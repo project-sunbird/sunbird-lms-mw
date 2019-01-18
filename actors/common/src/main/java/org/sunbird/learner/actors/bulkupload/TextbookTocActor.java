@@ -255,7 +255,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     for (Map<String, Object> child : children) {
       topics.add((String) child.get(JsonKey.NAME));
       if (null != child.get(JsonKey.CHILDREN)) {
-        getTopic((List<Map<String, Object>>) child.get(JsonKey.CHILDREN));
+        topics.addAll(getTopic((List<Map<String, Object>>) child.get(JsonKey.CHILDREN)));
       }
     }
     return topics;

@@ -318,8 +318,9 @@ public class OrganisationManagementActor extends BaseActor {
 
       String passedExternalId = (String) request.get(JsonKey.EXTERNAL_ID);
       if (StringUtils.isNotBlank(passedExternalId)) {
+        passedExternalId = passedExternalId.toLowerCase();
         String channel = (String) request.get(JsonKey.CHANNEL);
-        if (!validateChannelExternalIdUniqueness(channel, passedExternalId.toLowerCase(), null)) {
+        if (!validateChannelExternalIdUniqueness(channel, passedExternalId, null)) {
           ProjectCommonException.throwClientErrorException(
               ResponseCode.errorDuplicateEntry,
               MessageFormat.format(
@@ -429,7 +430,7 @@ public class OrganisationManagementActor extends BaseActor {
 
       if (StringUtils.isNotBlank(passedExternalId)) {
         String channel = (String) request.get(JsonKey.CHANNEL);
-        createOrgExternalIdRecord(channel, passedExternalId, uniqueId);
+        createOrgExternalIdRecord(channel.toLowerCase(), passedExternalId, uniqueId);
       }
       ProjectLogger.log("Org data saved into cassandra.");
       // create org_map if parentOrgId is present in request
@@ -1743,8 +1744,8 @@ public class OrganisationManagementActor extends BaseActor {
   private boolean validateChannelExternalIdUniqueness(
       String channel, String externalId, String orgId) {
     Map<String, Object> compositeKeyMap = new HashMap<String, Object>();
-    compositeKeyMap.put(JsonKey.PROVIDER, channel);
-    compositeKeyMap.put(JsonKey.EXTERNAL_ID, externalId);
+    compositeKeyMap.put(JsonKey.PROVIDER, channel.toLowerCase());
+    compositeKeyMap.put(JsonKey.EXTERNAL_ID, externalId.toLowerCase());
     return handleChannelExternalIdUniqueness(compositeKeyMap, orgId);
   }
 

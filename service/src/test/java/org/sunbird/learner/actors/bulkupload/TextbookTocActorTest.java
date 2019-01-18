@@ -12,8 +12,13 @@ import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.request.HttpRequestWithBody;
 import com.mashape.unirest.request.body.RequestBodyEntity;
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,6 +36,7 @@ import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.TextbookActorOperation;
 import org.sunbird.common.request.Request;
@@ -46,39 +52,41 @@ public class TextbookTocActorTest {
   private static final Props props =
       Props.create(org.sunbird.learner.actors.bulkupload.TextbookTocActor.class);
 
-  private static final String normalHeaders =
+  private static final String NORMAIL_HEADER =
       "Identifier,Medium,Grade,Subject,Textbook Name,Level 1 Textbook Unit,Description,QR Code Required?,QR Code,Purpose of Content to be linked,Mapped Topics,Keywords\n";
-  private static final String normalData = "do_1126788813057638401122,,,,test,unit1,,Yes,2019,,,";
-  private static final String extraData = "do_1126788813057638401122,,,,test,unit1,,Yes,2569,,,";
-  private static final String dailCodeNotReqData =
+  private static final String NORMAL_DATA = "do_1126788813057638401122,,,,test,unit1,,Yes,2019,,,";
+  private static final String EXTRA_DATA = "do_1126788813057638401122,,,,test,unit1,,Yes,2569,,,";
+  private static final String DAIL_CODE_NOT_REQ_DATA =
       "do_1126788813057638401122,,,,test,unit1,,No,2019,,,";
-  private static final String dataTopicFailure =
+  private static final String TOPIC_FAILURE_DATA =
       "do_1126788813057638401122,,,,test,unit1,,Yes,2019,,topi,abc";
-  private static final String dataDailCodeFailure =
+  private static final String DIAL_CODE_FAILURE_DATA =
       "do_1126788813057638401122,,,,test,unit1,,Yes,2089,,,";
-  private static final String dataDailCodeUniqueFailure =
+  private static final String DAIL_CODE_UNIQUE_FAILURE_DATA =
       "do_1126788813057638401122,,,,test,unit1,,Yes,2019,,,";
 
-  private static final String data = normalHeaders + normalData;
+  private static final String DATA = NORMAIL_HEADER + NORMAL_DATA;
 
-  private static final String dataDuplicateEntry = normalHeaders + normalData + "\n" + normalData;
+  private static final String DATA_DUPLICATE_ENTRY =
+      NORMAIL_HEADER + NORMAL_DATA + "\n" + NORMAL_DATA;
 
-  private static final String dataDailCodeMore = normalHeaders + normalData + "\n" + extraData;
+  private static final String DATA_DAIL_CODE_EXTRA =
+      NORMAIL_HEADER + NORMAL_DATA + "\n" + EXTRA_DATA;
 
-  private static final String dataDailcodeNotreq = normalHeaders + dailCodeNotReqData;
+  private static final String DATA_DAIL_CODE_NOT_REQ = NORMAIL_HEADER + DAIL_CODE_NOT_REQ_DATA;
 
-  private static final String dataFailureTopic = normalHeaders + dataTopicFailure;
+  private static final String DATA_TOPIC_FAILURE = NORMAIL_HEADER + TOPIC_FAILURE_DATA;
 
-  private static final String dataFailureDailcode = normalHeaders + dataDailCodeFailure;
+  private static final String DATA_DAIL_CODE_FAILURE = NORMAIL_HEADER + DIAL_CODE_FAILURE_DATA;
 
-  private static final String dataFailureDailcodeUnique = normalHeaders + dataDailCodeUniqueFailure;
+  private static final String DATA_DAIL_CODE_UNIQUENESS_FAILURE =
+      NORMAIL_HEADER + DAIL_CODE_UNIQUE_FAILURE_DATA;
 
-  private static final String dataFailure1 = normalHeaders;
+  private static final String DATA_FAILURE_ONLY_HEADERS = NORMAIL_HEADER;
 
   private static final String TEXTBOOK_TOC_INPUT_MAPPING =
-      "{\"identifier\":\"Identifier\",\"frameworkCategories\":{\"medium\":\"Medium\",\"gradeLevel\":\"Grade\",\"subject\":\"Subject\"},\"hierarchy\":{\"Textbook\":\"Textbook Name\",\"L:1\":\"Level 1 Textbook Unit\",\"L:2\":\"Level 2 Textbook Unit\",\"L:3\":\"Level 3 Textbook Unit\",\"L:4\":\"Level 4 Textbook Unit\"},\"metadata\":{\"description\":\"Description\",\"dialcodeRequired\":\"QR Code Required?\",\"dialcodes\":\"QR Code\",\"purpose\":\"Purpose of Content to be linked\",\"topic\":\"Mapped Topics\",\"keywords\":\"Keywords\"}}";
-  private static final String MANDATORY_VALUES =
-      "{\"Textbook\":\"Textbook Name\",\"L:1\":\"Level 1 Textbook Unit\"}";
+      getFileAsString("FrameworkForTextbookTocActorTest.json");
+  private static final String MANDATORY_VALUES = getFileAsString("MandatoryValue.json");
   private static final String CONTENT_TYPE = "any";
 
   @Before
@@ -98,9 +106,9 @@ public class TextbookTocActorTest {
   }
 
   @Test
-  public void testUpdateFailureDailcodecorrectAndIncorrect() throws IOException {
+  public void testUpdateFailureWithCorrectAndIncorrectDialCodeData() throws IOException {
     mockRequiredMethods(false);
-    ProjectCommonException res = (ProjectCommonException) doRequest(true, dataDailCodeMore);
+    ProjectCommonException res = (ProjectCommonException) doRequest(true, DATA_DAIL_CODE_EXTRA);
     Assert.assertEquals(
         res.getCode(), ResponseCode.errorDialCodeNotReservedForTextBook.getErrorCode());
     Assert.assertNotNull(res);
@@ -109,7 +117,7 @@ public class TextbookTocActorTest {
   @Test
   public void testUpdateFailureDailcodeNotreq() throws IOException {
     mockRequiredMethods(false);
-    ProjectCommonException res = (ProjectCommonException) doRequest(true, dataDailcodeNotreq);
+    ProjectCommonException res = (ProjectCommonException) doRequest(true, DATA_DAIL_CODE_NOT_REQ);
     Assert.assertEquals(res.getCode(), ResponseCode.errorConflictingValues.getErrorCode());
     Assert.assertNotNull(res);
   }
@@ -117,7 +125,7 @@ public class TextbookTocActorTest {
   @Test
   public void testUpdateFailureDuplicateEntry() throws IOException {
     mockRequiredMethods(false);
-    ProjectCommonException res = (ProjectCommonException) doRequest(true, dataDuplicateEntry);
+    ProjectCommonException res = (ProjectCommonException) doRequest(true, DATA_DUPLICATE_ENTRY);
     Assert.assertEquals(res.getCode(), ResponseCode.errorDuplicateEntries.getErrorCode());
     Assert.assertNotNull(res);
   }
@@ -125,15 +133,16 @@ public class TextbookTocActorTest {
   @Test
   public void testUpdateFailureblankCsv() throws IOException {
     mockRequiredMethods(false);
-    ProjectCommonException res = (ProjectCommonException) doRequest(true, dataFailure1);
+    ProjectCommonException res =
+        (ProjectCommonException) doRequest(true, DATA_FAILURE_ONLY_HEADERS);
     Assert.assertEquals(res.getCode(), ResponseCode.blankCsvData.getErrorCode());
     Assert.assertNotNull(res);
   }
 
   @Test
   public void testUpdateInvalideTopicFailure() throws IOException {
-    mock(false);
-    ProjectCommonException res = (ProjectCommonException) doRequest(true, dataFailureTopic);
+    mockRequiredMethods(false);
+    ProjectCommonException res = (ProjectCommonException) doRequest(true, DATA_TOPIC_FAILURE);
     Assert.assertEquals(res.getCode(), ResponseCode.errorInvalidTopic.getErrorCode());
     Assert.assertNotNull(res);
   }
@@ -141,7 +150,7 @@ public class TextbookTocActorTest {
   @Test
   public void testUpdateInvalideDailcodeFailure() throws IOException {
     mockRequiredMethods(false);
-    ProjectCommonException res = (ProjectCommonException) doRequest(true, dataFailureDailcode);
+    ProjectCommonException res = (ProjectCommonException) doRequest(true, DATA_DAIL_CODE_FAILURE);
     Assert.assertEquals(
         res.getCode(), ResponseCode.errorDialCodeNotReservedForTextBook.getErrorCode());
     Assert.assertNotNull(res);
@@ -151,7 +160,7 @@ public class TextbookTocActorTest {
   public void testUpdateInvalideDialCodeUniquenessFailure() throws IOException {
     mockRequiredMethods(true);
     ProjectCommonException res =
-        (ProjectCommonException) doRequest(true, dataFailureDailcodeUnique);
+        (ProjectCommonException) doRequest(true, DATA_DAIL_CODE_UNIQUENESS_FAILURE);
     Assert.assertEquals(res.getCode(), ResponseCode.errorDialCodeAlreadyAssociated.getErrorCode());
     Assert.assertNotNull(res);
   }
@@ -160,7 +169,7 @@ public class TextbookTocActorTest {
   public void testUpdateSuccess() throws Exception {
     mockRequiredMethods(false);
     mockResponseSuccess();
-    Response res = (Response) doRequest(false, data);
+    Response res = (Response) doRequest(false, DATA);
     Assert.assertNotNull(res);
   }
 
@@ -202,8 +211,7 @@ public class TextbookTocActorTest {
   }
 
   private void mockRequiredMethods(boolean bool) {
-    when(TextBookTocUtil.getRelatedFrameworkById(Mockito.anyString()))
-        .thenReturn(getFrameworkMap());
+    when(TextBookTocUtil.getRelatedFrameworkById(Mockito.anyString())).thenReturn(new Response());
     when(TextBookTocUtil.readHierarchy(Mockito.anyString())).thenReturn(getReadHierarchy(bool));
     when(TextBookTocUtil.readContent(Mockito.anyString())).thenReturn(getReadContentTextbookData());
   }
@@ -242,8 +250,19 @@ public class TextbookTocActorTest {
     return res;
   }
 
-  private Response getFrameworkMap() {
-    Response res = new Response();
-    return res;
+  private static String getFileAsString(String fileName) {
+    File file = null;
+
+    try {
+      file = new File(TextbookTocActorTest.class.getClassLoader().getResource(fileName).getFile());
+      Path path = Paths.get(file.getPath());
+      List<String> data = Files.readAllLines(path);
+      return data.get(0);
+    } catch (FileNotFoundException e) {
+      ProjectLogger.log(e.getMessage(), e);
+    } catch (IOException e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
+    return null;
   }
 }

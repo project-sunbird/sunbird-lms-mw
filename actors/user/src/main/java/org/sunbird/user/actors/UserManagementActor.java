@@ -104,10 +104,16 @@ public class UserManagementActor extends BaseActor {
     actorMessage.toLower();
     Util.getUserProfileConfig(systemSettingActorRef);
     String callerId = (String) actorMessage.getContext().get(JsonKey.CALLER_ID);
-    if (StringUtils.isNotBlank(callerId)) {
-      userService.validateUploader(actorMessage);
-    } else {
-      userService.validateUserId(actorMessage);
+    boolean isPrivate = false;
+    if (actorMessage.getContext().containsKey(JsonKey.PRIVATE)) {
+      isPrivate = (boolean) actorMessage.getContext().get(JsonKey.PRIVATE);
+    }
+    if (!Boolean.valueOf(isPrivate)) {
+      if (StringUtils.isNotBlank(callerId)) {
+        userService.validateUploader(actorMessage);
+      } else {
+        userService.validateUserId(actorMessage);
+      }
     }
     Map<String, Object> userMap = actorMessage.getRequest();
     userRequestValidator.validateUpdateUserRequest(actorMessage);

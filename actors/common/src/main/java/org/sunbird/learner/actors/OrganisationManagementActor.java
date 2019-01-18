@@ -315,10 +315,7 @@ public class OrganisationManagementActor extends BaseActor {
       }
       // removing default from request, not allowing user to create default org.
       request.remove(JsonKey.IS_DEFAULT);
-      // allow lower case values for source and externalId to the database
-      if (request.get(JsonKey.PROVIDER) != null) {
-        request.put(JsonKey.PROVIDER, ((String) request.get(JsonKey.PROVIDER)).toLowerCase());
-      }
+
       String passedExternalId = (String) request.get(JsonKey.EXTERNAL_ID);
       if (StringUtils.isNotBlank(passedExternalId)) {
         String channel = (String) request.get(JsonKey.CHANNEL);
@@ -331,8 +328,10 @@ public class OrganisationManagementActor extends BaseActor {
                   JsonKey.EXTERNAL_ID));
         }
         request.put(JsonKey.EXTERNAL_ID, passedExternalId);
+        request.put(JsonKey.PROVIDER, channel.toLowerCase());
       } else {
         request.remove(JsonKey.EXTERNAL_ID);
+        request.remove(JsonKey.PROVIDER);
       }
       // update address if present in request
       if (null != addressReq && addressReq.size() > 0) {

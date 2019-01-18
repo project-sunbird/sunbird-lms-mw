@@ -33,6 +33,7 @@ import org.sunbird.content.util.ContentStoreUtil;
 import org.sunbird.extension.user.UserExtension;
 import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.organisation.external.identity.service.OrgExternalService;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
@@ -59,6 +60,7 @@ public class UserManagementActor extends BaseActor {
   private UserService userService = UserServiceImpl.getInstance();
   private SystemSettingClient systemSettingClient = SystemSettingClientImpl.getInstance();
   private OrganisationClient organisationClient = new OrganisationClientImpl();
+  private OrgExternalService orgExternalService = new OrgExternalService();
   private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
   private static InterServiceCommunication interServiceCommunication =
       InterServiceCommunicationFactory.getInstance();
@@ -253,6 +255,41 @@ public class UserManagementActor extends BaseActor {
         sender().tell(ex, self());
         return;
       }
+    }
+    if (userMap.containsKey(JsonKey.ORG_EXTERNAL_ID)) {
+      String orgExternalId = (String) userMap.get(JsonKey.ORG_EXTERNAL_ID);
+      String channel = (String) userMap.get(JsonKey.CHANNEL);
+      String orgId =
+          orgExternalService.getOrgIdFromOrgExternalIdAndProvider(orgExternalId, channel);
+      if (StringUtils.isBlank(orgId)) {
+        ProjectLogger.log(
+            "UserManagementActor:createUser: No organisation with orgExternalId = "
+                + orgExternalId
+                + " and channel = "
+                + channel,
+            LoggerEnum.ERROR.name());
+        ProjectCommonException.throwClientErrorException(
+            ResponseCode.invalidParameterValue,
+            MessageFormat.format(
+                ResponseCode.invalidParameterValue.getErrorMessage(),
+                orgExternalId,
+                JsonKey.ORG_EXTERNAL_ID));
+      }
+      if (userMap.containsKey(JsonKey.ORGANISATION_ID)
+          && !orgId.equals((String) userMap.get(JsonKey.ORGANISATION_ID))) {
+        ProjectLogger.log(
+            "UserManagementActor:createUser Mismatch of organisation from orgExternalId="
+                + orgExternalId
+                + " and channel="
+                + channel
+                + " as organisationId="
+                + orgId
+                + " and request organisationId="
+                + userMap.get(JsonKey.ORGANISATION_ID),
+            LoggerEnum.ERROR.name());
+        throwParameterMismatchException(JsonKey.ORG_EXTERNAL_ID, JsonKey.ORGANISATION_ID);
+      }
+      userMap.remove(JsonKey.ORG_EXTERNAL_ID);
     }
     processUserRequest(userMap, callerId);
   }

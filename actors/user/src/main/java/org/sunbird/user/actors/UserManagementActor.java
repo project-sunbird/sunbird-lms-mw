@@ -108,7 +108,7 @@ public class UserManagementActor extends BaseActor {
     if (actorMessage.getContext().containsKey(JsonKey.PRIVATE)) {
       isPrivate = (boolean) actorMessage.getContext().get(JsonKey.PRIVATE);
     }
-    if (!Boolean.valueOf(isPrivate)) {
+    if (!isPrivate) {
       if (StringUtils.isNotBlank(callerId)) {
         userService.validateUploader(actorMessage);
       } else {

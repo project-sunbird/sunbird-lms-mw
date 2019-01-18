@@ -7,7 +7,6 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.request.HttpRequestWithBody;
@@ -46,60 +45,35 @@ public class TextbookTocActorTest {
   private static ActorSystem system;
   private static final Props props =
       Props.create(org.sunbird.learner.actors.bulkupload.TextbookTocActor.class);
-  private static ObjectMapper mapper = new ObjectMapper();
 
-  private static final String TB_WITHOUT_CHILDREN =
-      "{\"id\":\"ekstep.content.find\",\"ver\":\"3.0\",\"ts\":\"2018-12-12T06:21:17ZZ\",\"params\":{\"resmsgid\":\"bf8273ca-be0f-4062-8986-fbfff07002ac\",\"msgid\":null,\"err\":null,\"status\":\"successful\",\"errmsg\":null},\"responseCode\":\"OK\",\"result\":{\"content\":{\"ownershipType\":[\"createdBy\"],\"code\":\"Science\",\"channel\":\"in.ekstep\",\"description\":\"Test TextBook\",\"language\":[\"English\"],\"mimeType\":\"application/vnd.ekstep.content-collection\",\"idealScreenSize\":\"normal\",\"createdOn\":\"2018-12-12T06:20:57.814+0000\",\"appId\":\"ekstep_portal\",\"contentDisposition\":\"inline\",\"contentEncoding\":\"gzip\",\"lastUpdatedOn\":\"2018-12-12T06:20:57.814+0000\",\"contentType\":\"TextBook\",\"dialcodeRequired\":\"No\",\"identifier\":\"do_11265332762881228812868\",\"audience\":[\"Learner\"],\"visibility\":\"Default\",\"os\":[\"All\"],\"consumerId\":\"a6654129-b58d-4dd8-9cf2-f8f3c2f458bc\",\"mediaType\":\"content\",\"osId\":\"org.ekstep.quiz.app\",\"languageCode\":\"en\",\"versionKey\":\"1544595657814\",\"idealScreenDensity\":\"hdpi\",\"framework\":\"NCF\",\"compatibilityLevel\":1,\"name\":\"Science-10\",\"status\":\"Draft\"}}}";
+  private static final String normalHeaders =
+      "Identifier,Medium,Grade,Subject,Textbook Name,Level 1 Textbook Unit,Description,QR Code Required?,QR Code,Purpose of Content to be linked,Mapped Topics,Keywords\n";
+  private static final String normalData = "do_1126788813057638401122,,,,test,unit1,,Yes,2019,,,";
+  private static final String extraData = "do_1126788813057638401122,,,,test,unit1,,Yes,2569,,,";
+  private static final String dailCodeNotReqData =
+      "do_1126788813057638401122,,,,test,unit1,,No,2019,,,";
+  private static final String dataTopicFailure =
+      "do_1126788813057638401122,,,,test,unit1,,Yes,2019,,topi,abc";
+  private static final String dataDailCodeFailure =
+      "do_1126788813057638401122,,,,test,unit1,,Yes,2089,,,";
+  private static final String dataDailCodeUniqueFailure =
+      "do_1126788813057638401122,,,,test,unit1,,Yes,2019,,,";
 
-  private static final String TB_CREATE_VALID_REQ =
-      "{\"mode\":\"create\",\"fileData\":[{\"metadata\":{\"gradeLevel\":\"Class 10\",\"keywords\":\"head,eyes,nose,mouth\",\"subject\":\"Science\",\"description\":\"Explains key parts in the head such as eyes,nose,ears and mouth\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"No\",\"reservedDialcodes\":\"2019\",\"hierarchy\":{\"L:1\":\"5. Human Body\",\"L:3\":\"5.1.1 Key parts in the head\",\"L:2\":\"5.1 Parts of Body\",\"Textbook\":\"Science-10\"}},{\"metadata\":{\"gradeLevel\":\"Class 10\",\"purpose\":\"Video of lungs pumping\",\"subject\":\"Science\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"Yes\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"L:3\":\"5.2 .1 Respiratory System\",\"L:2\":\"5.2 Organ Systems\",\"Textbook\":\"Science-10\"}},{\"metadata\":{\"gradeLevel\":\"Class 10\",\"keywords\":\"head,eyes,nose,mouth\",\"subject\":\"Science\",\"description\":\"Explains key parts in the head such as eyes,nose,ears and mouth\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"No\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"L:2\":\"5.1 Parts of Body\",\"Textbook\":\"Science-10\"}},{\"metadata\":{\"gradeLevel\":\"Class 10\",\"purpose\":\"Video of lungs pumping\",\"subject\":\"Science\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"Yes\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"L:2\":\"5.2 Organ Systems\",\"Textbook\":\"Science-10\"}},{\"metadata\":{\"gradeLevel\":\"Class 10\",\"keywords\":\"head,eyes,nose,mouth\",\"subject\":\"Science\",\"description\":\"Explains key parts in the head such as eyes,nose,ears and mouth\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"No\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"Textbook\":\"Science-10\"}}]}";
+  private static final String data = normalHeaders + normalData;
 
-  private static final String DUPLICATE_ROW_REQ =
-      "{\"mode\":\"create\",\"fileData\":[{\"metadata\":{\"gradeLevel\":\"Class 10\",\"keywords\":\"head,eyes,nose,mouth\",\"subject\":\"Science\",\"description\":\"Explains key parts in the head such as eyes,nose,ears and mouth\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"No\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"L:3\":\"5.1.1 Key parts in the head\",\"L:2\":\"5.1 Parts of Body\",\"Textbook\":\"Science-10\"}},{\"metadata\":{\"gradeLevel\":\"Class 10\",\"purpose\":\"Video of lungs pumping\",\"subject\":\"Science\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"Yes\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"L:3\":\"5.2 .1 Respiratory System\",\"L:2\":\"5.2 Organ Systems\",\"Textbook\":\"Science-10\"}},{\"metadata\":{\"gradeLevel\":\"Class 10\",\"keywords\":\"head,eyes,nose,mouth\",\"subject\":\"Science\",\"description\":\"Explains key parts in the head such as eyes,nose,ears and mouth\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"No\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"L:2\":\"5.1 Parts of Body\",\"Textbook\":\"Science-10\"}},{\"metadata\":{\"gradeLevel\":\"Class 10\",\"purpose\":\"Video of lungs pumping\",\"subject\":\"Science\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"Yes\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"L:2\":\"5.2 Organ Systems\",\"Textbook\":\"Science-10\"}},{\"metadata\":{\"gradeLevel\":\"Class 10\",\"keywords\":\"head,eyes,nose,mouth\",\"subject\":\"Science\",\"description\":\"Explains key parts in the head such as eyes,nose,ears and mouth\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"No\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"Textbook\":\"Science-10\"}},{\"metadata\":{\"gradeLevel\":\"Class 10\",\"keywords\":\"head,eyes,nose,mouth\",\"subject\":\"Science\",\"description\":\"Explains key parts in the head such as eyes,nose,ears and mouth\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"No\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"Textbook\":\"Science-10\"}}]}";
+  private static final String dataDuplicateEntry = normalHeaders + normalData + "\n" + normalData;
 
-  private static final String REQUIRED_FIELD_MISS_REQ =
-      "{\"mode\":\"create\",\"fileData\":[{\"metadata\":{\"gradeLevel\":\"Class 10\",\"keywords\":\"head,eyes,nose,mouth\",\"subject\":\"Science\",\"description\":\"Explains key parts in the head such as eyes,nose,ears and mouth\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"Yes\"},\"hierarchy\":{\"L:3\":\"5.1.1 Key parts in the head\",\"L:2\":\"5.1 Parts of Body\",\"Textbook\":\"Science-10\"}},{\"metadata\":{\"gradeLevel\":\"Class 10\",\"purpose\":\"Video of lungs pumping\",\"subject\":\"Science\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"Yes\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"L:3\":\"5.2 .1 Respiratory System\",\"L:2\":\"5.2 Organ Systems\",\"Textbook\":\"Science-10\"}},{\"metadata\":{\"gradeLevel\":\"Class 10\",\"keywords\":\"head,eyes,nose,mouth\",\"subject\":\"Science\",\"description\":\"Explains key parts in the head such as eyes,nose,ears and mouth\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"No\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"L:2\":\"5.1 Parts of Body\",\"Textbook\":\"Science-10\"}},{\"metadata\":{\"gradeLevel\":\"Class 10\",\"purpose\":\"Video of lungs pumping\",\"subject\":\"Science\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"Yes\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"L:2\":\"5.2 Organ Systems\",\"Textbook\":\"Science-10\"}},{\"metadata\":{\"gradeLevel\":\"Class 10\",\"keywords\":\"head,eyes,nose,mouth\",\"subject\":\"Science\",\"description\":\"Explains key parts in the head such as eyes,nose,ears and mouth\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"No\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"Textbook\":\"Science-10\"}}]}";
+  private static final String dataDailCodeMore = normalHeaders + normalData + "\n" + extraData;
 
-  private static final String data =
-      "Identifier,Medium,Grade,Subject,Textbook Name,Level 1 Textbook Unit,Description,"
-          + "QR Code Required?,QR Code,Purpose of Content to be linked,Mapped Topics,Keywords\n"
-          + "do_1126788813057638401122,,,,test,unit1,,Yes,2019,,,,";
+  private static final String dataDailcodeNotreq = normalHeaders + dailCodeNotReqData;
 
-  private static final String dataDuplicateEntry =
-      "Identifier,Medium,Grade,Subject,Textbook Name,Level 1 Textbook Unit,Description,"
-          + "QR Code Required?,QR Code,Purpose of Content to be linked,Mapped Topics,Keywords\n"
-          + "do_1126788813057638401122,,,,test,unit1,,Yes,2019,,,\n"
-          + "do_1126788813057638401122,,,,test,unit1,,Yes,2019,,,";
+  private static final String dataFailureTopic = normalHeaders + dataTopicFailure;
 
-  private static final String dataDailCodeMore =
-      "Identifier,Medium,Grade,Subject,Textbook Name,Level 1 Textbook Unit,Description,"
-          + "QR Code Required?,QR Code,Purpose of Content to be linked,Mapped Topics,Keywords\n"
-          + "do_1126788813057638401122,,,,test,unit1,,Yes,2019,,,\n"
-          + "do_1126788813057638401122,,,,test,unit1,,Yes,2569,,,";
+  private static final String dataFailureDailcode = normalHeaders + dataDailCodeFailure;
 
-  private static final String dataDailcodeNotreq =
-      "Identifier,Medium,Grade,Subject,Textbook Name,Level 1 Textbook Unit,Description,"
-          + "QR Code Required?,QR Code,Purpose of Content to be linked,Mapped Topics,Keywords\n"
-          + "do_1126788813057638401122,,,,test,unit1,,No,2019,,,";
+  private static final String dataFailureDailcodeUnique = normalHeaders + dataDailCodeUniqueFailure;
 
-  private static final String dataFailureTopic =
-      "Identifier,Medium,Grade,Subject,Textbook Name,Level 1 Textbook Unit,Description,"
-          + "QR Code Required?,QR Code,Purpose of Content to be linked,Mapped Topics,Keywords\n"
-          + "do_1126788813057638401122,,,,test,unit1,,Yes,2019,,topi,abc";
-
-  private static final String dataFailureDailcode =
-      "Identifier,Medium,Grade,Subject,Textbook Name,Level 1 Textbook Unit,Description,"
-          + "QR Code Required?,QR Code,Purpose of Content to be linked,Mapped Topics,Keywords\n"
-          + "do_1126788813057638401122,,,,test,unit1,,Yes,2089,,,";
-
-  private static final String dataFailureDailcodeUnique =
-      "Identifier,Medium,Grade,Subject,Textbook Name,Level 1 Textbook Unit,Description,"
-          + "QR Code Required?,QR Code,Purpose of Content to be linked,Mapped Topics,Keywords\n"
-          + "do_1126788813057638401122,,,,test,unit1,,Yes,2019,,,";
-
-  private static final String dataFailure1 =
-      "Identifier,Medium,Grade,Subject,Textbook Name,Level 1 Textbook Unit,Description,"
-          + "QR Code Required?,QR Code,Purpose of Content to be linked,Mapped Topics,Keywords";
+  private static final String dataFailure1 = normalHeaders;
 
   private static final String TEXTBOOK_TOC_INPUT_MAPPING =
       "{\"identifier\":\"Identifier\",\"frameworkCategories\":{\"medium\":\"Medium\",\"gradeLevel\":\"Grade\",\"subject\":\"Subject\"},\"hierarchy\":{\"Textbook\":\"Textbook Name\",\"L:1\":\"Level 1 Textbook Unit\",\"L:2\":\"Level 2 Textbook Unit\",\"L:3\":\"Level 3 Textbook Unit\",\"L:4\":\"Level 4 Textbook Unit\"},\"metadata\":{\"description\":\"Description\",\"dialcodeRequired\":\"QR Code Required?\",\"dialcodes\":\"QR Code\",\"purpose\":\"Purpose of Content to be linked\",\"topic\":\"Mapped Topics\",\"keywords\":\"Keywords\"}}";
@@ -234,13 +208,6 @@ public class TextbookTocActorTest {
     when(TextBookTocUtil.readContent(Mockito.anyString())).thenReturn(getReadContentTextbookData());
   }
 
-  private Map<String, String> getDefaultHeaders() {
-    Map<String, String> headers = new HashMap<>();
-    headers.put("Content-Type", "application/json");
-    headers.put(JsonKey.AUTHORIZATION, JsonKey.BEARER);
-    return headers;
-  }
-
   private Response getReadHierarchy(boolean error) {
     // TODO Auto-generated method stub
     Response res = new Response();
@@ -276,7 +243,6 @@ public class TextbookTocActorTest {
   }
 
   private Response getFrameworkMap() {
-    Map<String, Object> map = new HashMap<>();
     Response res = new Response();
     return res;
   }

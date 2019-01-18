@@ -99,7 +99,7 @@ public class TextbookTocActorTest {
 
   @Test
   public void testUpdateFailureDailcodecorrectAndIncorrect() throws IOException {
-    mock(false);
+    mockRequiredMethods(false);
     ProjectCommonException res = (ProjectCommonException) doRequest(true, dataDailCodeMore);
     Assert.assertEquals(
         res.getCode(), ResponseCode.errorDialCodeNotReservedForTextBook.getErrorCode());
@@ -108,7 +108,7 @@ public class TextbookTocActorTest {
 
   @Test
   public void testUpdateFailureDailcodeNotreq() throws IOException {
-    mock(false);
+    mockRequiredMethods(false);
     ProjectCommonException res = (ProjectCommonException) doRequest(true, dataDailcodeNotreq);
     Assert.assertEquals(res.getCode(), ResponseCode.errorConflictingValues.getErrorCode());
     Assert.assertNotNull(res);
@@ -116,7 +116,7 @@ public class TextbookTocActorTest {
 
   @Test
   public void testUpdateFailureDuplicateEntry() throws IOException {
-    mock(false);
+    mockRequiredMethods(false);
     ProjectCommonException res = (ProjectCommonException) doRequest(true, dataDuplicateEntry);
     Assert.assertEquals(res.getCode(), ResponseCode.errorDuplicateEntries.getErrorCode());
     Assert.assertNotNull(res);
@@ -124,7 +124,7 @@ public class TextbookTocActorTest {
 
   @Test
   public void testUpdateFailureblankCsv() throws IOException {
-    mock(false);
+    mockRequiredMethods(false);
     ProjectCommonException res = (ProjectCommonException) doRequest(true, dataFailure1);
     Assert.assertEquals(res.getCode(), ResponseCode.blankCsvData.getErrorCode());
     Assert.assertNotNull(res);
@@ -140,7 +140,7 @@ public class TextbookTocActorTest {
 
   @Test
   public void testUpdateInvalideDailcodeFailure() throws IOException {
-    mock(false);
+    mockRequiredMethods(false);
     ProjectCommonException res = (ProjectCommonException) doRequest(true, dataFailureDailcode);
     Assert.assertEquals(
         res.getCode(), ResponseCode.errorDialCodeNotReservedForTextBook.getErrorCode());
@@ -149,7 +149,7 @@ public class TextbookTocActorTest {
 
   @Test
   public void testUpdateInvalideDialCodeUniquenessFailure() throws IOException {
-    mock(true);
+    mockRequiredMethods(true);
     ProjectCommonException res =
         (ProjectCommonException) doRequest(true, dataFailureDailcodeUnique);
     Assert.assertEquals(res.getCode(), ResponseCode.errorDialCodeAlreadyAssociated.getErrorCode());
@@ -158,7 +158,7 @@ public class TextbookTocActorTest {
 
   @Test
   public void testUpdateSuccess() throws Exception {
-    mock(false);
+    mockRequiredMethods(false);
     mockResponseSuccess();
     Response res = (Response) doRequest(false, data);
     Assert.assertNotNull(res);
@@ -201,7 +201,7 @@ public class TextbookTocActorTest {
     return res;
   }
 
-  private void mock(boolean bool) {
+  private void mockRequiredMethods(boolean bool) {
     when(TextBookTocUtil.getRelatedFrameworkById(Mockito.anyString()))
         .thenReturn(getFrameworkMap());
     when(TextBookTocUtil.readHierarchy(Mockito.anyString())).thenReturn(getReadHierarchy(bool));

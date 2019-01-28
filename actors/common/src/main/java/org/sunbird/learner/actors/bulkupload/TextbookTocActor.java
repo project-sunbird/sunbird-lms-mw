@@ -577,25 +577,16 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       for (Map<String, Object> row : data) {
         populateNodes(row, tbId, textBookdata, nodesModified, hierarchyData);
       }
-      Map<String, Object> updateRequest =
-          new HashMap<String, Object>() {
-            {
-              put(
-                  JsonKey.REQUEST,
-                  new HashMap<String, Object>() {
-                    {
-                      put(
-                          JsonKey.DATA,
-                          new HashMap<String, Object>() {
-                            {
-                              put(JsonKey.NODES_MODIFIED, nodesModified);
-                              put(JsonKey.HIERARCHY, hierarchyData);
-                            }
-                          });
-                    }
-                  });
-            }
-          };
+
+      Map<String, Object> updateRequest = new HashMap<String, Object>();
+      Map<String, Object> requestMap = new HashMap<String, Object>();
+      Map<String, Object> dataMap = new HashMap<String, Object>();
+      Map<String, Object> hierarchy = new HashMap<String, Object>();
+      dataMap.put(JsonKey.NODES_MODIFIED, nodesModified);
+      dataMap.put(JsonKey.HIERARCHY, hierarchy);
+      requestMap.put(JsonKey.DATA, dataMap);
+      updateRequest.put(JsonKey.REQUEST, requestMap);
+
       log(
           "Create Textbook - UpdateHierarchy Request : " + mapper.writeValueAsString(updateRequest),
           INFO.name());
@@ -749,14 +740,14 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             nodesModified,
             false);
       }
-      Map<String, Object> updateRequest = new HashMap<>();
-      Map<String, Object> reqData = new HashMap<>();
-      Map<String, Object> modifiedNodes = new HashMap<>();
-      Map<String, Object> hierarchy = new HashMap<>();
-      modifiedNodes.put(JsonKey.NODES_MODIFIED, nodesModified);
-      reqData.put(JsonKey.DATA, modifiedNodes);
-      reqData.put(JsonKey.HIERARCHY, hierarchy);
-      updateRequest.put(JsonKey.REQUEST, reqData);
+      Map<String, Object> updateRequest = new HashMap<String, Object>();
+      Map<String, Object> requestMap = new HashMap<String, Object>();
+      Map<String, Object> dataMap = new HashMap<String, Object>();
+      Map<String, Object> hierarchy = new HashMap<String, Object>();
+      dataMap.put(JsonKey.NODES_MODIFIED, nodesModified);
+      dataMap.put(JsonKey.HIERARCHY, hierarchy);
+      requestMap.put(JsonKey.DATA, dataMap);
+      updateRequest.put(JsonKey.REQUEST, requestMap);
       log(
           "Update Textbook - UpdateHierarchy Request : " + mapper.writeValueAsString(updateRequest),
           INFO.name());
@@ -848,25 +839,32 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             .body(mapper.writeValueAsString(updateRequest))
             .asString();
     if (null != updateResponse) {
-      Response response = mapper.readValue(updateResponse.getBody(), Response.class);
-      if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
-        return response;
-      } else {
-        Map<String, Object> resultMap =
-            Optional.ofNullable(response.getResult()).orElse(new HashMap<>());
-        String message = "Textbook hierarchy could not be created or updated. ";
-        if (MapUtils.isNotEmpty(resultMap)) {
-          Object obj = Optional.ofNullable(resultMap.get(JsonKey.TB_MESSAGES)).orElse("");
-          if (obj instanceof List) {
-            message += ((List<String>) obj).stream().collect(Collectors.joining(";"));
-          } else {
-            message += String.valueOf(obj);
+      try {
+        Response response = mapper.readValue(updateResponse.getBody(), Response.class);
+        if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
+          return response;
+        } else {
+          Map<String, Object> resultMap =
+              Optional.ofNullable(response.getResult()).orElse(new HashMap<>());
+          String message = "Textbook hierarchy could not be created or updated. ";
+          if (MapUtils.isNotEmpty(resultMap)) {
+            Object obj = Optional.ofNullable(resultMap.get(JsonKey.TB_MESSAGES)).orElse("");
+            if (obj instanceof List) {
+              message += ((List<String>) obj).stream().collect(Collectors.joining(";"));
+            } else {
+              message += String.valueOf(obj);
+            }
           }
+          throw new ProjectCommonException(
+              response.getResponseCode().name(),
+              message,
+              response.getResponseCode().getResponseCode());
         }
+      } catch (Exception ex) {
         throw new ProjectCommonException(
-            response.getResponseCode().name(),
-            message,
-            response.getResponseCode().getResponseCode());
+            ResponseCode.errorTbUpdate.getErrorCode(),
+            ResponseCode.errorTbUpdate.getErrorMessage(),
+            SERVER_ERROR.getResponseCode());
       }
     } else {
       throw new ProjectCommonException(

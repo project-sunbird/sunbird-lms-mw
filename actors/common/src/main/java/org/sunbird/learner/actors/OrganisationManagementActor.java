@@ -315,14 +315,12 @@ public class OrganisationManagementActor extends BaseActor {
       }
       // removing default from request, not allowing user to create default org.
       request.remove(JsonKey.IS_DEFAULT);
-      // allow lower case values for source and externalId to the database
-      if (request.get(JsonKey.PROVIDER) != null) {
-        request.put(JsonKey.PROVIDER, ((String) request.get(JsonKey.PROVIDER)).toLowerCase());
-      }
+
       String passedExternalId = (String) request.get(JsonKey.EXTERNAL_ID);
       if (StringUtils.isNotBlank(passedExternalId)) {
+        passedExternalId = passedExternalId.toLowerCase();
         String channel = (String) request.get(JsonKey.CHANNEL);
-        if (!validateChannelExternalIdUniqueness(channel, passedExternalId.toLowerCase(), null)) {
+        if (!validateChannelExternalIdUniqueness(channel, passedExternalId, null)) {
           ProjectCommonException.throwClientErrorException(
               ResponseCode.errorDuplicateEntry,
               MessageFormat.format(
@@ -331,8 +329,10 @@ public class OrganisationManagementActor extends BaseActor {
                   JsonKey.EXTERNAL_ID));
         }
         request.put(JsonKey.EXTERNAL_ID, passedExternalId);
+        request.put(JsonKey.PROVIDER, channel.toLowerCase());
       } else {
         request.remove(JsonKey.EXTERNAL_ID);
+        request.remove(JsonKey.PROVIDER);
       }
       // update address if present in request
       if (null != addressReq && addressReq.size() > 0) {
@@ -430,7 +430,7 @@ public class OrganisationManagementActor extends BaseActor {
 
       if (StringUtils.isNotBlank(passedExternalId)) {
         String channel = (String) request.get(JsonKey.CHANNEL);
-        createOrgExternalIdRecord(channel, passedExternalId, uniqueId);
+        createOrgExternalIdRecord(channel.toLowerCase(), passedExternalId, uniqueId);
       }
       ProjectLogger.log("Org data saved into cassandra.");
       // create org_map if parentOrgId is present in request
@@ -1744,8 +1744,8 @@ public class OrganisationManagementActor extends BaseActor {
   private boolean validateChannelExternalIdUniqueness(
       String channel, String externalId, String orgId) {
     Map<String, Object> compositeKeyMap = new HashMap<String, Object>();
-    compositeKeyMap.put(JsonKey.PROVIDER, channel);
-    compositeKeyMap.put(JsonKey.EXTERNAL_ID, externalId);
+    compositeKeyMap.put(JsonKey.PROVIDER, channel.toLowerCase());
+    compositeKeyMap.put(JsonKey.EXTERNAL_ID, externalId.toLowerCase());
     return handleChannelExternalIdUniqueness(compositeKeyMap, orgId);
   }
 

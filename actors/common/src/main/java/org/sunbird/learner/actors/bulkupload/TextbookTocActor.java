@@ -132,19 +132,19 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   @SuppressWarnings("unchecked")
   private void checkDialCodeUniquenessInTextBookHierarchy(
       Map<String, List<String>> reqDialCodesIdentifierMap, String textbookId) {
-    Map<String, Object> contentHierarchy = getHierarchy(textbookId);
-    Map<String, List<String>> hierarchyDialCodeIdentifierMap = new HashMap<>();
-    List<String> contentDialCodes = (List<String>) contentHierarchy.get(JsonKey.DIAL_CODES);
-    if (CollectionUtils.isNotEmpty(contentDialCodes)) {
-      hierarchyDialCodeIdentifierMap.put(
-          (String) contentHierarchy.get(JsonKey.IDENTIFIER), contentDialCodes);
-    }
-
-    List<Map<String, Object>> children =
-        (List<Map<String, Object>>) contentHierarchy.get(JsonKey.CHILDREN);
-    hierarchyDialCodeIdentifierMap.putAll(getDialCodeIdentifierMap(children));
-
     if (MapUtils.isNotEmpty(reqDialCodesIdentifierMap)) {
+      Map<String, Object> contentHierarchy = getHierarchy(textbookId);
+      Map<String, List<String>> hierarchyDialCodeIdentifierMap = new HashMap<>();
+      List<String> contentDialCodes = (List<String>) contentHierarchy.get(JsonKey.DIAL_CODES);
+      if (CollectionUtils.isNotEmpty(contentDialCodes)) {
+        hierarchyDialCodeIdentifierMap.put(
+            (String) contentHierarchy.get(JsonKey.IDENTIFIER), contentDialCodes);
+      }
+
+      List<Map<String, Object>> children =
+          (List<Map<String, Object>>) contentHierarchy.get(JsonKey.CHILDREN);
+      hierarchyDialCodeIdentifierMap.putAll(getDialCodeIdentifierMap(children));
+
       Map<String, String> reqDialCodeMap =
           convertDialcodeToIdentifierMap(reqDialCodesIdentifierMap);
       if (MapUtils.isNotEmpty(hierarchyDialCodeIdentifierMap)) {
@@ -201,7 +201,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             (String) child.get(JsonKey.IDENTIFIER), (List<String>) child.get(JsonKey.DIAL_CODES));
       }
       if (CollectionUtils.isNotEmpty((List<Map<String, Object>>) child.get(JsonKey.CHILDREN))) {
-        getDialCodeIdentifierMap((List<Map<String, Object>>) child.get(JsonKey.CHILDREN));
+        hierarchyDialCodeIdentifierMap.putAll(
+            getDialCodeIdentifierMap((List<Map<String, Object>>) child.get(JsonKey.CHILDREN)));
       }
     }
     return hierarchyDialCodeIdentifierMap;
@@ -264,7 +265,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   @SuppressWarnings("unchecked")
   private void validateDialCodesWithReservedDialCodes(
       Set<String> dialCodes, Map<String, Object> textBookdata) {
-    List<String> reservedDialCodes = (List<String>) textBookdata.get(JsonKey.RESERVED_DIAL_CODES);
+    Set<String> reservedDialCodes =
+        ((Map<String, Integer>) textBookdata.get(JsonKey.RESERVED_DIAL_CODES)).keySet();
     Set<String> invalidDialCodes = new HashSet<>();
     if (CollectionUtils.isNotEmpty(reservedDialCodes)) {
       dialCodes.forEach(
@@ -371,7 +373,6 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                   topics.add(s.trim());
                 });
           }
-
           Map<String, Object> map = new HashMap<>();
           if (JsonKey.UPDATE.equalsIgnoreCase(mode) && StringUtils.isNotBlank(record.get(id))) {
             String identifier = record.get(id).trim();
@@ -596,8 +597,30 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       log(
           "Create Textbook - UpdateHierarchy Request : " + mapper.writeValueAsString(updateRequest),
           INFO.name());
-      return updateHierarchy(tbId, updateRequest);
+      return callUpdateHierarchyAndLinkDialCodeApi(tbId, updateRequest, nodesModified);
     }
+  }
+
+  private Response callUpdateHierarchyAndLinkDialCodeApi(
+      String tbId, Map<String, Object> updateRequest, Map<String, Object> nodesModified)
+      throws Exception {
+    Response response = new Response();
+    updateHierarchy(tbId, updateRequest);
+    try {
+      linkDialCode(nodesModified);
+    } catch (Exception ex) {
+      ProjectLogger.log(
+          "TextbookTocActor:callUpdateHierarchyAndLinkDialCodeApi : Exception occurred while linking dial code : "
+              + ex);
+      response
+          .getResult()
+          .put(
+              JsonKey.ERROR_MSG,
+              "Textbook hierarchy metadata got updated but, "
+                  + ResponseCode.errorDialCodeLinkingFail.getErrorMessage());
+    }
+    response.getResult().put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    return response;
   }
 
   private void populateNodes(
@@ -720,29 +743,89 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             nodesModified,
             false);
       }
-      Map<String, Object> updateRequest =
-          new HashMap<String, Object>() {
-            {
-              put(
-                  JsonKey.REQUEST,
-                  new HashMap<String, Object>() {
-                    {
-                      put(
-                          JsonKey.DATA,
-                          new HashMap<String, Object>() {
-                            {
-                              put(JsonKey.NODES_MODIFIED, nodesModified);
-                            }
-                          });
-                    }
-                  });
-            }
-          };
+      Map<String, Object> updateRequest = new HashMap<>();
+      Map<String, Object> reqData = new HashMap<>();
+      Map<String, Object> modifiedNodes = new HashMap<>();
+      Map<String, Object> hierarchy = new HashMap<>();
+      modifiedNodes.put(JsonKey.NODES_MODIFIED, nodesModified);
+      reqData.put(JsonKey.DATA, modifiedNodes);
+      reqData.put(JsonKey.HIERARCHY, hierarchy);
+      updateRequest.put(JsonKey.REQUEST, reqData);
       log(
           "Update Textbook - UpdateHierarchy Request : " + mapper.writeValueAsString(updateRequest),
           INFO.name());
-      return updateHierarchy((String) request.get(TEXTBOOK_ID), updateRequest);
+      return callUpdateHierarchyAndLinkDialCodeApi(
+          (String) request.get(TEXTBOOK_ID), updateRequest, nodesModified);
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  private Response linkDialCode(Map<String, Object> modifiedNodes) throws Exception {
+    List<Map<String, Object>> content = new ArrayList<>();
+    modifiedNodes.forEach(
+        (k, v) -> {
+          Map<String, Object> value = (Map<String, Object>) v;
+          Map<String, Object> metadata = (Map<String, Object>) value.get(JsonKey.METADATA);
+          if (MapUtils.isNotEmpty(metadata)) {
+            String dialCodeRequired = (String) metadata.get(JsonKey.DIAL_CODE_REQUIRED);
+            if (JsonKey.YES.equalsIgnoreCase(dialCodeRequired)) {
+              if (null != metadata.get(JsonKey.DIAL_CODES)) {
+                Map<String, Object> linkDialCode = new HashMap<>();
+                linkDialCode.put(JsonKey.IDENTIFIER, k);
+                linkDialCode.put(JsonKey.DIAL_CODES, metadata.get(JsonKey.DIAL_CODES));
+                content.add(linkDialCode);
+              }
+            }
+          }
+        });
+    Map<String, Object> request = new HashMap<>();
+    request.put(JsonKey.CONTENT, content);
+    Map<String, Object> linkDialCoderequest = new HashMap<>();
+    linkDialCoderequest.put(JsonKey.REQUEST, request);
+    if (CollectionUtils.isNotEmpty(content)) {
+      return linkDialCodeApiCall(linkDialCoderequest);
+    }
+    return null;
+  }
+
+  private Response linkDialCodeApiCall(Map<String, Object> updateRequest) throws Exception {
+    String requestUrl =
+        getConfigValue(JsonKey.EKSTEP_BASE_URL) + getConfigValue(JsonKey.LINK_DIAL_CODE_API);
+    HttpResponse<String> updateResponse = null;
+    try {
+      updateResponse =
+          Unirest.post(requestUrl)
+              .headers(getDefaultHeaders())
+              .body(mapper.writeValueAsString(updateRequest))
+              .asString();
+      if (null != updateResponse) {
+        Response response = mapper.readValue(updateResponse.getBody(), Response.class);
+        if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
+          return response;
+        } else {
+          Map<String, Object> resultMap =
+              Optional.ofNullable(response.getResult()).orElse(new HashMap<>());
+          String message = "Linking of dial code failed";
+          if (MapUtils.isNotEmpty(resultMap)) {
+            Object obj = Optional.ofNullable(resultMap.get(JsonKey.TB_MESSAGES)).orElse("");
+            if (obj instanceof List) {
+              message += ((List<String>) obj).stream().collect(Collectors.joining(";"));
+            } else {
+              message += String.valueOf(obj);
+            }
+          }
+          throw new ProjectCommonException(
+              response.getResponseCode().name(),
+              message,
+              response.getResponseCode().getResponseCode());
+        }
+      } else {
+        ProjectCommonException.throwClientErrorException(ResponseCode.errorDialCodeLinkingFail);
+      }
+    } catch (Exception e) {
+      ProjectCommonException.throwClientErrorException(ResponseCode.errorDialCodeLinkingFail);
+    }
+    return null;
   }
 
   private Response updateHierarchy(String tbId, Map<String, Object> updateRequest)

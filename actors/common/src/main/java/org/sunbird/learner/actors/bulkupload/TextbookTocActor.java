@@ -769,7 +769,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
               if (null != metadata.get(JsonKey.DIAL_CODES)) {
                 Map<String, Object> linkDialCode = new HashMap<>();
                 linkDialCode.put(JsonKey.IDENTIFIER, k);
-                linkDialCode.put(JsonKey.DIAL_CODES, metadata.get(JsonKey.DIAL_CODES));
+                linkDialCode.put("dialcode", metadata.get(JsonKey.DIAL_CODES));
                 content.add(linkDialCode);
               }
             }

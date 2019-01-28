@@ -19,7 +19,7 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.ProjectUtil.ProgressStatus;
+import org.sunbird.common.models.util.ProjectUtil.BulkProcessStatus;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.ExecutionContext;
@@ -230,7 +230,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
               .stream()
               .forEach(
                   x -> {
-                    if (x.getStatus() == ProgressStatus.COMPLETED.getValue()) {
+                    if (x.getStatus() == BulkProcessStatus.COMPLETED.getValue()) {
                       addTaskDataToList(successList, x.getSuccessResult());
                     } else {
                       addTaskDataToList(failureList, x.getFailureResult());

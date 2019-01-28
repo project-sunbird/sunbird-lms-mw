@@ -7,7 +7,6 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
-import java.util.Map;
 import org.junit.Test;
 import org.sunbird.actor.core.BaseActorTest;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -34,7 +33,7 @@ public class UserProfileActorTest extends BaseActorTest {
   @Test
   public void testSetProfileVisibilitySuccess() {
 
-    this.createEsGetResponse(true, userId);
+    this.getDataByIdentifier(true, userId);
     boolean result = testScenario(ActorOperations.PROFILE_VISIBILITY, true, null);
     assertTrue(result);
   }
@@ -42,7 +41,7 @@ public class UserProfileActorTest extends BaseActorTest {
   @Test
   public void testSetProfileVisibilityFailure() {
 
-    this.createEsGetResponse(false, userId);
+    this.getDataByIdentifier(false, userId);
     boolean result =
         testScenario(
             ActorOperations.PROFILE_VISIBILITY, false, ResponseCode.userNotFound.getErrorCode());
@@ -71,15 +70,5 @@ public class UserProfileActorTest extends BaseActorTest {
     reqObj.put(JsonKey.USER_ID, userId);
     reqObj.setOperation(actorOperation.getValue());
     return reqObj;
-  }
-
-  @Override
-  protected Response getRecordByIdResponseAbstract(boolean b) {
-    return null;
-  }
-
-  @Override
-  protected Map<String, Object> esComplexSearchResponse() {
-    return null;
   }
 }

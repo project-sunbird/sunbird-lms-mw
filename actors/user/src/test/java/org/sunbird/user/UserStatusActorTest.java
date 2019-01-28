@@ -79,8 +79,9 @@ public class UserStatusActorTest extends BaseActorTest {
       String expectedErrorResponse) {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
-    //    getMapResponse(isDeleted);
-    getCassandraResponseForId(isDeleted);
+
+    Response response = getRecordByIdResponse(isDeleted);
+    getRecordById(response);
     subject.tell(getRequestObject(operation.getValue()), probe.getRef());
 
     Response res;
@@ -94,8 +95,7 @@ public class UserStatusActorTest extends BaseActorTest {
     }
   }
 
-  @Override
-  protected Response getRecordByIdResponseAbstract(boolean isDeleted) {
+  private Response getRecordByIdResponse(boolean isDeleted) {
 
     Response response = new Response();
     List<Map<String, Object>> resMapList = new ArrayList<>();
@@ -105,26 +105,4 @@ public class UserStatusActorTest extends BaseActorTest {
     response.put(JsonKey.RESPONSE, resMapList);
     return response;
   }
-
-  /*@Override
-  protected Map<String, Object> getMapResponse(boolean b) {
-    return null;
-  }*/
-
-  //  @Override
-  //  protected Map<String, Object> getMapResponse(boolean isDeleted) {
-  //    Map<String, Object> map = new HashMap<>();
-  //    map.put(JsonKey.IS_DELETED, isDeleted);
-  //    return map;
-  //  }
-
-  @Override
-  protected Map<String, Object> esComplexSearchResponse() {
-    return null;
-  }
-
-  /*@Override
-  public void getRecordByIdResponse(boolean isDelete) {
-
-  }*/
 }

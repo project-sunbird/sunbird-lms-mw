@@ -15,17 +15,13 @@ import java.util.HashMap;
 import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
+import org.sunbird.actor.core.BaseActorTest;
 import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.actorutil.InterServiceCommunication;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
 import org.sunbird.actorutil.impl.InterServiceCommunicationImpl;
-import org.sunbird.actorutil.location.impl.LocationClientImpl;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
@@ -41,7 +37,7 @@ import org.sunbird.user.actors.UserManagementActor;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.UserUtil;
 
-@RunWith(PowerMockRunner.class)
+/*@RunWith(PowerMockRunner.class)
 @PrepareForTest({
   ServiceFactory.class,
   ElasticSearchUtil.class,
@@ -53,8 +49,8 @@ import org.sunbird.user.util.UserUtil;
   InterServiceCommunicationFactory.class,
   LocationClientImpl.class
 })
-@PowerMockIgnore({"javax.management.*"})
-public class UserManagementActorTest {
+@PowerMockIgnore({"javax.management.*"})*/
+public class UserManagementActorTest extends BaseActorTest {
 
   private ActorSystem system = ActorSystem.create("system");
   private static final Props props = Props.create(UserManagementActor.class);

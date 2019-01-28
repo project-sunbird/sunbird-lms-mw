@@ -36,10 +36,12 @@ import static org.sunbird.content.util.TextBookTocUtil.readContent;
 import static org.sunbird.content.util.TextBookTocUtil.readHierarchy;
 import static org.sunbird.content.util.TextBookTocUtil.serialize;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
+import com.mashape.unirest.http.exceptions.UnirestException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -760,7 +762,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   }
 
   @SuppressWarnings("unchecked")
-  private Response linkDialCode(Map<String, Object> modifiedNodes) throws Exception {
+  private void linkDialCode(Map<String, Object> modifiedNodes) throws Exception {
     List<Map<String, Object>> content = new ArrayList<>();
     modifiedNodes.forEach(
         (k, v) -> {
@@ -783,12 +785,11 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     Map<String, Object> linkDialCoderequest = new HashMap<>();
     linkDialCoderequest.put(JsonKey.REQUEST, request);
     if (CollectionUtils.isNotEmpty(content)) {
-      return linkDialCodeApiCall(linkDialCoderequest);
+      linkDialCodeApiCall(linkDialCoderequest);
     }
-    return null;
   }
 
-  private Response linkDialCodeApiCall(Map<String, Object> updateRequest) throws Exception {
+  private Response linkDialCodeApiCall(Map<String, Object> updateRequest) {
     String requestUrl =
         getConfigValue(JsonKey.EKSTEP_BASE_URL) + getConfigValue(JsonKey.LINK_DIAL_CODE_API);
     HttpResponse<String> updateResponse = null;
@@ -805,7 +806,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         } else {
           Map<String, Object> resultMap =
               Optional.ofNullable(response.getResult()).orElse(new HashMap<>());
-          String message = "Linking of dial code failed";
+          String message = "Linking of dial code failed ";
           if (MapUtils.isNotEmpty(resultMap)) {
             Object obj = Optional.ofNullable(resultMap.get(JsonKey.TB_MESSAGES)).orElse("");
             if (obj instanceof List) {
@@ -822,7 +823,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       } else {
         ProjectCommonException.throwClientErrorException(ResponseCode.errorDialCodeLinkingFail);
       }
-    } catch (Exception e) {
+    } catch (JsonProcessingException | UnirestException e) {
+      ProjectCommonException.throwClientErrorException(ResponseCode.errorDialCodeLinkingFail);
+    } catch (IOException e) {
       ProjectCommonException.throwClientErrorException(ResponseCode.errorDialCodeLinkingFail);
     }
     return null;

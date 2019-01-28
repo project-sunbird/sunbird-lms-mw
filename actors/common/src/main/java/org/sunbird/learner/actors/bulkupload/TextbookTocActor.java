@@ -124,7 +124,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     if (StringUtils.equalsIgnoreCase(mode, JsonKey.CREATE)) {
       response = createTextbook(request, textbookData);
     } else if (StringUtils.equalsIgnoreCase(mode, JsonKey.UPDATE)) {
-      response = updateTextbook(request);
+      response = updateTextbook(request, (String) textbookData.get(JsonKey.CHANNEL));
     } else {
       unSupportedMessage();
     }
@@ -599,17 +599,21 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       log(
           "Create Textbook - UpdateHierarchy Request : " + mapper.writeValueAsString(updateRequest),
           INFO.name());
-      return callUpdateHierarchyAndLinkDialCodeApi(tbId, updateRequest, nodesModified);
+      return callUpdateHierarchyAndLinkDialCodeApi(
+          tbId, updateRequest, nodesModified, (String) textBookdata.get(JsonKey.CHANNEL));
     }
   }
 
   private Response callUpdateHierarchyAndLinkDialCodeApi(
-      String tbId, Map<String, Object> updateRequest, Map<String, Object> nodesModified)
+      String tbId,
+      Map<String, Object> updateRequest,
+      Map<String, Object> nodesModified,
+      String channel)
       throws Exception {
     Response response = new Response();
     updateHierarchy(tbId, updateRequest);
     try {
-      linkDialCode(nodesModified);
+      linkDialCode(nodesModified, channel);
     } catch (Exception ex) {
       ProjectLogger.log(
           "TextbookTocActor:callUpdateHierarchyAndLinkDialCodeApi : Exception occurred while linking dial code : "
@@ -707,7 +711,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   }
 
   @SuppressWarnings("unchecked")
-  private Response updateTextbook(Request request) throws Exception {
+  private Response updateTextbook(Request request, String channel) throws Exception {
     List<Map<String, Object>> data =
         (List<Map<String, Object>>)
             ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.FILE_DATA);
@@ -757,12 +761,12 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           "Update Textbook - UpdateHierarchy Request : " + mapper.writeValueAsString(updateRequest),
           INFO.name());
       return callUpdateHierarchyAndLinkDialCodeApi(
-          (String) request.get(TEXTBOOK_ID), updateRequest, nodesModified);
+          (String) request.get(TEXTBOOK_ID), updateRequest, nodesModified, channel);
     }
   }
 
   @SuppressWarnings("unchecked")
-  private void linkDialCode(Map<String, Object> modifiedNodes) throws Exception {
+  private void linkDialCode(Map<String, Object> modifiedNodes, String channel) throws Exception {
     List<Map<String, Object>> content = new ArrayList<>();
     modifiedNodes.forEach(
         (k, v) -> {
@@ -785,15 +789,17 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     Map<String, Object> linkDialCoderequest = new HashMap<>();
     linkDialCoderequest.put(JsonKey.REQUEST, request);
     if (CollectionUtils.isNotEmpty(content)) {
-      linkDialCodeApiCall(linkDialCoderequest);
+      linkDialCodeApiCall(linkDialCoderequest, channel);
     }
   }
 
-  private Response linkDialCodeApiCall(Map<String, Object> updateRequest) {
+  private Response linkDialCodeApiCall(Map<String, Object> updateRequest, String channel) {
     String requestUrl =
         getConfigValue(JsonKey.EKSTEP_BASE_URL) + getConfigValue(JsonKey.LINK_DIAL_CODE_API);
     HttpResponse<String> updateResponse = null;
     try {
+      Map<String, String> headers = getDefaultHeaders();
+      headers.put("X-Channel-Id", channel);
       updateResponse =
           Unirest.post(requestUrl)
               .headers(getDefaultHeaders())

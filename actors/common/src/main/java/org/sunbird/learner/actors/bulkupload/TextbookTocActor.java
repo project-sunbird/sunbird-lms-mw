@@ -802,7 +802,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       headers.put("X-Channel-Id", channel);
       updateResponse =
           Unirest.post(requestUrl)
-              .headers(getDefaultHeaders())
+              .headers(headers)
               .body(mapper.writeValueAsString(updateRequest))
               .asString();
       if (null != updateResponse) {

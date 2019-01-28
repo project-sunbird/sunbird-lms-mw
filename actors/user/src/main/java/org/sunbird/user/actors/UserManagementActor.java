@@ -296,6 +296,7 @@ public class UserManagementActor extends BaseActor {
         throwParameterMismatchException(JsonKey.ORG_EXTERNAL_ID, JsonKey.ORGANISATION_ID);
       }
       userMap.remove(JsonKey.ORG_EXTERNAL_ID);
+      userMap.put(JsonKey.ORGANISATION_ID, orgId);
     }
     processUserRequest(userMap, callerId);
   }

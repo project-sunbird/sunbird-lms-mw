@@ -161,7 +161,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       Map<String, String> reqDialCodeMap, Map<String, String> hierarchyDialCodeMap) {
     reqDialCodeMap.forEach(
         (k, v) -> {
-          if (!v.equalsIgnoreCase(hierarchyDialCodeMap.get(k))) {
+          if (StringUtils.isNotBlank(hierarchyDialCodeMap.get(k))
+              && !v.equalsIgnoreCase(hierarchyDialCodeMap.get(k))) {
             throwClientErrorException(
                 ResponseCode.errorDialCodeAlreadyAssociated,
                 MessageFormat.format(
@@ -879,6 +880,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     headers.put("Content-Type", "application/json");
     headers.put(
         JsonKey.AUTHORIZATION, JsonKey.BEARER + getConfigValue(JsonKey.SUNBIRD_AUTHORIZATION));
+    headers.put(
+        "x-authenticated-user-token",
+        "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJ1WXhXdE4tZzRfMld5MG5PS1ZoaE5hU0gtM2lSSjdXU25ibFlwVVU0TFRrIn0.eyJqdGkiOiIwYWViMDk0ZS04NTRiLTRhZmMtOTI2OC1mMzhiZjk2ZGNhYmYiLCJleHAiOjE1NDg2OTU3MjYsIm5iZiI6MCwiaWF0IjoxNTQ4Njc3NzI2LCJpc3MiOiJodHRwczovL2Rldi5zdW5iaXJkZWQub3JnL2F1dGgvcmVhbG1zL3N1bmJpcmQiLCJhdWQiOiJhZG1pbi1jbGkiLCJzdWIiOiI4NzRlZDhhNS03ODJlLTRmNmMtOGYzNi1lMDI4ODQ1NTkwMWUiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJhZG1pbi1jbGkiLCJhdXRoX3RpbWUiOjAsInNlc3Npb25fc3RhdGUiOiJkNmI2ZjNkOC0wMDM3LTRjMjUtYWRhMy03ZDcyNjMxMjBmMTIiLCJhY3IiOiIxIiwiYWxsb3dlZC1vcmlnaW5zIjpbXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbInVtYV9hdXRob3JpemF0aW9uIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnt9LCJuYW1lIjoiQ3JlYXRpb24iLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJudHB0ZXN0MTAyIiwiZ2l2ZW5fbmFtZSI6IkNyZWF0aW9uIiwiZmFtaWx5X25hbWUiOiIiLCJlbWFpbCI6ImFyY2hhbmFrKzFAaWxpbWkuaW4ifQ.KQhJmh0zZGsJ0WTQ5ABNL72W0kRS2uR4m_5KxH9VAmneQsv9745_clC1Zjk7LsUdbztkYf_vjxHPGJTrC__Pc1nDfB_Bem3qtgh-BE7cxAaVDlaWo2798h9afxoSRO45ndcLHzlmZcy17FgpFU0DDeZiU6eRnvxK3irzGZmYnmkqVCawGtR-RQU14HqUQEkHksWVkeJK7Z_SqVtOz3MTjpUn3Gy1QS46j-OyhQ_WGiWSoV90Gq8jiX20MSElVHdB6RMDwH-yEq3fF-xXeYA4NBPmswYCI3byagpZ4ZvR-8vmKE4cNjdnqF9LZOrJs5Kw2WwEluPygnK1YqpMDRczWw");
     return headers;
   }
 

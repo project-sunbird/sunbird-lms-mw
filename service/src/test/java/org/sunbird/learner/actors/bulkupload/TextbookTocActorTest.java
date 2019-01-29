@@ -104,7 +104,6 @@ public class TextbookTocActorTest {
     ProjectCommonException res = (ProjectCommonException) doRequest(true, dialCode);
     Assert.assertEquals(
         res.getCode(), ResponseCode.errorDialCodeNotReservedForTextBook.getErrorCode());
-    Assert.assertNotNull(res);
   }
 
   @Test
@@ -115,7 +114,6 @@ public class TextbookTocActorTest {
             NORMAL_HEADER, IDENTIFIER, TEXTBOOK_NAME, UNIT_NAME, JsonKey.NO, "2019", "", "", true);
     ProjectCommonException res = (ProjectCommonException) doRequest(true, dialCode);
     Assert.assertEquals(res.getCode(), ResponseCode.errorConflictingValues.getErrorCode());
-    Assert.assertNotNull(res);
   }
 
   @Test
@@ -143,7 +141,6 @@ public class TextbookTocActorTest {
             true);
     ProjectCommonException res = (ProjectCommonException) doRequest(true, dialCode);
     Assert.assertEquals(res.getCode(), ResponseCode.errorDuplicateEntries.getErrorCode());
-    Assert.assertNotNull(res);
   }
 
   @Test
@@ -151,7 +148,6 @@ public class TextbookTocActorTest {
     mockRequiredMethods(false);
     ProjectCommonException res = (ProjectCommonException) doRequest(true, NORMAL_HEADER);
     Assert.assertEquals(res.getCode(), ResponseCode.blankCsvData.getErrorCode());
-    Assert.assertNotNull(res);
   }
 
   @Test
@@ -170,7 +166,6 @@ public class TextbookTocActorTest {
             true);
     ProjectCommonException res = (ProjectCommonException) doRequest(true, dialCode);
     Assert.assertEquals(res.getCode(), ResponseCode.errorInvalidTopic.getErrorCode());
-    Assert.assertNotNull(res);
   }
 
   @Test
@@ -182,7 +177,6 @@ public class TextbookTocActorTest {
     ProjectCommonException res = (ProjectCommonException) doRequest(true, dialCode);
     Assert.assertEquals(
         res.getCode(), ResponseCode.errorDialCodeNotReservedForTextBook.getErrorCode());
-    Assert.assertNotNull(res);
   }
 
   @Test
@@ -193,7 +187,6 @@ public class TextbookTocActorTest {
             NORMAL_HEADER, IDENTIFIER, TEXTBOOK_NAME, UNIT_NAME, JsonKey.YES, "2019", "", "", true);
     ProjectCommonException res = (ProjectCommonException) doRequest(true, dialCode);
     Assert.assertEquals(res.getCode(), ResponseCode.errorDialCodeAlreadyAssociated.getErrorCode());
-    Assert.assertNotNull(res);
   }
 
   @Test

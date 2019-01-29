@@ -87,7 +87,7 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
         bulkUploadProcess.setFailureResult(e.getMessage());
         bulkUploadDao.update(bulkUploadProcess);
         ProjectLogger.log(
-            logMessagePrefix + "Exception occurred with error message = " + e.getMessage(), e);
+            logMessagePrefix + "Exception occurred with error message = " + e.getMessage(),LoggerEnum.INFO, e);
       }
     }
 
@@ -134,7 +134,7 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
 
       } catch (IOException e) {
         ProjectLogger.log(
-            logMessagePrefix + "Exception occurred with error message = " + e.getMessage(), e);
+            logMessagePrefix + "Exception occurred with error message = " + e.getMessage(),LoggerEnum.INFO, e);
       }
       performBatchUpdate(tasks);
       sequence = nextSequence;
@@ -165,7 +165,7 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
 
     } catch (Exception e) {
       ProjectLogger.log(
-          logMessagePrefix + "Exception occurred with error message = " + e.getMessage(), e);
+          logMessagePrefix + "Exception occurred with error message = " + e.getMessage(), LoggerEnum.INFO, e);
     }
     bulkUploadDao.update(bulkUploadProcess);
   }
@@ -223,7 +223,7 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
       file = File.createTempFile(objType, "upload");
     } catch (IOException e) {
       ProjectLogger.log(
-          logMessagePrefix + "Exception occurred with error message = " + e.getMessage(), e);
+          logMessagePrefix + "Exception occurred with error message = " + e.getMessage(), LoggerEnum.INFO, e);
     }
     return file;
   }

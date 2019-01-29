@@ -107,7 +107,7 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
     Integer taskCount = bulkUploadProcess.getTaskCount();
     List<Map<String, Object>> successList = new LinkedList<>();
     List<Map<String, Object>> failureList = new LinkedList<>();
-    while (sequence <= taskCount) {
+    while (sequence < taskCount) {
       Integer nextSequence = sequence + CASSANDRA_BATCH_SIZE;
       Map<String, Object> queryMap = new HashMap<>();
       queryMap.put(JsonKey.PROCESS_ID, bulkUploadProcess.getId());
@@ -116,6 +116,12 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
       sequenceRange.put(Constants.LTE, nextSequence);
       queryMap.put(BulkUploadJsonKey.SEQUENCE_ID, sequenceRange);
       List<BulkUploadProcessTask> tasks = bulkUploadProcessTaskDao.readByPrimaryKeys(queryMap);
+      if(tasks==null) {
+    	  ProjectLogger.log(
+    	            logMessagePrefix + "No bulkUploadProcessTask found for process id: " + bulkUploadProcess.getId() + " and range " + sequence + ":" + nextSequence,LoggerEnum.INFO);
+          sequence = nextSequence;
+    	  continue;
+      }
       function.apply(tasks);
 
       try {

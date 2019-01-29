@@ -52,7 +52,7 @@ public class TextbookTocActorTest {
   private static final Props props =
       Props.create(org.sunbird.learner.actors.bulkupload.TextbookTocActor.class);
 
-  private static final String NORMAL_HEADER =
+  private static final String VALID_HEADER =
       "Identifier,Medium,Grade,Subject,Textbook Name,Level 1 Textbook Unit,Description,QR Code Required?,QR Code,Purpose of Content to be linked,Mapped Topics,Keywords\n";
   private static final String TEXTBOOK_TOC_INPUT_MAPPING =
       getFileAsString("FrameworkForTextbookTocActorTest.json");
@@ -84,7 +84,7 @@ public class TextbookTocActorTest {
     String dialCode =
         getDialCodeData(
             getDialCodeData(
-                NORMAL_HEADER,
+                VALID_HEADER,
                 IDENTIFIER,
                 TEXTBOOK_NAME,
                 UNIT_NAME,
@@ -111,7 +111,7 @@ public class TextbookTocActorTest {
     mockRequiredMethods(false);
     String dialCode =
         getDialCodeData(
-            NORMAL_HEADER, IDENTIFIER, TEXTBOOK_NAME, UNIT_NAME, JsonKey.NO, "2019", "", "", true);
+            VALID_HEADER, IDENTIFIER, TEXTBOOK_NAME, UNIT_NAME, JsonKey.NO, "2019", "", "", true);
     ProjectCommonException res = (ProjectCommonException) doRequest(true, dialCode);
     Assert.assertEquals(res.getCode(), ResponseCode.errorConflictingValues.getErrorCode());
   }
@@ -122,7 +122,7 @@ public class TextbookTocActorTest {
     String dialCode =
         getDialCodeData(
             getDialCodeData(
-                NORMAL_HEADER,
+                VALID_HEADER,
                 IDENTIFIER,
                 TEXTBOOK_NAME,
                 UNIT_NAME,
@@ -146,7 +146,7 @@ public class TextbookTocActorTest {
   @Test
   public void testUpdateFailureblankCsv() throws IOException {
     mockRequiredMethods(false);
-    ProjectCommonException res = (ProjectCommonException) doRequest(true, NORMAL_HEADER);
+    ProjectCommonException res = (ProjectCommonException) doRequest(true, VALID_HEADER);
     Assert.assertEquals(res.getCode(), ResponseCode.blankCsvData.getErrorCode());
   }
 
@@ -155,7 +155,7 @@ public class TextbookTocActorTest {
     mockRequiredMethods(false);
     String dialCode =
         getDialCodeData(
-            NORMAL_HEADER,
+            VALID_HEADER,
             IDENTIFIER,
             TEXTBOOK_NAME,
             UNIT_NAME,
@@ -173,7 +173,7 @@ public class TextbookTocActorTest {
     mockRequiredMethods(false);
     String dialCode =
         getDialCodeData(
-            NORMAL_HEADER, IDENTIFIER, TEXTBOOK_NAME, UNIT_NAME, JsonKey.YES, "2089", "", "", true);
+            VALID_HEADER, IDENTIFIER, TEXTBOOK_NAME, UNIT_NAME, JsonKey.YES, "2089", "", "", true);
     ProjectCommonException res = (ProjectCommonException) doRequest(true, dialCode);
     Assert.assertEquals(
         res.getCode(), ResponseCode.errorDialCodeNotReservedForTextBook.getErrorCode());
@@ -184,7 +184,7 @@ public class TextbookTocActorTest {
     mockRequiredMethods(true);
     String dialCode =
         getDialCodeData(
-            NORMAL_HEADER, IDENTIFIER, TEXTBOOK_NAME, UNIT_NAME, JsonKey.YES, "2019", "", "", true);
+            VALID_HEADER, IDENTIFIER, TEXTBOOK_NAME, UNIT_NAME, JsonKey.YES, "2019", "", "", true);
     ProjectCommonException res = (ProjectCommonException) doRequest(true, dialCode);
     Assert.assertEquals(res.getCode(), ResponseCode.errorDialCodeAlreadyAssociated.getErrorCode());
   }
@@ -194,7 +194,7 @@ public class TextbookTocActorTest {
     mockRequiredMethods(false);
     String dialCode =
         getDialCodeData(
-            NORMAL_HEADER, IDENTIFIER, TEXTBOOK_NAME, UNIT_NAME, JsonKey.YES, "2019", "", "", true);
+            VALID_HEADER, IDENTIFIER, TEXTBOOK_NAME, UNIT_NAME, JsonKey.YES, "2019", "", "", true);
     mockResponseSuccess();
     Response res = (Response) doRequest(false, dialCode);
     Assert.assertNotNull(res);

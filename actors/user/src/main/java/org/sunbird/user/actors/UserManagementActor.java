@@ -106,10 +106,16 @@ public class UserManagementActor extends BaseActor {
     actorMessage.toLower();
     Util.getUserProfileConfig(systemSettingActorRef);
     String callerId = (String) actorMessage.getContext().get(JsonKey.CALLER_ID);
-    if (StringUtils.isNotBlank(callerId)) {
-      userService.validateUploader(actorMessage);
-    } else {
-      userService.validateUserId(actorMessage);
+    boolean isPrivate = false;
+    if (actorMessage.getContext().containsKey(JsonKey.PRIVATE)) {
+      isPrivate = (boolean) actorMessage.getContext().get(JsonKey.PRIVATE);
+    }
+    if (!isPrivate) {
+      if (StringUtils.isNotBlank(callerId)) {
+        userService.validateUploader(actorMessage);
+      } else {
+        userService.validateUserId(actorMessage);
+      }
     }
     Map<String, Object> userMap = actorMessage.getRequest();
     userRequestValidator.validateUpdateUserRequest(actorMessage);
@@ -290,6 +296,7 @@ public class UserManagementActor extends BaseActor {
         throwParameterMismatchException(JsonKey.ORG_EXTERNAL_ID, JsonKey.ORGANISATION_ID);
       }
       userMap.remove(JsonKey.ORG_EXTERNAL_ID);
+      userMap.put(JsonKey.ORGANISATION_ID, orgId);
     }
     processUserRequest(userMap, callerId);
   }

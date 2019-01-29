@@ -87,7 +87,9 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
         bulkUploadProcess.setFailureResult(e.getMessage());
         bulkUploadDao.update(bulkUploadProcess);
         ProjectLogger.log(
-            logMessagePrefix + "Exception occurred with error message = " + e.getMessage(),LoggerEnum.INFO, e);
+            logMessagePrefix + "Exception occurred with error message = " + e.getMessage(),
+            LoggerEnum.INFO,
+            e);
       }
     }
 
@@ -107,7 +109,7 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
     Integer taskCount = bulkUploadProcess.getTaskCount();
     List<Map<String, Object>> successList = new LinkedList<>();
     List<Map<String, Object>> failureList = new LinkedList<>();
-    while (sequence <= taskCount) {
+    while (sequence < taskCount) {
       Integer nextSequence = sequence + CASSANDRA_BATCH_SIZE;
       Map<String, Object> queryMap = new HashMap<>();
       queryMap.put(JsonKey.PROCESS_ID, bulkUploadProcess.getId());
@@ -116,6 +118,19 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
       sequenceRange.put(Constants.LTE, nextSequence);
       queryMap.put(BulkUploadJsonKey.SEQUENCE_ID, sequenceRange);
       List<BulkUploadProcessTask> tasks = bulkUploadProcessTaskDao.readByPrimaryKeys(queryMap);
+      if (tasks == null) {
+        ProjectLogger.log(
+            logMessagePrefix
+                + "No bulkUploadProcessTask found for process id: "
+                + bulkUploadProcess.getId()
+                + " and range "
+                + sequence
+                + ":"
+                + nextSequence,
+            LoggerEnum.INFO);
+        sequence = nextSequence;
+        continue;
+      }
       function.apply(tasks);
 
       try {
@@ -134,7 +149,9 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
 
       } catch (IOException e) {
         ProjectLogger.log(
-            logMessagePrefix + "Exception occurred with error message = " + e.getMessage(),LoggerEnum.INFO, e);
+            logMessagePrefix + "Exception occurred with error message = " + e.getMessage(),
+            LoggerEnum.INFO,
+            e);
       }
       performBatchUpdate(tasks);
       sequence = nextSequence;
@@ -165,7 +182,9 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
 
     } catch (Exception e) {
       ProjectLogger.log(
-          logMessagePrefix + "Exception occurred with error message = " + e.getMessage(), LoggerEnum.INFO, e);
+          logMessagePrefix + "Exception occurred with error message = " + e.getMessage(),
+          LoggerEnum.INFO,
+          e);
     }
     bulkUploadDao.update(bulkUploadProcess);
   }
@@ -223,7 +242,9 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
       file = File.createTempFile(objType, "upload");
     } catch (IOException e) {
       ProjectLogger.log(
-          logMessagePrefix + "Exception occurred with error message = " + e.getMessage(), LoggerEnum.INFO, e);
+          logMessagePrefix + "Exception occurred with error message = " + e.getMessage(),
+          LoggerEnum.INFO,
+          e);
     }
     return file;
   }

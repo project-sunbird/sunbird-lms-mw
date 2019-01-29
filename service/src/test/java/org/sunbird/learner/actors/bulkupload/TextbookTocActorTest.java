@@ -179,7 +179,6 @@ public class TextbookTocActorTest {
     String dialCode =
         getDialCodeData(
             NORMAL_HEADER, IDENTIFIER, TEXTBOOK_NAME, UNIT_NAME, JsonKey.YES, "2089", "", "", true);
-
     ProjectCommonException res = (ProjectCommonException) doRequest(true, dialCode);
     Assert.assertEquals(
         res.getCode(), ResponseCode.errorDialCodeNotReservedForTextBook.getErrorCode());
@@ -192,7 +191,6 @@ public class TextbookTocActorTest {
     String dialCode =
         getDialCodeData(
             NORMAL_HEADER, IDENTIFIER, TEXTBOOK_NAME, UNIT_NAME, JsonKey.YES, "2019", "", "", true);
-
     ProjectCommonException res = (ProjectCommonException) doRequest(true, dialCode);
     Assert.assertEquals(res.getCode(), ResponseCode.errorDialCodeAlreadyAssociated.getErrorCode());
     Assert.assertNotNull(res);
@@ -253,7 +251,6 @@ public class TextbookTocActorTest {
   }
 
   private Response getReadHierarchy(boolean error) {
-    // TODO Auto-generated method stub
     Response res = new Response();
     List<String> dialCodes = new ArrayList<>();
     Map<String, Object> content = new HashMap<>();
@@ -308,26 +305,8 @@ public class TextbookTocActorTest {
       String mappedTopic,
       String keywords,
       boolean isLastEntry) {
-    if (isLastEntry) {
-      return dialCode
-          + identifier
-          + ","
-          + ","
-          + ","
-          + ","
-          + textbookName
-          + ","
-          + textbookUnit
-          + ","
-          + ","
-          + isQrCodeReq
-          + ","
-          + qrCode
-          + ","
-          + ","
-          + mappedTopic
-          + ","
-          + keywords;
+    if (!isLastEntry) {
+      keywords = keywords + "\n";
     }
     return dialCode
         + identifier
@@ -347,7 +326,6 @@ public class TextbookTocActorTest {
         + ","
         + mappedTopic
         + ","
-        + keywords
-        + "\n";
+        + keywords;
   }
 }

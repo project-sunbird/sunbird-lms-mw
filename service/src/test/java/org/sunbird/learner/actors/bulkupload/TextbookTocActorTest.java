@@ -298,9 +298,7 @@ public class TextbookTocActorTest {
       String mappedTopic,
       String keywords,
       boolean isLastEntry) {
-    if (!isLastEntry) {
-      keywords = keywords + "\n";
-    }
+
     return dialCode
         + identifier
         + ","
@@ -319,6 +317,6 @@ public class TextbookTocActorTest {
         + ","
         + mappedTopic
         + ","
-        + keywords;
+        + (isLastEntry ? keywords : keywords + "\n");
   }
 }

@@ -161,7 +161,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       Map<String, String> reqDialCodeMap, Map<String, String> hierarchyDialCodeMap) {
     reqDialCodeMap.forEach(
         (k, v) -> {
-          if (!v.equalsIgnoreCase(hierarchyDialCodeMap.get(k))) {
+          if (StringUtils.isNotBlank(hierarchyDialCodeMap.get(k))
+              && !v.equalsIgnoreCase(hierarchyDialCodeMap.get(k))) {
             throwClientErrorException(
                 ResponseCode.errorDialCodeAlreadyAssociated,
                 MessageFormat.format(
@@ -267,16 +268,19 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   @SuppressWarnings("unchecked")
   private void validateDialCodesWithReservedDialCodes(
       Set<String> dialCodes, Map<String, Object> textBookdata) {
-    Set<String> reservedDialCodes =
-        ((Map<String, Integer>) textBookdata.get(JsonKey.RESERVED_DIAL_CODES)).keySet();
+    Map<String, Integer> reservedDialcodeMap =
+        (Map<String, Integer>) textBookdata.get(JsonKey.RESERVED_DIAL_CODES);
     Set<String> invalidDialCodes = new HashSet<>();
-    if (CollectionUtils.isNotEmpty(reservedDialCodes)) {
-      dialCodes.forEach(
-          dialCode -> {
-            if (!reservedDialCodes.contains(dialCode)) {
-              invalidDialCodes.add(dialCode);
-            }
-          });
+    if (MapUtils.isNotEmpty(reservedDialcodeMap)) {
+      if (MapUtils.isNotEmpty(reservedDialcodeMap)) {
+        Set<String> reservedDialCodes = reservedDialcodeMap.keySet();
+        dialCodes.forEach(
+            dialCode -> {
+              if (!reservedDialCodes.contains(dialCode)) {
+                invalidDialCodes.add(dialCode);
+              }
+            });
+      }
       if (CollectionUtils.isNotEmpty(invalidDialCodes)) {
         throwDialCodeNotReservedError(textBookdata, invalidDialCodes);
       }
@@ -766,12 +770,15 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           if (MapUtils.isNotEmpty(metadata)) {
             String dialCodeRequired = (String) metadata.get(JsonKey.DIAL_CODE_REQUIRED);
             if (JsonKey.YES.equalsIgnoreCase(dialCodeRequired)) {
+              Map<String, Object> linkDialCode = new HashMap<>();
+              linkDialCode.put(JsonKey.IDENTIFIER, k);
               if (null != metadata.get(JsonKey.DIAL_CODES)) {
-                Map<String, Object> linkDialCode = new HashMap<>();
-                linkDialCode.put(JsonKey.IDENTIFIER, k);
                 linkDialCode.put("dialcode", metadata.get(JsonKey.DIAL_CODES));
-                content.add(linkDialCode);
+              } else {
+                List<String> dialcodes = new ArrayList<>();
+                linkDialCode.put("dialcode", dialcodes);
               }
+              content.add(linkDialCode);
             }
           }
         });

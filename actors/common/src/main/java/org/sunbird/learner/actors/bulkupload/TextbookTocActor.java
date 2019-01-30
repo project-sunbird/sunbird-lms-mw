@@ -36,12 +36,10 @@ import static org.sunbird.content.util.TextBookTocUtil.readContent;
 import static org.sunbird.content.util.TextBookTocUtil.readHierarchy;
 import static org.sunbird.content.util.TextBookTocUtil.serialize;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
-import com.mashape.unirest.http.exceptions.UnirestException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -268,10 +266,11 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   @SuppressWarnings("unchecked")
   private void validateDialCodesWithReservedDialCodes(
       Set<String> dialCodes, Map<String, Object> textBookdata) {
-    Set<String> reservedDialCodes =
-        ((Map<String, Integer>) textBookdata.get(JsonKey.RESERVED_DIAL_CODES)).keySet();
+    Map<String, Integer> reservedDialcodeMap =
+        (Map<String, Integer>) textBookdata.get(JsonKey.RESERVED_DIAL_CODES);
     Set<String> invalidDialCodes = new HashSet<>();
-    if (CollectionUtils.isNotEmpty(reservedDialCodes)) {
+    if (MapUtils.isNotEmpty(reservedDialcodeMap)) {
+      Set<String> reservedDialCodes = reservedDialcodeMap.keySet();
       dialCodes.forEach(
           dialCode -> {
             if (!reservedDialCodes.contains(dialCode)) {
@@ -788,7 +787,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     }
   }
 
-  private Response linkDialCodeApiCall(Map<String, Object> updateRequest, String channel) {
+  private Response linkDialCodeApiCall(Map<String, Object> updateRequest, String channel)
+      throws Exception {
     String requestUrl =
         getConfigValue(JsonKey.EKSTEP_BASE_URL) + getConfigValue(JsonKey.LINK_DIAL_CODE_API);
     HttpResponse<String> updateResponse = null;
@@ -816,18 +816,23 @@ public class TextbookTocActor extends BaseBulkUploadActor {
               message += String.valueOf(obj);
             }
           }
-          throw new ProjectCommonException(
-              response.getResponseCode().name(),
-              message,
-              response.getResponseCode().getResponseCode());
+          ProjectCommonException.throwClientErrorException(
+              ResponseCode.errorDialCodeLinkingClientError,
+              MessageFormat.format(
+                  ResponseCode.errorDialCodeLinkingClientError.getErrorMessage(), message));
         }
       } else {
         ProjectCommonException.throwClientErrorException(ResponseCode.errorDialCodeLinkingFail);
       }
-    } catch (JsonProcessingException | UnirestException e) {
-      ProjectCommonException.throwClientErrorException(ResponseCode.errorDialCodeLinkingFail);
-    } catch (IOException e) {
-      ProjectCommonException.throwClientErrorException(ResponseCode.errorDialCodeLinkingFail);
+    } catch (Exception ex) {
+      if (ex instanceof ProjectCommonException) {
+        throw ex;
+      } else {
+        throw new ProjectCommonException(
+            ResponseCode.errorTbUpdate.getErrorCode(),
+            ResponseCode.errorTbUpdate.getErrorMessage(),
+            SERVER_ERROR.getResponseCode());
+      }
     }
     return null;
   }
@@ -860,15 +865,20 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             }
           }
           throw new ProjectCommonException(
-              response.getResponseCode().name(),
-              message,
-              response.getResponseCode().getResponseCode());
+              ResponseCode.errorDialCodeLinkingClientError.getErrorCode(),
+              MessageFormat.format(
+                  ResponseCode.errorDialCodeLinkingClientError.getErrorMessage(), message),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
         }
       } catch (Exception ex) {
-        throw new ProjectCommonException(
-            ResponseCode.errorTbUpdate.getErrorCode(),
-            ResponseCode.errorTbUpdate.getErrorMessage(),
-            SERVER_ERROR.getResponseCode());
+        if (ex instanceof ProjectCommonException) {
+          throw ex;
+        } else {
+          throw new ProjectCommonException(
+              ResponseCode.errorTbUpdate.getErrorCode(),
+              ResponseCode.errorTbUpdate.getErrorMessage(),
+              SERVER_ERROR.getResponseCode());
+        }
       }
     } else {
       throw new ProjectCommonException(
@@ -913,50 +923,54 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       if (StringUtils.isNotBlank(framework)) newMeta.put(JsonKey.FRAMEWORK, framework);
       node.put(JsonKey.METADATA, newMeta);
     }
-    nodesModified.put(code, node);
+    if (StringUtils.isNotBlank(code)) {
+      nodesModified.put(code, node);
+    }
   }
 
   private Map<String, Object> initializeMetaDataForModifiedNode(Map<String, Object> metadata) {
     Map<String, Object> newMeta = new HashMap<String, Object>();
-    List<String> keywords =
-        (StringUtils.isNotBlank((String) metadata.get(JsonKey.KEYWORDS)))
-            ? asList(((String) metadata.get(JsonKey.KEYWORDS)).split(","))
-            : null;
-    List<String> gradeLevel =
-        (StringUtils.isNotBlank((String) metadata.get(JsonKey.GRADE_LEVEL)))
-            ? asList(((String) metadata.get(JsonKey.GRADE_LEVEL)).split(","))
-            : null;
-    List<String> dialCodes =
-        (StringUtils.isNotBlank((String) metadata.get(JsonKey.DIAL_CODES)))
-            ? asList(((String) metadata.get(JsonKey.DIAL_CODES)).split(","))
-            : null;
+    if (MapUtils.isNotEmpty(metadata)) {
+      List<String> keywords =
+          (StringUtils.isNotBlank((String) metadata.get(JsonKey.KEYWORDS)))
+              ? asList(((String) metadata.get(JsonKey.KEYWORDS)).split(","))
+              : null;
+      List<String> gradeLevel =
+          (StringUtils.isNotBlank((String) metadata.get(JsonKey.GRADE_LEVEL)))
+              ? asList(((String) metadata.get(JsonKey.GRADE_LEVEL)).split(","))
+              : null;
+      List<String> dialCodes =
+          (StringUtils.isNotBlank((String) metadata.get(JsonKey.DIAL_CODES)))
+              ? asList(((String) metadata.get(JsonKey.DIAL_CODES)).split(","))
+              : null;
 
-    List<String> topics =
-        (StringUtils.isNotBlank((String) metadata.get(JsonKey.TOPIC)))
-            ? asList(((String) metadata.get(JsonKey.TOPIC)).split(","))
-            : null;
-    newMeta.putAll(metadata);
-    newMeta.remove(JsonKey.KEYWORDS);
-    newMeta.remove(JsonKey.GRADE_LEVEL);
-    newMeta.remove(JsonKey.DIAL_CODES);
-    newMeta.remove(JsonKey.TOPIC);
-    if (CollectionUtils.isNotEmpty(keywords)) newMeta.put(JsonKey.KEYWORDS, keywords);
-    if (CollectionUtils.isNotEmpty(gradeLevel)) newMeta.put(JsonKey.GRADE_LEVEL, gradeLevel);
-    if (CollectionUtils.isNotEmpty(dialCodes)) {
-      List<String> dCodes = new ArrayList<>();
-      dialCodes.forEach(
-          s -> {
-            dCodes.add(s.trim());
-          });
-      newMeta.put(JsonKey.DIAL_CODES, dCodes);
-    }
-    if (CollectionUtils.isNotEmpty(topics)) {
-      List<String> topicList = new ArrayList<>();
-      topics.forEach(
-          s -> {
-            topicList.add(s.trim());
-          });
-      newMeta.put(JsonKey.TOPIC, topicList);
+      List<String> topics =
+          (StringUtils.isNotBlank((String) metadata.get(JsonKey.TOPIC)))
+              ? asList(((String) metadata.get(JsonKey.TOPIC)).split(","))
+              : null;
+      newMeta.putAll(metadata);
+      newMeta.remove(JsonKey.KEYWORDS);
+      newMeta.remove(JsonKey.GRADE_LEVEL);
+      newMeta.remove(JsonKey.DIAL_CODES);
+      newMeta.remove(JsonKey.TOPIC);
+      if (CollectionUtils.isNotEmpty(keywords)) newMeta.put(JsonKey.KEYWORDS, keywords);
+      if (CollectionUtils.isNotEmpty(gradeLevel)) newMeta.put(JsonKey.GRADE_LEVEL, gradeLevel);
+      if (CollectionUtils.isNotEmpty(dialCodes)) {
+        List<String> dCodes = new ArrayList<>();
+        dialCodes.forEach(
+            s -> {
+              dCodes.add(s.trim());
+            });
+        newMeta.put(JsonKey.DIAL_CODES, dCodes);
+      }
+      if (CollectionUtils.isNotEmpty(topics)) {
+        List<String> topicList = new ArrayList<>();
+        topics.forEach(
+            s -> {
+              topicList.add(s.trim());
+            });
+        newMeta.put(JsonKey.TOPIC, topicList);
+      }
     }
     return newMeta;
   }

@@ -268,16 +268,19 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   @SuppressWarnings("unchecked")
   private void validateDialCodesWithReservedDialCodes(
       Set<String> dialCodes, Map<String, Object> textBookdata) {
-    Set<String> reservedDialCodes =
-        ((Map<String, Integer>) textBookdata.get(JsonKey.RESERVED_DIAL_CODES)).keySet();
+    Map<String, Integer> reservedDialcodeMap =
+        (Map<String, Integer>) textBookdata.get(JsonKey.RESERVED_DIAL_CODES);
     Set<String> invalidDialCodes = new HashSet<>();
-    if (CollectionUtils.isNotEmpty(reservedDialCodes)) {
-      dialCodes.forEach(
-          dialCode -> {
-            if (!reservedDialCodes.contains(dialCode)) {
-              invalidDialCodes.add(dialCode);
-            }
-          });
+    if (MapUtils.isNotEmpty(reservedDialcodeMap)) {
+      if (MapUtils.isNotEmpty(reservedDialcodeMap)) {
+        Set<String> reservedDialCodes = reservedDialcodeMap.keySet();
+        dialCodes.forEach(
+            dialCode -> {
+              if (!reservedDialCodes.contains(dialCode)) {
+                invalidDialCodes.add(dialCode);
+              }
+            });
+      }
       if (CollectionUtils.isNotEmpty(invalidDialCodes)) {
         throwDialCodeNotReservedError(textBookdata, invalidDialCodes);
       }

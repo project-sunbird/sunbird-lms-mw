@@ -136,12 +136,27 @@ public class UserProfileReadActor extends BaseActor {
       userId = id;
       showMaskedData = false;
     }
-
-    Map<String, Object> result =
-        ElasticSearchUtil.getDataByIdentifier(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.user.getTypeName(),
-            userId);
+    boolean isPrivate = (boolean) actorMessage.getContext().get(JsonKey.PRIVATE);
+    Map<String, Object> result;
+    if (!isPrivate) {
+      result =
+          ElasticSearchUtil.getDataByIdentifier(
+              ProjectUtil.EsIndex.sunbird.getIndexName(),
+              ProjectUtil.EsType.user.getTypeName(),
+              userId);
+    } else {
+      UserDao userDao = new UserDaoImpl();
+      User foundUser = userDao.getUserById(userId);
+      if (foundUser == null) {
+        throw new ProjectCommonException(
+            ResponseCode.userNotFound.getErrorCode(),
+            ResponseCode.userNotFound.getErrorMessage(),
+            ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+      }
+      ObjectMapper objectMapper = new ObjectMapper();
+      objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+      result = objectMapper.convertValue(foundUser, Map.class);
+    }
     // check user found or not
     if (result == null || result.size() == 0) {
       throw new ProjectCommonException(

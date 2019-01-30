@@ -923,7 +923,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       if (StringUtils.isNotBlank(framework)) newMeta.put(JsonKey.FRAMEWORK, framework);
       node.put(JsonKey.METADATA, newMeta);
     }
-    nodesModified.put(code, node);
+    if (StringUtils.isNotBlank(code)) {
+      nodesModified.put(code, node);
+    }
   }
 
   private Map<String, Object> initializeMetaDataForModifiedNode(Map<String, Object> metadata) {

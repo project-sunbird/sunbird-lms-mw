@@ -9,6 +9,7 @@ import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
+import com.mashape.unirest.http.exceptions.UnirestException;
 import com.mashape.unirest.request.HttpRequestWithBody;
 import com.mashape.unirest.request.body.RequestBodyEntity;
 import java.io.ByteArrayInputStream;
@@ -79,29 +80,12 @@ public class TextbookTocActorTest {
   }
 
   @Test
-  public void testUpdateFailureWithCorrectAndIncorrectDialCodeData() throws IOException {
+  public void testUpdateFailureWithCorrectAndIncorrecttocDataData() throws IOException {
     mockRequiredMethods(false);
-    String dialCode =
-        getDialCodeData(
-            getDialCodeData(
-                VALID_HEADER,
-                IDENTIFIER,
-                TEXTBOOK_NAME,
-                UNIT_NAME,
-                JsonKey.YES,
-                "2019",
-                "",
-                "",
-                false),
-            IDENTIFIER,
-            TEXTBOOK_NAME,
-            UNIT_NAME,
-            JsonKey.YES,
-            "2096",
-            "",
-            "",
-            true);
-    ProjectCommonException res = (ProjectCommonException) doRequest(true, dialCode);
+    StringBuffer tocData = new StringBuffer(VALID_HEADER);
+    tocData = addTocDataRow(tocData, JsonKey.YES, "2019", "", "", false);
+    tocData = addTocDataRow(tocData, JsonKey.YES, "2096", "", "", true);
+    ProjectCommonException res = (ProjectCommonException) doRequest(true, tocData.toString());
     Assert.assertEquals(
         res.getCode(), ResponseCode.errorDialCodeNotReservedForTextBook.getErrorCode());
   }
@@ -109,37 +93,19 @@ public class TextbookTocActorTest {
   @Test
   public void testUpdateFailureDailcodeNotreq() throws IOException {
     mockRequiredMethods(false);
-    String dialCode =
-        getDialCodeData(
-            VALID_HEADER, IDENTIFIER, TEXTBOOK_NAME, UNIT_NAME, JsonKey.NO, "2019", "", "", true);
-    ProjectCommonException res = (ProjectCommonException) doRequest(true, dialCode);
+    StringBuffer tocData = new StringBuffer(VALID_HEADER);
+    tocData = addTocDataRow(tocData, JsonKey.NO, "2019", "", "", true);
+    ProjectCommonException res = (ProjectCommonException) doRequest(true, tocData.toString());
     Assert.assertEquals(res.getCode(), ResponseCode.errorConflictingValues.getErrorCode());
   }
 
   @Test
   public void testUpdateFailureDuplicateEntry() throws IOException {
     mockRequiredMethods(false);
-    String dialCode =
-        getDialCodeData(
-            getDialCodeData(
-                VALID_HEADER,
-                IDENTIFIER,
-                TEXTBOOK_NAME,
-                UNIT_NAME,
-                JsonKey.YES,
-                "2019",
-                "",
-                "",
-                false),
-            IDENTIFIER,
-            TEXTBOOK_NAME,
-            UNIT_NAME,
-            JsonKey.YES,
-            "2019",
-            "",
-            "",
-            true);
-    ProjectCommonException res = (ProjectCommonException) doRequest(true, dialCode);
+    StringBuffer tocData = new StringBuffer(VALID_HEADER);
+    tocData = addTocDataRow(tocData, JsonKey.YES, "2019", "", "", false);
+    tocData = addTocDataRow(tocData, JsonKey.YES, "2019", "", "", true);
+    ProjectCommonException res = (ProjectCommonException) doRequest(true, tocData.toString());
     Assert.assertEquals(res.getCode(), ResponseCode.errorDuplicateEntries.getErrorCode());
   }
 
@@ -153,54 +119,42 @@ public class TextbookTocActorTest {
   @Test
   public void testUpdateInvalideTopicFailure() throws IOException {
     mockRequiredMethods(false);
-    String dialCode =
-        getDialCodeData(
-            VALID_HEADER,
-            IDENTIFIER,
-            TEXTBOOK_NAME,
-            UNIT_NAME,
-            JsonKey.YES,
-            "2019",
-            "topi",
-            "abc",
-            true);
-    ProjectCommonException res = (ProjectCommonException) doRequest(true, dialCode);
+    StringBuffer tocData = new StringBuffer(VALID_HEADER);
+    tocData = addTocDataRow(tocData, JsonKey.YES, "2019", "topi", "abc", true);
+    ProjectCommonException res = (ProjectCommonException) doRequest(true, tocData.toString());
     Assert.assertEquals(res.getCode(), ResponseCode.errorInvalidTopic.getErrorCode());
   }
 
   @Test
   public void testUpdateInvalideDailcodeFailure() throws IOException {
     mockRequiredMethods(false);
-    String dialCode =
-        getDialCodeData(
-            VALID_HEADER, IDENTIFIER, TEXTBOOK_NAME, UNIT_NAME, JsonKey.YES, "2089", "", "", true);
-    ProjectCommonException res = (ProjectCommonException) doRequest(true, dialCode);
+    StringBuffer tocData = new StringBuffer(VALID_HEADER);
+    tocData = addTocDataRow(tocData, JsonKey.YES, "2089", "", "", true);
+    ProjectCommonException res = (ProjectCommonException) doRequest(true, tocData.toString());
     Assert.assertEquals(
         res.getCode(), ResponseCode.errorDialCodeNotReservedForTextBook.getErrorCode());
   }
 
   @Test
-  public void testUpdateInvalideDialCodeUniquenessFailure() throws IOException {
+  public void testUpdateInvalidetocDataUniquenessFailure() throws IOException {
     mockRequiredMethods(true);
-    String dialCode =
-        getDialCodeData(
-            VALID_HEADER, IDENTIFIER, TEXTBOOK_NAME, UNIT_NAME, JsonKey.YES, "2019", "", "", true);
-    ProjectCommonException res = (ProjectCommonException) doRequest(true, dialCode);
+    StringBuffer tocData = new StringBuffer(VALID_HEADER);
+    tocData = addTocDataRow(tocData, JsonKey.YES, "2019", "", "", true);
+    ProjectCommonException res = (ProjectCommonException) doRequest(true, tocData.toString());
     Assert.assertEquals(res.getCode(), ResponseCode.errorDialCodeAlreadyAssociated.getErrorCode());
   }
 
   @Test
-  public void testUpdateSuccess() throws Exception {
+  public void testUpdateSuccess() throws UnirestException, IOException {
     mockRequiredMethods(false);
-    String dialCode =
-        getDialCodeData(
-            VALID_HEADER, IDENTIFIER, TEXTBOOK_NAME, UNIT_NAME, JsonKey.YES, "2019", "", "", true);
+    StringBuffer tocData = new StringBuffer(VALID_HEADER);
+    tocData = addTocDataRow(tocData, JsonKey.YES, "2019", "", "", true);
     mockResponseSuccess();
-    Response res = (Response) doRequest(false, dialCode);
+    Response res = (Response) doRequest(false, tocData.toString());
     Assert.assertNotNull(res);
   }
 
-  private void mockResponseSuccess() throws Exception {
+  private void mockResponseSuccess() throws UnirestException {
     HttpRequestWithBody http = Mockito.mock(HttpRequestWithBody.class);
     RequestBodyEntity entity = Mockito.mock(RequestBodyEntity.class);
     HttpResponse<String> res = Mockito.mock(HttpResponse.class);
@@ -245,15 +199,15 @@ public class TextbookTocActorTest {
 
   private Response getReadHierarchy(boolean error) {
     Response res = new Response();
-    List<String> dialCodes = new ArrayList<>();
+    List<String> tocDatas = new ArrayList<>();
     Map<String, Object> content = new HashMap<>();
     if (error) {
       content.put(JsonKey.IDENTIFIER, "do_112678881305763840115");
     } else {
       content.put(JsonKey.IDENTIFIER, "do_1126788813057638401122");
     }
-    dialCodes.add("2019");
-    content.put(JsonKey.DIAL_CODES, dialCodes);
+    tocDatas.add("2019");
+    content.put(JsonKey.DIAL_CODES, tocDatas);
     content.put(JsonKey.CHILDREN, new ArrayList<>());
     res.put(JsonKey.CONTENT, content);
     return res;
@@ -288,35 +242,32 @@ public class TextbookTocActorTest {
     return null;
   }
 
-  private String getDialCodeData(
-      String dialCode,
-      String identifier,
-      String textbookName,
-      String textbookUnit,
+  private StringBuffer addTocDataRow(
+      StringBuffer tocData,
       String isQrCodeReq,
       String qrCode,
       String mappedTopic,
       String keywords,
       boolean isLastEntry) {
 
-    return dialCode
-        + identifier
-        + ","
-        + ","
-        + ","
-        + ","
-        + textbookName
-        + ","
-        + textbookUnit
-        + ","
-        + ","
-        + isQrCodeReq
-        + ","
-        + qrCode
-        + ","
-        + ","
-        + mappedTopic
-        + ","
-        + (isLastEntry ? keywords : keywords + "\n");
+    return tocData.append(
+        IDENTIFIER
+            + ","
+            + ","
+            + ","
+            + ","
+            + TEXTBOOK_NAME
+            + ","
+            + UNIT_NAME
+            + ","
+            + ","
+            + isQrCodeReq
+            + ","
+            + qrCode
+            + ","
+            + ","
+            + mappedTopic
+            + ","
+            + (isLastEntry ? keywords : keywords + "\n"));
   }
 }

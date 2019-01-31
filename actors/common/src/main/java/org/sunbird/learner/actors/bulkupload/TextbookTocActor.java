@@ -36,12 +36,10 @@ import static org.sunbird.content.util.TextBookTocUtil.readContent;
 import static org.sunbird.content.util.TextBookTocUtil.readHierarchy;
 import static org.sunbird.content.util.TextBookTocUtil.serialize;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
-import com.mashape.unirest.http.exceptions.UnirestException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -124,7 +122,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     if (StringUtils.equalsIgnoreCase(mode, JsonKey.CREATE)) {
       response = createTextbook(request, textbookData);
     } else if (StringUtils.equalsIgnoreCase(mode, JsonKey.UPDATE)) {
-      response = updateTextbook(request);
+      response = updateTextbook(request, (String) textbookData.get(JsonKey.CHANNEL));
     } else {
       unSupportedMessage();
     }
@@ -161,7 +159,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       Map<String, String> reqDialCodeMap, Map<String, String> hierarchyDialCodeMap) {
     reqDialCodeMap.forEach(
         (k, v) -> {
-          if (!v.equalsIgnoreCase(hierarchyDialCodeMap.get(k))) {
+          if (StringUtils.isNotBlank(hierarchyDialCodeMap.get(k))
+              && !v.equalsIgnoreCase(hierarchyDialCodeMap.get(k))) {
             throwClientErrorException(
                 ResponseCode.errorDialCodeAlreadyAssociated,
                 MessageFormat.format(
@@ -267,10 +266,11 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   @SuppressWarnings("unchecked")
   private void validateDialCodesWithReservedDialCodes(
       Set<String> dialCodes, Map<String, Object> textBookdata) {
-    Set<String> reservedDialCodes =
-        ((Map<String, Integer>) textBookdata.get(JsonKey.RESERVED_DIAL_CODES)).keySet();
+    Map<String, Integer> reservedDialcodeMap =
+        (Map<String, Integer>) textBookdata.get(JsonKey.RESERVED_DIAL_CODES);
     Set<String> invalidDialCodes = new HashSet<>();
-    if (CollectionUtils.isNotEmpty(reservedDialCodes)) {
+    if (MapUtils.isNotEmpty(reservedDialcodeMap)) {
+      Set<String> reservedDialCodes = reservedDialcodeMap.keySet();
       dialCodes.forEach(
           dialCode -> {
             if (!reservedDialCodes.contains(dialCode)) {
@@ -577,39 +577,34 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       for (Map<String, Object> row : data) {
         populateNodes(row, tbId, textBookdata, nodesModified, hierarchyData);
       }
-      Map<String, Object> updateRequest =
-          new HashMap<String, Object>() {
-            {
-              put(
-                  JsonKey.REQUEST,
-                  new HashMap<String, Object>() {
-                    {
-                      put(
-                          JsonKey.DATA,
-                          new HashMap<String, Object>() {
-                            {
-                              put(JsonKey.NODES_MODIFIED, nodesModified);
-                              put(JsonKey.HIERARCHY, hierarchyData);
-                            }
-                          });
-                    }
-                  });
-            }
-          };
+
+      Map<String, Object> updateRequest = new HashMap<String, Object>();
+      Map<String, Object> requestMap = new HashMap<String, Object>();
+      Map<String, Object> dataMap = new HashMap<String, Object>();
+      Map<String, Object> hierarchy = new HashMap<String, Object>();
+      dataMap.put(JsonKey.NODES_MODIFIED, nodesModified);
+      dataMap.put(JsonKey.HIERARCHY, hierarchy);
+      requestMap.put(JsonKey.DATA, dataMap);
+      updateRequest.put(JsonKey.REQUEST, requestMap);
+
       log(
           "Create Textbook - UpdateHierarchy Request : " + mapper.writeValueAsString(updateRequest),
           INFO.name());
-      return callUpdateHierarchyAndLinkDialCodeApi(tbId, updateRequest, nodesModified);
+      return callUpdateHierarchyAndLinkDialCodeApi(
+          tbId, updateRequest, nodesModified, (String) textBookdata.get(JsonKey.CHANNEL));
     }
   }
 
   private Response callUpdateHierarchyAndLinkDialCodeApi(
-      String tbId, Map<String, Object> updateRequest, Map<String, Object> nodesModified)
+      String tbId,
+      Map<String, Object> updateRequest,
+      Map<String, Object> nodesModified,
+      String channel)
       throws Exception {
     Response response = new Response();
     updateHierarchy(tbId, updateRequest);
     try {
-      linkDialCode(nodesModified);
+      linkDialCode(nodesModified, channel);
     } catch (Exception ex) {
       ProjectLogger.log(
           "TextbookTocActor:callUpdateHierarchyAndLinkDialCodeApi : Exception occurred while linking dial code : "
@@ -707,7 +702,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   }
 
   @SuppressWarnings("unchecked")
-  private Response updateTextbook(Request request) throws Exception {
+  private Response updateTextbook(Request request, String channel) throws Exception {
     List<Map<String, Object>> data =
         (List<Map<String, Object>>)
             ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.FILE_DATA);
@@ -745,24 +740,24 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             nodesModified,
             false);
       }
-      Map<String, Object> updateRequest = new HashMap<>();
-      Map<String, Object> reqData = new HashMap<>();
-      Map<String, Object> modifiedNodes = new HashMap<>();
-      Map<String, Object> hierarchy = new HashMap<>();
-      modifiedNodes.put(JsonKey.NODES_MODIFIED, nodesModified);
-      reqData.put(JsonKey.DATA, modifiedNodes);
-      reqData.put(JsonKey.HIERARCHY, hierarchy);
-      updateRequest.put(JsonKey.REQUEST, reqData);
+      Map<String, Object> updateRequest = new HashMap<String, Object>();
+      Map<String, Object> requestMap = new HashMap<String, Object>();
+      Map<String, Object> dataMap = new HashMap<String, Object>();
+      Map<String, Object> hierarchy = new HashMap<String, Object>();
+      dataMap.put(JsonKey.NODES_MODIFIED, nodesModified);
+      dataMap.put(JsonKey.HIERARCHY, hierarchy);
+      requestMap.put(JsonKey.DATA, dataMap);
+      updateRequest.put(JsonKey.REQUEST, requestMap);
       log(
           "Update Textbook - UpdateHierarchy Request : " + mapper.writeValueAsString(updateRequest),
           INFO.name());
       return callUpdateHierarchyAndLinkDialCodeApi(
-          (String) request.get(TEXTBOOK_ID), updateRequest, nodesModified);
+          (String) request.get(TEXTBOOK_ID), updateRequest, nodesModified, channel);
     }
   }
 
   @SuppressWarnings("unchecked")
-  private void linkDialCode(Map<String, Object> modifiedNodes) throws Exception {
+  private void linkDialCode(Map<String, Object> modifiedNodes, String channel) throws Exception {
     List<Map<String, Object>> content = new ArrayList<>();
     modifiedNodes.forEach(
         (k, v) -> {
@@ -771,12 +766,15 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           if (MapUtils.isNotEmpty(metadata)) {
             String dialCodeRequired = (String) metadata.get(JsonKey.DIAL_CODE_REQUIRED);
             if (JsonKey.YES.equalsIgnoreCase(dialCodeRequired)) {
+              Map<String, Object> linkDialCode = new HashMap<>();
+              linkDialCode.put(JsonKey.IDENTIFIER, k);
               if (null != metadata.get(JsonKey.DIAL_CODES)) {
-                Map<String, Object> linkDialCode = new HashMap<>();
-                linkDialCode.put(JsonKey.IDENTIFIER, k);
-                linkDialCode.put(JsonKey.DIAL_CODES, metadata.get(JsonKey.DIAL_CODES));
-                content.add(linkDialCode);
+                linkDialCode.put("dialcode", metadata.get(JsonKey.DIAL_CODES));
+              } else {
+                List<String> dialcodes = new ArrayList<>();
+                linkDialCode.put("dialcode", dialcodes);
               }
+              content.add(linkDialCode);
             }
           }
         });
@@ -785,18 +783,21 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     Map<String, Object> linkDialCoderequest = new HashMap<>();
     linkDialCoderequest.put(JsonKey.REQUEST, request);
     if (CollectionUtils.isNotEmpty(content)) {
-      linkDialCodeApiCall(linkDialCoderequest);
+      linkDialCodeApiCall(linkDialCoderequest, channel);
     }
   }
 
-  private Response linkDialCodeApiCall(Map<String, Object> updateRequest) {
+  private Response linkDialCodeApiCall(Map<String, Object> updateRequest, String channel)
+      throws Exception {
     String requestUrl =
         getConfigValue(JsonKey.EKSTEP_BASE_URL) + getConfigValue(JsonKey.LINK_DIAL_CODE_API);
     HttpResponse<String> updateResponse = null;
     try {
+      Map<String, String> headers = getDefaultHeaders();
+      headers.put("X-Channel-Id", channel);
       updateResponse =
           Unirest.post(requestUrl)
-              .headers(getDefaultHeaders())
+              .headers(headers)
               .body(mapper.writeValueAsString(updateRequest))
               .asString();
       if (null != updateResponse) {
@@ -815,18 +816,23 @@ public class TextbookTocActor extends BaseBulkUploadActor {
               message += String.valueOf(obj);
             }
           }
-          throw new ProjectCommonException(
-              response.getResponseCode().name(),
-              message,
-              response.getResponseCode().getResponseCode());
+          ProjectCommonException.throwClientErrorException(
+              ResponseCode.errorDialCodeLinkingClientError,
+              MessageFormat.format(
+                  ResponseCode.errorDialCodeLinkingClientError.getErrorMessage(), message));
         }
       } else {
         ProjectCommonException.throwClientErrorException(ResponseCode.errorDialCodeLinkingFail);
       }
-    } catch (JsonProcessingException | UnirestException e) {
-      ProjectCommonException.throwClientErrorException(ResponseCode.errorDialCodeLinkingFail);
-    } catch (IOException e) {
-      ProjectCommonException.throwClientErrorException(ResponseCode.errorDialCodeLinkingFail);
+    } catch (Exception ex) {
+      if (ex instanceof ProjectCommonException) {
+        throw ex;
+      } else {
+        throw new ProjectCommonException(
+            ResponseCode.errorTbUpdate.getErrorCode(),
+            ResponseCode.errorTbUpdate.getErrorMessage(),
+            SERVER_ERROR.getResponseCode());
+      }
     }
     return null;
   }
@@ -842,25 +848,37 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             .body(mapper.writeValueAsString(updateRequest))
             .asString();
     if (null != updateResponse) {
-      Response response = mapper.readValue(updateResponse.getBody(), Response.class);
-      if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
-        return response;
-      } else {
-        Map<String, Object> resultMap =
-            Optional.ofNullable(response.getResult()).orElse(new HashMap<>());
-        String message = "Textbook hierarchy could not be created or updated. ";
-        if (MapUtils.isNotEmpty(resultMap)) {
-          Object obj = Optional.ofNullable(resultMap.get(JsonKey.TB_MESSAGES)).orElse("");
-          if (obj instanceof List) {
-            message += ((List<String>) obj).stream().collect(Collectors.joining(";"));
-          } else {
-            message += String.valueOf(obj);
+      try {
+        Response response = mapper.readValue(updateResponse.getBody(), Response.class);
+        if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
+          return response;
+        } else {
+          Map<String, Object> resultMap =
+              Optional.ofNullable(response.getResult()).orElse(new HashMap<>());
+          String message = "Textbook hierarchy could not be created or updated. ";
+          if (MapUtils.isNotEmpty(resultMap)) {
+            Object obj = Optional.ofNullable(resultMap.get(JsonKey.TB_MESSAGES)).orElse("");
+            if (obj instanceof List) {
+              message += ((List<String>) obj).stream().collect(Collectors.joining(";"));
+            } else {
+              message += String.valueOf(obj);
+            }
           }
+          throw new ProjectCommonException(
+              ResponseCode.errorDialCodeLinkingClientError.getErrorCode(),
+              MessageFormat.format(
+                  ResponseCode.errorDialCodeLinkingClientError.getErrorMessage(), message),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
         }
-        throw new ProjectCommonException(
-            response.getResponseCode().name(),
-            message,
-            response.getResponseCode().getResponseCode());
+      } catch (Exception ex) {
+        if (ex instanceof ProjectCommonException) {
+          throw ex;
+        } else {
+          throw new ProjectCommonException(
+              ResponseCode.errorTbUpdate.getErrorCode(),
+              ResponseCode.errorTbUpdate.getErrorMessage(),
+              SERVER_ERROR.getResponseCode());
+        }
       }
     } else {
       throw new ProjectCommonException(
@@ -905,50 +923,54 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       if (StringUtils.isNotBlank(framework)) newMeta.put(JsonKey.FRAMEWORK, framework);
       node.put(JsonKey.METADATA, newMeta);
     }
-    nodesModified.put(code, node);
+    if (StringUtils.isNotBlank(code)) {
+      nodesModified.put(code, node);
+    }
   }
 
   private Map<String, Object> initializeMetaDataForModifiedNode(Map<String, Object> metadata) {
     Map<String, Object> newMeta = new HashMap<String, Object>();
-    List<String> keywords =
-        (StringUtils.isNotBlank((String) metadata.get(JsonKey.KEYWORDS)))
-            ? asList(((String) metadata.get(JsonKey.KEYWORDS)).split(","))
-            : null;
-    List<String> gradeLevel =
-        (StringUtils.isNotBlank((String) metadata.get(JsonKey.GRADE_LEVEL)))
-            ? asList(((String) metadata.get(JsonKey.GRADE_LEVEL)).split(","))
-            : null;
-    List<String> dialCodes =
-        (StringUtils.isNotBlank((String) metadata.get(JsonKey.DIAL_CODES)))
-            ? asList(((String) metadata.get(JsonKey.DIAL_CODES)).split(","))
-            : null;
+    if (MapUtils.isNotEmpty(metadata)) {
+      List<String> keywords =
+          (StringUtils.isNotBlank((String) metadata.get(JsonKey.KEYWORDS)))
+              ? asList(((String) metadata.get(JsonKey.KEYWORDS)).split(","))
+              : null;
+      List<String> gradeLevel =
+          (StringUtils.isNotBlank((String) metadata.get(JsonKey.GRADE_LEVEL)))
+              ? asList(((String) metadata.get(JsonKey.GRADE_LEVEL)).split(","))
+              : null;
+      List<String> dialCodes =
+          (StringUtils.isNotBlank((String) metadata.get(JsonKey.DIAL_CODES)))
+              ? asList(((String) metadata.get(JsonKey.DIAL_CODES)).split(","))
+              : null;
 
-    List<String> topics =
-        (StringUtils.isNotBlank((String) metadata.get(JsonKey.TOPIC)))
-            ? asList(((String) metadata.get(JsonKey.TOPIC)).split(","))
-            : null;
-    newMeta.putAll(metadata);
-    newMeta.remove(JsonKey.KEYWORDS);
-    newMeta.remove(JsonKey.GRADE_LEVEL);
-    newMeta.remove(JsonKey.DIAL_CODES);
-    newMeta.remove(JsonKey.TOPIC);
-    if (CollectionUtils.isNotEmpty(keywords)) newMeta.put(JsonKey.KEYWORDS, keywords);
-    if (CollectionUtils.isNotEmpty(gradeLevel)) newMeta.put(JsonKey.GRADE_LEVEL, gradeLevel);
-    if (CollectionUtils.isNotEmpty(dialCodes)) {
-      List<String> dCodes = new ArrayList<>();
-      dialCodes.forEach(
-          s -> {
-            dCodes.add(s.trim());
-          });
-      newMeta.put(JsonKey.DIAL_CODES, dCodes);
-    }
-    if (CollectionUtils.isNotEmpty(topics)) {
-      List<String> topicList = new ArrayList<>();
-      topics.forEach(
-          s -> {
-            topicList.add(s.trim());
-          });
-      newMeta.put(JsonKey.TOPIC, topicList);
+      List<String> topics =
+          (StringUtils.isNotBlank((String) metadata.get(JsonKey.TOPIC)))
+              ? asList(((String) metadata.get(JsonKey.TOPIC)).split(","))
+              : null;
+      newMeta.putAll(metadata);
+      newMeta.remove(JsonKey.KEYWORDS);
+      newMeta.remove(JsonKey.GRADE_LEVEL);
+      newMeta.remove(JsonKey.DIAL_CODES);
+      newMeta.remove(JsonKey.TOPIC);
+      if (CollectionUtils.isNotEmpty(keywords)) newMeta.put(JsonKey.KEYWORDS, keywords);
+      if (CollectionUtils.isNotEmpty(gradeLevel)) newMeta.put(JsonKey.GRADE_LEVEL, gradeLevel);
+      if (CollectionUtils.isNotEmpty(dialCodes)) {
+        List<String> dCodes = new ArrayList<>();
+        dialCodes.forEach(
+            s -> {
+              dCodes.add(s.trim());
+            });
+        newMeta.put(JsonKey.DIAL_CODES, dCodes);
+      }
+      if (CollectionUtils.isNotEmpty(topics)) {
+        List<String> topicList = new ArrayList<>();
+        topics.forEach(
+            s -> {
+              topicList.add(s.trim());
+            });
+        newMeta.put(JsonKey.TOPIC, topicList);
+      }
     }
     return newMeta;
   }

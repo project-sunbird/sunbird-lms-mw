@@ -289,18 +289,23 @@ public class PageManagementActor extends BaseActor {
       if (arr != null) {
         for (Object obj : arr) {
           Map<String, Object> sectionMap = (Map<String, Object>) obj;
-          Map<String, Object> sectionData =
-              new HashMap<>(DataCacheHandler.getSectionMap().get(sectionMap.get(JsonKey.ID)));
-          Future<Map<String, Object>> contentFuture =
-              getContentData(
-                  sectionData,
-                  reqFilters,
-                  headers,
-                  filterMap,
-                  urlQueryString,
-                  sectionMap.get(JsonKey.GROUP),
-                  sectionMap.get(JsonKey.INDEX));
-          sectionList.add(contentFuture);
+          if (MapUtils.isNotEmpty(sectionMap)
+              && DataCacheHandler.getSectionMap().get(sectionMap.get(JsonKey.ID)) != null) {
+            Map<String, Object> sectionData =
+                new HashMap<>(DataCacheHandler.getSectionMap().get(sectionMap.get(JsonKey.ID)));
+            if (MapUtils.isNotEmpty(sectionData)) {
+              Future<Map<String, Object>> contentFuture =
+                  getContentData(
+                      sectionData,
+                      reqFilters,
+                      headers,
+                      filterMap,
+                      urlQueryString,
+                      sectionMap.get(JsonKey.GROUP),
+                      sectionMap.get(JsonKey.INDEX));
+              sectionList.add(contentFuture);
+            }
+          }
         }
       }
 

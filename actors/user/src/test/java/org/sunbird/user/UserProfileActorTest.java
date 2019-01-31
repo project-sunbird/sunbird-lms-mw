@@ -7,6 +7,8 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.Test;
 import org.sunbird.actor.core.BaseActorTest;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -22,6 +24,16 @@ public class UserProfileActorTest extends BaseActorTest {
   private ActorSystem system = ActorSystem.create("system");
   private static final String userId = "USER-ID";
   private final Props props = Props.create(UserProfileActor.class);
+  private static boolean isSuccessStatic;
+
+  @Test
+  public void testSetProfileVisibilityFailure() {
+
+    boolean result =
+        testScenario(
+            ActorOperations.PROFILE_VISIBILITY, false, ResponseCode.userNotFound.getErrorCode());
+    assertTrue(result);
+  }
 
   @Test
   public void testGetMediaTypesSuccess() {
@@ -33,18 +45,7 @@ public class UserProfileActorTest extends BaseActorTest {
   @Test
   public void testSetProfileVisibilitySuccess() {
 
-    this.getDataByIdentifier(true, userId);
     boolean result = testScenario(ActorOperations.PROFILE_VISIBILITY, true, null);
-    assertTrue(result);
-  }
-
-  @Test
-  public void testSetProfileVisibilityFailure() {
-
-    this.getDataByIdentifier(false, userId);
-    boolean result =
-        testScenario(
-            ActorOperations.PROFILE_VISIBILITY, false, ResponseCode.userNotFound.getErrorCode());
     assertTrue(result);
   }
 
@@ -53,6 +54,9 @@ public class UserProfileActorTest extends BaseActorTest {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
+    isSuccessStatic = isSuccess;
+    getAbstractMethod();
+
     subject.tell(getRequestedObj(actorOperation), probe.getRef());
 
     if (isSuccess) {
@@ -70,5 +74,28 @@ public class UserProfileActorTest extends BaseActorTest {
     reqObj.put(JsonKey.USER_ID, userId);
     reqObj.setOperation(actorOperation.getValue());
     return reqObj;
+  }
+
+  private static HashMap getEsResponseMap() {
+    HashMap<String, Object> map = new HashMap<>();
+    map.put(JsonKey.CONTENT, "Any-content");
+    return map;
+  }
+
+  @Override
+  protected Map<String, Object> getAbstractMethod() {
+    if (isSuccessStatic) {
+      return getEsResponseMap();
+    } else return new HashMap<>();
+  }
+
+  @Override
+  protected Response getCassandraRecordByIdForBulkUploadResponse() {
+    return null;
+  }
+
+  @Override
+  public Response getRecordByIdResponse() {
+    return null;
   }
 }

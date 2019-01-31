@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.Test;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.sunbird.actor.core.BaseActorTest;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -21,14 +22,27 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.user.actors.UserStatusActor;
 
+@PowerMockIgnore({"javax.management.*"})
 public class UserStatusActorTest extends BaseActorTest {
 
   private static final Props props = Props.create(UserStatusActor.class);
   private static final ActorSystem system = ActorSystem.create("system");
+  private static boolean staticIsDelete;
+
+  @Test
+  public void testUnblockUserFailureWithUserAlreadyActive() {
+    boolean result =
+        testScenario(
+            false,
+            ActorOperations.UNBLOCK_USER,
+            false,
+            ResponseCode.userAlreadyActive.getErrorCode());
+    assertTrue(result);
+  }
 
   @Test
   public void testBlockUserSuccess() {
-    boolean result = testScenario(false, ActorOperations.BLOCK_USER, true, null);
+    boolean result = testScenario(true, ActorOperations.BLOCK_USER, true, null);
     assertTrue(result);
   }
 
@@ -49,20 +63,6 @@ public class UserStatusActorTest extends BaseActorTest {
     assertTrue(result);
   }
 
-  @Test
-  public void testUnblockUserFailureWithUserAlreadyActive() {
-    resetAllMocks();
-    boolean result =
-        testScenario(
-            false,
-            ActorOperations.UNBLOCK_USER,
-            false,
-            ResponseCode.userAlreadyActive.getErrorCode());
-    assertTrue(result);
-  }
-
-  private void resetAllMocks() {}
-
   private Request getRequestObject(String operation) {
 
     Request reqObj = new Request();
@@ -77,11 +77,12 @@ public class UserStatusActorTest extends BaseActorTest {
       ActorOperations operation,
       boolean isSuccess,
       String expectedErrorResponse) {
+
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
-    Response response = getRecordByIdResponse(isDeleted);
-    getRecordById(response);
+    staticIsDelete = isDeleted;
+    getRecordByIdResponse();
     subject.tell(getRequestObject(operation.getValue()), probe.getRef());
 
     Response res;
@@ -95,12 +96,23 @@ public class UserStatusActorTest extends BaseActorTest {
     }
   }
 
-  private Response getRecordByIdResponse(boolean isDeleted) {
+  @Override
+  protected Map<String, Object> getAbstractMethod() {
+    return null;
+  }
+
+  @Override
+  protected Response getCassandraRecordByIdForBulkUploadResponse() {
+    return null;
+  }
+
+  @Override
+  public Response getRecordByIdResponse() {
 
     Response response = new Response();
     List<Map<String, Object>> resMapList = new ArrayList<>();
     Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.IS_DELETED, isDeleted);
+    map.put(JsonKey.IS_DELETED, staticIsDelete);
     resMapList.add(map);
     response.put(JsonKey.RESPONSE, resMapList);
     return response;

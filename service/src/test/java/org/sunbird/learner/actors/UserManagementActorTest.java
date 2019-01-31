@@ -15,15 +15,19 @@ import java.util.HashMap;
 import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.actor.core.BaseActorTest;
 import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.actorutil.InterServiceCommunication;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
 import org.sunbird.actorutil.impl.InterServiceCommunicationImpl;
+import org.sunbird.actorutil.location.impl.LocationClientImpl;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -31,16 +35,13 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.user.actors.UserManagementActor;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.UserUtil;
 
-/*@RunWith(PowerMockRunner.class)
+@RunWith(PowerMockRunner.class)
 @PrepareForTest({
-  ServiceFactory.class,
-  ElasticSearchUtil.class,
   Util.class,
   RequestRouter.class,
   SystemSettingClientImpl.class,
@@ -49,14 +50,15 @@ import org.sunbird.user.util.UserUtil;
   InterServiceCommunicationFactory.class,
   LocationClientImpl.class
 })
-@PowerMockIgnore({"javax.management.*"})*/
+@PowerMockIgnore({"javax.management.*"})
 public class UserManagementActorTest extends BaseActorTest {
 
   private ActorSystem system = ActorSystem.create("system");
   private static final Props props = Props.create(UserManagementActor.class);
   private static Map<String, Object> reqMap;
   static InterServiceCommunication interServiceCommunication =
-      mock(InterServiceCommunicationImpl.class);;
+      mock(InterServiceCommunicationImpl.class);
+  private static final HashMap esResponseMap = getEsResponseMap();
 
   @Before
   public void beforeEachTest() {
@@ -64,16 +66,6 @@ public class UserManagementActorTest extends BaseActorTest {
     ActorRef actorRef = mock(ActorRef.class);
     PowerMockito.mockStatic(RequestRouter.class);
     when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
-
-    PowerMockito.mockStatic(ServiceFactory.class);
-    CassandraOperationImpl cassandraOperation = mock(CassandraOperationImpl.class);
-    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
-    when(cassandraOperation.insertRecord(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(getSuccessResponse());
-    when(cassandraOperation.updateRecord(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(getSuccessResponse());
 
     PowerMockito.mockStatic(InterServiceCommunicationFactory.class);
     when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
@@ -98,11 +90,6 @@ public class UserManagementActorTest extends BaseActorTest {
     when(userService.getCustodianChannel(Mockito.anyMap(), Mockito.any(ActorRef.class)))
         .thenReturn("anyChannel");
     when(userService.getRootOrgIdFromChannel(Mockito.anyString())).thenReturn("rootOrgId");
-
-    PowerMockito.mockStatic(ElasticSearchUtil.class);
-    when(ElasticSearchUtil.getDataByIdentifier(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getEsResponseMap());
 
     PowerMockito.mockStatic(Util.class);
     Util.getUserProfileConfig(Mockito.any(ActorRef.class));
@@ -302,14 +289,15 @@ public class UserManagementActorTest extends BaseActorTest {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
+
     subject.tell(reqObj, probe.getRef());
 
     if (errorCode == null) {
-      Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+      Response res = probe.expectMsgClass(duration("1000 second"), Response.class);
       return null != res && res.getResponseCode() == ResponseCode.OK;
     } else {
       ProjectCommonException res =
-          probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+          probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
       return res.getCode().equals(errorCode.getErrorCode())
           || res.getResponseCode() == errorCode.getResponseCode();
     }
@@ -373,21 +361,30 @@ public class UserManagementActorTest extends BaseActorTest {
     return response;
   }
 
-  private static Response getSuccessResponse() {
-    Response response = new Response();
-    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-    return response;
-  }
-
-  private static Map<String, Object> getEsResponseMap() {
-    Map<String, Object> map = new HashMap<>();
+  private static HashMap getEsResponseMap() {
+    HashMap<String, Object> map = new HashMap<>();
     map.put(JsonKey.IS_ROOT_ORG, true);
     map.put(JsonKey.ID, "rootOrgId");
     map.put(JsonKey.CHANNEL, "anyChannel");
     return map;
   }
 
-  public Object getEsResponseForLocation() {
+  @Override
+  protected Map<String, Object> getAbstractMethod() {
+    return esResponseMap;
+  }
+
+  @Override
+  protected Response getCassandraRecordByIdForBulkUploadResponse() {
+    return null;
+  }
+
+  @Override
+  public Response getRecordByIdResponse() {
+    return null;
+  }
+
+  private Object getEsResponseForLocation() {
     Response response = new Response();
     response.put(JsonKey.RESPONSE, Arrays.asList("id"));
     return response;

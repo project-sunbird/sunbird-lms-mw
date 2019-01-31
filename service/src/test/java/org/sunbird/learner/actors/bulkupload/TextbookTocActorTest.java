@@ -7,6 +7,7 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
+import com.google.common.base.Joiner;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.Unirest;
 import com.mashape.unirest.http.exceptions.UnirestException;
@@ -57,7 +58,8 @@ public class TextbookTocActorTest {
       "Identifier,Medium,Grade,Subject,Textbook Name,Level 1 Textbook Unit,Description,QR Code Required?,QR Code,Purpose of Content to be linked,Mapped Topics,Keywords\n";
   private static final String TEXTBOOK_TOC_INPUT_MAPPING =
       getFileAsString("FrameworkForTextbookTocActorTest.json");
-  private static final String MANDATORY_VALUES = getFileAsString("MandatoryValue.json");
+  private static final String MANDATORY_VALUES =
+      getFileAsString("MandatoryValueForTextbookTocActorTest.json");
   private static final String CONTENT_TYPE = "any";
   private static final String IDENTIFIER = "do_1126788813057638401122";
   private static final String TEXTBOOK_NAME = "test";
@@ -80,7 +82,7 @@ public class TextbookTocActorTest {
   }
 
   @Test
-  public void testUpdateFailureWithCorrectAndIncorrecttocDataData() throws IOException {
+  public void testUpdateFailureWithIncorrectTocData() throws IOException {
     mockRequiredMethods(false);
     StringBuffer tocData = new StringBuffer(VALID_HEADER);
     tocData = addTocDataRow(tocData, JsonKey.YES, "2019", "", "", false);
@@ -91,7 +93,7 @@ public class TextbookTocActorTest {
   }
 
   @Test
-  public void testUpdateFailureDailcodeNotreq() throws IOException {
+  public void testUpdateFailureWithDailcodeNotreq() throws IOException {
     mockRequiredMethods(false);
     StringBuffer tocData = new StringBuffer(VALID_HEADER);
     tocData = addTocDataRow(tocData, JsonKey.NO, "2019", "", "", true);
@@ -100,7 +102,7 @@ public class TextbookTocActorTest {
   }
 
   @Test
-  public void testUpdateFailureDuplicateEntry() throws IOException {
+  public void testUpdateFailureWithDuplicateEntry() throws IOException {
     mockRequiredMethods(false);
     StringBuffer tocData = new StringBuffer(VALID_HEADER);
     tocData = addTocDataRow(tocData, JsonKey.YES, "2019", "", "", false);
@@ -110,14 +112,14 @@ public class TextbookTocActorTest {
   }
 
   @Test
-  public void testUpdateFailureblankCsv() throws IOException {
+  public void testUpdateFailureWithblankCsv() throws IOException {
     mockRequiredMethods(false);
     ProjectCommonException res = (ProjectCommonException) doRequest(true, VALID_HEADER);
     Assert.assertEquals(res.getCode(), ResponseCode.blankCsvData.getErrorCode());
   }
 
   @Test
-  public void testUpdateInvalideTopicFailure() throws IOException {
+  public void testUpdateFailureWithInvalideTopic() throws IOException {
     mockRequiredMethods(false);
     StringBuffer tocData = new StringBuffer(VALID_HEADER);
     tocData = addTocDataRow(tocData, JsonKey.YES, "2019", "topi", "abc", true);
@@ -126,7 +128,7 @@ public class TextbookTocActorTest {
   }
 
   @Test
-  public void testUpdateInvalideDailcodeFailure() throws IOException {
+  public void testUpdateFailureWithInvalideDailcode() throws IOException {
     mockRequiredMethods(false);
     StringBuffer tocData = new StringBuffer(VALID_HEADER);
     tocData = addTocDataRow(tocData, JsonKey.YES, "2089", "", "", true);
@@ -136,7 +138,7 @@ public class TextbookTocActorTest {
   }
 
   @Test
-  public void testUpdateInvalidetocDataUniquenessFailure() throws IOException {
+  public void testUpdateFailureWithtocDataNotUnique() throws IOException {
     mockRequiredMethods(true);
     StringBuffer tocData = new StringBuffer(VALID_HEADER);
     tocData = addTocDataRow(tocData, JsonKey.YES, "2019", "", "", true);
@@ -145,7 +147,7 @@ public class TextbookTocActorTest {
   }
 
   @Test
-  public void testUpdateSuccess() throws UnirestException, IOException {
+  public void testUpdateSuccessWithValidData() throws UnirestException, IOException {
     mockRequiredMethods(false);
     StringBuffer tocData = new StringBuffer(VALID_HEADER);
     tocData = addTocDataRow(tocData, JsonKey.YES, "2019", "", "", true);
@@ -191,9 +193,9 @@ public class TextbookTocActorTest {
     return res;
   }
 
-  private void mockRequiredMethods(boolean bool) {
+  private void mockRequiredMethods(boolean error) {
     when(TextBookTocUtil.getRelatedFrameworkById(Mockito.anyString())).thenReturn(new Response());
-    when(TextBookTocUtil.readHierarchy(Mockito.anyString())).thenReturn(getReadHierarchy(bool));
+    when(TextBookTocUtil.readHierarchy(Mockito.anyString())).thenReturn(getReadHierarchy(error));
     when(TextBookTocUtil.readContent(Mockito.anyString())).thenReturn(getReadContentTextbookData());
   }
 
@@ -216,9 +218,9 @@ public class TextbookTocActorTest {
   private Response getReadContentTextbookData() {
     Response res = new Response();
     Map<String, Object> textBookdata = new HashMap<>();
-    Map<String, Integer> s = new HashMap<>();
-    s.put("2019", 1);
-    textBookdata.put(JsonKey.RESERVED_DIAL_CODES, s);
+    Map<String, Integer> reserveDialCodes = new HashMap<>();
+    reserveDialCodes.put("2019", 1);
+    textBookdata.put(JsonKey.RESERVED_DIAL_CODES, reserveDialCodes);
     textBookdata.put(JsonKey.CONTENT_TYPE, CONTENT_TYPE);
     textBookdata.put(JsonKey.MIME_TYPE, "application/vnd.ekstep.content-collection");
     textBookdata.put(JsonKey.NAME, "test");
@@ -250,24 +252,22 @@ public class TextbookTocActorTest {
       String keywords,
       boolean isLastEntry) {
 
-    return tocData.append(
-        IDENTIFIER
-            + ","
-            + ","
-            + ","
-            + ","
-            + TEXTBOOK_NAME
-            + ","
-            + UNIT_NAME
-            + ","
-            + ","
-            + isQrCodeReq
-            + ","
-            + qrCode
-            + ","
-            + ","
-            + mappedTopic
-            + ","
-            + (isLastEntry ? keywords : keywords + "\n"));
+    tocData.append(
+        Joiner.on(',')
+            .join(
+                IDENTIFIER,
+                "",
+                "",
+                "",
+                TEXTBOOK_NAME,
+                UNIT_NAME,
+                "",
+                isQrCodeReq,
+                qrCode,
+                "",
+                mappedTopic,
+                (isLastEntry ? keywords : keywords + "\n")));
+
+    return tocData;
   }
 }

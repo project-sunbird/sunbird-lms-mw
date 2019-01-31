@@ -151,20 +151,20 @@ public class TextbookTocActorTest {
     mockRequiredMethods(false);
     StringBuffer tocData = new StringBuffer(VALID_HEADER);
     tocData = addTocDataRow(tocData, JsonKey.YES, "2019", "", "", true);
-    mockResponseSuccess();
-    Response res = (Response) doRequest(false, tocData.toString());
-    Assert.assertNotNull(res);
+    mockResponseFromUpdateHierarchy();
+    Response response = (Response) doRequest(false, tocData.toString());
+    Assert.assertNotNull(response);
   }
 
-  private void mockResponseSuccess() throws UnirestException {
+  private void mockResponseFromUpdateHierarchy() throws UnirestException {
     HttpRequestWithBody http = Mockito.mock(HttpRequestWithBody.class);
     RequestBodyEntity entity = Mockito.mock(RequestBodyEntity.class);
-    HttpResponse<String> res = Mockito.mock(HttpResponse.class);
+    HttpResponse<String> response = Mockito.mock(HttpResponse.class);
     when(Unirest.patch(Mockito.anyString())).thenReturn(http);
     when(http.headers(Mockito.anyMap())).thenReturn(http);
     when(http.body(Mockito.anyString())).thenReturn(entity);
-    when(entity.asString()).thenReturn(res);
-    when(res.getBody()).thenReturn("{\"responseCode\" :\"OK\" }");
+    when(entity.asString()).thenReturn(response);
+    when(response.getBody()).thenReturn("{\"responseCode\" :\"OK\" }");
   }
 
   private Object doRequest(boolean error, String data) throws IOException {
@@ -189,8 +189,8 @@ public class TextbookTocActorTest {
           probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
       return res;
     }
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    return res;
+    Response response = probe.expectMsgClass(duration("10 second"), Response.class);
+    return response;
   }
 
   private void mockRequiredMethods(boolean error) {
@@ -200,23 +200,23 @@ public class TextbookTocActorTest {
   }
 
   private Response getReadHierarchy(boolean error) {
-    Response res = new Response();
-    List<String> tocDatas = new ArrayList<>();
+    Response response = new Response();
+    List<String> tocData = new ArrayList<>();
     Map<String, Object> content = new HashMap<>();
     if (error) {
       content.put(JsonKey.IDENTIFIER, "do_112678881305763840115");
     } else {
       content.put(JsonKey.IDENTIFIER, "do_1126788813057638401122");
     }
-    tocDatas.add("2019");
-    content.put(JsonKey.DIAL_CODES, tocDatas);
+    tocData.add("2019");
+    content.put(JsonKey.DIAL_CODES, tocData);
     content.put(JsonKey.CHILDREN, new ArrayList<>());
-    res.put(JsonKey.CONTENT, content);
-    return res;
+    response.put(JsonKey.CONTENT, content);
+    return response;
   }
 
   private Response getReadContentTextbookData() {
-    Response res = new Response();
+    Response response = new Response();
     Map<String, Object> textBookdata = new HashMap<>();
     Map<String, Integer> reserveDialCodes = new HashMap<>();
     reserveDialCodes.put("2019", 1);
@@ -224,8 +224,8 @@ public class TextbookTocActorTest {
     textBookdata.put(JsonKey.CONTENT_TYPE, CONTENT_TYPE);
     textBookdata.put(JsonKey.MIME_TYPE, "application/vnd.ekstep.content-collection");
     textBookdata.put(JsonKey.NAME, "test");
-    res.put(JsonKey.CONTENT, textBookdata);
-    return res;
+    response.put(JsonKey.CONTENT, textBookdata);
+    return response;
   }
 
   private static String getFileAsString(String fileName) {
@@ -234,8 +234,12 @@ public class TextbookTocActorTest {
     try {
       file = new File(TextbookTocActorTest.class.getClassLoader().getResource(fileName).getFile());
       Path path = Paths.get(file.getPath());
-      List<String> data = Files.readAllLines(path);
-      return data.get(0);
+      List<String> fileData = Files.readAllLines(path);
+      StringBuffer result = new StringBuffer();
+      for (String line : fileData) {
+        result.append(line);
+      }
+      return result.toString();
     } catch (FileNotFoundException e) {
       ProjectLogger.log(e.getMessage(), e);
     } catch (IOException e) {

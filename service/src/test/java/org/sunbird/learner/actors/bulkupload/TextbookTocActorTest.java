@@ -7,13 +7,27 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Joiner;
+import com.mashape.unirest.http.HttpResponse;
+import com.mashape.unirest.http.Unirest;
+import com.mashape.unirest.http.exceptions.UnirestException;
+import com.mashape.unirest.request.HttpRequestWithBody;
+import com.mashape.unirest.request.body.RequestBodyEntity;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import org.apache.commons.io.IOUtils;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -24,121 +38,138 @@ import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.TextbookActorOperation;
 import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.content.util.TextBookTocUtil;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({TextBookTocUtil.class})
+@PrepareForTest({TextBookTocUtil.class, ProjectUtil.class, Unirest.class})
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*"})
 public class TextbookTocActorTest {
 
   private static ActorSystem system;
   private static final Props props =
       Props.create(org.sunbird.learner.actors.bulkupload.TextbookTocActor.class);
-  private static ObjectMapper mapper = new ObjectMapper();
-  private static final String TB_WITHOUT_CHILDREN =
-      "{\"id\":\"ekstep.content.find\",\"ver\":\"3.0\",\"ts\":\"2018-12-12T06:21:17ZZ\",\"params\":{\"resmsgid\":\"bf8273ca-be0f-4062-8986-fbfff07002ac\",\"msgid\":null,\"err\":null,\"status\":\"successful\",\"errmsg\":null},\"responseCode\":\"OK\",\"result\":{\"content\":{\"ownershipType\":[\"createdBy\"],\"code\":\"Science\",\"channel\":\"in.ekstep\",\"description\":\"Test TextBook\",\"language\":[\"English\"],\"mimeType\":\"application/vnd.ekstep.content-collection\",\"idealScreenSize\":\"normal\",\"createdOn\":\"2018-12-12T06:20:57.814+0000\",\"appId\":\"ekstep_portal\",\"contentDisposition\":\"inline\",\"contentEncoding\":\"gzip\",\"lastUpdatedOn\":\"2018-12-12T06:20:57.814+0000\",\"contentType\":\"TextBook\",\"dialcodeRequired\":\"No\",\"identifier\":\"do_11265332762881228812868\",\"audience\":[\"Learner\"],\"visibility\":\"Default\",\"os\":[\"All\"],\"consumerId\":\"a6654129-b58d-4dd8-9cf2-f8f3c2f458bc\",\"mediaType\":\"content\",\"osId\":\"org.ekstep.quiz.app\",\"languageCode\":\"en\",\"versionKey\":\"1544595657814\",\"idealScreenDensity\":\"hdpi\",\"framework\":\"NCF\",\"compatibilityLevel\":1,\"name\":\"Science-10\",\"status\":\"Draft\"}}}";
-  private static final String TB_CREATE_VALID_REQ =
-      "{\"mode\":\"create\",\"fileData\":[{\"metadata\":{\"gradeLevel\":\"Class 10\",\"keywords\":\"head,eyes,nose,mouth\",\"subject\":\"Science\",\"description\":\"Explains key parts in the head such as eyes,nose,ears and mouth\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"No\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"L:3\":\"5.1.1 Key parts in the head\",\"L:2\":\"5.1 Parts of Body\",\"Textbook\":\"Science-10\"}},{\"metadata\":{\"gradeLevel\":\"Class 10\",\"purpose\":\"Video of lungs pumping\",\"subject\":\"Science\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"Yes\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"L:3\":\"5.2 .1 Respiratory System\",\"L:2\":\"5.2 Organ Systems\",\"Textbook\":\"Science-10\"}},{\"metadata\":{\"gradeLevel\":\"Class 10\",\"keywords\":\"head,eyes,nose,mouth\",\"subject\":\"Science\",\"description\":\"Explains key parts in the head such as eyes,nose,ears and mouth\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"No\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"L:2\":\"5.1 Parts of Body\",\"Textbook\":\"Science-10\"}},{\"metadata\":{\"gradeLevel\":\"Class 10\",\"purpose\":\"Video of lungs pumping\",\"subject\":\"Science\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"Yes\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"L:2\":\"5.2 Organ Systems\",\"Textbook\":\"Science-10\"}},{\"metadata\":{\"gradeLevel\":\"Class 10\",\"keywords\":\"head,eyes,nose,mouth\",\"subject\":\"Science\",\"description\":\"Explains key parts in the head such as eyes,nose,ears and mouth\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"No\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"Textbook\":\"Science-10\"}}]}";
-  private static final String DUPLICATE_ROW_REQ =
-      "{\"mode\":\"create\",\"fileData\":[{\"metadata\":{\"gradeLevel\":\"Class 10\",\"keywords\":\"head,eyes,nose,mouth\",\"subject\":\"Science\",\"description\":\"Explains key parts in the head such as eyes,nose,ears and mouth\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"No\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"L:3\":\"5.1.1 Key parts in the head\",\"L:2\":\"5.1 Parts of Body\",\"Textbook\":\"Science-10\"}},{\"metadata\":{\"gradeLevel\":\"Class 10\",\"purpose\":\"Video of lungs pumping\",\"subject\":\"Science\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"Yes\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"L:3\":\"5.2 .1 Respiratory System\",\"L:2\":\"5.2 Organ Systems\",\"Textbook\":\"Science-10\"}},{\"metadata\":{\"gradeLevel\":\"Class 10\",\"keywords\":\"head,eyes,nose,mouth\",\"subject\":\"Science\",\"description\":\"Explains key parts in the head such as eyes,nose,ears and mouth\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"No\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"L:2\":\"5.1 Parts of Body\",\"Textbook\":\"Science-10\"}},{\"metadata\":{\"gradeLevel\":\"Class 10\",\"purpose\":\"Video of lungs pumping\",\"subject\":\"Science\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"Yes\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"L:2\":\"5.2 Organ Systems\",\"Textbook\":\"Science-10\"}},{\"metadata\":{\"gradeLevel\":\"Class 10\",\"keywords\":\"head,eyes,nose,mouth\",\"subject\":\"Science\",\"description\":\"Explains key parts in the head such as eyes,nose,ears and mouth\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"No\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"Textbook\":\"Science-10\"}},{\"metadata\":{\"gradeLevel\":\"Class 10\",\"keywords\":\"head,eyes,nose,mouth\",\"subject\":\"Science\",\"description\":\"Explains key parts in the head such as eyes,nose,ears and mouth\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"No\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"Textbook\":\"Science-10\"}}]}";
-  private static final String REQUIRED_FIELD_MISS_REQ =
-      "{\"mode\":\"create\",\"fileData\":[{\"metadata\":{\"gradeLevel\":\"Class 10\",\"keywords\":\"head,eyes,nose,mouth\",\"subject\":\"Science\",\"description\":\"Explains key parts in the head such as eyes,nose,ears and mouth\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"No\"},\"hierarchy\":{\"L:3\":\"5.1.1 Key parts in the head\",\"L:2\":\"5.1 Parts of Body\",\"Textbook\":\"Science-10\"}},{\"metadata\":{\"gradeLevel\":\"Class 10\",\"purpose\":\"Video of lungs pumping\",\"subject\":\"Science\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"Yes\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"L:3\":\"5.2 .1 Respiratory System\",\"L:2\":\"5.2 Organ Systems\",\"Textbook\":\"Science-10\"}},{\"metadata\":{\"gradeLevel\":\"Class 10\",\"keywords\":\"head,eyes,nose,mouth\",\"subject\":\"Science\",\"description\":\"Explains key parts in the head such as eyes,nose,ears and mouth\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"No\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"L:2\":\"5.1 Parts of Body\",\"Textbook\":\"Science-10\"}},{\"metadata\":{\"gradeLevel\":\"Class 10\",\"purpose\":\"Video of lungs pumping\",\"subject\":\"Science\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"Yes\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"L:2\":\"5.2 Organ Systems\",\"Textbook\":\"Science-10\"}},{\"metadata\":{\"gradeLevel\":\"Class 10\",\"keywords\":\"head,eyes,nose,mouth\",\"subject\":\"Science\",\"description\":\"Explains key parts in the head such as eyes,nose,ears and mouth\",\"medium\":\"Hindi\",\"dialcodeRequired\":\"No\"},\"hierarchy\":{\"L:1\":\"5. Human Body\",\"Textbook\":\"Science-10\"}}]}";
+
+  private static final String VALID_HEADER =
+      "Identifier,Medium,Grade,Subject,Textbook Name,Level 1 Textbook Unit,Description,QR Code Required?,QR Code,Purpose of Content to be linked,Mapped Topics,Keywords\n";
+  private static final String TEXTBOOK_TOC_INPUT_MAPPING =
+      getFileAsString("FrameworkForTextbookTocActorTest.json");
+  private static final String MANDATORY_VALUES =
+      getFileAsString("MandatoryValueForTextbookTocActorTest.json");
+  private static final String CONTENT_TYPE = "any";
+  private static final String IDENTIFIER = "do_1126788813057638401122";
+  private static final String TEXTBOOK_NAME = "test";
+  private static final String UNIT_NAME = "unit1";
 
   @Before
   public void setUp() {
     PowerMockito.mockStatic(TextBookTocUtil.class);
+    PowerMockito.mockStatic(ProjectUtil.class);
+    PowerMockito.mockStatic(Unirest.class);
     system = ActorSystem.create("system");
-  }
-
-  @Ignore
-  public void testDuplicateRow() throws IOException {
-    TestKit probe = new TestKit(system);
-    ActorRef toc = system.actorOf(props);
-
-    Response readTb = getTbWithoutChildren();
-    when(TextBookTocUtil.readContent(Mockito.anyString())).thenReturn(readTb);
-    Request request = new Request();
-    request.setContext(
-        new HashMap<String, Object>() {
-          {
-            put("userId", "test");
-          }
-        });
-    request.put(JsonKey.TEXTBOOK_ID, "do_11265332762881228812868");
-    request.put(JsonKey.DATA, mapper.readValue(DUPLICATE_ROW_REQ, Map.class));
-    request.setOperation(TextbookActorOperation.TEXTBOOK_TOC_UPLOAD.getValue());
-
-    toc.tell(request, probe.getRef());
-    ProjectCommonException res =
-        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    Assert.assertTrue(null != res);
-    Assert.assertEquals(
-        "Duplicate Textbook node found. Please check and upload again. Row number 6",
-        res.getMessage());
-  }
-
-  @Ignore
-  public void testReqFieldMiss() throws IOException {
-    TestKit probe = new TestKit(system);
-    ActorRef toc = system.actorOf(props);
-
-    Response readTb = getTbWithoutChildren();
-    when(TextBookTocUtil.readContent(Mockito.anyString())).thenReturn(readTb);
-    Request request = new Request();
-    request.setContext(
-        new HashMap<String, Object>() {
-          {
-            put("userId", "test");
-          }
-        });
-    request.put(JsonKey.TEXTBOOK_ID, "do_11265332762881228812868");
-    request.put(JsonKey.DATA, mapper.readValue(REQUIRED_FIELD_MISS_REQ, Map.class));
-    request.setOperation(TextbookActorOperation.TEXTBOOK_TOC_UPLOAD.getValue());
-
-    toc.tell(request, probe.getRef());
-    ProjectCommonException res =
-        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    Assert.assertTrue(null != res);
-    Assert.assertEquals(
-        "Required columns missing. Please check and upload again. Mandatory fields are: [Textbook Name, Level 1 Textbook Unit]",
-        res.getMessage());
+    when(ProjectUtil.getConfigValue(Mockito.anyString())).thenReturn(TEXTBOOK_TOC_INPUT_MAPPING);
+    when(ProjectUtil.getConfigValue(JsonKey.TEXTBOOK_TOC_MAX_CSV_ROWS)).thenReturn("5");
+    when(ProjectUtil.getConfigValue(JsonKey.TEXTBOOK_TOC_MANDATORY_FIELDS))
+        .thenReturn(MANDATORY_VALUES);
+    when(ProjectUtil.getConfigValue(JsonKey.TEXTBOOK_TOC_ALLOWED_CONTNET_TYPES))
+        .thenReturn(CONTENT_TYPE);
+    when(ProjectUtil.getConfigValue(JsonKey.EKSTEP_BASE_URL)).thenReturn("http://www.abc.com/");
+    when(ProjectUtil.getConfigValue(JsonKey.UPDATE_HIERARCHY_API)).thenReturn("");
   }
 
   @Test
-  public void testDownloadInvalid() throws IOException {
-    TestKit probe = new TestKit(system);
-    ActorRef toc = system.actorOf(props);
-
-    Response readTb = getTbWithoutChildren();
-    when(TextBookTocUtil.readContent(Mockito.anyString())).thenReturn(readTb);
-    Request request = new Request();
-    request.setContext(
-        new HashMap<String, Object>() {
-          {
-            put("userId", "test");
-          }
-        });
-    request.put(JsonKey.TEXTBOOK_ID, "");
-    request.setOperation(TextbookActorOperation.TEXTBOOK_TOC_URL.getValue());
-
-    toc.tell(request, probe.getRef());
-    ProjectCommonException res =
-        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    Assert.assertTrue(null != res);
+  public void testUpdateFailureWithIncorrectTocData() throws IOException {
+    mockRequiredMethods(false);
+    StringBuffer tocData = new StringBuffer(VALID_HEADER);
+    tocData = addTocDataRow(tocData, JsonKey.YES, "2019", "", "", false);
+    tocData = addTocDataRow(tocData, JsonKey.YES, "2096", "", "", true);
+    ProjectCommonException res = (ProjectCommonException) doRequest(true, tocData.toString());
     Assert.assertEquals(
-        "Invalid Textbook. Please Provide Valid Textbook Identifier.", res.getMessage());
+        res.getCode(), ResponseCode.errorDialCodeNotReservedForTextBook.getErrorCode());
   }
 
-  @Ignore
-  public void testTocUplodSuccess() throws IOException {
+  @Test
+  public void testUpdateFailureWithDailcodeNotReq() throws IOException {
+    mockRequiredMethods(false);
+    StringBuffer tocData = new StringBuffer(VALID_HEADER);
+    tocData = addTocDataRow(tocData, JsonKey.NO, "2019", "", "", true);
+    ProjectCommonException res = (ProjectCommonException) doRequest(true, tocData.toString());
+    Assert.assertEquals(res.getCode(), ResponseCode.errorConflictingValues.getErrorCode());
+  }
+
+  @Test
+  public void testUpdateFailureWithDuplicateEntry() throws IOException {
+    mockRequiredMethods(false);
+    StringBuffer tocData = new StringBuffer(VALID_HEADER);
+    tocData = addTocDataRow(tocData, JsonKey.YES, "2019", "", "", false);
+    tocData = addTocDataRow(tocData, JsonKey.YES, "2019", "", "", true);
+    ProjectCommonException res = (ProjectCommonException) doRequest(true, tocData.toString());
+    Assert.assertEquals(res.getCode(), ResponseCode.errorDuplicateEntries.getErrorCode());
+  }
+
+  @Test
+  public void testUpdateFailureWithBlankCsv() throws IOException {
+    mockRequiredMethods(false);
+    ProjectCommonException res = (ProjectCommonException) doRequest(true, VALID_HEADER);
+    Assert.assertEquals(res.getCode(), ResponseCode.blankCsvData.getErrorCode());
+  }
+
+  @Test
+  public void testUpdateFailureWithInvalidTopic() throws IOException {
+    mockRequiredMethods(false);
+    StringBuffer tocData = new StringBuffer(VALID_HEADER);
+    tocData = addTocDataRow(tocData, JsonKey.YES, "2019", "topi", "abc", true);
+    ProjectCommonException res = (ProjectCommonException) doRequest(true, tocData.toString());
+    Assert.assertEquals(res.getCode(), ResponseCode.errorInvalidTopic.getErrorCode());
+  }
+
+  @Test
+  public void testUpdateFailureWithInvalidDailcode() throws IOException {
+    mockRequiredMethods(false);
+    StringBuffer tocData = new StringBuffer(VALID_HEADER);
+    tocData = addTocDataRow(tocData, JsonKey.YES, "2089", "", "", true);
+    ProjectCommonException res = (ProjectCommonException) doRequest(true, tocData.toString());
+    Assert.assertEquals(
+        res.getCode(), ResponseCode.errorDialCodeNotReservedForTextBook.getErrorCode());
+  }
+
+  @Test
+  public void testUpdateFailureWithTocDataNotUnique() throws IOException {
+    mockRequiredMethods(true);
+    StringBuffer tocData = new StringBuffer(VALID_HEADER);
+    tocData = addTocDataRow(tocData, JsonKey.YES, "2019", "", "", true);
+    ProjectCommonException res = (ProjectCommonException) doRequest(true, tocData.toString());
+    Assert.assertEquals(res.getCode(), ResponseCode.errorDialCodeAlreadyAssociated.getErrorCode());
+  }
+
+  @Test
+  public void testUpdateSuccess() throws UnirestException, IOException {
+    mockRequiredMethods(false);
+    StringBuffer tocData = new StringBuffer(VALID_HEADER);
+    tocData = addTocDataRow(tocData, JsonKey.YES, "2019", "", "", true);
+    mockResponseFromUpdateHierarchy();
+    Response response = (Response) doRequest(false, tocData.toString());
+    Assert.assertNotNull(response);
+  }
+
+  private void mockResponseFromUpdateHierarchy() throws UnirestException {
+    HttpRequestWithBody http = Mockito.mock(HttpRequestWithBody.class);
+    RequestBodyEntity entity = Mockito.mock(RequestBodyEntity.class);
+    HttpResponse<String> response = Mockito.mock(HttpResponse.class);
+    when(Unirest.patch(Mockito.anyString())).thenReturn(http);
+    when(http.headers(Mockito.anyMap())).thenReturn(http);
+    when(http.body(Mockito.anyString())).thenReturn(entity);
+    when(entity.asString()).thenReturn(response);
+    when(response.getBody()).thenReturn("{\"responseCode\" :\"OK\" }");
+  }
+
+  private Object doRequest(boolean error, String data) throws IOException {
     TestKit probe = new TestKit(system);
     ActorRef toc = system.actorOf(props);
-
-    Response readTb = getTbWithoutChildren();
-    when(TextBookTocUtil.readContent(Mockito.anyString())).thenReturn(readTb);
-
     Request request = new Request();
     request.setContext(
         new HashMap<String, Object>() {
@@ -146,23 +177,102 @@ public class TextbookTocActorTest {
             put("userId", "test");
           }
         });
-    request.put(JsonKey.TEXTBOOK_ID, "do_11265332762881228812868");
-    request.put(JsonKey.DATA, mapper.readValue(TB_CREATE_VALID_REQ, Map.class));
+    request.put(JsonKey.TEXTBOOK_ID, "do_1126788813057638401122");
+    InputStream stream = new ByteArrayInputStream(data.getBytes());
+    byte[] byteArray = IOUtils.toByteArray(stream);
+    request.getRequest().put(JsonKey.DATA, byteArray);
+    request.put(JsonKey.DATA, byteArray);
     request.setOperation(TextbookActorOperation.TEXTBOOK_TOC_UPLOAD.getValue());
-
     toc.tell(request, probe.getRef());
-    Response res = probe.expectMsgClass(duration("100 second"), Response.class);
-    Assert.assertNotNull(res);
-    Assert.assertEquals("OK", res.getResponseCode().name());
-  }
-
-  private static Response getTbWithoutChildren() throws IOException {
-    return mapper.readValue(TB_WITHOUT_CHILDREN, Response.class);
-  }
-
-  private static Response getSuccess() {
-    Response response = new Response();
-    response.put("content_id", "do_11265332762881228812868");
+    if (error) {
+      ProjectCommonException res =
+          probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+      return res;
+    }
+    Response response = probe.expectMsgClass(duration("10 second"), Response.class);
     return response;
+  }
+
+  private void mockRequiredMethods(boolean error) {
+    when(TextBookTocUtil.getRelatedFrameworkById(Mockito.anyString())).thenReturn(new Response());
+    when(TextBookTocUtil.readHierarchy(Mockito.anyString())).thenReturn(getReadHierarchy(error));
+    when(TextBookTocUtil.readContent(Mockito.anyString())).thenReturn(getReadContentTextbookData());
+  }
+
+  private Response getReadHierarchy(boolean error) {
+    Response response = new Response();
+    List<String> tocData = new ArrayList<>();
+    Map<String, Object> content = new HashMap<>();
+    if (error) {
+      content.put(JsonKey.IDENTIFIER, "do_112678881305763840115");
+    } else {
+      content.put(JsonKey.IDENTIFIER, "do_1126788813057638401122");
+    }
+    tocData.add("2019");
+    content.put(JsonKey.DIAL_CODES, tocData);
+    content.put(JsonKey.CHILDREN, new ArrayList<>());
+    response.put(JsonKey.CONTENT, content);
+    return response;
+  }
+
+  private Response getReadContentTextbookData() {
+    Response response = new Response();
+    Map<String, Object> textBookdata = new HashMap<>();
+    Map<String, Integer> reserveDialCodes = new HashMap<>();
+    reserveDialCodes.put("2019", 1);
+    textBookdata.put(JsonKey.RESERVED_DIAL_CODES, reserveDialCodes);
+    textBookdata.put(JsonKey.CONTENT_TYPE, CONTENT_TYPE);
+    textBookdata.put(JsonKey.MIME_TYPE, "application/vnd.ekstep.content-collection");
+    textBookdata.put(JsonKey.NAME, "test");
+    response.put(JsonKey.CONTENT, textBookdata);
+    return response;
+  }
+
+  private static String getFileAsString(String fileName) {
+    File file = null;
+
+    try {
+      file = new File(TextbookTocActorTest.class.getClassLoader().getResource(fileName).getFile());
+      Path path = Paths.get(file.getPath());
+      List<String> fileData = Files.readAllLines(path);
+      StringBuffer result = new StringBuffer();
+      result.append(fileData.get(0));
+      for (int num = 1; num < fileData.size(); num++) {
+        result.append("\n" + fileData.get(num));
+      }
+      return result.toString();
+    } catch (FileNotFoundException e) {
+      ProjectLogger.log(e.getMessage(), e);
+    } catch (IOException e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
+    return null;
+  }
+
+  private StringBuffer addTocDataRow(
+      StringBuffer tocData,
+      String isQrCodeReq,
+      String qrCode,
+      String mappedTopic,
+      String keywords,
+      boolean isLastEntry) {
+
+    tocData.append(
+        Joiner.on(',')
+            .join(
+                IDENTIFIER,
+                "",
+                "",
+                "",
+                TEXTBOOK_NAME,
+                UNIT_NAME,
+                "",
+                isQrCodeReq,
+                qrCode,
+                "",
+                mappedTopic,
+                (isLastEntry ? keywords : keywords + "\n")));
+
+    return tocData;
   }
 }

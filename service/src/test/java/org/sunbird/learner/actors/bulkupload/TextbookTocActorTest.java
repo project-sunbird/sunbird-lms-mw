@@ -236,8 +236,9 @@ public class TextbookTocActorTest {
       Path path = Paths.get(file.getPath());
       List<String> fileData = Files.readAllLines(path);
       StringBuffer result = new StringBuffer();
-      for (String line : fileData) {
-        result.append(line);
+      result.append(fileData.get(0));
+      for (int num = 1; num < fileData.size(); num++) {
+        result.append("\n" + fileData.get(num));
       }
       return result.toString();
     } catch (FileNotFoundException e) {

@@ -582,6 +582,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       Map<String, Object> requestMap = new HashMap<String, Object>();
       Map<String, Object> dataMap = new HashMap<String, Object>();
       Map<String, Object> hierarchy = new HashMap<String, Object>();
+      if (MapUtils.isNotEmpty(hierarchyData)) {
+        hierarchy.putAll(hierarchyData);
+      }
       dataMap.put(JsonKey.NODES_MODIFIED, nodesModified);
       dataMap.put(JsonKey.HIERARCHY, hierarchy);
       requestMap.put(JsonKey.DATA, dataMap);

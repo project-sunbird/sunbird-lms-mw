@@ -93,7 +93,7 @@ public class TextbookTocActorTest {
   }
 
   @Test
-  public void testUpdateFailureWithDailcodeNotreq() throws IOException {
+  public void testUpdateFailureWithDailcodeNotReq() throws IOException {
     mockRequiredMethods(false);
     StringBuffer tocData = new StringBuffer(VALID_HEADER);
     tocData = addTocDataRow(tocData, JsonKey.NO, "2019", "", "", true);
@@ -112,14 +112,14 @@ public class TextbookTocActorTest {
   }
 
   @Test
-  public void testUpdateFailureWithblankCsv() throws IOException {
+  public void testUpdateFailureWithBlankCsv() throws IOException {
     mockRequiredMethods(false);
     ProjectCommonException res = (ProjectCommonException) doRequest(true, VALID_HEADER);
     Assert.assertEquals(res.getCode(), ResponseCode.blankCsvData.getErrorCode());
   }
 
   @Test
-  public void testUpdateFailureWithInvalideTopic() throws IOException {
+  public void testUpdateFailureWithInvalidTopic() throws IOException {
     mockRequiredMethods(false);
     StringBuffer tocData = new StringBuffer(VALID_HEADER);
     tocData = addTocDataRow(tocData, JsonKey.YES, "2019", "topi", "abc", true);
@@ -128,7 +128,7 @@ public class TextbookTocActorTest {
   }
 
   @Test
-  public void testUpdateFailureWithInvalideDailcode() throws IOException {
+  public void testUpdateFailureWithInvalidDailcode() throws IOException {
     mockRequiredMethods(false);
     StringBuffer tocData = new StringBuffer(VALID_HEADER);
     tocData = addTocDataRow(tocData, JsonKey.YES, "2089", "", "", true);
@@ -138,7 +138,7 @@ public class TextbookTocActorTest {
   }
 
   @Test
-  public void testUpdateFailureWithtocDataNotUnique() throws IOException {
+  public void testUpdateFailureWithTocDataNotUnique() throws IOException {
     mockRequiredMethods(true);
     StringBuffer tocData = new StringBuffer(VALID_HEADER);
     tocData = addTocDataRow(tocData, JsonKey.YES, "2019", "", "", true);
@@ -147,7 +147,7 @@ public class TextbookTocActorTest {
   }
 
   @Test
-  public void testUpdateSuccessWithValidData() throws UnirestException, IOException {
+  public void testUpdateSuccess() throws UnirestException, IOException {
     mockRequiredMethods(false);
     StringBuffer tocData = new StringBuffer(VALID_HEADER);
     tocData = addTocDataRow(tocData, JsonKey.YES, "2019", "", "", true);

@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.concurrent.CompletionStage;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -60,6 +61,7 @@ import scala.concurrent.duration.Duration;
   DecryptionService.class,
 })
 @PowerMockIgnore({"javax.management.*"})
+@Ignore
 public class UserRoleActorTest {
 
   private ActorSystem system = ActorSystem.create("system");

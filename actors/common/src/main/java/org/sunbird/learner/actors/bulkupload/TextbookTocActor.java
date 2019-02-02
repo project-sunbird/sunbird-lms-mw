@@ -74,6 +74,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.content.textbook.FileExtension;
 import org.sunbird.content.textbook.TextBookTocUploader;
 import org.sunbird.content.util.TextBookTocUtil;
+import org.sunbird.common.models.util.LoggerEnum;
 
 @ActorConfig(
   tasks = {"textbookTocUpload", "textbookTocUrl", "textbookTocUpdate"},
@@ -402,7 +403,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         if (null != csvFileParser) csvFileParser.close();
       } catch (IOException e) {
         ProjectLogger.log(
-            "TextbookTocActor:readAndValidateCSV : Exception occurred while closing stream");
+            "TextbookTocActor:readAndValidateCSV : Exception occurred while closing stream", LoggerEnum.ERROR);
       }
     }
     return result;
@@ -544,13 +545,13 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     log("Create Textbook called ", INFO.name());
     Map<String, Object> file = (Map<String, Object>) request.get(JsonKey.DATA);
     List<Map<String, Object>> data = (List<Map<String, Object>>) file.get(JsonKey.FILE_DATA);
-    log("Create Textbook - UpdateHierarchy input data : " + mapper.writeValueAsString(data));
     if (CollectionUtils.isEmpty(data)) {
       throw new ProjectCommonException(
           ResponseCode.invalidRequestData.getErrorCode(),
           ResponseCode.invalidRequestData.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     } else {
+     log("Create Textbook - UpdateHierarchy input data : " + mapper.writeValueAsString(data),LoggerEnum.INFO); 
       String tbId = (String) request.get(TEXTBOOK_ID);
       Map<String, Object> nodesModified = new HashMap<>();
       Map<String, Object> hierarchyData = new HashMap<>();

@@ -178,7 +178,7 @@ public class UserManagementActor extends BaseActor {
   private void validateUserTypeForUpdate(Map<String, Object> userMap) {
     if (userMap.containsKey(JsonKey.USER_TYPE)) {
       String userType = (String) userMap.get(JsonKey.USER_TYPE);
-      if (userType.equalsIgnoreCase(UserType.TEACHER.getTypeName())) {
+      if (UserType.TEACHER.getTypeName().equalsIgnoreCase(userType)) {
         String custodianChannel = null;
         String custodianRootOrgId = null;
         User user = userService.getUserById((String) userMap.get(JsonKey.USER_ID));
@@ -195,12 +195,9 @@ public class UserManagementActor extends BaseActor {
         if (StringUtils.isNotBlank(custodianRootOrgId)
             && user.getRootOrgId().equalsIgnoreCase(custodianRootOrgId)) {
           ProjectCommonException.throwClientErrorException(
-              ResponseCode.errorTeacherCannotBelongsToCustodianOrg,
-              ResponseCode.errorTeacherCannotBelongsToCustodianOrg.getErrorMessage());
-        } else {
-          userMap.put(JsonKey.USER_TYPE, UserType.TEACHER.getTypeName());
+              ResponseCode.errorTeacherCannotBelongToCustodianOrg,
+              ResponseCode.errorTeacherCannotBelongToCustodianOrg.getErrorMessage());
         }
-
       } else {
         userMap.put(JsonKey.USER_TYPE, UserType.OTHER.getTypeName());
       }
@@ -344,8 +341,8 @@ public class UserManagementActor extends BaseActor {
     if (StringUtils.isNotBlank(userType)) {
       if (userType.equalsIgnoreCase(UserType.TEACHER.getTypeName()) && isCustodianOrg) {
         ProjectCommonException.throwClientErrorException(
-            ResponseCode.errorTeacherCannotBelongsToCustodianOrg,
-            ResponseCode.errorTeacherCannotBelongsToCustodianOrg.getErrorMessage());
+            ResponseCode.errorTeacherCannotBelongToCustodianOrg,
+            ResponseCode.errorTeacherCannotBelongToCustodianOrg.getErrorMessage());
       } else if (userType.equalsIgnoreCase(UserType.TEACHER.getTypeName())) {
         userMap.put(JsonKey.USER_TYPE, UserType.TEACHER.getTypeName());
       }

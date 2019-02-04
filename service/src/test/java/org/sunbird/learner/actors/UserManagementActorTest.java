@@ -326,7 +326,7 @@ public class UserManagementActorTest {
     boolean result =
         testScenario(
             getRequest(false, false, true, reqMap, ActorOperations.CREATE_USER),
-            ResponseCode.errorTeacherCannotBelongsToCustodianOrg);
+            ResponseCode.errorTeacherCannotBelongToCustodianOrg);
     assertTrue(result);
   }
 
@@ -350,7 +350,7 @@ public class UserManagementActorTest {
     boolean result =
         testScenario(
             getRequest(false, true, true, req, ActorOperations.UPDATE_USER),
-            ResponseCode.errorTeacherCannotBelongsToCustodianOrg);
+            ResponseCode.errorTeacherCannotBelongToCustodianOrg);
     assertTrue(result);
   }
 

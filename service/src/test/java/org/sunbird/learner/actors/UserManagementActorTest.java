@@ -37,6 +37,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
+import org.sunbird.models.user.User;
 import org.sunbird.user.actors.UserManagementActor;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.UserUtil;
@@ -61,6 +62,7 @@ public class UserManagementActorTest {
   private static Map<String, Object> reqMap;
   static InterServiceCommunication interServiceCommunication =
       mock(InterServiceCommunicationImpl.class);;
+  private static UserServiceImpl userService;
 
   @Before
   public void beforeEachTest() {
@@ -96,7 +98,7 @@ public class UserManagementActorTest {
         .thenReturn(new HashMap<>());
 
     PowerMockito.mockStatic(UserServiceImpl.class);
-    UserServiceImpl userService = mock(UserServiceImpl.class);
+    userService = mock(UserServiceImpl.class);
     when(UserServiceImpl.getInstance()).thenReturn(userService);
     when(userService.getRootOrgIdFromChannel(Mockito.anyString())).thenReturn("anyId");
     when(userService.getCustodianChannel(Mockito.anyMap(), Mockito.any(ActorRef.class)))
@@ -117,7 +119,6 @@ public class UserManagementActorTest {
     Map<String, Object> requestMap = new HashMap<>();
     requestMap.put(JsonKey.TNC_ACCEPTED_ON, 12345678L);
     when(UserUtil.encryptUserData(Mockito.anyMap())).thenReturn(requestMap);
-
     reqMap = getMapObject();
   }
 
@@ -296,6 +297,63 @@ public class UserManagementActorTest {
     assertTrue(result);
   }
 
+  @Test
+  public void testCreateUserSuccessWithUserTypeAsTeacher() {
+    reqMap.put(JsonKey.USER_TYPE, JsonKey.TEACHER);
+
+    boolean result =
+        testScenario(
+            getRequest(true, true, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
+            null);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testCreateUserSuccessWithUserTypeAsOther() {
+    reqMap.put(JsonKey.USER_TYPE, JsonKey.OTHER);
+
+    boolean result =
+        testScenario(
+            getRequest(true, true, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
+            null);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testCreateUserFailureWithUserTypeAsTeacherAndCustodianOrg() {
+    reqMap.put(JsonKey.USER_TYPE, JsonKey.TEACHER);
+
+    boolean result =
+        testScenario(
+            getRequest(false, false, true, reqMap, ActorOperations.CREATE_USER),
+            ResponseCode.errorTeacherCannotBelongsToCustodianOrg);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testUpdateUserSuccessWithUserTypeTeacher() {
+    Map<String, Object> req = getExternalIdMap();
+    req.put(JsonKey.USER_TYPE, JsonKey.TEACHER);
+    when(userService.getUserById(Mockito.anyString())).thenReturn(getUser(false));
+    when(userService.getRootOrgIdFromChannel(Mockito.anyString())).thenReturn("rootOrgId1");
+    boolean result =
+        testScenario(getRequest(false, true, true, req, ActorOperations.UPDATE_USER), null);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testUpdateUserFailureWithUserTypeTeacher() {
+    Map<String, Object> req = getExternalIdMap();
+    req.put(JsonKey.USER_TYPE, JsonKey.TEACHER);
+    when(userService.getUserById(Mockito.anyString())).thenReturn(getUser(false));
+    when(userService.getRootOrgIdFromChannel(Mockito.anyString())).thenReturn("rootOrgId");
+    boolean result =
+        testScenario(
+            getRequest(false, true, true, req, ActorOperations.UPDATE_USER),
+            ResponseCode.errorTeacherCannotBelongsToCustodianOrg);
+    assertTrue(result);
+  }
+
   private Map<String, Object> getAdditionalMapData(Map<String, Object> reqMap) {
     reqMap.put(JsonKey.ORGANISATION_ID, "anyOrgId");
     reqMap.put(JsonKey.CHANNEL, "anyChannel");
@@ -395,5 +453,14 @@ public class UserManagementActorTest {
     Response response = new Response();
     response.put(JsonKey.RESPONSE, Arrays.asList("id"));
     return response;
+  }
+
+  private User getUser(boolean isCustodian) {
+    User user = new User();
+    user.setRootOrgId("rootOrgId");
+    if (isCustodian) {
+      user.setRootOrgId("custodianOrgId");
+    }
+    return user;
   }
 }

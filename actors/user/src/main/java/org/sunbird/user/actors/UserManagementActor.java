@@ -343,9 +343,7 @@ public class UserManagementActor extends BaseActor {
         ProjectCommonException.throwClientErrorException(
             ResponseCode.errorTeacherCannotBelongToCustodianOrg,
             ResponseCode.errorTeacherCannotBelongToCustodianOrg.getErrorMessage());
-      } else if (userType.equalsIgnoreCase(UserType.TEACHER.getTypeName())) {
-        userMap.put(JsonKey.USER_TYPE, UserType.TEACHER.getTypeName());
-      }
+      } 
     } else {
       userMap.put(JsonKey.USER_TYPE, UserType.OTHER.getTypeName());
     }

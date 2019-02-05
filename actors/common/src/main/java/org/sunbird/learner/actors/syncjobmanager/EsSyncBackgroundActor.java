@@ -214,7 +214,8 @@ public class EsSyncBackgroundActor extends BaseActor {
     userMap.put(BadgingJsonKey.BADGE_ASSERTIONS, Util.getUserBadge(userId));
     userMap.put(JsonKey.BATCHES, Util.getUserCourseBatch(userId));
     userMap.put(
-        JsonKey.ROOT_ORG_NAME, Util.getRootOrgIdFromChannel((String) userMap.get(JsonKey.CHANNEL)));
+        JsonKey.ROOT_ORG_NAME,
+        Util.getRootOrgIdOrNameFromChannel((String) userMap.get(JsonKey.CHANNEL), true));
 
     // save masked email and phone number
     Util.addMaskEmailAndPhone(userMap);

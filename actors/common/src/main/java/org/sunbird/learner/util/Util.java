@@ -1585,6 +1585,33 @@ public final class Util {
     return badges;
   }
 
+  public static List<Map<String, Object>> getUserCourseBatch(String userId) {
+    DbInfo userCourseDb = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
+    List<Map<String, Object>> userCourses = new ArrayList<>();
+    try {
+      Response result =
+          cassandraOperation.getRecordsByIndexedProperty(
+              userCourseDb.getKeySpace(), userCourseDb.getTableName(), JsonKey.USER_ID, userId);
+      List<Map<String, Object>> courseBatch =
+          (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+      if (!CollectionUtils.isEmpty(courseBatch)) {
+        for (Map<String, Object> userCourseBatch : courseBatch) {
+          Map<String, Object> tempMap = new HashMap<>();
+          tempMap.put(JsonKey.ENROLLED_ON, userCourseBatch.get(JsonKey.COURSE_ENROLL_DATE));
+          tempMap.put(JsonKey.COURSE_ID, userCourseBatch.get(JsonKey.COURSE_ID));
+          tempMap.put(JsonKey.BATCH_ID, userCourseBatch.get(JsonKey.BATCH_ID));
+          tempMap.put(JsonKey.PROGRESS, userCourseBatch.get(JsonKey.PROGRESS));
+          tempMap.put(JsonKey.LAST_ACCESSED_ON, userCourseBatch.get(JsonKey.DATE_TIME));
+          userCourses.add(tempMap);
+        }
+      }
+
+    } catch (Exception e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
+    return userCourses;
+  }
+
   public static List<Map<String, Object>> getUserOrgDetails(String userId) {
     List<Map<String, Object>> userOrgList = null;
     List<Map<String, Object>> organisations = new ArrayList<>();
@@ -1598,7 +1625,19 @@ public final class Util {
               orgUsrDbInfo.getKeySpace(), orgUsrDbInfo.getTableName(), reqMap);
       userOrgList = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
       if (CollectionUtils.isNotEmpty(userOrgList)) {
+        List<String> organisationIds = new ArrayList<>();
+
         for (Map<String, Object> tempMap : userOrgList) {
+          organisationIds.add((String) tempMap.get(JsonKey.ORGANISATION_ID));
+        }
+
+        List<String> fields = Arrays.asList(JsonKey.ORG_NAME, JsonKey.PARENT_ORG_ID, JsonKey.ID);
+
+        Map<String, Map<String, Object>> orgInfoMap =
+            getEsResultByListOfIds(organisationIds, fields, EsType.organisation);
+
+        for (Map<String, Object> tempMap : userOrgList) {
+          tempMap.putAll(orgInfoMap.get(tempMap.get(JsonKey.ID)));
           organisations.add(tempMap);
         }
       }
@@ -1606,6 +1645,30 @@ public final class Util {
       ProjectLogger.log(e.getMessage(), e);
     }
     return organisations;
+  }
+
+  private static Map<String, Map<String, Object>> getEsResultByListOfIds(
+      List<String> orgIds, List<String> fields, EsType typeToSearch) {
+
+    Map<String, Object> filters = new HashMap<>();
+    filters.put(JsonKey.ID, orgIds);
+
+    SearchDTO searchDTO = new SearchDTO();
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
+    searchDTO.setFields(fields);
+
+    Map<String, Object> result =
+        ElasticSearchUtil.complexSearch(
+            searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(), typeToSearch.getTypeName());
+    List<Map<String, Object>> esContent = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+    return esContent
+        .stream()
+        .collect(
+            Collectors.toMap(
+                obj -> {
+                  return (String) obj.get("id");
+                },
+                val -> val));
   }
 
   public static List<Map<String, Object>> getJobProfileDetails(String userId) {

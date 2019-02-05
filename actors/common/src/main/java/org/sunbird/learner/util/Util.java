@@ -729,6 +729,10 @@ public final class Util {
    * @return Id of Root organization.
    */
   public static String getRootOrgIdFromChannel(String channel) {
+    return getRootOrgIdOrNameFromChannel(channel, false);
+  }
+
+  public static String getRootOrgIdOrNameFromChannel(String channel, boolean isName) {
     Map<String, Object> filters = new HashMap<>();
     filters.put(JsonKey.IS_ROOT_ORG, true);
     if (StringUtils.isNotBlank(channel)) {
@@ -753,7 +757,8 @@ public final class Util {
         && CollectionUtils.isNotEmpty((List) esResult.get(JsonKey.CONTENT))) {
       Map<String, Object> esContent =
           ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT)).get(0);
-      return (String) esContent.get(JsonKey.ID);
+      if (!isName) return (String) esContent.get(JsonKey.ID);
+      else return (String) esContent.get(JsonKey.ORG_NAME);
     } else {
       if (StringUtils.isNotBlank(channel)) {
         throw new ProjectCommonException(

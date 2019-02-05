@@ -40,6 +40,7 @@ import org.sunbird.learner.util.Util;
   tasks = {
     "courseProgressMetrics",
     "courseConsumptionMetrics",
+          "courseConsumptionMetricsV2",
     "courseProgressMetricsReport",
     "courseConsumptionMetricsReport"
   },
@@ -57,21 +58,28 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
-    if (request
-        .getOperation()
-        .equalsIgnoreCase(ActorOperations.COURSE_PROGRESS_METRICS.getValue())) {
-      courseProgressMetrics(request);
-    } else if (request
-        .getOperation()
-        .equalsIgnoreCase(ActorOperations.COURSE_CREATION_METRICS.getValue())) {
-      courseConsumptionMetrics(request);
-    } else if (request
-        .getOperation()
-        .equalsIgnoreCase(ActorOperations.COURSE_PROGRESS_METRICS_REPORT.getValue())) {
-      courseProgressMetricsReport(request);
-    } else {
-      onReceiveUnsupportedOperation(request.getOperation());
+    String requestedOperation = request.getOperation();
+    switch (requestedOperation) {
+      case "courseProgressMetrics":
+        courseProgressMetrics(request);
+        break;
+      case "courseConsumptionMetrics":
+        courseConsumptionMetrics(request);
+        break;
+      case "courseConsumptionMetricsV2":
+        courseProgressMetricsV2(request);
+        break;
+      case "courseProgressMetricsReport":
+        courseProgressMetricsReport(request);
+        break;
+      default:
+        onReceiveUnsupportedOperation(request.getOperation());
+        break;
     }
+
+  }
+
+  private void courseProgressMetricsV2(Request actorMessage) {
   }
 
   private void courseProgressMetricsReport(Request actorMessage) {

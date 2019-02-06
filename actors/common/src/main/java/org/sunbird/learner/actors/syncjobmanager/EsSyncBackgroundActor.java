@@ -8,8 +8,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -212,6 +212,10 @@ public class EsSyncBackgroundActor extends BaseActor {
     userMap.put(JsonKey.JOB_PROFILE, Util.getJobProfileDetails(userId));
     userMap.put(JsonKey.ORGANISATIONS, Util.getUserOrgDetails(userId));
     userMap.put(BadgingJsonKey.BADGE_ASSERTIONS, Util.getUserBadge(userId));
+    userMap.put(JsonKey.BATCHES, Util.getUserCourseBatch(userId));
+    userMap.put(
+        JsonKey.ROOT_ORG_NAME,
+        Util.getRootOrgIdOrNameFromChannel((String) userMap.get(JsonKey.CHANNEL), true));
 
     // save masked email and phone number
     Util.addMaskEmailAndPhone(userMap);

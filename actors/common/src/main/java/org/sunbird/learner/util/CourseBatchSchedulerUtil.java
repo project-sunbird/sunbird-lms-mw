@@ -307,7 +307,7 @@ public final class CourseBatchSchedulerUtil {
     } else {
       contentName = "c_" + name + "_private_batch_count";
     }
-    return contentName;
+    return contentName.toLowerCase();
   }
 
   public static int getUpdatedBatchCount(

@@ -1630,16 +1630,16 @@ public final class Util {
               orgUsrDbInfo.getKeySpace(), orgUsrDbInfo.getTableName(), reqMap);
       userOrgList = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
       if (CollectionUtils.isNotEmpty(userOrgList)) {
-        List<String> organisationIds = new ArrayList<>();
-
-        for (Map<String, Object> tempMap : userOrgList) {
-          organisationIds.add((String) tempMap.get(JsonKey.ORGANISATION_ID));
-        }
-
+        List<String> organisationIds =
+            userOrgList
+                .stream()
+                .map(m -> (String) m.get(JsonKey.ORGANISATION_ID))
+                .distinct()
+                .collect(Collectors.toList());
         List<String> fields = Arrays.asList(JsonKey.ORG_NAME, JsonKey.PARENT_ORG_ID, JsonKey.ID);
 
         Map<String, Map<String, Object>> orgInfoMap =
-            getEsResultByListOfIds(organisationIds, fields, EsType.organisation);
+            ElasticSearchUtil.getEsResultByListOfIds(organisationIds, fields, EsType.organisation);
 
         for (Map<String, Object> tempMap : userOrgList) {
           tempMap.putAll(orgInfoMap.get(tempMap.get(JsonKey.ID)));
@@ -1650,30 +1650,6 @@ public final class Util {
       ProjectLogger.log(e.getMessage(), e);
     }
     return organisations;
-  }
-
-  private static Map<String, Map<String, Object>> getEsResultByListOfIds(
-      List<String> orgIds, List<String> fields, EsType typeToSearch) {
-
-    Map<String, Object> filters = new HashMap<>();
-    filters.put(JsonKey.ID, orgIds);
-
-    SearchDTO searchDTO = new SearchDTO();
-    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
-    searchDTO.setFields(fields);
-
-    Map<String, Object> result =
-        ElasticSearchUtil.complexSearch(
-            searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(), typeToSearch.getTypeName());
-    List<Map<String, Object>> esContent = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-    return esContent
-        .stream()
-        .collect(
-            Collectors.toMap(
-                obj -> {
-                  return (String) obj.get("id");
-                },
-                val -> val));
   }
 
   public static List<Map<String, Object>> getJobProfileDetails(String userId) {

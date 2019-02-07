@@ -1040,6 +1040,9 @@ public class OrganisationManagementActor extends BaseActor {
     usrOrgData.remove(JsonKey.PROVIDER);
     usrOrgData.remove(JsonKey.USERNAME);
     usrOrgData.remove(JsonKey.USER_NAME);
+    usrOrgData.remove(JsonKey.USER_EXTERNAL_ID);
+    usrOrgData.remove(JsonKey.USER_PROVIDER);
+    usrOrgData.remove(JsonKey.USER_ID_TYPE);
     usrOrgData.put(JsonKey.IS_DELETED, false);
 
     String updatedBy = null;
@@ -1596,10 +1599,10 @@ public class OrganisationManagementActor extends BaseActor {
     } else if (StringUtils.isNotBlank((String) data.get(JsonKey.USER_EXTERNAL_ID))
         && StringUtils.isNotBlank((String) data.get(JsonKey.USER_PROVIDER))
         && StringUtils.isNotBlank((String) data.get(JsonKey.USER_ID_TYPE))) {
-      requestDbMap.put(JsonKey.USER_PROVIDER, data.get(JsonKey.USER_PROVIDER));
-      requestDbMap.put(JsonKey.USER_ID_TYPE, data.get(JsonKey.USER_ID_TYPE));
-      requestDbMap.put(JsonKey.USER_EXTERNAL_ID, data.get(JsonKey.USER_EXTERNAL_ID));
-      usrDbInfo = Util.dbInfoMap.get(JsonKey.USR_EXT_ID_DB);
+      requestDbMap.put(JsonKey.PROVIDER, data.get(JsonKey.USER_PROVIDER));
+      requestDbMap.put(JsonKey.ID_TYPE, data.get(JsonKey.USER_ID_TYPE));
+      requestDbMap.put(JsonKey.EXTERNAL_ID, data.get(JsonKey.USER_EXTERNAL_ID));
+      usrDbInfo = Util.dbInfoMap.get(JsonKey.USR_EXT_IDNT_TABLE);
       result =
           cassandraOperation.getRecordsByProperties(
               usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestDbMap);

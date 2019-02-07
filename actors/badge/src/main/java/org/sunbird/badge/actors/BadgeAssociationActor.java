@@ -135,7 +135,6 @@ public class BadgeAssociationActor extends BaseActor {
           ResponseCode.errorBadgeAssociationNotFound,
           MessageFormat.format(
               ResponseCode.errorBadgeAssociationNotFound.getErrorMessage(), badgeIds));
-      ProjectCommonException.throwClientErrorException(ResponseCode.errorBadgeAssociationNotFound);
     }
     List<String> associationIds = new ArrayList<>();
     if (CollectionUtils.isNotEmpty(activeBadges)) {

@@ -1571,7 +1571,9 @@ public class OrganisationManagementActor extends BaseActor {
     }
     Map<String, Object> data = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     data.putAll(req);
-    if (isNull(data.get(JsonKey.USER_ID)) && isNull(data.get(JsonKey.USER_EXTERNAL_ID))) {
+    if (isNull(data.get(JsonKey.USER_ID))
+        && isNull(data.get(JsonKey.USER_EXTERNAL_ID))
+        && isNull(data.get(JsonKey.USERNAME))) {
       ProjectCommonException exception =
           new ProjectCommonException(
               ResponseCode.usrValidationError.getErrorCode(),

@@ -129,7 +129,6 @@ public class BadgeAssociationActor extends BaseActor {
 
   private List<String> getAssociationIdsToBeRemoved(
       List<Map<String, Object>> activeBadges, List<String> reqestedBadges) {
-    // TODO Auto-generated method stub
     List<String> badgeIds = getUncommonBadgeIds(reqestedBadges, activeBadges);
     if (CollectionUtils.isNotEmpty(badgeIds)) {
       ProjectCommonException.throwClientErrorException(

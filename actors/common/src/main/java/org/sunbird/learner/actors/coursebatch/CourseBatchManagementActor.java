@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
@@ -139,6 +140,7 @@ public class CourseBatchManagementActor extends BaseActor {
       batchOperationNotifier(courseBatch, null);
     }
     updateBatchCount(courseBatch);
+    if (!CollectionUtils.isEmpty(participants)) sendUserBatchSync(participants);
   }
 
   private boolean courseNotificationActive() {
@@ -234,6 +236,7 @@ public class CourseBatchManagementActor extends BaseActor {
     if (courseNotificationActive()) {
       batchOperationNotifier(courseBatch, participantsMap);
     }
+    if (!CollectionUtils.isEmpty(participants)) sendUserBatchSync(participants);
   }
 
   private Map<String, Object> getMentorLists(
@@ -395,6 +398,7 @@ public class CourseBatchManagementActor extends BaseActor {
       ProjectLogger.log(
           "CourseBatchManagementActor:addUserCourseBatch: Sync course batch details to ES called");
       tellToAnother(request);
+      sendUserBatchSync(userIds);
     } catch (Exception ex) {
       ProjectLogger.log(
           "CourseBatchManagementActor:addUserCourseBatch: Exception occurred with error message = "
@@ -888,5 +892,15 @@ public class CourseBatchManagementActor extends BaseActor {
             LoggerEnum.INFO.name());
       }
     }
+  }
+
+  private void sendUserBatchSync(List<String> userids) {
+    Request userBatchSync = new Request();
+    userBatchSync.setOperation(ActorOperations.SYNC.getValue());
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.OBJECT_IDS, userids);
+    map.put(JsonKey.OBJECT_TYPE, JsonKey.USER);
+    userBatchSync.getRequest().put(JsonKey.DATA, map);
+    tellToAnother(userBatchSync);
   }
 }

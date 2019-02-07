@@ -301,6 +301,10 @@ public class UserManagementActorTest {
   public void testCreateUserSuccessWithUserTypeAsTeacher() {
     reqMap.put(JsonKey.USER_TYPE, JsonKey.TEACHER);
 
+    when(userService.getRootOrgIdFromChannel(Mockito.anyString()))
+        .thenReturn("rootOrgId")
+        .thenReturn("");
+
     boolean result =
         testScenario(
             getRequest(true, true, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),

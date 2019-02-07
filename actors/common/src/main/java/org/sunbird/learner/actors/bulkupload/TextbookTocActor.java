@@ -47,10 +47,12 @@ import java.io.InputStreamReader;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -60,12 +62,14 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.TextbookActorOperation;
@@ -74,13 +78,15 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.content.textbook.FileExtension;
 import org.sunbird.content.textbook.TextBookTocUploader;
 import org.sunbird.content.util.TextBookTocUtil;
-import org.sunbird.common.models.util.LoggerEnum;
 
 @ActorConfig(
   tasks = {"textbookTocUpload", "textbookTocUrl", "textbookTocUpdate"},
   asyncTasks = {}
 )
 public class TextbookTocActor extends BaseBulkUploadActor {
+
+  final String TEXTBOOK_NAME = "Textbook Name";
+  final String L1_TEXTBOOK_UNIT = "Level 1 Textbook Unit";
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -109,7 +115,17 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     resultMap.remove(JsonKey.DIAL_CODE_IDENTIFIER_MAP);
     Set<String> topics = (Set<String>) resultMap.get(JsonKey.TOPICS);
     resultMap.remove(JsonKey.TOPICS);
-
+    Map<Integer, List<String>> rowNumVsContentIdsMap =
+        (Map<Integer, List<String>>) resultMap.get(JsonKey.LINKED_CONTENT);
+    resultMap.remove(JsonKey.LINKED_CONTENT);
+    validateLinkedContents(rowNumVsContentIdsMap);
+    resultMap.put(JsonKey.LINKED_CONTENT, false);
+    for (Entry<Integer, List<String>> entry : rowNumVsContentIdsMap.entrySet()) {
+      if (CollectionUtils.isNotEmpty(entry.getValue())) {
+        resultMap.put(JsonKey.LINKED_CONTENT, true);
+        break;
+      }
+    }
     String tbId = (String) request.get(TEXTBOOK_ID);
     Map<String, Object> textbookData = getTextbook(tbId);
 
@@ -123,11 +139,135 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     if (StringUtils.equalsIgnoreCase(mode, JsonKey.CREATE)) {
       response = createTextbook(request, textbookData);
     } else if (StringUtils.equalsIgnoreCase(mode, JsonKey.UPDATE)) {
-      response = updateTextbook(request, (String) textbookData.get(JsonKey.CHANNEL));
+      response = updateTextbook(request, textbookData);
     } else {
       unSupportedMessage();
     }
     sender().tell(response, sender());
+  }
+
+  private void validateLinkedContents(Map<Integer, List<String>> rowNumVsContentIdsMap) {
+    // rowNumVsContentIdsMap convert to contentIdVsrowListMap
+    if (MapUtils.isNotEmpty(rowNumVsContentIdsMap)) {
+      Map<String, List<Integer>> contentIdVsRowNumMap = new HashMap<>();
+      rowNumVsContentIdsMap.forEach(
+          (k, v) -> {
+            v.forEach(
+                contentId -> {
+                  if (contentIdVsRowNumMap.containsKey(contentId)) {
+                    contentIdVsRowNumMap.get(contentId).add(k);
+                  } else {
+                    List<Integer> rowNumList = new ArrayList<>();
+                    rowNumList.add(k);
+                    contentIdVsRowNumMap.put(contentId, rowNumList);
+                  }
+                });
+          });
+      callSearchApiForContentIdsValidation(contentIdVsRowNumMap);
+    }
+  }
+
+  private void callSearchApiForContentIdsValidation(
+      Map<String, List<Integer>> contentIdVsRowNumMap) {
+    List<String> contentIds = new ArrayList<>();
+    contentIds.addAll(contentIdVsRowNumMap.keySet());
+    Map<String, Object> requestMap = new HashMap<>();
+    Map<String, Object> request = new HashMap<>();
+    Map<String, Object> filters = new HashMap<>();
+    filters.put(JsonKey.STATUS, "Live");
+    filters.put(JsonKey.IDENTIFIER, contentIds);
+    request.put(JsonKey.FILTERS, filters);
+    requestMap.put(JsonKey.REQUEST, request);
+    List<String> fields = new ArrayList<>();
+    fields.add(JsonKey.IDENTIFIER);
+    request.put(JsonKey.FIELDS, fields);
+
+    String requestUrl =
+        getConfigValue(JsonKey.EKSTEP_BASE_URL) + getConfigValue(JsonKey.SUNBIRD_CS_SEARCH_PATH);
+    HttpResponse<String> updateResponse = null;
+    try {
+      updateResponse =
+          Unirest.post(requestUrl)
+              .headers(getDefaultHeaders())
+              .body(mapper.writeValueAsString(requestMap))
+              .asString();
+      if (null != updateResponse) {
+        Response response = mapper.readValue(updateResponse.getBody(), Response.class);
+        if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
+          Map<String, Object> result = response.getResult();
+          List<String> searchedContentIds = new ArrayList<>();
+          if (MapUtils.isNotEmpty(result)) {
+            int count = (int) result.get(JsonKey.COUNT);
+            if (0 == count) {
+              Map<String, String> errorMap =
+                  prepareErrorMap(contentIdVsRowNumMap, searchedContentIds);
+              ProjectCommonException.throwClientErrorException(
+                  ResponseCode.errorInvalidLinkedContentUrl,
+                  mapper.convertValue(errorMap, String.class));
+            }
+            List<Map<String, Object>> content =
+                (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+            if (CollectionUtils.isNotEmpty(content)) {
+              content.forEach(
+                  contentMap -> {
+                    searchedContentIds.add((String) contentMap.get(JsonKey.IDENTIFIER));
+                  });
+              if (content.size() != contentIds.size()) {
+                Map<String, String> errorMap =
+                    prepareErrorMap(contentIdVsRowNumMap, searchedContentIds);
+                if (errorMap.size() == 1) {
+                  for (Map.Entry<String, String> entry : errorMap.entrySet()) {
+                    throwInvalidLinkedContentUrl(
+                        entry.getValue(), contentIdVsRowNumMap.get(entry.getKey()));
+                  }
+                } else {
+                  ProjectCommonException.throwClientErrorException(
+                      ResponseCode.errorInvalidLinkedContentUrl,
+                      mapper.convertValue(errorMap, String.class));
+                }
+              }
+            } else {
+              throwCompositeSearchFailureError();
+            }
+          }
+        } else {
+          throwCompositeSearchFailureError();
+        }
+      } else {
+        throwCompositeSearchFailureError();
+      }
+    } catch (Exception e) {
+      ProjectLogger.log(
+          "TextbookTocActor:validateLinkedContents : Error occurred with message " + e.getMessage(),
+          e);
+      throwCompositeSearchFailureError();
+    }
+  }
+
+  private Map<String, String> prepareErrorMap(
+      Map<String, List<Integer>> contentIdVsRowNumMap, List<String> searchedContentIds) {
+    Map<String, String> errorMap = new HashMap<>();
+    contentIdVsRowNumMap
+        .keySet()
+        .forEach(
+            contentId -> {
+              if (!searchedContentIds.contains(contentId)) {
+                String contentUrl =
+                    ProjectUtil.getConfigValue(JsonKey.SUNBIRD_LINKED_CONTENT_BASE_URL) + contentId;
+                String message =
+                    MessageFormat.format(
+                        ResponseCode.errorInvalidLinkedContentUrl.getErrorMessage(),
+                        contentUrl,
+                        contentIdVsRowNumMap.get(contentId));
+                errorMap.put(contentId, message);
+              }
+            });
+    return errorMap;
+  }
+
+  private void throwCompositeSearchFailureError() {
+    ProjectCommonException.throwServerErrorException(
+        ResponseCode.customServerError, "Exception occurred while validating linked content.");
   }
 
   @SuppressWarnings("unchecked")
@@ -300,6 +440,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   private Map<String, Object> readAndValidateCSV(InputStream inputStream) throws IOException {
     ObjectMapper mapper = new ObjectMapper();
     Map<String, Object> result = new HashMap<>();
+    Map<Integer, List<String>> rowNumVsContentIdsMap = new HashMap<>();
     List<Map<String, Object>> rows = new ArrayList<>();
 
     String tocMapping = ProjectUtil.getConfigValue(JsonKey.TEXTBOOK_TOC_INPUT_MAPPING);
@@ -308,6 +449,11 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
     Map<String, String> metadata = (Map<String, String>) configMap.get(JsonKey.METADATA);
     Map<String, String> hierarchy = (Map<String, String>) configMap.get(JsonKey.HIERARCHY);
+    Map<String, String> linkedContent = (Map<String, String>) configMap.get(JsonKey.LINKED_CONTENT);
+    int max_allowed_content_size =
+        Integer.parseInt(linkedContent.get(JsonKey.MAX_ALLOWED_CONTENT_SIZE));
+    String linkedContentKey = linkedContent.get(JsonKey.LINKED_CONTENT_COLUMN_KEY);
+
     Map<String, String> fwMetadata =
         (Map<String, String>) configMap.get(JsonKey.FRAMEWORK_METADATA);
     String id =
@@ -347,6 +493,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           if (StringUtils.isNotBlank(record.get(entry.getValue())))
             recordMap.put(entry.getKey(), record.get(entry.getValue()));
         }
+        validateMandatoryFields(record, hierarchy.entrySet(), i);
         for (Map.Entry<String, String> entry : hierarchy.entrySet()) {
           if (StringUtils.isNotBlank(record.get(entry.getValue())))
             hierarchyMap.put(entry.getKey(), record.get(entry.getValue()));
@@ -384,8 +531,13 @@ public class TextbookTocActor extends BaseBulkUploadActor {
               dialCodeIdentifierMap.put(identifier, dialCodeList);
             }
           }
+          List<String> contentIds =
+              validateLinkedContentUrlAndGetContentIds(
+                  max_allowed_content_size, linkedContentKey, record, i);
+          rowNumVsContentIdsMap.put(i, contentIds);
           map.put(JsonKey.METADATA, recordMap);
           map.put(JsonKey.HIERARCHY, hierarchyMap);
+          map.put(JsonKey.CHILDREN, contentIds);
           rows.add(map);
         }
       }
@@ -394,6 +546,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       result.put(JsonKey.DIAL_CODES, dialCodes);
       result.put(JsonKey.TOPICS, topics);
       result.put(JsonKey.DIAL_CODE_IDENTIFIER_MAP, dialCodeIdentifierMap);
+      result.put(JsonKey.LINKED_CONTENT, rowNumVsContentIdsMap);
     } catch (ProjectCommonException e) {
       throw e;
     } catch (Exception e) {
@@ -403,10 +556,80 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         if (null != csvFileParser) csvFileParser.close();
       } catch (IOException e) {
         ProjectLogger.log(
-            "TextbookTocActor:readAndValidateCSV : Exception occurred while closing stream", LoggerEnum.ERROR);
+            "TextbookTocActor:readAndValidateCSV : Exception occurred while closing stream",
+            LoggerEnum.ERROR);
       }
     }
     return result;
+  }
+
+  private void validateMandatoryFields(
+      CSVRecord record, Set<Entry<String, String>> tocMetadata, int rowNum) {
+    for (Map.Entry<String, String> entry : tocMetadata) {
+      if ((TEXTBOOK_NAME.equalsIgnoreCase(entry.getValue())
+              || L1_TEXTBOOK_UNIT.equalsIgnoreCase(entry.getValue()))
+          && StringUtils.isBlank(record.get(entry.getValue()))) {
+        String message =
+            "Mandatory parameter " + entry.getValue() + " is missing at row " + rowNum + ".";
+        ProjectCommonException.throwClientErrorException(ResponseCode.customClientError, message);
+      }
+    }
+  }
+
+  private List<String> validateLinkedContentUrlAndGetContentIds(
+      int max_allowed_content_size, String linkedContentKey, CSVRecord record, int rowNumber) {
+    List<String> contentIds = new ArrayList<>();
+    for (int i = 1; i <= max_allowed_content_size; i++) {
+      String key = MessageFormat.format(linkedContentKey, i).trim();
+      String contentId = null;
+      try {
+        contentId = validateLinkedContentUrlAndGetContentId(record.get(key), rowNumber);
+      } catch (Exception ex) {
+        ProjectLogger.log(ex.getMessage(), ex);
+      }
+      if (StringUtils.isNotBlank(contentId)) {
+        if (contentIds.contains(contentId)) {
+          String message =
+              MessageFormat.format(
+                  ResponseCode.errorDuplicateLinkedContentUrl.getErrorMessage(),
+                  record.get(key),
+                  rowNumber);
+          ProjectCommonException.throwClientErrorException(
+              ResponseCode.errorDuplicateLinkedContentUrl, message);
+        }
+        contentIds.add(contentId);
+      } else {
+        break;
+      }
+    }
+    return contentIds;
+  }
+
+  private String validateLinkedContentUrlAndGetContentId(String contentUrl, int rowNumber) {
+    if (StringUtils.isNotBlank(contentUrl)) {
+      String linkedContentBaseUrl =
+          ProjectUtil.getConfigValue(JsonKey.SUNBIRD_LINKED_CONTENT_BASE_URL);
+      String[] arr = linkedContentBaseUrl.split("/");
+      String[] contentUrlArr = contentUrl.split("/");
+      if ((arr.length + 1) != contentUrlArr.length) {
+        throwInvalidLinkedContentUrl(contentUrl, rowNumber);
+      } else {
+        if (contentUrl.startsWith(linkedContentBaseUrl)) {
+          return contentUrlArr[contentUrlArr.length - 1];
+        } else {
+          throwInvalidLinkedContentUrl(contentUrl, rowNumber);
+        }
+      }
+    }
+    return "";
+  }
+
+  private void throwInvalidLinkedContentUrl(String contentUrl, Object rowNumber) {
+    String message =
+        MessageFormat.format(
+            ResponseCode.errorInvalidLinkedContentUrl.getErrorMessage(), contentUrl, rowNumber);
+    ProjectCommonException.throwClientErrorException(
+        ResponseCode.errorInvalidLinkedContentUrl, message);
   }
 
   private void validateQrCodeRequiredAndQrCode(Map<String, Object> recordMap) {
@@ -551,7 +774,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           ResponseCode.invalidRequestData.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     } else {
-     log("Create Textbook - UpdateHierarchy input data : " + mapper.writeValueAsString(data),LoggerEnum.INFO); 
+      log(
+          "Create Textbook - UpdateHierarchy input data : " + mapper.writeValueAsString(data),
+          LoggerEnum.INFO);
       String tbId = (String) request.get(TEXTBOOK_ID);
       Map<String, Object> nodesModified = new HashMap<>();
       Map<String, Object> hierarchyData = new HashMap<>();
@@ -706,7 +931,11 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   }
 
   @SuppressWarnings("unchecked")
-  private Response updateTextbook(Request request, String channel) throws Exception {
+  private Response updateTextbook(Request request, Map<String, Object> textbookData)
+      throws Exception {
+    Boolean linkContent =
+        (boolean) ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.LINKED_CONTENT);
+    String channel = (String) textbookData.get(JsonKey.CHANNEL);
     List<Map<String, Object>> data =
         (List<Map<String, Object>>)
             ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.FILE_DATA);
@@ -730,11 +959,14 @@ public class TextbookTocActor extends BaseBulkUploadActor {
               put(JsonKey.METADATA, new HashMap<String, Object>());
             }
           });
+      Map<String, Object> hierarchyData = new HashMap<>();
+
       for (Map<String, Object> row : data) {
         Map<String, Object> metadata = (Map<String, Object>) row.get(JsonKey.METADATA);
         Map<String, Object> hierarchy = (Map<String, Object>) row.get(JsonKey.HIERARCHY);
         String id = (String) row.get(JsonKey.IDENTIFIER);
         metadata.remove(JsonKey.IDENTIFIER);
+
         populateNodeModified(
             (String) hierarchy.get("L:" + (hierarchy.size() - 1)),
             id,
@@ -743,13 +975,31 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             null,
             nodesModified,
             false);
+        if (BooleanUtils.isTrue(linkContent)) {
+          Map<String, Object> modifiedNode = ((Map<String, Object>) nodesModified.get(id));
+          Map<String, Object> node = Collections.EMPTY_MAP;
+          if (MapUtils.isNotEmpty(modifiedNode)) {
+            Map<String, Object> meta = (Map<String, Object>) modifiedNode.get(JsonKey.METADATA);
+            node = populateHierarchyDataForUpdateRequest(meta);
+            node.put(JsonKey.CHILDREN, row.get(JsonKey.CHILDREN));
+            hierarchyData.put(id, node);
+          }
+        }
+      }
+      if (MapUtils.isNotEmpty(hierarchyData)) {
+        Map<String, Object> root = new HashMap<String, Object>();
+        root.put(JsonKey.NAME, textbookData.get(JsonKey.NAME));
+        root.put(CONTENT_TYPE, textbookData.get(CONTENT_TYPE));
+        root.put(CHILDREN, new ArrayList<>(nodesModified.keySet()));
+        root.put(JsonKey.TB_ROOT, true);
+        hierarchyData.put((String) request.get(TEXTBOOK_ID), root);
       }
       Map<String, Object> updateRequest = new HashMap<String, Object>();
       Map<String, Object> requestMap = new HashMap<String, Object>();
       Map<String, Object> dataMap = new HashMap<String, Object>();
-      Map<String, Object> hierarchy = new HashMap<String, Object>();
+
       dataMap.put(JsonKey.NODES_MODIFIED, nodesModified);
-      dataMap.put(JsonKey.HIERARCHY, hierarchy);
+      dataMap.put(JsonKey.HIERARCHY, hierarchyData);
       requestMap.put(JsonKey.DATA, dataMap);
       updateRequest.put(JsonKey.REQUEST, requestMap);
       log(
@@ -758,6 +1008,14 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       return callUpdateHierarchyAndLinkDialCodeApi(
           (String) request.get(TEXTBOOK_ID), updateRequest, nodesModified, channel);
     }
+  }
+
+  private Map<String, Object> populateHierarchyDataForUpdateRequest(Map<String, Object> metadata) {
+    Map<String, Object> node = new HashMap<String, Object>();
+    node.put(JsonKey.NAME, metadata.get(JsonKey.NAME));
+    node.put(JsonKey.CONTENT_TYPE, "TextBookUnit");
+    node.put(JsonKey.TB_ROOT, false);
+    return node;
   }
 
   @SuppressWarnings("unchecked")

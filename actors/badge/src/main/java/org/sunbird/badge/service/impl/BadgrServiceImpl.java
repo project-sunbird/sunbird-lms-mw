@@ -229,13 +229,10 @@ public class BadgrServiceImpl implements BadgingService {
   }
 
   @Override
-  public Response getBadgeClassDetails(Request request) throws ProjectCommonException {
+  public Response getBadgeClassDetails(String badgeId) throws ProjectCommonException {
     Response response = new Response();
 
     try {
-      Map<String, Object> requestData = request.getRequest();
-
-      String badgeId = (String) requestData.get(BadgingJsonKey.BADGE_ID);
 
       Map<String, String> headers = BadgingUtil.getBadgrHeaders();
       String badgrUrl = BadgingUtil.getBadgeClassUrl(BadgingJsonKey.ISSUER_ID, badgeId);

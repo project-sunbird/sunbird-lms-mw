@@ -33,6 +33,7 @@ import org.sunbird.common.models.util.ProjectUtil.ReportTrackingStatus;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
@@ -40,6 +41,7 @@ import org.sunbird.learner.util.Util;
   tasks = {
     "courseProgressMetrics",
     "courseConsumptionMetrics",
+    "courseProgressMetricsV2",
     "courseProgressMetricsReport",
     "courseConsumptionMetricsReport"
   },
@@ -54,23 +56,116 @@ public class CourseMetricsActor extends BaseMetricsActor {
   private DecryptionService decryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
           null);
+  private int limit = 200;
 
   @Override
   public void onReceive(Request request) throws Throwable {
-    if (request
-        .getOperation()
-        .equalsIgnoreCase(ActorOperations.COURSE_PROGRESS_METRICS.getValue())) {
-      courseProgressMetrics(request);
-    } else if (request
-        .getOperation()
-        .equalsIgnoreCase(ActorOperations.COURSE_CREATION_METRICS.getValue())) {
-      courseConsumptionMetrics(request);
-    } else if (request
-        .getOperation()
-        .equalsIgnoreCase(ActorOperations.COURSE_PROGRESS_METRICS_REPORT.getValue())) {
-      courseProgressMetricsReport(request);
-    } else {
-      onReceiveUnsupportedOperation(request.getOperation());
+    String requestedOperation = request.getOperation();
+    switch (requestedOperation) {
+      case "courseProgressMetrics":
+        courseProgressMetrics(request);
+        break;
+      case "courseConsumptionMetrics":
+        courseConsumptionMetrics(request);
+        break;
+      case "courseProgressMetricsV2":
+        courseProgressMetricsV2(request);
+        break;
+      case "courseProgressMetricsReport":
+        courseProgressMetricsReport(request);
+        break;
+      default:
+        onReceiveUnsupportedOperation(request.getOperation());
+        break;
+    }
+  }
+
+  private void courseProgressMetricsV2(Request actorMessage) {
+    ProjectLogger.log("CourseMetricsActor: courseProgressMetrics called.", LoggerEnum.INFO.name());
+    Integer limit = (Integer) actorMessage.getContext().get(JsonKey.PERIOD);
+    String sortBy = (String) actorMessage.getContext().get(JsonKey.SORT_BY);
+    String batchId = (String) actorMessage.getContext().get(JsonKey.BATCH_ID);
+    Integer offset = (Integer) actorMessage.getContext().get(JsonKey.OFFSET);
+
+    String requestedBy = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
+    validateUserId(requestedBy);
+    Map<String, Object> courseBatchResult = validateAndGetCourseBatch(batchId);
+    Map<String, Object> filter = new HashMap<>();
+    filter.put("batches.batchId", batchId);
+    SearchDTO searchDTO = new SearchDTO();
+    searchDTO.setLimit(limit);
+    searchDTO.setOffset(offset);
+    if (StringUtils.isEmpty(sortBy)) {
+      Map<String, String> sortMap = new HashMap<>();
+      if (JsonKey.USER_NAME.equalsIgnoreCase(sortBy)) {
+        sortBy = JsonKey.FIRST_NAME;
+      }
+      sortMap.put(sortBy, "ASC");
+      searchDTO.setSortBy(sortMap);
+    }
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTER, filter);
+
+    Map<String, Object> result =
+        ElasticSearchUtil.complexSearch(
+            searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
+    if (isNull(result) || courseBatchResult.size() == 0) {
+      ProjectLogger.log(
+          "CourseMetricsActor:courseProgressMetricsV2: data not found.", LoggerEnum.INFO.name());
+      ProjectCommonException.throwClientErrorException(ResponseCode.invalidCourseBatchId);
+    }
+    List<Map<String, Object>> esContents = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+    Map<String, Object> courseProgressResult = new HashMap<>();
+    List<Map<String, Object>> userData = new ArrayList<>();
+    for (Map<String, Object> esContent : esContents) {
+      Map<String, Object> map = new HashMap<>();
+      map.put(JsonKey.USER_NAME, esContent.get(JsonKey.FIRST_NAME + " " + JsonKey.LAST_NAME));
+      map.put(JsonKey.ORG_NAME, esContent.get(JsonKey.ROOT_ORG_NAME));
+      for (Map<String, Object> batchMap :
+          (List<Map<String, Object>>) esContent.get(JsonKey.BATCHES)) {
+        if (batchId.equalsIgnoreCase((String) batchMap.get(JsonKey.BATCH_ID))) {
+          map.putAll(batchMap);
+        }
+      }
+      userData.add(map);
+    }
+
+    courseProgressResult.put(JsonKey.COUNT, result.get(JsonKey.COUNT));
+    courseProgressResult.put(JsonKey.DATA, userData);
+    courseProgressResult.put(JsonKey.START_DATE, courseBatchResult.get(JsonKey.START_DATE));
+    courseProgressResult.put(JsonKey.END_DATE, courseBatchResult.get(JsonKey.END_DATE));
+    sender().tell(courseProgressResult, self());
+  }
+
+  private Map<String, Object> validateAndGetCourseBatch(String batchId) {
+    if (StringUtils.isBlank(batchId)) {
+      ProjectLogger.log(
+          "CourseMetricsActor:courseProgressMetricsV2: batchId is invalid (blank).",
+          LoggerEnum.INFO.name());
+      ProjectCommonException.throwClientErrorException(ResponseCode.invalidCourseBatchId);
+    }
+    // check batch exist in ES or not
+    Map<String, Object> courseBatchResult =
+        ElasticSearchUtil.getDataByIdentifier(
+            EsIndex.sunbird.getIndexName(), EsType.course.getTypeName(), batchId);
+    if (isNull(courseBatchResult) || courseBatchResult.size() == 0) {
+      ProjectLogger.log(
+          "CourseMetricsActor:courseProgressMetricsV2: batchId not found.", LoggerEnum.INFO.name());
+      ProjectCommonException.throwClientErrorException(ResponseCode.invalidCourseBatchId);
+    }
+    return courseBatchResult;
+  }
+
+  private void validateUserId(String requestedBy) {
+
+    Map<String, Object> requestedByInfo =
+        ElasticSearchUtil.getDataByIdentifier(
+            EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), requestedBy);
+    if (isNull(requestedByInfo)
+        || StringUtils.isBlank((String) requestedByInfo.get(JsonKey.FIRST_NAME))) {
+      throw new ProjectCommonException(
+          ResponseCode.invalidUserId.getErrorCode(),
+          ResponseCode.invalidUserId.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
     }
   }
 

@@ -195,24 +195,12 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         Response response = mapper.readValue(updateResponse.getBody(), Response.class);
         if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
           Map<String, Object> result = response.getResult();
+          List<String> searchedContentIds = new ArrayList<>();
           if (MapUtils.isNotEmpty(result)) {
             int count = (int) result.get(JsonKey.COUNT);
             if (0 == count) {
-              Map<String, String> errorMap = new HashMap<>();
-              contentIdVsRowNumMap
-                  .keySet()
-                  .forEach(
-                      contentId -> {
-                        String contentUrl =
-                            ProjectUtil.getConfigValue(JsonKey.SUNBIRD_LINKED_CONTENT_BASE_URL)
-                                + contentId;
-                        String message =
-                            MessageFormat.format(
-                                ResponseCode.errorInvalidLinkedContentUrl.getErrorMessage(),
-                                contentUrl,
-                                contentIdVsRowNumMap.get(contentId));
-                        errorMap.put(contentId, message);
-                      });
+              Map<String, String> errorMap =
+                  prepareErrorMap(contentIdVsRowNumMap, searchedContentIds);
               ProjectCommonException.throwClientErrorException(
                   ResponseCode.errorInvalidLinkedContentUrl,
                   mapper.convertValue(errorMap, String.class));
@@ -220,29 +208,13 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             List<Map<String, Object>> content =
                 (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
             if (CollectionUtils.isNotEmpty(content)) {
-              List<String> searchedContentIds = new ArrayList<>();
               content.forEach(
                   contentMap -> {
                     searchedContentIds.add((String) contentMap.get(JsonKey.IDENTIFIER));
                   });
               if (content.size() != contentIds.size()) {
-                Map<String, String> errorMap = new HashMap<>();
-                contentIdVsRowNumMap
-                    .keySet()
-                    .forEach(
-                        contentId -> {
-                          if (!searchedContentIds.contains(contentId)) {
-                            String contentUrl =
-                                ProjectUtil.getConfigValue(JsonKey.SUNBIRD_LINKED_CONTENT_BASE_URL)
-                                    + contentId;
-                            String message =
-                                MessageFormat.format(
-                                    ResponseCode.errorInvalidLinkedContentUrl.getErrorMessage(),
-                                    contentUrl,
-                                    contentIdVsRowNumMap.get(contentId));
-                            errorMap.put(contentId, contentUrl);
-                          }
-                        });
+                Map<String, String> errorMap =
+                    prepareErrorMap(contentIdVsRowNumMap, searchedContentIds);
                 if (errorMap.size() == 1) {
                   for (Map.Entry<String, String> entry : errorMap.entrySet()) {
                     throwInvalidLinkedContentUrl(
@@ -270,6 +242,27 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           e);
       throwCompositeSearchFailureError();
     }
+  }
+
+  private Map<String, String> prepareErrorMap(
+      Map<String, List<Integer>> contentIdVsRowNumMap, List<String> searchedContentIds) {
+    Map<String, String> errorMap = new HashMap<>();
+    contentIdVsRowNumMap
+        .keySet()
+        .forEach(
+            contentId -> {
+              if (!searchedContentIds.contains(contentId)) {
+                String contentUrl =
+                    ProjectUtil.getConfigValue(JsonKey.SUNBIRD_LINKED_CONTENT_BASE_URL) + contentId;
+                String message =
+                    MessageFormat.format(
+                        ResponseCode.errorInvalidLinkedContentUrl.getErrorMessage(),
+                        contentUrl,
+                        contentIdVsRowNumMap.get(contentId));
+                errorMap.put(contentId, message);
+              }
+            });
+    return errorMap;
   }
 
   private void throwCompositeSearchFailureError() {

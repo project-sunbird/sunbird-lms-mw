@@ -1,5 +1,6 @@
 package org.sunbird.content.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.HashMap;
@@ -115,12 +116,14 @@ public class ContentService {
           "ContentService:updateEkstepContent: updating badgeAssociations details to Ekstep ",
           LoggerEnum.INFO.name());
       String contentUpdateBaseUrl = ProjectUtil.getConfigValue(JsonKey.EKSTEP_BASE_URL);
+      String requestBody = getRequestBody(attributeName, activeBadges);
+      System.out.println(requestBody);
       response =
           HttpUtil.sendPatchRequest(
               contentUpdateBaseUrl
                   + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_UPDATE_URL)
                   + courseId,
-              "{\"request\": {\"content\": {\"" + attributeName + "\": " + activeBadges + "}}}",
+              requestBody,
               CourseBatchSchedulerUtil.headerMap);
       ProjectLogger.log(
           "ContentService:updateEkstepContent: updating badgeAssociations response=="
@@ -135,5 +138,23 @@ public class ContentService {
           e);
     }
     return JsonKey.SUCCESS.equalsIgnoreCase(response);
+  }
+
+  private static String getRequestBody(
+      String attributeName, List<Map<String, Object>> activeBadges) {
+    Map<String, Object> reqMap = new HashMap<>();
+    Map<String, Object> contentReqMap = new HashMap<>();
+    Map<String, Object> badgeAssociationMap = new HashMap<>();
+    badgeAssociationMap.put(attributeName, activeBadges);
+    contentReqMap.put(JsonKey.CONTENT, badgeAssociationMap);
+    reqMap.put(JsonKey.REQUEST, contentReqMap);
+    try {
+      return mapper.writeValueAsString(reqMap);
+    } catch (JsonProcessingException e) {
+      ProjectLogger.log(
+          "ContentService:getRequestBody: error occured while converting to string",
+          LoggerEnum.INFO);
+    }
+    return null;
   }
 }

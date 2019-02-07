@@ -10,21 +10,11 @@ import org.sunbird.badge.dao.impl.ContentBadgeAssociationDaoImpl;
 import org.sunbird.badge.service.BadgeAssociationService;
 import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.datasecurity.OneWayHashing;
+import org.sunbird.common.models.util.ProjectUtil;
 
 public class BadgeAssociationServiceImpl implements BadgeAssociationService {
 
   private ContentBadgeAssociationDao associationDao = new ContentBadgeAssociationDaoImpl();
-
-  @Override
-  public String getBadgeAssociationId(String contentId, String badgeId, long timeStamp) {
-    return OneWayHashing.encryptVal(
-        contentId
-            + JsonKey.PRIMARY_KEY_DELIMETER
-            + badgeId
-            + JsonKey.PRIMARY_KEY_DELIMETER
-            + timeStamp);
-  }
 
   @Override
   public Map<String, Object> getBadgeAssociationMapForContentUpdate(Map<String, Object> badgeMap) {
@@ -32,11 +22,9 @@ public class BadgeAssociationServiceImpl implements BadgeAssociationService {
     associatedBadge.put(BadgingJsonKey.BADGE_ID, badgeMap.get(BadgingJsonKey.BADGE_ID));
     associatedBadge.put(BadgingJsonKey.ISSUER_ID, badgeMap.get(BadgingJsonKey.ISSUER_ID));
     associatedBadge.put(BadgingJsonKey.ASSOCIATION_ID, badgeMap.get(BadgingJsonKey.ASSOCIATION_ID));
-    associatedBadge.put(
-        BadgingJsonKey.BADGE_CLASS_IMAGE, badgeMap.get(BadgingJsonKey.BADGE_CLASS_IMAGE));
+    associatedBadge.put(BadgingJsonKey.BADGE_CLASS_IMAGE, badgeMap.get(BadgingJsonKey.IMAGE));
     associatedBadge.put(BadgingJsonKey.CREATED_TS, badgeMap.get(BadgingJsonKey.CREATED_TS));
-    associatedBadge.put(
-        BadgingJsonKey.BADGE_CLASS_NANE, badgeMap.get(BadgingJsonKey.BADGE_CLASS_NANE));
+    associatedBadge.put(BadgingJsonKey.BADGE_CLASS_NANE, badgeMap.get(BadgingJsonKey.NAME));
     return associatedBadge;
   }
 
@@ -47,13 +35,11 @@ public class BadgeAssociationServiceImpl implements BadgeAssociationService {
     associatedBadgeMap.put(JsonKey.CONTENT_ID, contentId);
     associatedBadgeMap.put(BadgingJsonKey.BADGE_ID, badgeMap.get(BadgingJsonKey.BADGE_ID));
     associatedBadgeMap.put(BadgingJsonKey.ISSUER_ID, badgeMap.get(BadgingJsonKey.ISSUER_ID));
-    associatedBadgeMap.put(
-        BadgingJsonKey.BADGE_CLASS_IMAGE, badgeMap.get(BadgingJsonKey.BADGE_CLASS_IMAGE));
+    associatedBadgeMap.put(BadgingJsonKey.BADGE_CLASS_IMAGE, badgeMap.get(BadgingJsonKey.IMAGE));
     associatedBadgeMap.put(JsonKey.CREATED_ON, new Timestamp(new Date().getTime()));
     associatedBadgeMap.put(JsonKey.CREATED_BY, requestedBy);
-    associatedBadgeMap.put(JsonKey.STATUS, true);
-    associatedBadgeMap.put(
-        BadgingJsonKey.BADGE_CLASS_NANE, badgeMap.get(BadgingJsonKey.BADGE_CLASS_NANE));
+    associatedBadgeMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
+    associatedBadgeMap.put(BadgingJsonKey.BADGE_CLASS_NANE, badgeMap.get(BadgingJsonKey.NAME));
     return associatedBadgeMap;
   }
 
@@ -64,7 +50,7 @@ public class BadgeAssociationServiceImpl implements BadgeAssociationService {
     associatedBadgeMap.put(JsonKey.ID, associationId);
     associatedBadgeMap.put(JsonKey.LAST_UPDATED_BY, requestedBy);
     associatedBadgeMap.put(JsonKey.LAST_UPDATED_ON, new Timestamp(new Date().getTime()));
-    associatedBadgeMap.put(JsonKey.STATUS, false);
+    associatedBadgeMap.put(JsonKey.STATUS, ProjectUtil.Status.INACTIVE.getValue());
     return associatedBadgeMap;
   }
 

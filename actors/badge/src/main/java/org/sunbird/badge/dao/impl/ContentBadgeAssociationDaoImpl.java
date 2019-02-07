@@ -13,7 +13,7 @@ import org.sunbird.helper.ServiceFactory;
 
 public class ContentBadgeAssociationDaoImpl implements ContentBadgeAssociationDao {
 
-  private static final String KEYSPACE = "SUNBIRD";
+  private static final String KEYSPACE = "sunbird" + "";
   private static final String TABLE_NAME = "content_badge_association";
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
@@ -29,10 +29,10 @@ public class ContentBadgeAssociationDaoImpl implements ContentBadgeAssociationDa
 
   @SuppressWarnings("unchecked")
   @Override
-  public List<Map<String, Object>> getAllActiveAssociatedBadge(String contentId) {
+  public List<Map<String, Object>> esGetAllActiveAssociatedBadges(String contentId) {
     Map<String, Object> searchMap = new HashMap<>();
     searchMap.put(JsonKey.CONTENT_ID, contentId);
-    searchMap.put(JsonKey.STATUS, true);
+    searchMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
     Map<String, Object> result =
         ElasticSearchUtil.searchData(
             ProjectUtil.EsIndex.sunbird.getIndexName(),
@@ -43,7 +43,7 @@ public class ContentBadgeAssociationDaoImpl implements ContentBadgeAssociationDa
 
   @SuppressWarnings("unchecked")
   @Override
-  public List<Map<String, Object>> getAllBadgeAssocaitedBadge(String contentId) {
+  public List<Map<String, Object>> esGetAllAssociatedBadges(String contentId) {
     Map<String, Object> searchMap = new HashMap<>();
     searchMap.put(JsonKey.CONTENT_ID, contentId);
     Map<String, Object> result =

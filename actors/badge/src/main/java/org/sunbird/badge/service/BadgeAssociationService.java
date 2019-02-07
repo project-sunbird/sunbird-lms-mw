@@ -5,7 +5,6 @@ import java.util.Map;
 
 public interface BadgeAssociationService {
 
-  public String getBadgeAssociationId(String contentId, String badgeId, long timeStamp);
   /*
    * This method will return map for badgeAssociations in content-metadta
    *

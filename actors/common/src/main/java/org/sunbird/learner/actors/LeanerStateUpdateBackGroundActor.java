@@ -51,6 +51,7 @@ public class LeanerStateUpdateBackGroundActor extends BaseActor {
     if (message instanceof Request) {
       Request req = (Request) message;
       // get the list of content objects
+
       List<Map<String, Object>> contentList =
           (List<Map<String, Object>>) req.getRequest().get(JsonKey.CONTENTS);
       // get the content state info
@@ -61,6 +62,7 @@ public class LeanerStateUpdateBackGroundActor extends BaseActor {
         String contentid = (String) map.get(JsonKey.ID);
         if (map.get(JsonKey.COURSE_ID) != null) {
           // generate course table primary key as hash of userid##courseid##batchId
+
           String primary = generateUserCoursesPrimaryKey(map);
           if (temp.containsKey(primary)) {
             Map<String, Object> innerMap = (Map<String, Object>) temp.get(primary);
@@ -149,7 +151,6 @@ public class LeanerStateUpdateBackGroundActor extends BaseActor {
           // correct it.
           updateDb.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(ts));
           updateUserCoursesToES(updateDb);
-          sendUserBatchSync(Arrays.asList((String) updateDb.get(JsonKey.USER_ID)));
         } catch (Exception ex) {
           ProjectLogger.log(ex.getMessage(), ex);
         }
@@ -211,15 +212,5 @@ public class LeanerStateUpdateBackGroundActor extends BaseActor {
     } catch (Exception ex) {
       ProjectLogger.log("Exception Occurred during saving user count to Es : ", ex);
     }
-  }
-
-  private void sendUserBatchSync(List<String> userids) {
-    Request userBatchSync = new Request();
-    userBatchSync.setOperation(ActorOperations.SYNC.getValue());
-    Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.OBJECT_IDS, userids);
-    map.put(JsonKey.OBJECT_TYPE, JsonKey.USER);
-    userBatchSync.getRequest().put(JsonKey.DATA, map);
-    tellToAnother(userBatchSync);
   }
 }

@@ -109,7 +109,6 @@ public class CourseEnrollmentActor extends BaseActor {
     }
     updateCourseBatch(courseBatch);
     generateAndProcessTelemetryEvent(courseMap, "user.batch.course");
-    sendUserBatchSync(Arrays.asList((String) actorMessage.getRequest().get(JsonKey.USER_ID)));
   }
 
   private boolean courseNotificationActive() {
@@ -178,7 +177,6 @@ public class CourseEnrollmentActor extends BaseActor {
     if (courseNotificationActive()) {
       batchOperationNotifier(request, courseBatch, JsonKey.REMOVE);
     }
-    sendUserBatchSync(Arrays.asList((String) actorMessage.getRequest().get(JsonKey.USER_ID)));
   }
 
   private void batchOperationNotifier(
@@ -338,15 +336,5 @@ public class CourseEnrollmentActor extends BaseActor {
     Map<String, Boolean> participantMap = courseBatch.getParticipant();
     participantMap.put(userId, true);
     return participantMap;
-  }
-
-  private void sendUserBatchSync(List<String> userids) {
-    Request userBatchSync = new Request();
-    userBatchSync.setOperation(ActorOperations.SYNC.getValue());
-    Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.OBJECT_IDS, userids);
-    map.put(JsonKey.OBJECT_TYPE, JsonKey.USER);
-    userBatchSync.getRequest().put(JsonKey.DATA, map);
-    tellToAnother(userBatchSync);
   }
 }

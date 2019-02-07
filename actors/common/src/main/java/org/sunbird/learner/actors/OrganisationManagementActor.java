@@ -1532,12 +1532,13 @@ public class OrganisationManagementActor extends BaseActor {
       requestDbMap.put(JsonKey.PROVIDER, req.get(JsonKey.PROVIDER));
       requestDbMap.put(JsonKey.EXTERNAL_ID, req.get(JsonKey.EXTERNAL_ID));
     }
-
+    SearchDTO searchDTO = new SearchDTO();
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, requestDbMap);
     Map<String, Object> esResponse =
-        ElasticSearchUtil.searchData(
+        ElasticSearchUtil.complexSearch(
+            searchDTO,
             ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.organisation.getTypeName(),
-            requestDbMap);
+            ProjectUtil.EsType.organisation.getTypeName());
 
     List<Map<String, Object>> list = (List<Map<String, Object>>) esResponse.get(JsonKey.CONTENT);
     if (null == list || list.isEmpty()) {

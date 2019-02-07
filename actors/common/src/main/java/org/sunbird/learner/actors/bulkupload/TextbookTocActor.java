@@ -85,6 +85,9 @@ import org.sunbird.content.util.TextBookTocUtil;
 )
 public class TextbookTocActor extends BaseBulkUploadActor {
 
+  final String TEXTBOOK_NAME = "Textbook Name";
+  final String L1_TEXTBOOK_UNIT = "Level 1 Textbook Unit";
+
   @Override
   public void onReceive(Request request) throws Throwable {
     if (request
@@ -545,10 +548,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   }
 
   private void validateMandatoryFields(
-      CSVRecord record, Set<Entry<String, String>> entrySet, int rowNum) {
-    for (Map.Entry<String, String> entry : entrySet) {
-      if (("Textbook Name".equalsIgnoreCase(entry.getValue())
-              || "Level 1 Textbook Unit".equalsIgnoreCase(entry.getValue()))
+      CSVRecord record, Set<Entry<String, String>> tocMetadata, int rowNum) {
+    for (Map.Entry<String, String> entry : tocMetadata) {
+      if ((TEXTBOOK_NAME.equalsIgnoreCase(entry.getValue())
+              || L1_TEXTBOOK_UNIT.equalsIgnoreCase(entry.getValue()))
           && StringUtils.isBlank(record.get(entry.getValue()))) {
         String message =
             "Mandatory parameter " + entry.getValue() + " is missing at row " + rowNum + ".";
@@ -595,7 +598,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       if ((arr.length + 1) != contentUrlArr.length) {
         throwInvalidLinkedContentUrl(contentUrl, rowNumber);
       } else {
-        if (contentUrl.contains(linkedContentBaseUrl)) {
+        if (contentUrl.startsWith(linkedContentBaseUrl)) {
           return contentUrlArr[contentUrlArr.length - 1];
         } else {
           throwInvalidLinkedContentUrl(contentUrl, rowNumber);

@@ -343,7 +343,7 @@ public class UserManagementActor extends BaseActor {
         ProjectCommonException.throwClientErrorException(
             ResponseCode.errorTeacherCannotBelongToCustodianOrg,
             ResponseCode.errorTeacherCannotBelongToCustodianOrg.getErrorMessage());
-      } else if (userType.equalsIgnoreCase(UserType.TEACHER.getTypeName())) {
+      } else if (UserType.TEACHER.getTypeName().equalsIgnoreCase(userType)) {
         String custodianChannel = null;
         String custodianRootOrgId = null;
         try {

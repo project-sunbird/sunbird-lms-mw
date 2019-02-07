@@ -161,86 +161,89 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                   }
                 });
           });
-      List<String> contentIds = new ArrayList<>();
-      contentIds.addAll(contentIdVsRowNumMap.keySet());
-      Map<String, Object> requestMap = new HashMap<>();
-      Map<String, Object> request = new HashMap<>();
-      Map<String, Object> filters = new HashMap<>();
-      filters.put(JsonKey.STATUS, "Live");
-      filters.put(JsonKey.IDENTIFIER, contentIds);
-      request.put(JsonKey.FILTERS, filters);
-      requestMap.put(JsonKey.REQUEST, request);
-      List<String> fields = new ArrayList<>();
-      fields.add(JsonKey.IDENTIFIER);
-      request.put(JsonKey.FIELDS, fields);
+      callSearchApiForContentIdsValidation(contentIdVsRowNumMap);
+    }
+  }
 
-      String requestUrl =
-          getConfigValue(JsonKey.EKSTEP_BASE_URL) + getConfigValue(JsonKey.SUNBIRD_CS_SEARCH_PATH);
-      HttpResponse<String> updateResponse = null;
-      try {
-        updateResponse =
-            Unirest.post(requestUrl)
-                .headers(getDefaultHeaders())
-                .body(mapper.writeValueAsString(requestMap))
-                .asString();
-        if (null != updateResponse) {
-          Response response = mapper.readValue(updateResponse.getBody(), Response.class);
-          if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
-            Map<String, Object> result = response.getResult();
-            if (MapUtils.isNotEmpty(result)) {
-              int count = (int) result.get(JsonKey.COUNT);
-              if (0 == count) {
+  private void callSearchApiForContentIdsValidation(
+      Map<String, List<Integer>> contentIdVsRowNumMap) {
+    List<String> contentIds = new ArrayList<>();
+    contentIds.addAll(contentIdVsRowNumMap.keySet());
+    Map<String, Object> requestMap = new HashMap<>();
+    Map<String, Object> request = new HashMap<>();
+    Map<String, Object> filters = new HashMap<>();
+    filters.put(JsonKey.STATUS, "Live");
+    filters.put(JsonKey.IDENTIFIER, contentIds);
+    request.put(JsonKey.FILTERS, filters);
+    requestMap.put(JsonKey.REQUEST, request);
+    List<String> fields = new ArrayList<>();
+    fields.add(JsonKey.IDENTIFIER);
+    request.put(JsonKey.FIELDS, fields);
+
+    String requestUrl =
+        getConfigValue(JsonKey.EKSTEP_BASE_URL) + getConfigValue(JsonKey.SUNBIRD_CS_SEARCH_PATH);
+    HttpResponse<String> updateResponse = null;
+    try {
+      updateResponse =
+          Unirest.post(requestUrl)
+              .headers(getDefaultHeaders())
+              .body(mapper.writeValueAsString(requestMap))
+              .asString();
+      if (null != updateResponse) {
+        Response response = mapper.readValue(updateResponse.getBody(), Response.class);
+        if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
+          Map<String, Object> result = response.getResult();
+          if (MapUtils.isNotEmpty(result)) {
+            int count = (int) result.get(JsonKey.COUNT);
+            if (0 == count) {
+              contentIdVsRowNumMap
+                  .keySet()
+                  .forEach(
+                      contentId -> {
+                        String contentUrl =
+                            ProjectUtil.getConfigValue(JsonKey.SUNBIRD_LINKED_CONTENT_BASE_URL)
+                                + contentId;
+                        throwInvalidLinkedContentUrl(
+                            contentUrl, contentIdVsRowNumMap.get(contentId));
+                      });
+            }
+            List<Map<String, Object>> content =
+                (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+            if (CollectionUtils.isNotEmpty(content)) {
+              List<String> searchedContentIds = new ArrayList<>();
+              content.forEach(
+                  contentMap -> {
+                    searchedContentIds.add((String) contentMap.get(JsonKey.IDENTIFIER));
+                  });
+              if (content.size() != contentIds.size()) {
                 contentIdVsRowNumMap
                     .keySet()
                     .forEach(
                         contentId -> {
-                          String contentUrl =
-                              ProjectUtil.getConfigValue(JsonKey.SUNBIRD_LINKED_CONTENT_BASE_URL)
-                                  + contentId;
-                          throwInvalidLinkedContentUrl(
-                              contentUrl, contentIdVsRowNumMap.get(contentId));
+                          if (!searchedContentIds.contains(contentId)) {
+                            String contentUrl =
+                                ProjectUtil.getConfigValue(JsonKey.SUNBIRD_LINKED_CONTENT_BASE_URL)
+                                    + contentId;
+                            throwInvalidLinkedContentUrl(
+                                contentUrl, contentIdVsRowNumMap.get(contentId));
+                          }
                         });
               }
-              List<Map<String, Object>> content =
-                  (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-              if (CollectionUtils.isNotEmpty(content)) {
-                List<String> searchedContentIds = new ArrayList<>();
-                content.forEach(
-                    contentMap -> {
-                      searchedContentIds.add((String) contentMap.get(JsonKey.IDENTIFIER));
-                    });
-                if (content.size() != rowNumVsContentIdsMap.size()) {
-                  contentIdVsRowNumMap
-                      .keySet()
-                      .forEach(
-                          contentId -> {
-                            if (!searchedContentIds.contains(contentId)) {
-                              String contentUrl =
-                                  ProjectUtil.getConfigValue(
-                                          JsonKey.SUNBIRD_LINKED_CONTENT_BASE_URL)
-                                      + contentId;
-                              throwInvalidLinkedContentUrl(
-                                  contentUrl, contentIdVsRowNumMap.get(contentId));
-                            }
-                          });
-                }
-              } else {
-                throwCompositeSearchFailureError();
-              }
+            } else {
+              throwCompositeSearchFailureError();
             }
-          } else {
-            throwCompositeSearchFailureError();
           }
         } else {
           throwCompositeSearchFailureError();
         }
-      } catch (Exception e) {
-        ProjectLogger.log(
-            "TextbookTocActor:validateLinkedContents : Error occurred with message "
-                + e.getMessage(),
-            e);
+      } else {
         throwCompositeSearchFailureError();
       }
+    } catch (Exception e) {
+      ProjectLogger.log(
+          "TextbookTocActor:validateLinkedContents : Error occurred with message " + e.getMessage(),
+          e);
+      throwCompositeSearchFailureError();
     }
   }
 

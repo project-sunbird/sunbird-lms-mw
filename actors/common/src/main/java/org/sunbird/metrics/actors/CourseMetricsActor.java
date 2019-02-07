@@ -41,7 +41,7 @@ import org.sunbird.learner.util.Util;
   tasks = {
     "courseProgressMetrics",
     "courseConsumptionMetrics",
-    "courseConsumptionMetricsV2",
+    "courseProgressMetricsV2",
     "courseProgressMetricsReport",
     "courseConsumptionMetricsReport"
   },
@@ -68,7 +68,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
       case "courseConsumptionMetrics":
         courseConsumptionMetrics(request);
         break;
-      case "courseConsumptionMetricsV2":
+      case "courseProgressMetricsV2":
         courseProgressMetricsV2(request);
         break;
       case "courseProgressMetricsReport":

@@ -4,11 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -113,6 +109,7 @@ public class CourseEnrollmentActor extends BaseActor {
     }
     updateCourseBatch(courseBatch);
     generateAndProcessTelemetryEvent(courseMap, "user.batch.course");
+    sendUserBatchSync(Arrays.asList((String) actorMessage.getRequest().get(JsonKey.USER_ID)));
   }
 
   private boolean courseNotificationActive() {
@@ -181,6 +178,7 @@ public class CourseEnrollmentActor extends BaseActor {
     if (courseNotificationActive()) {
       batchOperationNotifier(request, courseBatch, JsonKey.REMOVE);
     }
+    sendUserBatchSync(Arrays.asList((String) actorMessage.getRequest().get(JsonKey.USER_ID)));
   }
 
   private void batchOperationNotifier(
@@ -340,5 +338,15 @@ public class CourseEnrollmentActor extends BaseActor {
     Map<String, Boolean> participantMap = courseBatch.getParticipant();
     participantMap.put(userId, true);
     return participantMap;
+  }
+
+  private void sendUserBatchSync(List<String> userids) {
+    Request userBatchSync = new Request();
+    userBatchSync.setOperation(ActorOperations.SYNC.getValue());
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.OBJECT_IDS, userids);
+    map.put(JsonKey.OBJECT_TYPE, JsonKey.USER);
+    userBatchSync.getRequest().put(JsonKey.DATA, map);
+    tellToAnother(userBatchSync);
   }
 }

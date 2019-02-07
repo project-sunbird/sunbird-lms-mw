@@ -3,10 +3,7 @@ package org.sunbird.learner.actors;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -152,6 +149,7 @@ public class LeanerStateUpdateBackGroundActor extends BaseActor {
           // correct it.
           updateDb.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(ts));
           updateUserCoursesToES(updateDb);
+          sendUserBatchSync(Arrays.asList((String) updateDb.get(JsonKey.USER_ID)));
         } catch (Exception ex) {
           ProjectLogger.log(ex.getMessage(), ex);
         }
@@ -213,5 +211,15 @@ public class LeanerStateUpdateBackGroundActor extends BaseActor {
     } catch (Exception ex) {
       ProjectLogger.log("Exception Occurred during saving user count to Es : ", ex);
     }
+  }
+
+  private void sendUserBatchSync(List<String> userids) {
+    Request userBatchSync = new Request();
+    userBatchSync.setOperation(ActorOperations.SYNC.getValue());
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.OBJECT_IDS, userids);
+    map.put(JsonKey.OBJECT_TYPE, JsonKey.USER);
+    userBatchSync.getRequest().put(JsonKey.DATA, map);
+    tellToAnother(userBatchSync);
   }
 }

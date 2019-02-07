@@ -582,10 +582,13 @@ public class CourseBatchManagementActor extends BaseActor {
 
   private void removeParticipants(
       Map<String, Boolean> removedParticipant, String batchId, String courseId) {
+    List<String> unEnrollIds = new ArrayList<>();
     removedParticipant.forEach(
         (userId, aBoolean) -> {
+          unEnrollIds.add(userId);
           new UserCoursesService().unenroll(userId, courseId, batchId);
         });
+    sendUserBatchSync(unEnrollIds);
   }
 
   private void validateCourseBatchData(CourseBatch courseBatchObject) {

@@ -1,7 +1,10 @@
 package org.sunbird.content.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -10,9 +13,11 @@ import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.learner.util.CourseBatchSchedulerUtil;
 
 public class ContentService {
 
@@ -101,5 +106,55 @@ public class ContentService {
         break;
     }
     return props;
+  }
+
+  public static boolean updateEkstepContent(
+      String courseId, String attributeName, List<Map<String, Object>> activeBadges) {
+    String response = "";
+    try {
+      ProjectLogger.log(
+          "ContentService:updateEkstepContent: updating badgeAssociations details to Ekstep ",
+          LoggerEnum.INFO.name());
+      String contentUpdateBaseUrl = ProjectUtil.getConfigValue(JsonKey.EKSTEP_BASE_URL);
+      String requestBody = getRequestBody(attributeName, activeBadges);
+      System.out.println(requestBody);
+      response =
+          HttpUtil.sendPatchRequest(
+              contentUpdateBaseUrl
+                  + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_UPDATE_URL)
+                  + courseId,
+              requestBody,
+              CourseBatchSchedulerUtil.headerMap);
+      ProjectLogger.log(
+          "ContentService:updateEkstepContent: updating badgeAssociations response=="
+              + response
+              + " "
+              + courseId,
+          LoggerEnum.INFO.name());
+    } catch (IOException e) {
+      ProjectLogger.log(
+          "ContentService:updateEkstepContent: Error while updating badgeAssociations "
+              + e.getMessage(),
+          e);
+    }
+    return JsonKey.SUCCESS.equalsIgnoreCase(response);
+  }
+
+  private static String getRequestBody(
+      String attributeName, List<Map<String, Object>> activeBadges) {
+    Map<String, Object> reqMap = new HashMap<>();
+    Map<String, Object> contentReqMap = new HashMap<>();
+    Map<String, Object> badgeAssociationMap = new HashMap<>();
+    badgeAssociationMap.put(attributeName, activeBadges);
+    contentReqMap.put(JsonKey.CONTENT, badgeAssociationMap);
+    reqMap.put(JsonKey.REQUEST, contentReqMap);
+    try {
+      return mapper.writeValueAsString(reqMap);
+    } catch (JsonProcessingException e) {
+      ProjectLogger.log(
+          "ContentService:getRequestBody: error occured while converting to string",
+          LoggerEnum.INFO);
+    }
+    return null;
   }
 }

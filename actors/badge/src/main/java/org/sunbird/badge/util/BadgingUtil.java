@@ -332,7 +332,8 @@ public class BadgingUtil {
         .getRequest()
         .put(BadgingJsonKey.BADGE_CLASS_ID, reqMap.get(BadgingJsonKey.BADGE_CLASS_ID));
     try {
-      Response response = service.getBadgeClassDetails(request);
+      Response response =
+          service.getBadgeClassDetails((String) reqMap.get(BadgingJsonKey.BADGE_CLASS_ID));
       innerMap.put(BadgingJsonKey.BADGE_CLASS_NANE, response.getResult().get(JsonKey.NAME));
     } catch (ProjectCommonException e) {
       ProjectLogger.log(e.getMessage(), e);

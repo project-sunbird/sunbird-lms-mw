@@ -50,13 +50,13 @@ public interface BadgingService {
   public Response createBadgeClass(Request request) throws ProjectCommonException;
 
   /**
-   * This method will provide badge class details based on issuerId and badgeId
+   * This method will provide badge class details based on badgeId
    *
-   * @param request Request
+   * @param String badgeId
    * @exception IOException
    * @return Response
    */
-  public Response getBadgeClassDetails(Request request) throws ProjectCommonException;
+  public Response getBadgeClassDetails(String badgeId) throws ProjectCommonException;
 
   /**
    * This method will provide list of badge class either for one issuer or multiple or all , this

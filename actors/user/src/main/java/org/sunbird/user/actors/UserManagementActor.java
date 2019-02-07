@@ -343,7 +343,26 @@ public class UserManagementActor extends BaseActor {
         ProjectCommonException.throwClientErrorException(
             ResponseCode.errorTeacherCannotBelongToCustodianOrg,
             ResponseCode.errorTeacherCannotBelongToCustodianOrg.getErrorMessage());
-      } 
+      } else if (userType.equalsIgnoreCase(UserType.TEACHER.getTypeName())) {
+        String custodianChannel = null;
+        String custodianRootOrgId = null;
+        try {
+          custodianChannel =
+              userService.getCustodianChannel(new HashMap<>(), systemSettingActorRef);
+          custodianRootOrgId = userService.getRootOrgIdFromChannel(custodianChannel);
+        } catch (Exception ex) {
+          ProjectLogger.log(
+              "UserManagementActor: validateUserType :"
+                  + " Exception Occured while fetching Custodian Org ",
+              LoggerEnum.INFO);
+        }
+        if (StringUtils.isNotBlank(custodianRootOrgId)
+            && ((String) userMap.get(JsonKey.ROOT_ORG_ID)).equalsIgnoreCase(custodianRootOrgId)) {
+          ProjectCommonException.throwClientErrorException(
+              ResponseCode.errorTeacherCannotBelongToCustodianOrg,
+              ResponseCode.errorTeacherCannotBelongToCustodianOrg.getErrorMessage());
+        }
+      }
     } else {
       userMap.put(JsonKey.USER_TYPE, UserType.OTHER.getTypeName());
     }

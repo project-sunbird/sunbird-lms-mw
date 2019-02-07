@@ -198,6 +198,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           if (MapUtils.isNotEmpty(result)) {
             int count = (int) result.get(JsonKey.COUNT);
             if (0 == count) {
+              Map<String, String> errorMap = new HashMap<>();
               contentIdVsRowNumMap
                   .keySet()
                   .forEach(
@@ -205,9 +206,16 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                         String contentUrl =
                             ProjectUtil.getConfigValue(JsonKey.SUNBIRD_LINKED_CONTENT_BASE_URL)
                                 + contentId;
-                        throwInvalidLinkedContentUrl(
-                            contentUrl, contentIdVsRowNumMap.get(contentId));
+                        String message =
+                            MessageFormat.format(
+                                ResponseCode.errorInvalidLinkedContentUrl.getErrorMessage(),
+                                contentUrl,
+                                contentIdVsRowNumMap.get(contentId));
+                        errorMap.put(contentId, message);
                       });
+              ProjectCommonException.throwClientErrorException(
+                  ResponseCode.errorInvalidLinkedContentUrl,
+                  mapper.convertValue(errorMap, String.class));
             }
             List<Map<String, Object>> content =
                 (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
@@ -218,6 +226,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                     searchedContentIds.add((String) contentMap.get(JsonKey.IDENTIFIER));
                   });
               if (content.size() != contentIds.size()) {
+                Map<String, String> errorMap = new HashMap<>();
                 contentIdVsRowNumMap
                     .keySet()
                     .forEach(
@@ -226,10 +235,24 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                             String contentUrl =
                                 ProjectUtil.getConfigValue(JsonKey.SUNBIRD_LINKED_CONTENT_BASE_URL)
                                     + contentId;
-                            throwInvalidLinkedContentUrl(
-                                contentUrl, contentIdVsRowNumMap.get(contentId));
+                            String message =
+                                MessageFormat.format(
+                                    ResponseCode.errorInvalidLinkedContentUrl.getErrorMessage(),
+                                    contentUrl,
+                                    contentIdVsRowNumMap.get(contentId));
+                            errorMap.put(contentId, contentUrl);
                           }
                         });
+                if (errorMap.size() == 1) {
+                  for (Map.Entry<String, String> entry : errorMap.entrySet()) {
+                    throwInvalidLinkedContentUrl(
+                        entry.getValue(), contentIdVsRowNumMap.get(entry.getKey()));
+                  }
+                } else {
+                  ProjectCommonException.throwClientErrorException(
+                      ResponseCode.errorInvalidLinkedContentUrl,
+                      mapper.convertValue(errorMap, String.class));
+                }
               }
             } else {
               throwCompositeSearchFailureError();

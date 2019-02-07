@@ -82,7 +82,6 @@ public class UserStatusActorTest extends BaseActorTest {
     ActorRef subject = system.actorOf(props);
 
     staticIsDelete = isDeleted;
-    getRecordByIdResponse();
     subject.tell(getRequestObject(operation.getValue()), probe.getRef());
 
     Response res;
@@ -97,7 +96,7 @@ public class UserStatusActorTest extends BaseActorTest {
   }
 
   @Override
-  protected Map<String, Object> getAbstractMethod() {
+  protected Map<String, Object> getEsDataByIdentifierResponse() {
     return null;
   }
 
@@ -116,5 +115,15 @@ public class UserStatusActorTest extends BaseActorTest {
     resMapList.add(map);
     response.put(JsonKey.RESPONSE, resMapList);
     return response;
+  }
+
+  @Override
+  protected Response getFirstEsInterServiceCommunicationResponse() {
+    return null;
+  }
+
+  @Override
+  protected Response getSecondEsInterServiceCommunicationResponse() {
+    return null;
   }
 }

@@ -55,8 +55,6 @@ public class UserProfileActorTest extends BaseActorTest {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     isSuccessStatic = isSuccess;
-    getAbstractMethod();
-
     subject.tell(getRequestedObj(actorOperation), probe.getRef());
 
     if (isSuccess) {
@@ -83,7 +81,7 @@ public class UserProfileActorTest extends BaseActorTest {
   }
 
   @Override
-  protected Map<String, Object> getAbstractMethod() {
+  protected Map<String, Object> getEsDataByIdentifierResponse() {
     if (isSuccessStatic) {
       return getEsResponseMap();
     } else return new HashMap<>();
@@ -96,6 +94,16 @@ public class UserProfileActorTest extends BaseActorTest {
 
   @Override
   public Response getRecordByIdResponse() {
+    return null;
+  }
+
+  @Override
+  protected Response getFirstEsInterServiceCommunicationResponse() {
+    return null;
+  }
+
+  @Override
+  protected Response getSecondEsInterServiceCommunicationResponse() {
     return null;
   }
 }

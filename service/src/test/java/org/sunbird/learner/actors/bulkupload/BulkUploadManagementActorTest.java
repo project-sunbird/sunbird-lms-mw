@@ -239,7 +239,17 @@ public class BulkUploadManagementActorTest extends BaseActorTest {
   }
 
   @Override
-  protected Map<String, Object> getAbstractMethod() {
+  protected Response getFirstEsInterServiceCommunicationResponse() {
+    return null;
+  }
+
+  @Override
+  protected Response getSecondEsInterServiceCommunicationResponse() {
+    return null;
+  }
+
+  @Override
+  protected Map<String, Object> getEsDataByIdentifierResponse() {
     return null;
   }
 

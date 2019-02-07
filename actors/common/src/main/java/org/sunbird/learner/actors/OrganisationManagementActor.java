@@ -1521,7 +1521,6 @@ public class OrganisationManagementActor extends BaseActor {
     }
     // fetch orgid from database on basis of source and external id and put orgid
     // into request .
-    Util.DbInfo orgDBInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 
     Map<String, Object> requestDbMap = new HashMap<>();
     if (!StringUtils.isBlank((String) req.get(JsonKey.ORGANISATION_ID))) {
@@ -1531,12 +1530,15 @@ public class OrganisationManagementActor extends BaseActor {
       requestDbMap.put(JsonKey.EXTERNAL_ID, req.get(JsonKey.EXTERNAL_ID));
     }
 
-    Response result =
-        cassandraOperation.getRecordsByProperties(
-            orgDBInfo.getKeySpace(), orgDBInfo.getTableName(), requestDbMap);
-    List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+    Map<String, Object> esResponse =
+        ElasticSearchUtil.searchData(
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.organisation.getTypeName(),
+            requestDbMap);
 
-    if (list.isEmpty()) {
+    List<Map<String, Object>> list = (List<Map<String, Object>>) esResponse.get(JsonKey.CONTENT);
+    if (null == list || list.isEmpty()) {
+
       ProjectCommonException exception =
           new ProjectCommonException(
               ResponseCode.invalidOrgData.getErrorCode(),
@@ -1569,7 +1571,9 @@ public class OrganisationManagementActor extends BaseActor {
     }
     Map<String, Object> data = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     data.putAll(req);
-    if (isNull(data.get(JsonKey.USER_ID)) && isNull(data.get(JsonKey.USERNAME))) {
+    if (isNull(data.get(JsonKey.USER_ID))
+        && isNull(data.get(JsonKey.USER_EXTERNAL_ID))
+        && isNull(data.get(JsonKey.USERNAME))) {
       ProjectCommonException exception =
           new ProjectCommonException(
               ResponseCode.usrValidationError.getErrorCode(),
@@ -1589,7 +1593,18 @@ public class OrganisationManagementActor extends BaseActor {
               usrDbInfo.getTableName(),
               JsonKey.ID,
               data.get(JsonKey.USER_ID));
+    } else if (StringUtils.isNotBlank((String) data.get(JsonKey.USER_EXTERNAL_ID))
+        && StringUtils.isNotBlank((String) data.get(JsonKey.USER_PROVIDER))
+        && StringUtils.isNotBlank((String) data.get(JsonKey.USER_ID_TYPE))) {
+      requestDbMap.put(JsonKey.USER_PROVIDER, data.get(JsonKey.USER_PROVIDER));
+      requestDbMap.put(JsonKey.USER_ID_TYPE, data.get(JsonKey.USER_ID_TYPE));
+      requestDbMap.put(JsonKey.USER_EXTERNAL_ID, data.get(JsonKey.USER_EXTERNAL_ID));
+      usrDbInfo = Util.dbInfoMap.get(JsonKey.USR_EXT_ID_DB);
+      result =
+          cassandraOperation.getRecordsByProperties(
+              usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestDbMap);
     } else {
+      usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
       requestDbMap.put(JsonKey.PROVIDER, data.get(JsonKey.PROVIDER));
       requestDbMap.put(JsonKey.USERNAME, data.get(JsonKey.USERNAME));
       if (data.containsKey(JsonKey.PROVIDER)

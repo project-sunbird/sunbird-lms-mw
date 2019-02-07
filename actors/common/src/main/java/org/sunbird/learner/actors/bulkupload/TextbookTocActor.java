@@ -116,12 +116,11 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         (Map<Integer, List<String>>) resultMap.get(JsonKey.LINKED_CONTENT);
     resultMap.remove(JsonKey.LINKED_CONTENT);
     validateLinkedContents(rowNumVsContentIdsMap);
+    resultMap.put(JsonKey.LINKED_CONTENT, false);
     for (Entry<Integer, List<String>> entry : rowNumVsContentIdsMap.entrySet()) {
       if (CollectionUtils.isNotEmpty(entry.getValue())) {
         resultMap.put(JsonKey.LINKED_CONTENT, true);
         break;
-      } else {
-        resultMap.put(JsonKey.LINKED_CONTENT, false);
       }
     }
     String tbId = (String) request.get(TEXTBOOK_ID);

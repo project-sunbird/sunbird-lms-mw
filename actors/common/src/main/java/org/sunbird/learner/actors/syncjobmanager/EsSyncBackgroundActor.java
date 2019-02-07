@@ -60,7 +60,7 @@ public class EsSyncBackgroundActor extends BaseActor {
     Map<String, Object> dataMap = (Map<String, Object>) req.get(JsonKey.DATA);
 
     String objectType = (String) dataMap.get(JsonKey.OBJECT_TYPE);
-    List<Object> objectIds = null;
+    List<Object> objectIds = new ArrayList<>();
     if (null != dataMap.get(JsonKey.OBJECT_IDS)) {
       objectIds = (List<Object>) dataMap.get(JsonKey.OBJECT_IDS);
     }

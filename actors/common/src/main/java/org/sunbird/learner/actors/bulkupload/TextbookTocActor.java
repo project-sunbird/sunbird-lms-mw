@@ -47,7 +47,6 @@ import java.io.InputStreamReader;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -128,10 +127,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     }
     String tbId = (String) request.get(TEXTBOOK_ID);
     Map<String, Object> textbookData = getTextbook(tbId);
-
+    Map<String, Object> hierarchy = getHierarchy(tbId);
     validateTopics(topics, (String) textbookData.get(JsonKey.FRAMEWORK));
     validateDialCodesWithReservedDialCodes(dialCodes, textbookData);
-    checkDialCodeUniquenessInTextBookHierarchy(reqDialCodeIdentifierMap, tbId);
+    checkDialCodeUniquenessInTextBookHierarchy(reqDialCodeIdentifierMap, hierarchy);
     request.getRequest().put(JsonKey.DATA, resultMap);
     String mode = ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.MODE).toString();
     validateRequest(request, mode, textbookData);
@@ -139,7 +138,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     if (StringUtils.equalsIgnoreCase(mode, JsonKey.CREATE)) {
       response = createTextbook(request, textbookData);
     } else if (StringUtils.equalsIgnoreCase(mode, JsonKey.UPDATE)) {
-      response = updateTextbook(request, textbookData);
+      response = updateTextbook(request, textbookData, hierarchy);
     } else {
       unSupportedMessage();
     }
@@ -181,66 +180,68 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     List<String> fields = new ArrayList<>();
     fields.add(JsonKey.IDENTIFIER);
     request.put(JsonKey.FIELDS, fields);
-
-    String requestUrl =
-        getConfigValue(JsonKey.EKSTEP_BASE_URL) + getConfigValue(JsonKey.SUNBIRD_CS_SEARCH_PATH);
-    HttpResponse<String> updateResponse = null;
-    try {
-      updateResponse =
-          Unirest.post(requestUrl)
-              .headers(getDefaultHeaders())
-              .body(mapper.writeValueAsString(requestMap))
-              .asString();
-      if (null != updateResponse) {
-        Response response = mapper.readValue(updateResponse.getBody(), Response.class);
-        if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
-          Map<String, Object> result = response.getResult();
-          List<String> searchedContentIds = new ArrayList<>();
-          if (MapUtils.isNotEmpty(result)) {
-            int count = (int) result.get(JsonKey.COUNT);
-            if (0 == count) {
-              Map<String, String> errorMap =
-                  prepareErrorMap(contentIdVsRowNumMap, searchedContentIds);
-              ProjectCommonException.throwClientErrorException(
-                  ResponseCode.errorInvalidLinkedContentUrl,
-                  mapper.convertValue(errorMap, String.class));
-            }
-            List<Map<String, Object>> content =
-                (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-            if (CollectionUtils.isNotEmpty(content)) {
-              content.forEach(
-                  contentMap -> {
-                    searchedContentIds.add((String) contentMap.get(JsonKey.IDENTIFIER));
-                  });
-              if (content.size() != contentIds.size()) {
+    if (CollectionUtils.isNotEmpty(contentIds)) {
+      String requestUrl =
+          getConfigValue(JsonKey.EKSTEP_BASE_URL) + getConfigValue(JsonKey.SUNBIRD_CS_SEARCH_PATH);
+      HttpResponse<String> updateResponse = null;
+      try {
+        updateResponse =
+            Unirest.post(requestUrl)
+                .headers(getDefaultHeaders())
+                .body(mapper.writeValueAsString(requestMap))
+                .asString();
+        if (null != updateResponse) {
+          Response response = mapper.readValue(updateResponse.getBody(), Response.class);
+          if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
+            Map<String, Object> result = response.getResult();
+            List<String> searchedContentIds = new ArrayList<>();
+            if (MapUtils.isNotEmpty(result)) {
+              int count = (int) result.get(JsonKey.COUNT);
+              if (0 == count) {
                 Map<String, String> errorMap =
                     prepareErrorMap(contentIdVsRowNumMap, searchedContentIds);
-                if (errorMap.size() == 1) {
-                  for (Map.Entry<String, String> entry : errorMap.entrySet()) {
-                    throwInvalidLinkedContentUrl(
-                        entry.getValue(), contentIdVsRowNumMap.get(entry.getKey()));
-                  }
-                } else {
-                  ProjectCommonException.throwClientErrorException(
-                      ResponseCode.errorInvalidLinkedContentUrl,
-                      mapper.convertValue(errorMap, String.class));
-                }
+                ProjectCommonException.throwClientErrorException(
+                    ResponseCode.errorInvalidLinkedContentUrl,
+                    mapper.convertValue(errorMap, String.class));
               }
-            } else {
-              throwCompositeSearchFailureError();
+              List<Map<String, Object>> content =
+                  (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+              if (CollectionUtils.isNotEmpty(content)) {
+                content.forEach(
+                    contentMap -> {
+                      searchedContentIds.add((String) contentMap.get(JsonKey.IDENTIFIER));
+                    });
+                if (content.size() != contentIds.size()) {
+                  Map<String, String> errorMap =
+                      prepareErrorMap(contentIdVsRowNumMap, searchedContentIds);
+                  if (errorMap.size() == 1) {
+                    for (Map.Entry<String, String> entry : errorMap.entrySet()) {
+                      throwInvalidLinkedContentUrl(
+                          entry.getValue(), contentIdVsRowNumMap.get(entry.getKey()));
+                    }
+                  } else {
+                    ProjectCommonException.throwClientErrorException(
+                        ResponseCode.errorInvalidLinkedContentUrl,
+                        mapper.convertValue(errorMap, String.class));
+                  }
+                }
+              } else {
+                throwCompositeSearchFailureError();
+              }
             }
+          } else {
+            throwCompositeSearchFailureError();
           }
         } else {
           throwCompositeSearchFailureError();
         }
-      } else {
+      } catch (Exception e) {
+        ProjectLogger.log(
+            "TextbookTocActor:validateLinkedContents : Error occurred with message "
+                + e.getMessage(),
+            e);
         throwCompositeSearchFailureError();
       }
-    } catch (Exception e) {
-      ProjectLogger.log(
-          "TextbookTocActor:validateLinkedContents : Error occurred with message " + e.getMessage(),
-          e);
-      throwCompositeSearchFailureError();
     }
   }
 
@@ -272,9 +273,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
   @SuppressWarnings("unchecked")
   private void checkDialCodeUniquenessInTextBookHierarchy(
-      Map<String, List<String>> reqDialCodesIdentifierMap, String textbookId) {
+      Map<String, List<String>> reqDialCodesIdentifierMap, Map<String, Object> contentHierarchy) {
     if (MapUtils.isNotEmpty(reqDialCodesIdentifierMap)) {
-      Map<String, Object> contentHierarchy = getHierarchy(textbookId);
       Map<String, List<String>> hierarchyDialCodeIdentifierMap = new HashMap<>();
       List<String> contentDialCodes = (List<String>) contentHierarchy.get(JsonKey.DIAL_CODES);
       if (CollectionUtils.isNotEmpty(contentDialCodes)) {
@@ -931,7 +931,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   }
 
   @SuppressWarnings("unchecked")
-  private Response updateTextbook(Request request, Map<String, Object> textbookData)
+  private Response updateTextbook(
+      Request request, Map<String, Object> textbookData, Map<String, Object> textbookHierarchy)
       throws Exception {
     Boolean linkContent =
         (boolean) ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.LINKED_CONTENT);
@@ -975,25 +976,27 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             null,
             nodesModified,
             false);
-        if (BooleanUtils.isTrue(linkContent)) {
-          Map<String, Object> modifiedNode = ((Map<String, Object>) nodesModified.get(id));
-          Map<String, Object> node = Collections.EMPTY_MAP;
-          if (MapUtils.isNotEmpty(modifiedNode)) {
-            Map<String, Object> meta = (Map<String, Object>) modifiedNode.get(JsonKey.METADATA);
-            node = populateHierarchyDataForUpdateRequest(meta);
-            node.put(JsonKey.CHILDREN, row.get(JsonKey.CHILDREN));
-            hierarchyData.put(id, node);
-          }
-        }
       }
-      if (MapUtils.isNotEmpty(hierarchyData)) {
-        Map<String, Object> root = new HashMap<String, Object>();
-        root.put(JsonKey.NAME, textbookData.get(JsonKey.NAME));
-        root.put(CONTENT_TYPE, textbookData.get(CONTENT_TYPE));
-        root.put(CHILDREN, new ArrayList<>(nodesModified.keySet()));
-        root.put(JsonKey.TB_ROOT, true);
-        hierarchyData.put((String) request.get(TEXTBOOK_ID), root);
+      if (BooleanUtils.isTrue(linkContent)) {
+        List<Map<String, Object>> hierarchyList =
+            getParentChildHierarchy(
+                tbId,
+                (String) textbookData.get(JsonKey.NAME),
+                (List<Map<String, Object>>) textbookHierarchy.get(JsonKey.CHILDREN));
+        Map<String, Object> hierarchy = populateHierarchyDataForUpdate(hierarchyList, tbId);
+        data.forEach(
+            s -> {
+              Map<String, Object> nodeData =
+                  (Map<String, Object>) hierarchy.get(s.get(JsonKey.IDENTIFIER));
+              if (MapUtils.isNotEmpty(nodeData)
+                  && CollectionUtils.isNotEmpty((List<String>) s.get(JsonKey.CHILDREN))) {
+                ((List<String>) nodeData.get(JsonKey.CHILDREN))
+                    .addAll((List<String>) s.get(JsonKey.CHILDREN));
+              }
+            });
+        hierarchyData.putAll(hierarchy);
       }
+
       Map<String, Object> updateRequest = new HashMap<String, Object>();
       Map<String, Object> requestMap = new HashMap<String, Object>();
       Map<String, Object> dataMap = new HashMap<String, Object>();
@@ -1010,12 +1013,47 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     }
   }
 
-  private Map<String, Object> populateHierarchyDataForUpdateRequest(Map<String, Object> metadata) {
-    Map<String, Object> node = new HashMap<String, Object>();
-    node.put(JsonKey.NAME, metadata.get(JsonKey.NAME));
-    node.put(JsonKey.CONTENT_TYPE, "TextBookUnit");
-    node.put(JsonKey.TB_ROOT, false);
-    return node;
+  public List<Map<String, Object>> getParentChildHierarchy(
+      String parentId, String name, List<Map<String, Object>> children) {
+    List<Map<String, Object>> hierarchyList = new ArrayList<>();
+    Map<String, Object> hierarchy = new HashMap<>();
+    Map<String, Object> node = new HashMap<>();
+    node.put(JsonKey.NAME, name);
+    List<String> contentIdList = new ArrayList<>();
+    node.put(JsonKey.CHILDREN, contentIdList);
+    hierarchy.put(parentId, node);
+    hierarchyList.add(hierarchy);
+    for (Map<String, Object> child : children) {
+      contentIdList.add((String) child.get(JsonKey.IDENTIFIER));
+      if (null != child.get(JsonKey.CHILDREN)) {
+        hierarchyList.addAll(
+            getParentChildHierarchy(
+                (String) child.get(JsonKey.IDENTIFIER),
+                (String) child.get(JsonKey.NAME),
+                (List<Map<String, Object>>) child.get(JsonKey.CHILDREN)));
+      }
+    }
+    return hierarchyList;
+  }
+
+  @SuppressWarnings("unchecked")
+  private Map<String, Object> populateHierarchyDataForUpdate(
+      List<Map<String, Object>> hierarchy, String textbookId) {
+    Map<String, Object> hierarchyData = new HashMap<>();
+    hierarchy.forEach(
+        s -> {
+          for (Entry<String, Object> entry : s.entrySet()) {
+            if (textbookId.equalsIgnoreCase(entry.getKey())) {
+              ((Map<String, Object>) entry.getValue()).put(JsonKey.CONTENT_TYPE, "TextBook");
+              ((Map<String, Object>) entry.getValue()).put(JsonKey.TB_ROOT, true);
+            } else {
+              ((Map<String, Object>) entry.getValue()).put(JsonKey.CONTENT_TYPE, "TextBookUnit");
+              ((Map<String, Object>) entry.getValue()).put(JsonKey.TB_ROOT, false);
+            }
+            hierarchyData.put(entry.getKey(), entry.getValue());
+          }
+        });
+    return hierarchyData;
   }
 
   @SuppressWarnings("unchecked")
@@ -1153,6 +1191,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   private Map<String, String> getDefaultHeaders() {
     Map<String, String> headers = new HashMap<>();
     headers.put("Content-Type", "application/json");
+    headers.put(
+        "x-authenticated-user-token",
+        "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJ1WXhXdE4tZzRfMld5MG5PS1ZoaE5hU0gtM2lSSjdXU25ibFlwVVU0TFRrIn0.eyJqdGkiOiI1NjBmNWM2ZS0xYjc2LTRjYmItYjQ2Mi0yNTE5MzY1OGQ4N2UiLCJleHAiOjE1NDk2MzAyODIsIm5iZiI6MCwiaWF0IjoxNTQ5NjEyMjgyLCJpc3MiOiJodHRwczovL2Rldi5zdW5iaXJkZWQub3JnL2F1dGgvcmVhbG1zL3N1bmJpcmQiLCJhdWQiOiJhZG1pbi1jbGkiLCJzdWIiOiI4NzRlZDhhNS03ODJlLTRmNmMtOGYzNi1lMDI4ODQ1NTkwMWUiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJhZG1pbi1jbGkiLCJhdXRoX3RpbWUiOjAsInNlc3Npb25fc3RhdGUiOiIwN2ZlNjdmOC1jMDU3LTRmMDEtOWJkZi05OGM4YjY2YjQ3MDciLCJhY3IiOiIxIiwiYWxsb3dlZC1vcmlnaW5zIjpbXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbInVtYV9hdXRob3JpemF0aW9uIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnt9LCJuYW1lIjoiQ3JlYXRpb24iLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJudHB0ZXN0MTAyIiwiZ2l2ZW5fbmFtZSI6IkNyZWF0aW9uIiwiZmFtaWx5X25hbWUiOiIiLCJlbWFpbCI6Imxha2hhbnNpbmdobWFuZGxvaTFAZ21haWwuY29tIn0.UQkHgUS4tf4vcfbKWr_6zghTtzg1CX8ZoKfFOGpKIxwSsfvPQW6jPNuWY65hmVIcnsbUTtNMC_R_IR7wBXoJXS7oh2Y6eIPp8u9ImaTM6L66zck8uQ3pIFIZgIDgpK_HniiKXYRbeDtvJyrTJf0-zDg8KJDfoZIhNTN5M72As2NIQj77HGpUBLEpVrqSTnCLNzQvH4ei4Ccp_scYDj7VD_NSVzh1xr_8VQTNnHa-ygSSwRPMmWONS0Lsr-Np_MOoYVr7vhXlj8o9TNDTp9AG4NoD1Veg2muezffZwyrriAnsYly2o4iI_PkLWc6f0KBXxX1_FDmSxT6e43liu8etzA");
     headers.put(
         JsonKey.AUTHORIZATION, JsonKey.BEARER + getConfigValue(JsonKey.SUNBIRD_AUTHORIZATION));
     return headers;

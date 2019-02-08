@@ -1532,12 +1532,13 @@ public class OrganisationManagementActor extends BaseActor {
       requestDbMap.put(JsonKey.PROVIDER, req.get(JsonKey.PROVIDER));
       requestDbMap.put(JsonKey.EXTERNAL_ID, req.get(JsonKey.EXTERNAL_ID));
     }
-
+    SearchDTO searchDTO = new SearchDTO();
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, requestDbMap);
     Map<String, Object> esResponse =
-        ElasticSearchUtil.searchData(
+        ElasticSearchUtil.complexSearch(
+            searchDTO,
             ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.organisation.getTypeName(),
-            requestDbMap);
+            ProjectUtil.EsType.organisation.getTypeName());
 
     List<Map<String, Object>> list = (List<Map<String, Object>>) esResponse.get(JsonKey.CONTENT);
     if (null == list || list.isEmpty()) {
@@ -1586,6 +1587,7 @@ public class OrganisationManagementActor extends BaseActor {
       return false;
     }
     Response result = null;
+    boolean fromExtId = false;
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Map<String, Object> requestDbMap = new HashMap<>();
     if (!StringUtils.isBlank((String) data.get(JsonKey.USER_ID))) {
@@ -1601,11 +1603,13 @@ public class OrganisationManagementActor extends BaseActor {
         && StringUtils.isNotBlank((String) data.get(JsonKey.USER_ID_TYPE))) {
       requestDbMap.put(JsonKey.PROVIDER, data.get(JsonKey.USER_PROVIDER));
       requestDbMap.put(JsonKey.ID_TYPE, data.get(JsonKey.USER_ID_TYPE));
-      requestDbMap.put(JsonKey.EXTERNAL_ID, data.get(JsonKey.USER_EXTERNAL_ID));
-      usrDbInfo = Util.dbInfoMap.get(JsonKey.USR_EXT_IDNT_TABLE);
+      requestDbMap.put(
+          JsonKey.EXTERNAL_ID, Util.encryptData((String) data.get(JsonKey.USER_EXTERNAL_ID)));
+
       result =
-          cassandraOperation.getRecordsByProperties(
-              usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestDbMap);
+          cassandraOperation.getRecordsByCompositeKey(
+              JsonKey.SUNBIRD, JsonKey.USR_EXT_IDNT_TABLE, requestDbMap);
+      fromExtId = true;
     } else {
       usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
       requestDbMap.put(JsonKey.PROVIDER, data.get(JsonKey.PROVIDER));
@@ -1644,8 +1648,11 @@ public class OrganisationManagementActor extends BaseActor {
       sender().tell(exception, self());
       return false;
     }
-    req.put(JsonKey.USER_ID, list.get(0).get(JsonKey.ID));
-
+    String userId =
+        (fromExtId)
+            ? (String) list.get(0).get(JsonKey.USER_ID)
+            : (String) list.get(0).get(JsonKey.ID);
+    req.put(JsonKey.USER_ID, userId);
     return true;
   }
 

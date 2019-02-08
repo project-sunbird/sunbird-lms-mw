@@ -86,18 +86,23 @@ public class CourseMetricsActor extends BaseMetricsActor {
     String sortBy = (String) actorMessage.getContext().get(JsonKey.SORT_BY);
     String batchId = (String) actorMessage.getContext().get(JsonKey.BATCH_ID);
     Integer offset = (Integer) actorMessage.getContext().get(JsonKey.OFFSET);
+    String userName = (String) actorMessage.getContext().get(JsonKey.USERNAME);
 
     String requestedBy = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
     validateUserId(requestedBy);
     Map<String, Object> courseBatchResult = validateAndGetCourseBatch(batchId);
     Map<String, Object> filter = new HashMap<>();
     filter.put("batches.batchId", batchId);
+
     SearchDTO searchDTO = new SearchDTO();
+    if (!StringUtils.isEmpty(userName)) {
+      searchDTO.setQuery("firstName : " + userName);
+    }
     searchDTO.setLimit(limit);
     searchDTO.setOffset(offset);
     if (!StringUtils.isEmpty(sortBy)) {
       Map<String, String> sortMap = new HashMap<>();
-      if (JsonKey.USER_NAME.equalsIgnoreCase(sortBy)) {
+      if (JsonKey.USERNAME.equalsIgnoreCase(sortBy)) {
         sortBy = JsonKey.FIRST_NAME;
       }
       sortMap.put(sortBy, "ASC");
@@ -108,11 +113,12 @@ public class CourseMetricsActor extends BaseMetricsActor {
     Map<String, Object> result =
         ElasticSearchUtil.complexSearch(
             searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
-    if (isNull(result) || courseBatchResult.size() == 0) {
+    if (isNull(result) || result.size() == 0) {
       ProjectLogger.log(
           "CourseMetricsActor:courseProgressMetricsV2: data not found.", LoggerEnum.INFO.name());
       ProjectCommonException.throwClientErrorException(ResponseCode.invalidCourseBatchId);
     }
+
     List<Map<String, Object>> esContents = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
     Map<String, Object> courseProgressResult = new HashMap<>();
     List<Map<String, Object>> userData = new ArrayList<>();
@@ -135,10 +141,30 @@ public class CourseMetricsActor extends BaseMetricsActor {
     courseProgressResult.put(JsonKey.DATA, userData);
     courseProgressResult.put(JsonKey.START_DATE, courseBatchResult.get(JsonKey.START_DATE));
     courseProgressResult.put(JsonKey.END_DATE, courseBatchResult.get(JsonKey.END_DATE));
+    courseProgressResult.put(JsonKey.COMPLETED_COUNT, getCompletedCount(batchId));
     Response response = new Response();
     response.put("response", "SUCCESS");
     response.getResult().putAll(courseProgressResult);
     sender().tell(response, self());
+  }
+
+  private Long getCompletedCount(String batchId) {
+    SearchDTO searchDTO = new SearchDTO();
+    Map<String, Object> filter = new HashMap<>();
+    filter.put("batches.batchId", batchId);
+    filter.put("batches.progress", 100);
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filter);
+
+    Map<String, Object> result =
+        ElasticSearchUtil.complexSearch(
+            searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
+    if (isNull(result) || result.size() == 0) {
+      ProjectLogger.log(
+          "CourseMetricsActor:courseProgressMetricsV2: data not found.", LoggerEnum.INFO.name());
+      return 0L;
+    } else {
+      return (Long) result.get(JsonKey.COUNT);
+    }
   }
 
   private Map<String, Object> validateAndGetCourseBatch(String batchId) {

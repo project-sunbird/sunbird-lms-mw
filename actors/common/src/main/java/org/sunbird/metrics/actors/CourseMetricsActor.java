@@ -82,7 +82,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
   private void courseProgressMetricsV2(Request actorMessage) {
     ProjectLogger.log("CourseMetricsActor: courseProgressMetrics called.", LoggerEnum.INFO.name());
-    Integer limit = (Integer) actorMessage.getContext().get(JsonKey.PERIOD);
+    Integer limit = (Integer) actorMessage.getContext().get(JsonKey.LIMIT);
     String sortBy = (String) actorMessage.getContext().get(JsonKey.SORT_BY);
     String batchId = (String) actorMessage.getContext().get(JsonKey.BATCH_ID);
     Integer offset = (Integer) actorMessage.getContext().get(JsonKey.OFFSET);
@@ -95,7 +95,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     SearchDTO searchDTO = new SearchDTO();
     searchDTO.setLimit(limit);
     searchDTO.setOffset(offset);
-    if (StringUtils.isEmpty(sortBy)) {
+    if (!StringUtils.isEmpty(sortBy)) {
       Map<String, String> sortMap = new HashMap<>();
       if (JsonKey.USER_NAME.equalsIgnoreCase(sortBy)) {
         sortBy = JsonKey.FIRST_NAME;
@@ -103,7 +103,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
       sortMap.put(sortBy, "ASC");
       searchDTO.setSortBy(sortMap);
     }
-    searchDTO.getAdditionalProperties().put(JsonKey.FILTER, filter);
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filter);
 
     Map<String, Object> result =
         ElasticSearchUtil.complexSearch(
@@ -118,7 +118,9 @@ public class CourseMetricsActor extends BaseMetricsActor {
     List<Map<String, Object>> userData = new ArrayList<>();
     for (Map<String, Object> esContent : esContents) {
       Map<String, Object> map = new HashMap<>();
-      map.put(JsonKey.USER_NAME, esContent.get(JsonKey.FIRST_NAME + " " + JsonKey.LAST_NAME));
+      map.put(
+          JsonKey.USER_NAME,
+          esContent.get(JsonKey.FIRST_NAME) + " " + esContent.get(JsonKey.LAST_NAME));
       map.put(JsonKey.ORG_NAME, esContent.get(JsonKey.ROOT_ORG_NAME));
       for (Map<String, Object> batchMap :
           (List<Map<String, Object>>) esContent.get(JsonKey.BATCHES)) {
@@ -133,7 +135,10 @@ public class CourseMetricsActor extends BaseMetricsActor {
     courseProgressResult.put(JsonKey.DATA, userData);
     courseProgressResult.put(JsonKey.START_DATE, courseBatchResult.get(JsonKey.START_DATE));
     courseProgressResult.put(JsonKey.END_DATE, courseBatchResult.get(JsonKey.END_DATE));
-    sender().tell(courseProgressResult, self());
+    Response response = new Response();
+    response.put("response", "SUCCESS");
+    response.getResult().putAll(courseProgressResult);
+    sender().tell(response, self());
   }
 
   private Map<String, Object> validateAndGetCourseBatch(String batchId) {

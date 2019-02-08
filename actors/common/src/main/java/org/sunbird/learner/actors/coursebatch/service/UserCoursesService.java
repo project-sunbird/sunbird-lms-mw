@@ -92,7 +92,7 @@ public class UserCoursesService {
           courseId,
           batchId,
           (String) userCourses.get(JsonKey.COURSE_ENROLL_DATE),
-          (String) userCourses.get(JsonKey.COURSE_PROGRESS),
+          (Integer) userCourses.get(JsonKey.COURSE_PROGRESS),
           null,
           userId);
       flag = true;
@@ -144,7 +144,7 @@ public class UserCoursesService {
       String courseId,
       String batchId,
       String enrolledOn,
-      String progress,
+      Integer progress,
       String lastAccessedOn,
       String userId) {
     Map<String, Object> userMap =
@@ -171,7 +171,7 @@ public class UserCoursesService {
     boolean response =
         ElasticSearchUtil.upsertData(
             ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.usercourses.getTypeName(),
+            ProjectUtil.EsType.user.getTypeName(),
             userId,
             userMap);
     ProjectLogger.log(
@@ -207,7 +207,7 @@ public class UserCoursesService {
     boolean response =
         ElasticSearchUtil.upsertData(
             ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.usercourses.getTypeName(),
+            ProjectUtil.EsType.user.getTypeName(),
             userId,
             userMap);
     ProjectLogger.log(

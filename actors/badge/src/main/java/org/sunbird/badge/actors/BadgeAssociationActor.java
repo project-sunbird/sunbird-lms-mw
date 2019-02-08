@@ -123,7 +123,7 @@ public class BadgeAssociationActor extends BaseActor {
     for (Map<String, Object> badgeDetails : activeBadges) {
       if (!associationIdsToBeRemoved.contains(
           (String) badgeDetails.get(BadgingJsonKey.ASSOCIATION_ID))) {
-        updatedBadges.contains(badgeDetails);
+        updatedBadges.add(badgeDetails);
       }
     }
     return updatedBadges;

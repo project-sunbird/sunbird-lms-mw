@@ -98,13 +98,15 @@ public class BadgeAssociationActor extends BaseActor {
     List<Map<String, Object>> activeBadges = getAssociationMapList(badgeAssociationString);
     List<String> reqestedBadges = (List<String>) request.getRequest().get(BadgingJsonKey.BADGE_IDs);
     List<String> associationIds = getAssociationIdsToBeRemoved(activeBadges, reqestedBadges);
+    List<Map<String, Object>> updatedActiveBadges =
+        getUpdatedActiveBadges(activeBadges, associationIds);
     List<Map<String, Object>> updateMapList = new ArrayList<>();
     Response response = new Response();
     boolean flag = false;
     if (CollectionUtils.isNotEmpty(associationIds)) {
       flag =
           ContentService.updateEkstepContent(
-              contentId, BadgingJsonKey.BADGE_ASSOCIATIONS, activeBadges);
+              contentId, BadgingJsonKey.BADGE_ASSOCIATIONS, updatedActiveBadges);
       if (flag) {
         updateMapList = updateCassandraAndGetUpdateMapList(associationIds, requestedBy);
       }
@@ -113,6 +115,18 @@ public class BadgeAssociationActor extends BaseActor {
     if (flag) {
       associationService.syncToES(updateMapList, false);
     }
+  }
+
+  private List<Map<String, Object>> getUpdatedActiveBadges(
+      List<Map<String, Object>> activeBadges, List<String> associationIdsToBeRemoved) {
+    List<Map<String, Object>> updatedBadges = new ArrayList<>();
+    for (Map<String, Object> badgeDetails : activeBadges) {
+      if (!associationIdsToBeRemoved.contains(
+          (String) badgeDetails.get(BadgingJsonKey.ASSOCIATION_ID))) {
+        updatedBadges.add(badgeDetails);
+      }
+    }
+    return updatedBadges;
   }
 
   private List<Map<String, Object>> updateCassandraAndGetUpdateMapList(
@@ -142,7 +156,6 @@ public class BadgeAssociationActor extends BaseActor {
         if (reqestedBadges.contains((String) activeBadges.get(i).get(BadgingJsonKey.BADGE_ID))) {
           String associationId = (String) activeBadges.get(i).get(BadgingJsonKey.ASSOCIATION_ID);
           associationIds.add(associationId);
-          activeBadges.remove(i);
         }
       }
     }

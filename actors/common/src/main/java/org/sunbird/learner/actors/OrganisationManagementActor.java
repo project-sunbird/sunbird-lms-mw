@@ -1603,7 +1603,8 @@ public class OrganisationManagementActor extends BaseActor {
         && StringUtils.isNotBlank((String) data.get(JsonKey.USER_ID_TYPE))) {
       requestDbMap.put(JsonKey.PROVIDER, data.get(JsonKey.USER_PROVIDER));
       requestDbMap.put(JsonKey.ID_TYPE, data.get(JsonKey.USER_ID_TYPE));
-      requestDbMap.put(JsonKey.EXTERNAL_ID, data.get(JsonKey.USER_EXTERNAL_ID));
+      requestDbMap.put(
+          JsonKey.EXTERNAL_ID, Util.encryptData((String) data.get(JsonKey.USER_EXTERNAL_ID)));
 
       result =
           cassandraOperation.getRecordsByCompositeKey(

@@ -449,10 +449,13 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
     Map<String, String> metadata = (Map<String, String>) configMap.get(JsonKey.METADATA);
     Map<String, String> hierarchy = (Map<String, String>) configMap.get(JsonKey.HIERARCHY);
-    Map<String, String> linkedContent = (Map<String, String>) configMap.get(JsonKey.LINKED_CONTENT);
+    String linkedContentMapping =
+        ProjectUtil.getConfigValue(JsonKey.TEXTBOOK_TOC_LINKED_CONTENT_SETTINGS);
+    Map<String, Object> linkedContentMap =
+        mapper.readValue(linkedContentMapping, new TypeReference<Map<String, Object>>() {});
     int max_allowed_content_size =
-        Integer.parseInt(linkedContent.get(JsonKey.MAX_ALLOWED_CONTENT_SIZE));
-    String linkedContentKey = linkedContent.get(JsonKey.LINKED_CONTENT_COLUMN_KEY);
+        Integer.parseInt((String) linkedContentMap.get(JsonKey.MAX_ALLOWED_CONTENT_SIZE));
+    String linkedContentKey = (String) linkedContentMap.get(JsonKey.LINKED_CONTENT_COLUMN_KEY);
 
     Map<String, String> fwMetadata =
         (Map<String, String>) configMap.get(JsonKey.FRAMEWORK_METADATA);
@@ -493,7 +496,6 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           if (StringUtils.isNotBlank(record.get(entry.getValue())))
             recordMap.put(entry.getKey(), record.get(entry.getValue()));
         }
-        validateMandatoryFields(record, hierarchy.entrySet(), i);
         for (Map.Entry<String, String> entry : hierarchy.entrySet()) {
           if (StringUtils.isNotBlank(record.get(entry.getValue())))
             hierarchyMap.put(entry.getKey(), record.get(entry.getValue()));
@@ -561,19 +563,6 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       }
     }
     return result;
-  }
-
-  private void validateMandatoryFields(
-      CSVRecord record, Set<Entry<String, String>> tocMetadata, int rowNum) {
-    for (Map.Entry<String, String> entry : tocMetadata) {
-      if ((TEXTBOOK_NAME.equalsIgnoreCase(entry.getValue())
-              || L1_TEXTBOOK_UNIT.equalsIgnoreCase(entry.getValue()))
-          && StringUtils.isBlank(record.get(entry.getValue()))) {
-        String message =
-            "Mandatory parameter " + entry.getValue() + " is missing at row " + rowNum + ".";
-        ProjectCommonException.throwClientErrorException(ResponseCode.customClientError, message);
-      }
-    }
   }
 
   private List<String> validateLinkedContentUrlAndGetContentIds(
@@ -990,8 +979,11 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                   (Map<String, Object>) hierarchy.get(s.get(JsonKey.IDENTIFIER));
               if (MapUtils.isNotEmpty(nodeData)
                   && CollectionUtils.isNotEmpty((List<String>) s.get(JsonKey.CHILDREN))) {
-                ((List<String>) nodeData.get(JsonKey.CHILDREN))
-                    .addAll((List<String>) s.get(JsonKey.CHILDREN));
+                for (String contentId : (List<String>) s.get(JsonKey.CHILDREN)) {
+                  if (!((List<String>) nodeData.get(JsonKey.CHILDREN)).contains(contentId)) {
+                    ((List<String>) nodeData.get(JsonKey.CHILDREN)).add(contentId);
+                  }
+                }
               }
             });
         hierarchyData.putAll(hierarchy);
@@ -1191,9 +1183,6 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   private Map<String, String> getDefaultHeaders() {
     Map<String, String> headers = new HashMap<>();
     headers.put("Content-Type", "application/json");
-    headers.put(
-        "x-authenticated-user-token",
-        "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJ1WXhXdE4tZzRfMld5MG5PS1ZoaE5hU0gtM2lSSjdXU25ibFlwVVU0TFRrIn0.eyJqdGkiOiI1NjBmNWM2ZS0xYjc2LTRjYmItYjQ2Mi0yNTE5MzY1OGQ4N2UiLCJleHAiOjE1NDk2MzAyODIsIm5iZiI6MCwiaWF0IjoxNTQ5NjEyMjgyLCJpc3MiOiJodHRwczovL2Rldi5zdW5iaXJkZWQub3JnL2F1dGgvcmVhbG1zL3N1bmJpcmQiLCJhdWQiOiJhZG1pbi1jbGkiLCJzdWIiOiI4NzRlZDhhNS03ODJlLTRmNmMtOGYzNi1lMDI4ODQ1NTkwMWUiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJhZG1pbi1jbGkiLCJhdXRoX3RpbWUiOjAsInNlc3Npb25fc3RhdGUiOiIwN2ZlNjdmOC1jMDU3LTRmMDEtOWJkZi05OGM4YjY2YjQ3MDciLCJhY3IiOiIxIiwiYWxsb3dlZC1vcmlnaW5zIjpbXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbInVtYV9hdXRob3JpemF0aW9uIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnt9LCJuYW1lIjoiQ3JlYXRpb24iLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJudHB0ZXN0MTAyIiwiZ2l2ZW5fbmFtZSI6IkNyZWF0aW9uIiwiZmFtaWx5X25hbWUiOiIiLCJlbWFpbCI6Imxha2hhbnNpbmdobWFuZGxvaTFAZ21haWwuY29tIn0.UQkHgUS4tf4vcfbKWr_6zghTtzg1CX8ZoKfFOGpKIxwSsfvPQW6jPNuWY65hmVIcnsbUTtNMC_R_IR7wBXoJXS7oh2Y6eIPp8u9ImaTM6L66zck8uQ3pIFIZgIDgpK_HniiKXYRbeDtvJyrTJf0-zDg8KJDfoZIhNTN5M72As2NIQj77HGpUBLEpVrqSTnCLNzQvH4ei4Ccp_scYDj7VD_NSVzh1xr_8VQTNnHa-ygSSwRPMmWONS0Lsr-Np_MOoYVr7vhXlj8o9TNDTp9AG4NoD1Veg2muezffZwyrriAnsYly2o4iI_PkLWc6f0KBXxX1_FDmSxT6e43liu8etzA");
     headers.put(
         JsonKey.AUTHORIZATION, JsonKey.BEARER + getConfigValue(JsonKey.SUNBIRD_AUTHORIZATION));
     return headers;

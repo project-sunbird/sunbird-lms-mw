@@ -109,6 +109,23 @@ public class CourseEnrollmentActor extends BaseActor {
     }
     updateCourseBatch(courseBatch);
     generateAndProcessTelemetryEvent(courseMap, "user.batch.course");
+    if (userCourseResult == null) {
+      UserCoursesService.syncUserCourses(
+          (String) courseMap.get(JsonKey.COURSE_ID),
+          (String) courseMap.get(JsonKey.BATCH_ID),
+          (String) courseMap.get(JsonKey.COURSE_ENROLL_DATE),
+          0,
+          null,
+          (String) actorMessage.getRequest().get(JsonKey.USER_ID));
+    } else {
+      UserCoursesService.syncUserCourses(
+          (String) courseMap.get(JsonKey.COURSE_ID),
+          (String) courseMap.get(JsonKey.BATCH_ID),
+          userCourseResult.getEnrolledDate(),
+          0,
+          null,
+          (String) actorMessage.getRequest().get(JsonKey.USER_ID));
+    }
   }
 
   private boolean courseNotificationActive() {
@@ -177,6 +194,9 @@ public class CourseEnrollmentActor extends BaseActor {
     if (courseNotificationActive()) {
       batchOperationNotifier(request, courseBatch, JsonKey.REMOVE);
     }
+    UserCoursesService.syncRemoveUserCourses(
+        (String) request.get(JsonKey.BATCH_ID),
+        (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY));
   }
 
   private void batchOperationNotifier(

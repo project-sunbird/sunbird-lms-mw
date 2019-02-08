@@ -1040,6 +1040,9 @@ public class OrganisationManagementActor extends BaseActor {
     usrOrgData.remove(JsonKey.PROVIDER);
     usrOrgData.remove(JsonKey.USERNAME);
     usrOrgData.remove(JsonKey.USER_NAME);
+    usrOrgData.remove(JsonKey.USER_EXTERNAL_ID);
+    usrOrgData.remove(JsonKey.USER_PROVIDER);
+    usrOrgData.remove(JsonKey.USER_ID_TYPE);
     usrOrgData.put(JsonKey.IS_DELETED, false);
 
     String updatedBy = null;
@@ -1521,7 +1524,6 @@ public class OrganisationManagementActor extends BaseActor {
     }
     // fetch orgid from database on basis of source and external id and put orgid
     // into request .
-    Util.DbInfo orgDBInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 
     Map<String, Object> requestDbMap = new HashMap<>();
     if (!StringUtils.isBlank((String) req.get(JsonKey.ORGANISATION_ID))) {
@@ -1530,13 +1532,17 @@ public class OrganisationManagementActor extends BaseActor {
       requestDbMap.put(JsonKey.PROVIDER, req.get(JsonKey.PROVIDER));
       requestDbMap.put(JsonKey.EXTERNAL_ID, req.get(JsonKey.EXTERNAL_ID));
     }
+    SearchDTO searchDTO = new SearchDTO();
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, requestDbMap);
+    Map<String, Object> esResponse =
+        ElasticSearchUtil.complexSearch(
+            searchDTO,
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.organisation.getTypeName());
 
-    Response result =
-        cassandraOperation.getRecordsByProperties(
-            orgDBInfo.getKeySpace(), orgDBInfo.getTableName(), requestDbMap);
-    List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+    List<Map<String, Object>> list = (List<Map<String, Object>>) esResponse.get(JsonKey.CONTENT);
+    if (null == list || list.isEmpty()) {
 
-    if (list.isEmpty()) {
       ProjectCommonException exception =
           new ProjectCommonException(
               ResponseCode.invalidOrgData.getErrorCode(),
@@ -1569,7 +1575,9 @@ public class OrganisationManagementActor extends BaseActor {
     }
     Map<String, Object> data = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     data.putAll(req);
-    if (isNull(data.get(JsonKey.USER_ID)) && isNull(data.get(JsonKey.USERNAME))) {
+    if (isNull(data.get(JsonKey.USER_ID))
+        && isNull(data.get(JsonKey.USER_EXTERNAL_ID))
+        && isNull(data.get(JsonKey.USERNAME))) {
       ProjectCommonException exception =
           new ProjectCommonException(
               ResponseCode.usrValidationError.getErrorCode(),
@@ -1579,6 +1587,7 @@ public class OrganisationManagementActor extends BaseActor {
       return false;
     }
     Response result = null;
+    boolean fromExtId = false;
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Map<String, Object> requestDbMap = new HashMap<>();
     if (!StringUtils.isBlank((String) data.get(JsonKey.USER_ID))) {
@@ -1589,7 +1598,20 @@ public class OrganisationManagementActor extends BaseActor {
               usrDbInfo.getTableName(),
               JsonKey.ID,
               data.get(JsonKey.USER_ID));
+    } else if (StringUtils.isNotBlank((String) data.get(JsonKey.USER_EXTERNAL_ID))
+        && StringUtils.isNotBlank((String) data.get(JsonKey.USER_PROVIDER))
+        && StringUtils.isNotBlank((String) data.get(JsonKey.USER_ID_TYPE))) {
+      requestDbMap.put(JsonKey.PROVIDER, data.get(JsonKey.USER_PROVIDER));
+      requestDbMap.put(JsonKey.ID_TYPE, data.get(JsonKey.USER_ID_TYPE));
+      requestDbMap.put(
+          JsonKey.EXTERNAL_ID, Util.encryptData((String) data.get(JsonKey.USER_EXTERNAL_ID)));
+
+      result =
+          cassandraOperation.getRecordsByCompositeKey(
+              JsonKey.SUNBIRD, JsonKey.USR_EXT_IDNT_TABLE, requestDbMap);
+      fromExtId = true;
     } else {
+      usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
       requestDbMap.put(JsonKey.PROVIDER, data.get(JsonKey.PROVIDER));
       requestDbMap.put(JsonKey.USERNAME, data.get(JsonKey.USERNAME));
       if (data.containsKey(JsonKey.PROVIDER)
@@ -1626,8 +1648,11 @@ public class OrganisationManagementActor extends BaseActor {
       sender().tell(exception, self());
       return false;
     }
-    req.put(JsonKey.USER_ID, list.get(0).get(JsonKey.ID));
-
+    String userId =
+        (fromExtId)
+            ? (String) list.get(0).get(JsonKey.USER_ID)
+            : (String) list.get(0).get(JsonKey.ID);
+    req.put(JsonKey.USER_ID, userId);
     return true;
   }
 

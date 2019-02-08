@@ -1,7 +1,6 @@
 package org.sunbird.learner.actors.coursebatch.service;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -89,6 +88,13 @@ public class UserCoursesService {
     try {
       userCourseDao.insert(userCourses);
       sync(userCourses, (String) userCourses.get(JsonKey.ID));
+      syncUserCourses(
+          courseId,
+          batchId,
+          (String) userCourses.get(JsonKey.COURSE_ENROLL_DATE),
+          (Integer) userCourses.get(JsonKey.COURSE_PROGRESS),
+          null,
+          userId);
       flag = true;
     } catch (Exception ex) {
       ProjectLogger.log(
@@ -107,6 +113,7 @@ public class UserCoursesService {
     updateAttributes.put(JsonKey.ID, userCourses.getId());
     userCourseDao.update(updateAttributes);
     sync(updateAttributes, userCourses.getId());
+    syncRemoveUserCourses(batchId, userId);
   }
 
   public Map<String, Object> getActiveUserCourses(String userId) {
@@ -130,6 +137,84 @@ public class UserCoursesService {
             courseMap);
     ProjectLogger.log(
         "UserCoursesService:sync: sync user courses id and  response  " + id + "==" + response,
+        LoggerEnum.INFO.name());
+  }
+
+  public static void syncUserCourses(
+      String courseId,
+      String batchId,
+      String enrolledOn,
+      Integer progress,
+      String lastAccessedOn,
+      String userId) {
+    Map<String, Object> userMap =
+        ElasticSearchUtil.getDataByIdentifier(
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName(),
+            userId);
+    if (userMap != null) {
+      List<Map<String, Object>> batches;
+      if (userMap.get(JsonKey.BATCHES) != null) {
+        batches = (List<Map<String, Object>>) userMap.get(JsonKey.BATCHES);
+      } else {
+        batches = new ArrayList<>();
+      }
+      Map<String, Object> map = new HashMap<>();
+      map.put(JsonKey.COURSE_ID, courseId);
+      map.put(JsonKey.BATCH_ID, batchId);
+      map.put(JsonKey.ENROLLED_ON, enrolledOn);
+      map.put(JsonKey.PROGRESS, progress);
+      map.put(JsonKey.LAST_ACCESSED_ON, lastAccessedOn);
+      batches.add(map);
+      userMap.put(JsonKey.BATCHES, batches);
+    }
+    boolean response =
+        ElasticSearchUtil.upsertData(
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName(),
+            userId,
+            userMap);
+    ProjectLogger.log(
+        "UserCoursesService:syncUserCourses: sync user courses batch and  response  "
+            + userId
+            + "=="
+            + response,
+        LoggerEnum.INFO.name());
+  }
+
+  public static void syncRemoveUserCourses(String batchId, String userId) {
+    Map<String, Object> userMap =
+        ElasticSearchUtil.getDataByIdentifier(
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName(),
+            userId);
+    if (userMap != null) {
+      List<Map<String, Object>> batches;
+      if (userMap.get(JsonKey.BATCHES) != null) {
+        batches = (List<Map<String, Object>>) userMap.get(JsonKey.BATCHES);
+
+        Iterator<Map<String, Object>> itr = batches.iterator();
+        while (itr.hasNext()) {
+          Map<String, Object> data = itr.next();
+          String dataBatchId = (String) data.get(JsonKey.BATCH_ID);
+          if (batchId.equalsIgnoreCase(dataBatchId)) {
+            itr.remove();
+          }
+        }
+        userMap.put(JsonKey.BATCHES, batches);
+      }
+    }
+    boolean response =
+        ElasticSearchUtil.upsertData(
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName(),
+            userId,
+            userMap);
+    ProjectLogger.log(
+        "UserCoursesService:syncRemoveUserCourses: sync user courses batch and  response  "
+            + userId
+            + "=="
+            + response,
         LoggerEnum.INFO.name());
   }
 }

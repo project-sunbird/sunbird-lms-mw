@@ -60,7 +60,7 @@ public abstract class UserManagementActorTestBase {
   protected ActorSystem system = ActorSystem.create("system");
   protected static final Props props = Props.create(UserManagementActor.class);
   protected static Map<String, Object> reqMap;
-  static InterServiceCommunication interServiceCommunication =
+  protected static InterServiceCommunication interServiceCommunication =
       mock(InterServiceCommunicationImpl.class);;
   protected static UserServiceImpl userService;
 

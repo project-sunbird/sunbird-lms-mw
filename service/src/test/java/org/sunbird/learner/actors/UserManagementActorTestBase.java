@@ -1,16 +1,19 @@
 package org.sunbird.learner.actors;
 
+import static akka.testkit.JavaTestKit.duration;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.when;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
+import akka.testkit.javadsl.TestKit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
@@ -25,10 +28,12 @@ import org.sunbird.actorutil.location.impl.LocationClientImpl;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
@@ -49,7 +54,8 @@ import org.sunbird.user.util.UserUtil;
   LocationClientImpl.class
 })
 @PowerMockIgnore({"javax.management.*"})
-public class UserManagementActorTestBase {
+@Ignore
+public abstract class UserManagementActorTestBase {
 
   protected ActorSystem system = ActorSystem.create("system");
   protected static final Props props = Props.create(UserManagementActor.class);
@@ -201,5 +207,28 @@ public class UserManagementActorTestBase {
       user.setRootOrgId("custodianOrgId");
     }
     return user;
+  }
+
+  protected Map<String, Object> getAdditionalMapData(Map<String, Object> reqMap) {
+    reqMap.put(JsonKey.ORGANISATION_ID, "anyOrgId");
+    reqMap.put(JsonKey.CHANNEL, "anyChannel");
+    return reqMap;
+  }
+
+  protected boolean testScenario(Request reqObj, ResponseCode errorCode) {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    subject.tell(reqObj, probe.getRef());
+
+    if (errorCode == null) {
+      Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+      return null != res && res.getResponseCode() == ResponseCode.OK;
+    } else {
+      ProjectCommonException res =
+          probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+      return res.getCode().equals(errorCode.getErrorCode())
+          || res.getResponseCode() == errorCode.getResponseCode();
+    }
   }
 }

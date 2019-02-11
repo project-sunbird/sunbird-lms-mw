@@ -1,59 +1,23 @@
 package org.sunbird.learner.actors;
 
-import static akka.testkit.JavaTestKit.duration;
 import static org.junit.Assert.assertTrue;
 import static org.powermock.api.mockito.PowerMockito.when;
 
 import akka.actor.ActorRef;
-import akka.testkit.javadsl.TestKit;
 import java.util.Arrays;
 import java.util.Map;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
-import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
-import org.sunbird.actorutil.location.impl.LocationClientImpl;
-import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.common.ElasticSearchUtil;
-import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.Util;
-import org.sunbird.user.service.impl.UserServiceImpl;
-import org.sunbird.user.util.UserUtil;
 
-@RunWith(PowerMockRunner.class)
-@PrepareForTest({
-  ServiceFactory.class,
-  ElasticSearchUtil.class,
-  Util.class,
-  RequestRouter.class,
-  SystemSettingClientImpl.class,
-  UserServiceImpl.class,
-  UserUtil.class,
-  InterServiceCommunicationFactory.class,
-  LocationClientImpl.class
-})
 @PowerMockIgnore({"javax.management.*"})
 public class UserManagementActorTest extends UserManagementActorTestBase {
-
-  @Test
-  public void testCreateUserSuccessWithUserCallerId() {
-
-    boolean result =
-        testScenario(
-            getRequest(true, true, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
-            null);
-    assertTrue(result);
-  }
 
   @Test
   public void testCreateUserSuccessWithoutUserCallerId() {
@@ -62,6 +26,16 @@ public class UserManagementActorTest extends UserManagementActorTestBase {
         testScenario(
             getRequest(
                 false, true, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
+            null);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testCreateUserSuccessWithUserCallerId() {
+
+    boolean result =
+        testScenario(
+            getRequest(true, true, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
             null);
     assertTrue(result);
   }
@@ -279,28 +253,5 @@ public class UserManagementActorTest extends UserManagementActorTestBase {
             getRequest(false, true, true, req, ActorOperations.UPDATE_USER),
             ResponseCode.errorTeacherCannotBelongToCustodianOrg);
     assertTrue(result);
-  }
-
-  private Map<String, Object> getAdditionalMapData(Map<String, Object> reqMap) {
-    reqMap.put(JsonKey.ORGANISATION_ID, "anyOrgId");
-    reqMap.put(JsonKey.CHANNEL, "anyChannel");
-    return reqMap;
-  }
-
-  private boolean testScenario(Request reqObj, ResponseCode errorCode) {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    subject.tell(reqObj, probe.getRef());
-
-    if (errorCode == null) {
-      Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-      return null != res && res.getResponseCode() == ResponseCode.OK;
-    } else {
-      ProjectCommonException res =
-          probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-      return res.getCode().equals(errorCode.getErrorCode())
-          || res.getResponseCode() == errorCode.getResponseCode();
-    }
   }
 }

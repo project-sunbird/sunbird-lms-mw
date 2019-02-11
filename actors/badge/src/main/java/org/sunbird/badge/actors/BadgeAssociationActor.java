@@ -222,7 +222,8 @@ public class BadgeAssociationActor extends BaseActor {
 
   private List<Map<String, Object>> createActiveBadgeForContentUpdate(
       List<Map<String, Object>> badgesTobeAddedList, List<Map<String, Object>> activeBadges) {
-    List<Map<String, Object>> badgesList = new ArrayList<>();
+    List<Map<String, Object>> badgesList =
+        CollectionUtils.isEmpty(activeBadges) ? new ArrayList<>() : activeBadges;
     for (Map<String, Object> badgeDetails : badgesTobeAddedList) {
       long timeStamp = System.currentTimeMillis();
       badgeDetails.put(BadgingJsonKey.CREATED_TS, timeStamp);
@@ -230,12 +231,7 @@ public class BadgeAssociationActor extends BaseActor {
       badgeDetails.put(BadgingJsonKey.ASSOCIATION_ID, associationId);
       badgesList.add(associationService.getBadgeAssociationMapForContentUpdate(badgeDetails));
     }
-    if (CollectionUtils.isEmpty(activeBadges)) {
-      activeBadges = badgesList;
-    } else {
-      activeBadges.addAll(badgesList);
-    }
-    return activeBadges;
+    return badgesList;
   }
 
   @SuppressWarnings("unchecked")

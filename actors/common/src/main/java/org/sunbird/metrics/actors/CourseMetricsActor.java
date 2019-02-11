@@ -126,7 +126,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
             searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
     if (isNull(result) || result.size() == 0) {
       ProjectLogger.log(
-          "CourseMetricsActor:courseProgressMetricsV2: data not found.", LoggerEnum.INFO.name());
+          "CourseMetricsActor:courseProgressMetricsV2: No search results found.", LoggerEnum.INFO.name());
       ProjectCommonException.throwClientErrorException(ResponseCode.invalidCourseBatchId);
     }
 
@@ -162,8 +162,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
   private Long getCompletedCount(String batchId) {
     SearchDTO searchDTO = new SearchDTO();
     Map<String, Object> filter = new HashMap<>();
-    filter.put("batches.batchId", batchId);
-    filter.put("batches.progress", 100);
+    filter.put(JsonKey.BATCHES + "." + JsonKey.BATCH_ID, batchId);
+    filter.put(JsonKey.BATCHES + "." + JsonKey.PROGRESS, 100);
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filter);
 
     Map<String, Object> result =
@@ -171,7 +171,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
             searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
     if (isNull(result) || result.size() == 0) {
       ProjectLogger.log(
-          "CourseMetricsActor:courseProgressMetricsV2: data not found.", LoggerEnum.INFO.name());
+          "CourseMetricsActor:getCompletedCount: No search results found.", LoggerEnum.INFO.name());
       return 0L;
     } else {
       return (Long) result.get(JsonKey.COUNT);
@@ -181,7 +181,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
   private Map<String, Object> validateAndGetCourseBatch(String batchId) {
     if (StringUtils.isBlank(batchId)) {
       ProjectLogger.log(
-          "CourseMetricsActor:courseProgressMetricsV2: batchId is invalid (blank).",
+          "CourseMetricsActor:validateAndGetCourseBatch: batchId is invalid (blank).",
           LoggerEnum.INFO.name());
       ProjectCommonException.throwClientErrorException(ResponseCode.invalidCourseBatchId);
     }
@@ -191,7 +191,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
             EsIndex.sunbird.getIndexName(), EsType.course.getTypeName(), batchId);
     if (isNull(courseBatchResult) || courseBatchResult.size() == 0) {
       ProjectLogger.log(
-          "CourseMetricsActor:courseProgressMetricsV2: batchId not found.", LoggerEnum.INFO.name());
+          "CourseMetricsActor:validateAndGetCourseBatch: batchId not found.", LoggerEnum.INFO.name());
       ProjectCommonException.throwClientErrorException(ResponseCode.invalidCourseBatchId);
     }
     return courseBatchResult;

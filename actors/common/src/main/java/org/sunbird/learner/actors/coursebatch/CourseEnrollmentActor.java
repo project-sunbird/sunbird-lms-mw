@@ -122,8 +122,8 @@ public class CourseEnrollmentActor extends BaseActor {
           (String) courseMap.get(JsonKey.COURSE_ID),
           (String) courseMap.get(JsonKey.BATCH_ID),
           userCourseResult.getEnrolledDate(),
-          0,
-          null,
+          userCourseResult.getProgress(),
+          userCourseResult.getTimestamp(),
           (String) actorMessage.getRequest().get(JsonKey.USER_ID));
     }
   }

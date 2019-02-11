@@ -87,6 +87,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     String batchId = (String) actorMessage.getContext().get(JsonKey.BATCH_ID);
     Integer offset = (Integer) actorMessage.getContext().get(JsonKey.OFFSET);
     String userName = (String) actorMessage.getContext().get(JsonKey.USERNAME);
+    String sortOrder = (String) actorMessage.getContext().get(JsonKey.SORT_ORDER);
 
     String requestedBy = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
     validateUserId(requestedBy);
@@ -111,7 +112,11 @@ public class CourseMetricsActor extends BaseMetricsActor {
       if (JsonKey.ENROLLED_ON.equalsIgnoreCase(sortBy)) {
         sortBy = JsonKey.BATCHES + "." + JsonKey.ENROLLED_ON;
       }
-      sortMap.put(sortBy, "ASC");
+      if (StringUtils.isEmpty(sortOrder)) {
+        sortMap.put(sortBy, JsonKey.ASC);
+      } else {
+        sortMap.put(sortBy, sortOrder);
+      }
       searchDTO.setSortBy(sortMap);
     }
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filter);

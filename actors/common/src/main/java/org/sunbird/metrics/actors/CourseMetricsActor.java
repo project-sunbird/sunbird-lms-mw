@@ -83,7 +83,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
   private void courseProgressMetricsV2(Request actorMessage) {
     ProjectLogger.log("CourseMetricsActor: courseProgressMetrics called.", LoggerEnum.INFO.name());
     Integer limit = (Integer) actorMessage.getContext().get(JsonKey.LIMIT);
-    String sortBy = (String) actorMessage.getContext().get(JsonKey.SORT_BY);
+    String sortBy = (String) actorMessage.getContext().get(JsonKey.SORTBY);
     String batchId = (String) actorMessage.getContext().get(JsonKey.BATCH_ID);
     Integer offset = (Integer) actorMessage.getContext().get(JsonKey.OFFSET);
     String userName = (String) actorMessage.getContext().get(JsonKey.USERNAME);
@@ -92,11 +92,11 @@ public class CourseMetricsActor extends BaseMetricsActor {
     validateUserId(requestedBy);
     Map<String, Object> courseBatchResult = validateAndGetCourseBatch(batchId);
     Map<String, Object> filter = new HashMap<>();
-    filter.put("batches.batchId", batchId);
+    filter.put(JsonKey.BATCHES + "." + JsonKey.BATCH_ID, batchId);
 
     SearchDTO searchDTO = new SearchDTO();
     if (!StringUtils.isEmpty(userName)) {
-      searchDTO.setQuery("firstName : " + userName);
+      searchDTO.setQuery(JsonKey.FIRST_NAME + " : " + userName);
     }
     searchDTO.setLimit(limit);
     searchDTO.setOffset(offset);
@@ -104,6 +104,12 @@ public class CourseMetricsActor extends BaseMetricsActor {
       Map<String, String> sortMap = new HashMap<>();
       if (JsonKey.USERNAME.equalsIgnoreCase(sortBy)) {
         sortBy = JsonKey.FIRST_NAME;
+      }
+      if (JsonKey.PROGRESS.equalsIgnoreCase(sortBy)) {
+        sortBy = JsonKey.BATCHES + "." + JsonKey.PROGRESS;
+      }
+      if (JsonKey.ENROLLED_ON.equalsIgnoreCase(sortBy)) {
+        sortBy = JsonKey.BATCHES + "." + JsonKey.ENROLLED_ON;
       }
       sortMap.put(sortBy, "ASC");
       searchDTO.setSortBy(sortMap);

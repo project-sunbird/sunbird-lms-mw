@@ -1,11 +1,8 @@
 package org.sunbird.learner.actors;
 
-import static akka.testkit.JavaTestKit.duration;
 import static org.junit.Assert.assertTrue;
 import static org.powermock.api.mockito.PowerMockito.when;
 
-import akka.actor.ActorRef;
-import akka.testkit.javadsl.TestKit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -16,8 +13,6 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
@@ -33,60 +28,42 @@ public class UserFrameworkTest extends UserManagementActorTestBase {
   public void beforeTest() {
     PowerMockito.mockStatic(DataCacheHandler.class);
     PowerMockito.mockStatic(ContentStoreUtil.class);
+    mockForUpdateTest();
   }
 
   @Test
   public void testUpdateUserFrameworkSuccess() {
     Request reqObj = getRequest(null, null);
-    Response res = doUpdateActorCallSuccess(reqObj);
-    assertTrue(null != res.get(JsonKey.RESPONSE));
+    boolean res = testScenario(reqObj, null);
+    assertTrue(res);
   }
 
   @Test
   public void testUpdateUserFrameworkFailureInvalidGradeLevel() {
     Request reqObj = getRequest("gradeLevel", "SomeWrongGrade");
-    ProjectCommonException res = doUpdateActorCallFailure(reqObj);
-    assertTrue(res.getCode().equals(ResponseCode.invalidParameterValue.getErrorCode()));
+    boolean res = testScenario(reqObj, ResponseCode.invalidParameterValue);
+    assertTrue(res);
   }
 
   @Test
   public void testUpdateUserFrameworkFailureInvalidMedium() {
     Request reqObj = getRequest("medium", "glish");
-    ProjectCommonException res = doUpdateActorCallFailure(reqObj);
-    assertTrue(res.getCode().equals(ResponseCode.invalidParameterValue.getErrorCode()));
+    boolean res = testScenario(reqObj, ResponseCode.invalidParameterValue);
+    assertTrue(res);
   }
 
   @Test
   public void testUpdateUserFrameworkFailureInvalidBoard() {
     Request reqObj = getRequest("board", "RBCS");
-    ProjectCommonException res = doUpdateActorCallFailure(reqObj);
-    assertTrue(res.getCode().equals(ResponseCode.invalidParameterValue.getErrorCode()));
+    boolean res = testScenario(reqObj, ResponseCode.invalidParameterValue);
+    assertTrue(res);
   }
 
   @Test
   public void testUpdateUserFrameworkFailureInvalidFrameworkId() {
     Request reqObj = getRequest(JsonKey.ID, "invalidFrameworkId");
-    ProjectCommonException res = doUpdateActorCallFailure(reqObj);
-    assertTrue(res.getCode().equals(ResponseCode.errorNoFrameworkFound.getErrorCode()));
-  }
-
-  private Response doUpdateActorCallSuccess(Request reqObj) {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    mockForUpdateTest();
-    subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
-    return res;
-  }
-
-  private ProjectCommonException doUpdateActorCallFailure(Request reqObj) {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    mockForUpdateTest();
-    subject.tell(reqObj, probe.getRef());
-    ProjectCommonException res =
-        probe.expectMsgClass(duration("200 second"), ProjectCommonException.class);
-    return res;
+    boolean res = testScenario(reqObj, ResponseCode.errorNoFrameworkFound);
+    assertTrue(res);
   }
 
   @SuppressWarnings("unchecked")

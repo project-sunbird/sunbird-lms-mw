@@ -6,6 +6,7 @@ import org.sunbird.badge.service.BadgingService;
 import org.sunbird.badge.service.impl.BadgingFactory;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
@@ -94,7 +95,9 @@ public class BadgeClassActor extends BaseActor {
     ProjectLogger.log("getBadgeClass called");
 
     try {
-      Response response = badgingService.getBadgeClassDetails(actorMessage);
+      Response response =
+          badgingService.getBadgeClassDetails(
+              (String) actorMessage.getRequest().get(BadgingJsonKey.BADGE_ID));
 
       sender().tell(response, self());
     } catch (ProjectCommonException e) {

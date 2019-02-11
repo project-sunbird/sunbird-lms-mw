@@ -215,7 +215,7 @@ public class BadgrServiceImplBadgeClassTest {
     request.put(BadgingJsonKey.ISSUER_ID, VALUE_ISSUER_ID);
     request.put(BadgingJsonKey.BADGE_ID, VALUE_BADGE_ID);
 
-    Response response = badgrServiceImpl.getBadgeClassDetails(request);
+    Response response = badgrServiceImpl.getBadgeClassDetails(VALUE_BADGE_ID);
     validateSuccessResponse(response.getResponseCode(), response.getResult());
     Assert.assertTrue(null != response);
   }
@@ -243,7 +243,7 @@ public class BadgrServiceImplBadgeClassTest {
     boolean thrown = false;
 
     try {
-      badgrServiceImpl.getBadgeClassDetails(request);
+      badgrServiceImpl.getBadgeClassDetails(INVALID_VALUE);
     } catch (ProjectCommonException exception) {
       thrown = true;
       assertEquals(ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(), exception.getResponseCode());
@@ -272,7 +272,7 @@ public class BadgrServiceImplBadgeClassTest {
     boolean thrown = false;
 
     try {
-      badgrServiceImpl.getBadgeClassDetails(request);
+      badgrServiceImpl.getBadgeClassDetails(VALUE_BADGE_ID);
     } catch (ProjectCommonException exception) {
       thrown = true;
       assertEquals(ResponseCode.SERVER_ERROR.getResponseCode(), exception.getResponseCode());

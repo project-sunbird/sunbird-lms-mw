@@ -38,6 +38,7 @@ import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
 import org.sunbird.models.user.User;
+import org.sunbird.models.user.UserType;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.telemetry.util.TelemetryUtil;
@@ -121,6 +122,7 @@ public class UserManagementActor extends BaseActor {
     userRequestValidator.validateUpdateUserRequest(actorMessage);
     Map<String, Object> userDbRecord = UserUtil.validateExternalIdsAndReturnActiveUser(userMap);
     validateUserFrameworkData(userMap, userDbRecord);
+    validateUserTypeForUpdate(userMap);
     User user = mapper.convertValue(userMap, User.class);
     UserUtil.validateExternalIds(user, JsonKey.UPDATE);
     userMap.put(JsonKey.EXTERNAL_IDS, user.getExternalIds());
@@ -171,6 +173,35 @@ public class UserManagementActor extends BaseActor {
         TelemetryUtil.generateTargetObject(
             (String) userMap.get(JsonKey.USER_ID), JsonKey.USER, JsonKey.UPDATE, null);
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
+  }
+
+  private void validateUserTypeForUpdate(Map<String, Object> userMap) {
+    if (userMap.containsKey(JsonKey.USER_TYPE)) {
+      String userType = (String) userMap.get(JsonKey.USER_TYPE);
+      if (UserType.TEACHER.getTypeName().equalsIgnoreCase(userType)) {
+        String custodianChannel = null;
+        String custodianRootOrgId = null;
+        User user = userService.getUserById((String) userMap.get(JsonKey.USER_ID));
+        try {
+          custodianChannel =
+              userService.getCustodianChannel(new HashMap<>(), systemSettingActorRef);
+          custodianRootOrgId = userService.getRootOrgIdFromChannel(custodianChannel);
+        } catch (Exception ex) {
+          ProjectLogger.log(
+              "UserManagementActor: validateUserTypeForUpdate :"
+                  + " Exception Occured while fetching Custodian Org ",
+              LoggerEnum.INFO);
+        }
+        if (StringUtils.isNotBlank(custodianRootOrgId)
+            && user.getRootOrgId().equalsIgnoreCase(custodianRootOrgId)) {
+          ProjectCommonException.throwClientErrorException(
+              ResponseCode.errorTeacherCannotBelongToCustodianOrg,
+              ResponseCode.errorTeacherCannotBelongToCustodianOrg.getErrorMessage());
+        }
+      } else {
+        userMap.put(JsonKey.USER_TYPE, UserType.OTHER.getTypeName());
+      }
+    }
   }
 
   @SuppressWarnings("unchecked")
@@ -242,11 +273,13 @@ public class UserManagementActor extends BaseActor {
       userRequestValidator.validateCreateUserV1Request(actorMessage);
     }
     validateChannelAndOrganisationId(userMap);
+
     // remove these fields from req
     userMap.remove(JsonKey.ENC_EMAIL);
     userMap.remove(JsonKey.ENC_PHONE);
     actorMessage.getRequest().putAll(userMap);
     Util.getUserProfileConfig(systemSettingActorRef);
+    boolean isCustodianOrg = false;
     if (StringUtils.isBlank(callerId)) {
       userMap.put(JsonKey.CREATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
       try {
@@ -256,12 +289,14 @@ public class UserManagementActor extends BaseActor {
           String rootOrgId = userService.getRootOrgIdFromChannel(channel);
           userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
           userMap.put(JsonKey.CHANNEL, channel);
+          isCustodianOrg = true;
         }
       } catch (Exception ex) {
         sender().tell(ex, self());
         return;
       }
     }
+    validateUserType(userMap, isCustodianOrg);
     if (userMap.containsKey(JsonKey.ORG_EXTERNAL_ID)) {
       String orgExternalId = (String) userMap.get(JsonKey.ORG_EXTERNAL_ID);
       String channel = (String) userMap.get(JsonKey.CHANNEL);
@@ -299,6 +334,38 @@ public class UserManagementActor extends BaseActor {
       userMap.put(JsonKey.ORGANISATION_ID, orgId);
     }
     processUserRequest(userMap, callerId);
+  }
+
+  private void validateUserType(Map<String, Object> userMap, boolean isCustodianOrg) {
+    String userType = (String) userMap.get(JsonKey.USER_TYPE);
+    if (StringUtils.isNotBlank(userType)) {
+      if (userType.equalsIgnoreCase(UserType.TEACHER.getTypeName()) && isCustodianOrg) {
+        ProjectCommonException.throwClientErrorException(
+            ResponseCode.errorTeacherCannotBelongToCustodianOrg,
+            ResponseCode.errorTeacherCannotBelongToCustodianOrg.getErrorMessage());
+      } else if (UserType.TEACHER.getTypeName().equalsIgnoreCase(userType)) {
+        String custodianChannel = null;
+        String custodianRootOrgId = null;
+        try {
+          custodianChannel =
+              userService.getCustodianChannel(new HashMap<>(), systemSettingActorRef);
+          custodianRootOrgId = userService.getRootOrgIdFromChannel(custodianChannel);
+        } catch (Exception ex) {
+          ProjectLogger.log(
+              "UserManagementActor: validateUserType :"
+                  + " Exception Occured while fetching Custodian Org ",
+              LoggerEnum.INFO);
+        }
+        if (StringUtils.isNotBlank(custodianRootOrgId)
+            && ((String) userMap.get(JsonKey.ROOT_ORG_ID)).equalsIgnoreCase(custodianRootOrgId)) {
+          ProjectCommonException.throwClientErrorException(
+              ResponseCode.errorTeacherCannotBelongToCustodianOrg,
+              ResponseCode.errorTeacherCannotBelongToCustodianOrg.getErrorMessage());
+        }
+      }
+    } else {
+      userMap.put(JsonKey.USER_TYPE, UserType.OTHER.getTypeName());
+    }
   }
 
   private void validateChannelAndOrganisationId(Map<String, Object> userMap) {

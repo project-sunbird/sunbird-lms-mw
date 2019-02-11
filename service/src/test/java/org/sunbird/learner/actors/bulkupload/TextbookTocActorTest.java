@@ -28,6 +28,7 @@ import java.util.Map;
 import org.apache.commons.io.IOUtils;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -48,6 +49,7 @@ import org.sunbird.content.util.TextBookTocUtil;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({TextBookTocUtil.class, ProjectUtil.class, Unirest.class})
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*"})
+@Ignore
 public class TextbookTocActorTest {
 
   private static ActorSystem system;

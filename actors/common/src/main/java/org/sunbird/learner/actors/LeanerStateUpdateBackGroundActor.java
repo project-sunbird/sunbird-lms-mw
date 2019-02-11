@@ -3,10 +3,7 @@ package org.sunbird.learner.actors;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -54,6 +51,7 @@ public class LeanerStateUpdateBackGroundActor extends BaseActor {
     if (message instanceof Request) {
       Request req = (Request) message;
       // get the list of content objects
+
       List<Map<String, Object>> contentList =
           (List<Map<String, Object>>) req.getRequest().get(JsonKey.CONTENTS);
       // get the content state info
@@ -64,6 +62,7 @@ public class LeanerStateUpdateBackGroundActor extends BaseActor {
         String contentid = (String) map.get(JsonKey.ID);
         if (map.get(JsonKey.COURSE_ID) != null) {
           // generate course table primary key as hash of userid##courseid##batchId
+
           String primary = generateUserCoursesPrimaryKey(map);
           if (temp.containsKey(primary)) {
             Map<String, Object> innerMap = (Map<String, Object>) temp.get(primary);

@@ -9,7 +9,10 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -18,8 +21,13 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
-import org.sunbird.actor.core.BaseActorTest;
+import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actorutil.InterServiceCommunication;
+import org.sunbird.actorutil.InterServiceCommunicationFactory;
+import org.sunbird.actorutil.impl.InterServiceCommunicationImpl;
 import org.sunbird.actorutil.location.impl.LocationClientImpl;
+import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
+import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -27,50 +35,90 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
+import org.sunbird.models.user.User;
 import org.sunbird.user.actors.UserManagementActor;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.UserUtil;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
+  ServiceFactory.class,
+  ElasticSearchUtil.class,
   Util.class,
+  RequestRouter.class,
+  SystemSettingClientImpl.class,
   UserServiceImpl.class,
   UserUtil.class,
-  LocationClientImpl.class,
+  InterServiceCommunicationFactory.class,
+  LocationClientImpl.class
 })
 @PowerMockIgnore({"javax.management.*"})
-public class UserManagementActorTest extends BaseActorTest {
+public class UserManagementActorTest {
 
   private ActorSystem system = ActorSystem.create("system");
   private static final Props props = Props.create(UserManagementActor.class);
   private static Map<String, Object> reqMap;
-  private static final HashMap esResponseMap = getEsResponseMap();
-  private static Response firstEsInterServiceCommunicationResponse;
-  private static Response secondEsInterServiceCommunicationResponse;
+  static InterServiceCommunication interServiceCommunication =
+      mock(InterServiceCommunicationImpl.class);;
+  private static UserServiceImpl userService;
 
   @Before
-  public void beforeEachTest() throws Exception {
+  public void beforeEachTest() {
 
-    PowerMockito.mockStatic(LocationClientImpl.class);
-    LocationClientImpl locationClient = mock(LocationClientImpl.class);
-    PowerMockito.whenNew(LocationClientImpl.class).withNoArguments().thenReturn(locationClient);
-    when(locationClient.getRelatedLocationIds(Mockito.any(ActorRef.class), Mockito.anyList()))
-        .thenReturn(getLocationList());
+    ActorRef actorRef = mock(ActorRef.class);
+    PowerMockito.mockStatic(RequestRouter.class);
+    when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
+
+    PowerMockito.mockStatic(ServiceFactory.class);
+    CassandraOperationImpl cassandraOperation = mock(CassandraOperationImpl.class);
+    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+    when(cassandraOperation.insertRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(getSuccessResponse());
+    when(cassandraOperation.updateRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(getSuccessResponse());
+
+    PowerMockito.mockStatic(InterServiceCommunicationFactory.class);
+    when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
+    when(interServiceCommunication.getResponse(
+            Mockito.any(ActorRef.class), Mockito.any(Request.class)))
+        .thenReturn(getEsResponse());
+
+    PowerMockito.mockStatic(SystemSettingClientImpl.class);
+    SystemSettingClientImpl systemSettingClient = mock(SystemSettingClientImpl.class);
+    when(SystemSettingClientImpl.getInstance()).thenReturn(systemSettingClient);
+    when(systemSettingClient.getSystemSettingByFieldAndKey(
+            Mockito.any(ActorRef.class),
+            Mockito.anyString(),
+            Mockito.anyString(),
+            Mockito.anyObject()))
+        .thenReturn(new HashMap<>());
 
     PowerMockito.mockStatic(UserServiceImpl.class);
-    UserServiceImpl userService = mock(UserServiceImpl.class);
+    userService = mock(UserServiceImpl.class);
     when(UserServiceImpl.getInstance()).thenReturn(userService);
     when(userService.getRootOrgIdFromChannel(Mockito.anyString())).thenReturn("anyId");
     when(userService.getCustodianChannel(Mockito.anyMap(), Mockito.any(ActorRef.class)))
         .thenReturn("anyChannel");
     when(userService.getRootOrgIdFromChannel(Mockito.anyString())).thenReturn("rootOrgId");
 
+    PowerMockito.mockStatic(ElasticSearchUtil.class);
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(getEsResponseMap());
+
     PowerMockito.mockStatic(Util.class);
     Util.getUserProfileConfig(Mockito.any(ActorRef.class));
 
     PowerMockito.mockStatic(UserUtil.class);
     UserUtil.setUserDefaultValue(Mockito.anyMap(), Mockito.anyString());
+
+    Map<String, Object> requestMap = new HashMap<>();
+    requestMap.put(JsonKey.TNC_ACCEPTED_ON, 12345678L);
+    when(UserUtil.encryptUserData(Mockito.anyMap())).thenReturn(requestMap);
     reqMap = getMapObject();
   }
 
@@ -80,10 +128,7 @@ public class UserManagementActorTest extends BaseActorTest {
     boolean result =
         testScenario(
             getRequest(true, true, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
-            null,
-            true,
-            false,
-            false);
+            null);
     assertTrue(result);
   }
 
@@ -94,10 +139,7 @@ public class UserManagementActorTest extends BaseActorTest {
         testScenario(
             getRequest(
                 false, true, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
-            null,
-            true,
-            false,
-            false);
+            null);
     assertTrue(result);
   }
 
@@ -105,12 +147,7 @@ public class UserManagementActorTest extends BaseActorTest {
   public void testCreateUserSuccessWithoutUserCallerIdChannelAndRootOrgId() {
 
     boolean result =
-        testScenario(
-            getRequest(false, false, true, reqMap, ActorOperations.CREATE_USER),
-            null,
-            true,
-            false,
-            false);
+        testScenario(getRequest(false, false, true, reqMap, ActorOperations.CREATE_USER), null);
     assertTrue(result);
   }
 
@@ -122,24 +159,23 @@ public class UserManagementActorTest extends BaseActorTest {
     boolean result =
         testScenario(
             getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
-            ResponseCode.parameterMismatch,
-            true,
-            false,
-            false);
+            ResponseCode.parameterMismatch);
     assertTrue(result);
   }
 
   @Test
   public void testCreateUserFailureWithInvalidLocationCodes() {
-
+    when(InterServiceCommunicationFactory.getInstance())
+        .thenReturn(interServiceCommunication)
+        .thenReturn(interServiceCommunication);
+    when(interServiceCommunication.getResponse(
+            Mockito.any(ActorRef.class), Mockito.any(Request.class)))
+        .thenReturn(null);
     reqMap.put(JsonKey.LOCATION_CODES, Arrays.asList("invalidLocationCode"));
     boolean result =
         testScenario(
             getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
-            ResponseCode.invalidParameterValue,
-            false,
-            false,
-            false);
+            ResponseCode.invalidParameterValue);
     assertTrue(result);
   }
 
@@ -147,26 +183,22 @@ public class UserManagementActorTest extends BaseActorTest {
   public void testCreateUserSuccessWithoutVersion() {
 
     boolean result =
-        testScenario(
-            getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
-            null,
-            true,
-            false,
-            false);
+        testScenario(getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER), null);
     assertTrue(result);
   }
 
   @Test
   public void testCreateUserSuccessWithLocationCodes() {
-
+    when(InterServiceCommunicationFactory.getInstance())
+        .thenReturn(interServiceCommunication)
+        .thenReturn(interServiceCommunication);
+    when(interServiceCommunication.getResponse(
+            Mockito.any(ActorRef.class), Mockito.any(Request.class)))
+        .thenReturn(getEsResponseForLocation())
+        .thenReturn(getEsResponse());
     reqMap.put(JsonKey.LOCATION_CODES, Arrays.asList("locationCode"));
     boolean result =
-        testScenario(
-            getRequest(true, true, true, reqMap, ActorOperations.CREATE_USER),
-            null,
-            true,
-            true,
-            true);
+        testScenario(getRequest(true, true, true, reqMap, ActorOperations.CREATE_USER), null);
     assertTrue(result);
   }
 
@@ -177,10 +209,7 @@ public class UserManagementActorTest extends BaseActorTest {
     boolean result =
         testScenario(
             getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
-            ResponseCode.dataTypeError,
-            true,
-            false,
-            false);
+            ResponseCode.dataTypeError);
     assertTrue(result);
   }
 
@@ -191,10 +220,7 @@ public class UserManagementActorTest extends BaseActorTest {
     boolean result =
         testScenario(
             getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
-            ResponseCode.dataTypeError,
-            true,
-            false,
-            false);
+            ResponseCode.dataTypeError);
     assertTrue(result);
   }
 
@@ -205,10 +231,7 @@ public class UserManagementActorTest extends BaseActorTest {
     boolean result =
         testScenario(
             getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
-            ResponseCode.invalidCountryCode,
-            true,
-            false,
-            false);
+            ResponseCode.invalidCountryCode);
     assertTrue(result);
   }
 
@@ -222,23 +245,20 @@ public class UserManagementActorTest extends BaseActorTest {
         testScenario(
             getRequest(
                 false, false, false, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
-            ResponseCode.invalidOrgData,
-            true,
-            false,
-            false);
+            ResponseCode.invalidOrgData);
     assertTrue(result);
   }
 
   @Test
   public void testUpdateUserFailureWithLocationCodes() {
+    when(interServiceCommunication.getResponse(
+            Mockito.any(ActorRef.class), Mockito.any(Request.class)))
+        .thenReturn(null);
     boolean result =
         testScenario(
             getRequest(
                 true, true, true, getUpdateRequestWithLocationCodes(), ActorOperations.UPDATE_USER),
-            ResponseCode.invalidParameterValue,
-            false,
-            false,
-            false);
+            ResponseCode.invalidParameterValue);
     assertTrue(result);
   }
 
@@ -247,39 +267,25 @@ public class UserManagementActorTest extends BaseActorTest {
 
     boolean result =
         testScenario(
-            getRequest(true, true, true, getExternalIdMap(), ActorOperations.UPDATE_USER),
-            null,
-            true,
-            false,
-            false);
+            getRequest(true, true, true, getExternalIdMap(), ActorOperations.UPDATE_USER), null);
     assertTrue(result);
   }
 
   @Test
   public void testUpdateUserSuccessWithLocationCodes() {
-
+    when(InterServiceCommunicationFactory.getInstance())
+        .thenReturn(interServiceCommunication)
+        .thenReturn(interServiceCommunication);
+    when(interServiceCommunication.getResponse(
+            Mockito.any(ActorRef.class), Mockito.any(Request.class)))
+        .thenReturn(getEsResponseForLocation())
+        .thenReturn(getEsResponse());
     boolean result =
         testScenario(
             getRequest(
                 true, true, true, getUpdateRequestWithLocationCodes(), ActorOperations.UPDATE_USER),
-            null,
-            true,
-            true,
-            true);
+            null);
     assertTrue(result);
-  }
-
-  private void getInterServiceCommunicationResponse(
-      boolean isFirstPresent, boolean isSecondPresent, boolean isLocation) {
-
-    if (isFirstPresent) {
-      firstEsInterServiceCommunicationResponse = getEsResponseForLocation(isLocation);
-    } else firstEsInterServiceCommunicationResponse = null;
-
-    if (isSecondPresent) {
-      secondEsInterServiceCommunicationResponse = getEsResponse();
-    } else secondEsInterServiceCommunicationResponse = null;
-    interServiceCommunication();
   }
 
   @Test
@@ -287,11 +293,68 @@ public class UserManagementActorTest extends BaseActorTest {
 
     boolean result =
         testScenario(
-            getRequest(false, true, true, getExternalIdMap(), ActorOperations.UPDATE_USER),
-            null,
-            true,
-            false,
-            false);
+            getRequest(false, true, true, getExternalIdMap(), ActorOperations.UPDATE_USER), null);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testCreateUserSuccessWithUserTypeAsTeacher() {
+    reqMap.put(JsonKey.USER_TYPE, JsonKey.TEACHER);
+
+    when(userService.getRootOrgIdFromChannel(Mockito.anyString()))
+        .thenReturn("rootOrgId")
+        .thenReturn("");
+
+    boolean result =
+        testScenario(
+            getRequest(true, true, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
+            null);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testCreateUserSuccessWithUserTypeAsOther() {
+    reqMap.put(JsonKey.USER_TYPE, JsonKey.OTHER);
+
+    boolean result =
+        testScenario(
+            getRequest(true, true, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
+            null);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testCreateUserFailureWithUserTypeAsTeacherAndCustodianOrg() {
+    reqMap.put(JsonKey.USER_TYPE, JsonKey.TEACHER);
+
+    boolean result =
+        testScenario(
+            getRequest(false, false, true, reqMap, ActorOperations.CREATE_USER),
+            ResponseCode.errorTeacherCannotBelongToCustodianOrg);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testUpdateUserSuccessWithUserTypeTeacher() {
+    Map<String, Object> req = getExternalIdMap();
+    req.put(JsonKey.USER_TYPE, JsonKey.TEACHER);
+    when(userService.getUserById(Mockito.anyString())).thenReturn(getUser(false));
+    when(userService.getRootOrgIdFromChannel(Mockito.anyString())).thenReturn("rootOrgId1");
+    boolean result =
+        testScenario(getRequest(false, true, true, req, ActorOperations.UPDATE_USER), null);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testUpdateUserFailureWithUserTypeTeacher() {
+    Map<String, Object> req = getExternalIdMap();
+    req.put(JsonKey.USER_TYPE, JsonKey.TEACHER);
+    when(userService.getUserById(Mockito.anyString())).thenReturn(getUser(false));
+    when(userService.getRootOrgIdFromChannel(Mockito.anyString())).thenReturn("rootOrgId");
+    boolean result =
+        testScenario(
+            getRequest(false, true, true, req, ActorOperations.UPDATE_USER),
+            ResponseCode.errorTeacherCannotBelongToCustodianOrg);
     assertTrue(result);
   }
 
@@ -301,25 +364,18 @@ public class UserManagementActorTest extends BaseActorTest {
     return reqMap;
   }
 
-  private boolean testScenario(
-      Request reqObj,
-      ResponseCode errorCode,
-      boolean isFirstPresent,
-      boolean isSecondPresent,
-      boolean isLocation) {
+  private boolean testScenario(Request reqObj, ResponseCode errorCode) {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
-
-    getInterServiceCommunicationResponse(isFirstPresent, isSecondPresent, isLocation);
     subject.tell(reqObj, probe.getRef());
 
     if (errorCode == null) {
-      Response res = probe.expectMsgClass(duration("1000 second"), Response.class);
+      Response res = probe.expectMsgClass(duration("10 second"), Response.class);
       return null != res && res.getResponseCode() == ResponseCode.OK;
     } else {
       ProjectCommonException res =
-          probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
+          probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
       return res.getCode().equals(errorCode.getErrorCode())
           || res.getResponseCode() == errorCode.getResponseCode();
     }
@@ -374,7 +430,7 @@ public class UserManagementActorTest extends BaseActorTest {
     return reqObj;
   }
 
-  protected static Response getEsResponse() {
+  private static Response getEsResponse() {
 
     Response response = new Response();
     Map<String, Object> map = new HashMap<>();
@@ -383,55 +439,32 @@ public class UserManagementActorTest extends BaseActorTest {
     return response;
   }
 
-  private static HashMap getEsResponseMap() {
-    HashMap<String, Object> map = new HashMap<>();
+  private static Response getSuccessResponse() {
+    Response response = new Response();
+    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    return response;
+  }
+
+  private static Map<String, Object> getEsResponseMap() {
+    Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.IS_ROOT_ORG, true);
     map.put(JsonKey.ID, "rootOrgId");
     map.put(JsonKey.CHANNEL, "anyChannel");
     return map;
   }
 
-  private List getLocationList() {
-
-    List<String> lst = new ArrayList<>();
-    lst.add("anyCode");
-    return lst;
-  }
-
-  @Override
-  protected Map<String, Object> getEsDataByIdentifierResponse() {
-    return esResponseMap;
-  }
-
-  @Override
-  protected Response getCassandraRecordByIdForBulkUploadResponse() {
-    return null;
-  }
-
-  @Override
-  public Response getRecordByIdResponse() {
-    return null;
-  }
-
-  @Override
-  protected Response getFirstEsInterServiceCommunicationResponse() {
-    return firstEsInterServiceCommunicationResponse;
-  }
-
-  @Override
-  protected Response getSecondEsInterServiceCommunicationResponse() {
-    return secondEsInterServiceCommunicationResponse;
-  }
-
-  private static Response getEsResponseForLocation(boolean isLocation) {
+  public Object getEsResponseForLocation() {
     Response response = new Response();
-    if (isLocation) {
-      response.put(JsonKey.RESPONSE, Arrays.asList("location"));
-      return response;
-    }
-    Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.ID, "anyId");
-    response.put(JsonKey.RESPONSE, map);
+    response.put(JsonKey.RESPONSE, Arrays.asList("id"));
     return response;
+  }
+
+  private User getUser(boolean isCustodian) {
+    User user = new User();
+    user.setRootOrgId("rootOrgId");
+    if (isCustodian) {
+      user.setRootOrgId("custodianOrgId");
+    }
+    return user;
   }
 }

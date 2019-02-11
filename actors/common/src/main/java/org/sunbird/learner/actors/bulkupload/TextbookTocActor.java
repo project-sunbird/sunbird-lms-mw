@@ -66,6 +66,7 @@ import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.TextbookActorOperation;
@@ -74,7 +75,6 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.content.textbook.FileExtension;
 import org.sunbird.content.textbook.TextBookTocUploader;
 import org.sunbird.content.util.TextBookTocUtil;
-import org.sunbird.common.models.util.LoggerEnum;
 
 @ActorConfig(
   tasks = {"textbookTocUpload", "textbookTocUrl", "textbookTocUpdate"},
@@ -403,7 +403,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         if (null != csvFileParser) csvFileParser.close();
       } catch (IOException e) {
         ProjectLogger.log(
-            "TextbookTocActor:readAndValidateCSV : Exception occurred while closing stream", LoggerEnum.ERROR);
+            "TextbookTocActor:readAndValidateCSV : Exception occurred while closing stream",
+            LoggerEnum.ERROR);
       }
     }
     return result;
@@ -551,7 +552,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           ResponseCode.invalidRequestData.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     } else {
-     log("Create Textbook - UpdateHierarchy input data : " + mapper.writeValueAsString(data),LoggerEnum.INFO); 
+      log(
+          "Create Textbook - UpdateHierarchy input data : " + mapper.writeValueAsString(data),
+          LoggerEnum.INFO);
       String tbId = (String) request.get(TEXTBOOK_ID);
       Map<String, Object> nodesModified = new HashMap<>();
       Map<String, Object> hierarchyData = new HashMap<>();

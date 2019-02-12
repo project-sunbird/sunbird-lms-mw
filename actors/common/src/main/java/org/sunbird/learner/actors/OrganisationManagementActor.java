@@ -430,7 +430,7 @@ public class OrganisationManagementActor extends BaseActor {
 
       if (StringUtils.isNotBlank(passedExternalId)) {
         String channel = (String) request.get(JsonKey.CHANNEL);
-        createOrgExternalIdRecord(channel.toLowerCase(), passedExternalId, uniqueId);
+        createOrgExternalIdRecord(channel, passedExternalId, uniqueId);
       }
       ProjectLogger.log("Org data saved into cassandra.");
       // create org_map if parentOrgId is present in request
@@ -478,8 +478,8 @@ public class OrganisationManagementActor extends BaseActor {
 
   private void createOrgExternalIdRecord(String channel, String externalId, String orgId) {
     Map<String, Object> orgExtIdRequest = new HashMap<String, Object>();
-    orgExtIdRequest.put(JsonKey.PROVIDER, channel);
-    orgExtIdRequest.put(JsonKey.EXTERNAL_ID, externalId);
+    orgExtIdRequest.put(JsonKey.PROVIDER, channel.toLowerCase());
+    orgExtIdRequest.put(JsonKey.EXTERNAL_ID, externalId.toLowerCase());
     orgExtIdRequest.put(JsonKey.ORG_ID, orgId);
 
     cassandraOperation.insertRecord(JsonKey.SUNBIRD, JsonKey.ORG_EXT_ID_DB, orgExtIdRequest);
@@ -487,8 +487,8 @@ public class OrganisationManagementActor extends BaseActor {
 
   private void deleteOrgExternalIdRecord(String channel, String externalId) {
     Map<String, String> orgExtIdRequest = new HashMap<String, String>();
-    orgExtIdRequest.put(JsonKey.PROVIDER, channel);
-    orgExtIdRequest.put(JsonKey.EXTERNAL_ID, externalId);
+    orgExtIdRequest.put(JsonKey.PROVIDER, channel.toLowerCase());
+    orgExtIdRequest.put(JsonKey.EXTERNAL_ID, externalId.toLowerCase());
 
     cassandraOperation.deleteRecord(JsonKey.SUNBIRD, JsonKey.ORG_EXT_ID_DB, orgExtIdRequest);
   }
@@ -791,12 +791,11 @@ public class OrganisationManagementActor extends BaseActor {
         request.put(JsonKey.PROVIDER, ((String) request.get(JsonKey.PROVIDER)).toLowerCase());
       }
       String passedExternalId = (String) request.get(JsonKey.EXTERNAL_ID);
+      passedExternalId = passedExternalId.toLowerCase();
       if (StringUtils.isNotBlank(passedExternalId)) {
         String channel = (String) request.get(JsonKey.CHANNEL);
         if (!validateChannelExternalIdUniqueness(
-            channel,
-            passedExternalId.toLowerCase(),
-            (String) request.get(JsonKey.ORGANISATION_ID))) {
+            channel, passedExternalId, (String) request.get(JsonKey.ORGANISATION_ID))) {
           ProjectCommonException.throwClientErrorException(
               ResponseCode.errorDuplicateEntry,
               MessageFormat.format(

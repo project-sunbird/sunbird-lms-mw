@@ -178,9 +178,6 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
                   .collect(Collectors.toSet()));
         }
       }
-      ProjectLogger.log(
-          "CourseMetricsBackgroundActor:courseProgressMetricsData unique org Ids : " + uniqueOrgIds,
-          LoggerEnum.INFO);
       Map<String, Map<String, Object>> orgDetails = fetchOrgDetailsById(uniqueOrgIds);
 
       for (Map<String, Object> map : userCoursesContent) {
@@ -188,8 +185,8 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
         Map<String, Object> userMap = userInfoCache.get(map.get(JsonKey.USER_ID));
         if (isNotNull(userMap)) {
           list.add(getFullName(userMap));
-          list.add(getOrgName(userMap, orgDetails));
-          list.add(getSchoolName(userMap, orgDetails));
+          list.add(getRootOrgName(userMap, orgDetails));
+          list.add(getCommaSepSubOrgName(userMap, orgDetails));
           list.add(map.get(JsonKey.COURSE_ENROLL_DATE));
           list.add(map.get(JsonKey.PROGRESS));
         } else {
@@ -230,16 +227,16 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
   }
 
   private Map<String, Map<String, Object>> fetchOrgDetailsById(Set<String> uniqueOrgIds) {
-    List<String> orgfields = new ArrayList<>();
-    orgfields.add(JsonKey.ID);
-    orgfields.add(JsonKey.ORG_NAME);
+    List<String> orgFields = new ArrayList<>();
+    orgFields.add(JsonKey.ID);
+    orgFields.add(JsonKey.ORG_NAME);
 
-    Map<String, Object> orgfilter = new HashMap<>();
-    orgfilter.put(JsonKey.ID, uniqueOrgIds.stream().collect(Collectors.toList()));
+    Map<String, Object> orgFilter = new HashMap<>();
+    orgFilter.put(JsonKey.ID, uniqueOrgIds.stream().collect(Collectors.toList()));
     Map<String, Map<String, Object>> orgDetails = new HashMap<>();
     Map<String, Object> result =
         ElasticSearchUtil.complexSearch(
-            createESRequest(orgfilter, null, orgfields),
+            createESRequest(orgFilter, null, orgFields),
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             EsType.organisation.getTypeName());
     List<Map<String, Object>> orgContent = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
@@ -264,17 +261,17 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
     return fullName;
   }
 
-  private String getOrgName(
+  private String getRootOrgName(
       Map<String, Object> userMap, Map<String, Map<String, Object>> orgDetails) {
     String rootOrgId = (String) userMap.get(JsonKey.ROOT_ORG_ID);
     if (orgDetails.containsKey(rootOrgId) && !MapUtils.isEmpty(orgDetails.get(rootOrgId))) {
       Map<String, Object> orgDetail = orgDetails.get(rootOrgId);
       return (String) orgDetail.get(JsonKey.ORG_NAME);
     }
-    return null;
+    return StringUtils.EMPTY;
   }
 
-  private String getSchoolName(
+  private String getCommaSepSubOrgName(
       Map<String, Object> userMap, Map<String, Map<String, Object>> orgDetails) {
     String rootOrgId = (String) userMap.get(JsonKey.ROOT_ORG_ID);
     List<Map<String, Object>> userOrgs =
@@ -299,6 +296,6 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
         return String.join(",", orgNames);
       }
     }
-    return null;
+    return StringUtils.EMPTY;
   }
 }

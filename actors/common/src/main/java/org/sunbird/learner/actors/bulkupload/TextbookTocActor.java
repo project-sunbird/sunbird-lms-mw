@@ -85,9 +85,6 @@ import org.sunbird.content.util.TextBookTocUtil;
 )
 public class TextbookTocActor extends BaseBulkUploadActor {
 
-  final String TEXTBOOK_NAME = "Textbook Name";
-  final String L1_TEXTBOOK_UNIT = "Level 1 Textbook Unit";
-
   @Override
   public void onReceive(Request request) throws Throwable {
     if (request
@@ -128,10 +125,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     }
     String tbId = (String) request.get(TEXTBOOK_ID);
     Map<String, Object> textbookData = getTextbook(tbId);
-
+    Map<String, Object> hierarchy = getHierarchy(tbId);
     validateTopics(topics, (String) textbookData.get(JsonKey.FRAMEWORK));
     validateDialCodesWithReservedDialCodes(dialCodes, textbookData);
-    checkDialCodeUniquenessInTextBookHierarchy(reqDialCodeIdentifierMap, tbId);
+    checkDialCodeUniquenessInTextBookHierarchy(reqDialCodeIdentifierMap, hierarchy);
     request.getRequest().put(JsonKey.DATA, resultMap);
     String mode = ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.MODE).toString();
     validateRequest(request, mode, textbookData);
@@ -139,7 +136,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     if (StringUtils.equalsIgnoreCase(mode, JsonKey.CREATE)) {
       response = createTextbook(request, textbookData);
     } else if (StringUtils.equalsIgnoreCase(mode, JsonKey.UPDATE)) {
-      response = updateTextbook(request, textbookData);
+      response = updateTextbook(request, textbookData, hierarchy);
     } else {
       unSupportedMessage();
     }
@@ -167,6 +164,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void callSearchApiForContentIdsValidation(
       Map<String, List<Integer>> contentIdVsRowNumMap) {
     List<String> contentIds = new ArrayList<>();
@@ -181,72 +179,63 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     List<String> fields = new ArrayList<>();
     fields.add(JsonKey.IDENTIFIER);
     request.put(JsonKey.FIELDS, fields);
-
-    String requestUrl =
-        getConfigValue(JsonKey.EKSTEP_BASE_URL) + getConfigValue(JsonKey.SUNBIRD_CS_SEARCH_PATH);
-    HttpResponse<String> updateResponse = null;
-    try {
-      updateResponse =
-          Unirest.post(requestUrl)
-              .headers(getDefaultHeaders())
-              .body(mapper.writeValueAsString(requestMap))
-              .asString();
-      if (null != updateResponse) {
-        Response response = mapper.readValue(updateResponse.getBody(), Response.class);
-        if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
-          Map<String, Object> result = response.getResult();
-          List<String> searchedContentIds = new ArrayList<>();
-          if (MapUtils.isNotEmpty(result)) {
-            int count = (int) result.get(JsonKey.COUNT);
-            if (0 == count) {
-              Map<String, String> errorMap =
-                  prepareErrorMap(contentIdVsRowNumMap, searchedContentIds);
-              ProjectCommonException.throwClientErrorException(
-                  ResponseCode.errorInvalidLinkedContentUrl,
-                  mapper.convertValue(errorMap, String.class));
-            }
-            List<Map<String, Object>> content =
-                (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-            if (CollectionUtils.isNotEmpty(content)) {
-              content.forEach(
-                  contentMap -> {
-                    searchedContentIds.add((String) contentMap.get(JsonKey.IDENTIFIER));
-                  });
-              if (content.size() != contentIds.size()) {
-                Map<String, String> errorMap =
-                    prepareErrorMap(contentIdVsRowNumMap, searchedContentIds);
-                if (errorMap.size() == 1) {
-                  for (Map.Entry<String, String> entry : errorMap.entrySet()) {
-                    throwInvalidLinkedContentUrl(
-                        entry.getValue(), contentIdVsRowNumMap.get(entry.getKey()));
-                  }
-                } else {
-                  ProjectCommonException.throwClientErrorException(
-                      ResponseCode.errorInvalidLinkedContentUrl,
-                      mapper.convertValue(errorMap, String.class));
-                }
+    if (CollectionUtils.isNotEmpty(contentIds)) {
+      String requestUrl =
+          getConfigValue(JsonKey.EKSTEP_BASE_URL) + getConfigValue(JsonKey.SUNBIRD_CS_SEARCH_PATH);
+      HttpResponse<String> updateResponse = null;
+      try {
+        updateResponse =
+            Unirest.post(requestUrl)
+                .headers(getDefaultHeaders())
+                .body(mapper.writeValueAsString(requestMap))
+                .asString();
+        if (null != updateResponse) {
+          Response response = mapper.readValue(updateResponse.getBody(), Response.class);
+          if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
+            Map<String, Object> result = response.getResult();
+            List<String> searchedContentIds = new ArrayList<>();
+            if (MapUtils.isNotEmpty(result)) {
+              int count = (int) result.get(JsonKey.COUNT);
+              if (0 == count) {
+                String errorMsg = prepareErrorMsg(contentIdVsRowNumMap, searchedContentIds);
+                ProjectCommonException.throwClientErrorException(
+                    ResponseCode.errorInvalidLinkedContentUrl, errorMsg);
               }
-            } else {
-              throwCompositeSearchFailureError();
+              List<Map<String, Object>> content =
+                  (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+              if (CollectionUtils.isNotEmpty(content)) {
+                content.forEach(
+                    contentMap -> {
+                      searchedContentIds.add((String) contentMap.get(JsonKey.IDENTIFIER));
+                    });
+                if (content.size() != contentIds.size()) {
+                  String errorMsg = prepareErrorMsg(contentIdVsRowNumMap, searchedContentIds);
+                  ProjectCommonException.throwClientErrorException(
+                      ResponseCode.errorInvalidLinkedContentUrl, errorMsg);
+                }
+              } else {
+                throwCompositeSearchFailureError();
+              }
             }
+          } else {
+            throwCompositeSearchFailureError();
           }
         } else {
           throwCompositeSearchFailureError();
         }
-      } else {
+      } catch (Exception e) {
+        ProjectLogger.log(
+            "TextbookTocActor:validateLinkedContents : Error occurred with message "
+                + e.getMessage(),
+            e);
         throwCompositeSearchFailureError();
       }
-    } catch (Exception e) {
-      ProjectLogger.log(
-          "TextbookTocActor:validateLinkedContents : Error occurred with message " + e.getMessage(),
-          e);
-      throwCompositeSearchFailureError();
     }
   }
 
-  private Map<String, String> prepareErrorMap(
+  private String prepareErrorMsg(
       Map<String, List<Integer>> contentIdVsRowNumMap, List<String> searchedContentIds) {
-    Map<String, String> errorMap = new HashMap<>();
+    StringBuilder errorMsg = new StringBuilder();
     contentIdVsRowNumMap
         .keySet()
         .forEach(
@@ -259,10 +248,11 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                         ResponseCode.errorInvalidLinkedContentUrl.getErrorMessage(),
                         contentUrl,
                         contentIdVsRowNumMap.get(contentId));
-                errorMap.put(contentId, message);
+                errorMsg.append(message);
+                errorMsg.append(" ");
               }
             });
-    return errorMap;
+    return errorMsg.toString();
   }
 
   private void throwCompositeSearchFailureError() {
@@ -272,9 +262,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
   @SuppressWarnings("unchecked")
   private void checkDialCodeUniquenessInTextBookHierarchy(
-      Map<String, List<String>> reqDialCodesIdentifierMap, String textbookId) {
+      Map<String, List<String>> reqDialCodesIdentifierMap, Map<String, Object> contentHierarchy) {
     if (MapUtils.isNotEmpty(reqDialCodesIdentifierMap)) {
-      Map<String, Object> contentHierarchy = getHierarchy(textbookId);
       Map<String, List<String>> hierarchyDialCodeIdentifierMap = new HashMap<>();
       List<String> contentDialCodes = (List<String>) contentHierarchy.get(JsonKey.DIAL_CODES);
       if (CollectionUtils.isNotEmpty(contentDialCodes)) {
@@ -449,10 +438,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
     Map<String, String> metadata = (Map<String, String>) configMap.get(JsonKey.METADATA);
     Map<String, String> hierarchy = (Map<String, String>) configMap.get(JsonKey.HIERARCHY);
-    Map<String, String> linkedContent = (Map<String, String>) configMap.get(JsonKey.LINKED_CONTENT);
     int max_allowed_content_size =
-        Integer.parseInt(linkedContent.get(JsonKey.MAX_ALLOWED_CONTENT_SIZE));
-    String linkedContentKey = linkedContent.get(JsonKey.LINKED_CONTENT_COLUMN_KEY);
+        Integer.parseInt(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_TOC_MAX_FIRST_LEVEL_UNITS));
+    String linkedContentKey =
+        ProjectUtil.getConfigValue(JsonKey.SUNBIRD_TOC_LINKED_CONTENT_COLUMN_NAME);
 
     Map<String, String> fwMetadata =
         (Map<String, String>) configMap.get(JsonKey.FRAMEWORK_METADATA);
@@ -484,6 +473,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       Set<String> dialCodes = new HashSet<>();
       Map<String, List<String>> dialCodeIdentifierMap = new HashMap<>();
       Set<String> topics = new HashSet<>();
+      StringBuilder exceptionMsgs = new StringBuilder();
       for (int i = 0; i < csvRecords.size(); i++) {
         CSVRecord record = csvRecords.get(i);
 
@@ -493,7 +483,6 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           if (StringUtils.isNotBlank(record.get(entry.getValue())))
             recordMap.put(entry.getKey(), record.get(entry.getValue()));
         }
-        validateMandatoryFields(record, hierarchy.entrySet(), i);
         for (Map.Entry<String, String> entry : hierarchy.entrySet()) {
           if (StringUtils.isNotBlank(record.get(entry.getValue())))
             hierarchyMap.put(entry.getKey(), record.get(entry.getValue()));
@@ -531,17 +520,26 @@ public class TextbookTocActor extends BaseBulkUploadActor {
               dialCodeIdentifierMap.put(identifier, dialCodeList);
             }
           }
-          List<String> contentIds =
-              validateLinkedContentUrlAndGetContentIds(
-                  max_allowed_content_size, linkedContentKey, record, i);
-          rowNumVsContentIdsMap.put(i, contentIds);
+          List<String> contentIds = Collections.EMPTY_LIST;
+          try {
+            contentIds =
+                validateLinkedContentUrlAndGetContentIds(
+                    max_allowed_content_size, linkedContentKey, record, i);
+            rowNumVsContentIdsMap.put(i, contentIds);
+          } catch (Exception ex) {
+            exceptionMsgs.append(ex.getMessage());
+            exceptionMsgs.append(" ");
+          }
           map.put(JsonKey.METADATA, recordMap);
           map.put(JsonKey.HIERARCHY, hierarchyMap);
           map.put(JsonKey.CHILDREN, contentIds);
           rows.add(map);
         }
       }
-
+      if (StringUtils.isNotBlank(exceptionMsgs.toString())) {
+        ProjectCommonException.throwClientErrorException(
+            ResponseCode.customClientError, exceptionMsgs.toString());
+      }
       result.put(JsonKey.FILE_DATA, rows);
       result.put(JsonKey.DIAL_CODES, dialCodes);
       result.put(JsonKey.TOPICS, topics);
@@ -563,30 +561,12 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     return result;
   }
 
-  private void validateMandatoryFields(
-      CSVRecord record, Set<Entry<String, String>> tocMetadata, int rowNum) {
-    for (Map.Entry<String, String> entry : tocMetadata) {
-      if ((TEXTBOOK_NAME.equalsIgnoreCase(entry.getValue())
-              || L1_TEXTBOOK_UNIT.equalsIgnoreCase(entry.getValue()))
-          && StringUtils.isBlank(record.get(entry.getValue()))) {
-        String message =
-            "Mandatory parameter " + entry.getValue() + " is missing at row " + rowNum + ".";
-        ProjectCommonException.throwClientErrorException(ResponseCode.customClientError, message);
-      }
-    }
-  }
-
   private List<String> validateLinkedContentUrlAndGetContentIds(
       int max_allowed_content_size, String linkedContentKey, CSVRecord record, int rowNumber) {
     List<String> contentIds = new ArrayList<>();
     for (int i = 1; i <= max_allowed_content_size; i++) {
       String key = MessageFormat.format(linkedContentKey, i).trim();
-      String contentId = null;
-      try {
-        contentId = validateLinkedContentUrlAndGetContentId(record.get(key), rowNumber);
-      } catch (Exception ex) {
-        ProjectLogger.log(ex.getMessage(), ex);
-      }
+      String contentId = validateLinkedContentUrlAndGetContentId(record.get(key), rowNumber);
       if (StringUtils.isNotBlank(contentId)) {
         if (contentIds.contains(contentId)) {
           String message =
@@ -931,7 +911,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   }
 
   @SuppressWarnings("unchecked")
-  private Response updateTextbook(Request request, Map<String, Object> textbookData)
+  private Response updateTextbook(
+      Request request, Map<String, Object> textbookData, Map<String, Object> textbookHierarchy)
       throws Exception {
     Boolean linkContent =
         (boolean) ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.LINKED_CONTENT);
@@ -975,25 +956,30 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             null,
             nodesModified,
             false);
-        if (BooleanUtils.isTrue(linkContent)) {
-          Map<String, Object> modifiedNode = ((Map<String, Object>) nodesModified.get(id));
-          Map<String, Object> node = Collections.EMPTY_MAP;
-          if (MapUtils.isNotEmpty(modifiedNode)) {
-            Map<String, Object> meta = (Map<String, Object>) modifiedNode.get(JsonKey.METADATA);
-            node = populateHierarchyDataForUpdateRequest(meta);
-            node.put(JsonKey.CHILDREN, row.get(JsonKey.CHILDREN));
-            hierarchyData.put(id, node);
-          }
-        }
       }
-      if (MapUtils.isNotEmpty(hierarchyData)) {
-        Map<String, Object> root = new HashMap<String, Object>();
-        root.put(JsonKey.NAME, textbookData.get(JsonKey.NAME));
-        root.put(CONTENT_TYPE, textbookData.get(CONTENT_TYPE));
-        root.put(CHILDREN, new ArrayList<>(nodesModified.keySet()));
-        root.put(JsonKey.TB_ROOT, true);
-        hierarchyData.put((String) request.get(TEXTBOOK_ID), root);
+      if (BooleanUtils.isTrue(linkContent)) {
+        List<Map<String, Object>> hierarchyList =
+            getParentChildHierarchy(
+                tbId,
+                (String) textbookData.get(JsonKey.NAME),
+                (List<Map<String, Object>>) textbookHierarchy.get(JsonKey.CHILDREN));
+        Map<String, Object> hierarchy = populateHierarchyDataForUpdate(hierarchyList, tbId);
+        data.forEach(
+            s -> {
+              Map<String, Object> nodeData =
+                  (Map<String, Object>) hierarchy.get(s.get(JsonKey.IDENTIFIER));
+              if (MapUtils.isNotEmpty(nodeData)
+                  && CollectionUtils.isNotEmpty((List<String>) s.get(JsonKey.CHILDREN))) {
+                for (String contentId : (List<String>) s.get(JsonKey.CHILDREN)) {
+                  if (!((List<String>) nodeData.get(JsonKey.CHILDREN)).contains(contentId)) {
+                    ((List<String>) nodeData.get(JsonKey.CHILDREN)).add(contentId);
+                  }
+                }
+              }
+            });
+        hierarchyData.putAll(hierarchy);
       }
+
       Map<String, Object> updateRequest = new HashMap<String, Object>();
       Map<String, Object> requestMap = new HashMap<String, Object>();
       Map<String, Object> dataMap = new HashMap<String, Object>();
@@ -1010,12 +996,47 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     }
   }
 
-  private Map<String, Object> populateHierarchyDataForUpdateRequest(Map<String, Object> metadata) {
-    Map<String, Object> node = new HashMap<String, Object>();
-    node.put(JsonKey.NAME, metadata.get(JsonKey.NAME));
-    node.put(JsonKey.CONTENT_TYPE, "TextBookUnit");
-    node.put(JsonKey.TB_ROOT, false);
-    return node;
+  public List<Map<String, Object>> getParentChildHierarchy(
+      String parentId, String name, List<Map<String, Object>> children) {
+    List<Map<String, Object>> hierarchyList = new ArrayList<>();
+    Map<String, Object> hierarchy = new HashMap<>();
+    Map<String, Object> node = new HashMap<>();
+    node.put(JsonKey.NAME, name);
+    List<String> contentIdList = new ArrayList<>();
+    node.put(JsonKey.CHILDREN, contentIdList);
+    hierarchy.put(parentId, node);
+    hierarchyList.add(hierarchy);
+    for (Map<String, Object> child : children) {
+      contentIdList.add((String) child.get(JsonKey.IDENTIFIER));
+      if (null != child.get(JsonKey.CHILDREN)) {
+        hierarchyList.addAll(
+            getParentChildHierarchy(
+                (String) child.get(JsonKey.IDENTIFIER),
+                (String) child.get(JsonKey.NAME),
+                (List<Map<String, Object>>) child.get(JsonKey.CHILDREN)));
+      }
+    }
+    return hierarchyList;
+  }
+
+  @SuppressWarnings("unchecked")
+  private Map<String, Object> populateHierarchyDataForUpdate(
+      List<Map<String, Object>> hierarchy, String textbookId) {
+    Map<String, Object> hierarchyData = new HashMap<>();
+    hierarchy.forEach(
+        s -> {
+          for (Entry<String, Object> entry : s.entrySet()) {
+            if (textbookId.equalsIgnoreCase(entry.getKey())) {
+              ((Map<String, Object>) entry.getValue()).put(JsonKey.CONTENT_TYPE, "TextBook");
+              ((Map<String, Object>) entry.getValue()).put(JsonKey.TB_ROOT, true);
+            } else {
+              ((Map<String, Object>) entry.getValue()).put(JsonKey.CONTENT_TYPE, "TextBookUnit");
+              ((Map<String, Object>) entry.getValue()).put(JsonKey.TB_ROOT, false);
+            }
+            hierarchyData.put(entry.getKey(), entry.getValue());
+          }
+        });
+    return hierarchyData;
   }
 
   @SuppressWarnings("unchecked")

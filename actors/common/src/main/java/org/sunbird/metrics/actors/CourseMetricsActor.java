@@ -231,6 +231,10 @@ public class CourseMetricsActor extends BaseMetricsActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
+    if (StringUtils.isBlank((String) requestedByInfo.get(JsonKey.ENC_EMAIL))) {
+      ProjectCommonException.throwClientErrorException(ResponseCode.emailRequired);
+    }
+
     String batchId = (String) actorMessage.getRequest().get(JsonKey.BATCH_ID);
     if (StringUtils.isBlank(batchId)) {
       ProjectLogger.log(

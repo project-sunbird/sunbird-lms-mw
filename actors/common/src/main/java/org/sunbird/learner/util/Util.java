@@ -1606,6 +1606,7 @@ public final class Util {
           (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
       if (!CollectionUtils.isEmpty(courseBatch)) {
         for (Map<String, Object> userCourseBatch : courseBatch) {
+          ProjectLogger.log("Util: getUserCourseBatch has course",LoggerEnum.INFO);
           Map<String, Object> tempMap = new HashMap<>();
           tempMap.put(JsonKey.ENROLLED_ON, userCourseBatch.get(JsonKey.COURSE_ENROLL_DATE));
           tempMap.put(JsonKey.COURSE_ID, userCourseBatch.get(JsonKey.COURSE_ID));
@@ -1619,7 +1620,7 @@ public final class Util {
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }
-      ProjectLogger.log("Util: getUserCourseBatch failed",LoggerEnum.INFO);
+      ProjectLogger.log("Util: getUserCourseBatch completed",LoggerEnum.INFO);
     return userCourses;
   }
 

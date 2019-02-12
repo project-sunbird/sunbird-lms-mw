@@ -382,7 +382,7 @@ public class LearnerStateUpdateActor extends BaseActor {
     boolean response =
         ElasticSearchUtil.upsertData(
             ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.usercourses.getTypeName(),
+            ProjectUtil.EsType.user.getTypeName(),
             userId,
             userMap);
     ProjectLogger.log(

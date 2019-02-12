@@ -125,7 +125,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
             searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
     if (isNull(result) || result.size() == 0) {
       ProjectLogger.log(
-          "CourseMetricsActor:courseProgressMetricsV2: No search results found.", LoggerEnum.INFO.name());
+          "CourseMetricsActor:courseProgressMetricsV2: No search results found.",
+          LoggerEnum.INFO.name());
       ProjectCommonException.throwClientErrorException(ResponseCode.invalidCourseBatchId);
     }
 
@@ -134,9 +135,13 @@ public class CourseMetricsActor extends BaseMetricsActor {
     List<Map<String, Object>> userData = new ArrayList<>();
     for (Map<String, Object> esContent : esContents) {
       Map<String, Object> map = new HashMap<>();
-      map.put(
-          JsonKey.USER_NAME,
-          esContent.get(JsonKey.FIRST_NAME) + " " + esContent.get(JsonKey.LAST_NAME));
+      String firstName = (String) esContent.get(JsonKey.FIRST_NAME);
+      String lastName = (String) esContent.get(JsonKey.LAST_NAME);
+      if (StringUtils.isEmpty(lastName)) {
+        map.put(JsonKey.USER_NAME, firstName);
+      } else {
+        map.put(JsonKey.USER_NAME, firstName + " " + lastName);
+      }
       map.put(JsonKey.ORG_NAME, esContent.get(JsonKey.ROOT_ORG_NAME));
       for (Map<String, Object> batchMap :
           (List<Map<String, Object>>) esContent.get(JsonKey.BATCHES)) {
@@ -190,7 +195,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
             EsIndex.sunbird.getIndexName(), EsType.course.getTypeName(), batchId);
     if (isNull(courseBatchResult) || courseBatchResult.size() == 0) {
       ProjectLogger.log(
-          "CourseMetricsActor:validateAndGetCourseBatch: batchId not found.", LoggerEnum.INFO.name());
+          "CourseMetricsActor:validateAndGetCourseBatch: batchId not found.",
+          LoggerEnum.INFO.name());
       ProjectCommonException.throwClientErrorException(ResponseCode.invalidCourseBatchId);
     }
     return courseBatchResult;

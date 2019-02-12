@@ -181,7 +181,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     request.put(JsonKey.FIELDS, fields);
     if (CollectionUtils.isNotEmpty(contentIds)) {
       String requestUrl =
-          getConfigValue(JsonKey.EKSTEP_BASE_URL) + getConfigValue(JsonKey.SUNBIRD_CS_SEARCH_PATH);
+          getConfigValue(JsonKey.SUNBIRD_WEB_URL)
+              + "/api"
+              + getConfigValue(JsonKey.SUNBIRD_CS_SEARCH_PATH);
       HttpResponse<String> updateResponse = null;
       try {
         updateResponse =

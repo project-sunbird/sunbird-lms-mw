@@ -413,6 +413,7 @@ public class CourseMetricsActorTest {
     userOrgMap.put(JsonKey.HASHTAGID, orgId);
     userOrgMap.put(JsonKey.ORG_NAME, "rootOrg");
     userOrgMap.put(JsonKey.FIRST_NAME, "user_first_name");
+    userOrgMap.put(JsonKey.ENC_EMAIL, "user_encrypted email");
     userOrgMap.put(JsonKey.ROOT_ORG_ID, "root123");
     userOrgMap.put(JsonKey.HASHTAGID, "hash123");
     when(ElasticSearchUtil.getDataByIdentifier(

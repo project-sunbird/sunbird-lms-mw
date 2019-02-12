@@ -202,8 +202,16 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             LoggerEnum.INFO.name());
         if (null != updateResponse) {
           Response response = mapper.readValue(updateResponse.getBody(), Response.class);
+          ProjectLogger.log(
+              "TextbookTocActor:callSearchApiForContentIdsValidation : response.getResponseCode().getResponseCode() : "
+                  + response.getResponseCode().getResponseCode(),
+              LoggerEnum.INFO.name());
           if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
             Map<String, Object> result = response.getResult();
+            ProjectLogger.log(
+                "TextbookTocActor:callSearchApiForContentIdsValidation : request : "
+                    + mapper.writeValueAsString(result),
+                LoggerEnum.INFO.name());
             List<String> searchedContentIds = new ArrayList<>();
             if (MapUtils.isNotEmpty(result)) {
               int count = (int) result.get(JsonKey.COUNT);

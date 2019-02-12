@@ -182,6 +182,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     if (CollectionUtils.isNotEmpty(contentIds)) {
       String requestUrl =
           getConfigValue(JsonKey.EKSTEP_BASE_URL) + getConfigValue(JsonKey.SUNBIRD_CS_SEARCH_PATH);
+      ProjectLogger.log(
+          "TextbookTocActor:callSearchApiForContentIdsValidation : requestUrl : " + requestUrl,
+          LoggerEnum.INFO.name());
       HttpResponse<String> updateResponse = null;
       try {
         updateResponse =
@@ -189,6 +192,14 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                 .headers(getDefaultHeaders())
                 .body(mapper.writeValueAsString(requestMap))
                 .asString();
+        ProjectLogger.log(
+            "TextbookTocActor:callSearchApiForContentIdsValidation : headers : "
+                + mapper.writeValueAsString(getDefaultHeaders()),
+            LoggerEnum.INFO.name());
+        ProjectLogger.log(
+            "TextbookTocActor:callSearchApiForContentIdsValidation : request : "
+                + mapper.writeValueAsString(requestMap),
+            LoggerEnum.INFO.name());
         if (null != updateResponse) {
           Response response = mapper.readValue(updateResponse.getBody(), Response.class);
           if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {

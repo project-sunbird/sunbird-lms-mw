@@ -184,6 +184,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           getConfigValue(JsonKey.SUNBIRD_WEB_URL)
               + "/api"
               + getConfigValue(JsonKey.SUNBIRD_CS_SEARCH_PATH);
+      ProjectLogger.log(
+          "TextbookTocActor:callSearchApiForContentIdsValidation : requestUrl : " + requestUrl,
+          LoggerEnum.INFO.name());
       HttpResponse<String> updateResponse = null;
       try {
         updateResponse =
@@ -191,10 +194,26 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                 .headers(getDefaultHeaders())
                 .body(mapper.writeValueAsString(requestMap))
                 .asString();
+        ProjectLogger.log(
+            "TextbookTocActor:callSearchApiForContentIdsValidation : headers : "
+                + mapper.writeValueAsString(getDefaultHeaders()),
+            LoggerEnum.INFO.name());
+        ProjectLogger.log(
+            "TextbookTocActor:callSearchApiForContentIdsValidation : request : "
+                + mapper.writeValueAsString(requestMap),
+            LoggerEnum.INFO.name());
         if (null != updateResponse) {
           Response response = mapper.readValue(updateResponse.getBody(), Response.class);
+          ProjectLogger.log(
+              "TextbookTocActor:callSearchApiForContentIdsValidation : response.getResponseCode().getResponseCode() : "
+                  + response.getResponseCode().getResponseCode(),
+              LoggerEnum.INFO.name());
           if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
             Map<String, Object> result = response.getResult();
+            ProjectLogger.log(
+                "TextbookTocActor:callSearchApiForContentIdsValidation : request : "
+                    + mapper.writeValueAsString(result),
+                LoggerEnum.INFO.name());
             List<String> searchedContentIds = new ArrayList<>();
             if (MapUtils.isNotEmpty(result)) {
               int count = (int) result.get(JsonKey.COUNT);
@@ -216,13 +235,22 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                       ResponseCode.errorInvalidLinkedContentUrl, errorMsg);
                 }
               } else {
+                ProjectLogger.log(
+                    "TextbookTocActor:callSearchApiForContentIdsValidation : Content is Empty.",
+                    LoggerEnum.INFO.name());
                 throwCompositeSearchFailureError();
               }
             }
           } else {
+            ProjectLogger.log(
+                "TextbookTocActor:callSearchApiForContentIdsValidation : response.getResponseCode().getResponseCode() is not 200",
+                LoggerEnum.INFO.name());
             throwCompositeSearchFailureError();
           }
         } else {
+          ProjectLogger.log(
+              "TextbookTocActor:callSearchApiForContentIdsValidation : update response is null.",
+              LoggerEnum.INFO.name());
           throwCompositeSearchFailureError();
         }
       } catch (Exception e) {
@@ -568,20 +596,22 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     List<String> contentIds = new ArrayList<>();
     for (int i = 1; i <= max_allowed_content_size; i++) {
       String key = MessageFormat.format(linkedContentKey, i).trim();
-      String contentId = validateLinkedContentUrlAndGetContentId(record.get(key), rowNumber);
-      if (StringUtils.isNotBlank(contentId)) {
-        if (contentIds.contains(contentId)) {
-          String message =
-              MessageFormat.format(
-                  ResponseCode.errorDuplicateLinkedContentUrl.getErrorMessage(),
-                  record.get(key),
-                  rowNumber);
-          ProjectCommonException.throwClientErrorException(
-              ResponseCode.errorDuplicateLinkedContentUrl, message);
+      if (record.isMapped(key)) {
+        String contentId = validateLinkedContentUrlAndGetContentId(record.get(key), rowNumber);
+        if (StringUtils.isNotBlank(contentId)) {
+          if (contentIds.contains(contentId)) {
+            String message =
+                MessageFormat.format(
+                    ResponseCode.errorDuplicateLinkedContentUrl.getErrorMessage(),
+                    record.get(key),
+                    rowNumber);
+            ProjectCommonException.throwClientErrorException(
+                ResponseCode.errorDuplicateLinkedContentUrl, message);
+          }
+          contentIds.add(contentId);
+        } else {
+          break;
         }
-        contentIds.add(contentId);
-      } else {
-        break;
       }
     }
     return contentIds;
@@ -998,7 +1028,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     }
   }
 
-  public List<Map<String, Object>> getParentChildHierarchy(
+  private List<Map<String, Object>> getParentChildHierarchy(
       String parentId, String name, List<Map<String, Object>> children) {
     List<Map<String, Object>> hierarchyList = new ArrayList<>();
     Map<String, Object> hierarchy = new HashMap<>();

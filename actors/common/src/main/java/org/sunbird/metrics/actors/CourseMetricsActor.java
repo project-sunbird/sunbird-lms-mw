@@ -56,7 +56,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
   private DecryptionService decryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
           null);
-  private int limit = 200;
 
   @Override
   public void onReceive(Request request) throws Throwable {

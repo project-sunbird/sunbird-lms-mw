@@ -1595,6 +1595,7 @@ public final class Util {
   }
 
   public static List<Map<String, Object>> getUserCourseBatch(String userId) {
+    ProjectLogger.log("Util: getUserCourseBatch called",LoggerEnum.INFO);
     DbInfo userCourseDb = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
     List<Map<String, Object>> userCourses = new ArrayList<>();
     try {
@@ -1618,6 +1619,7 @@ public final class Util {
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }
+      ProjectLogger.log("Util: getUserCourseBatch failed",LoggerEnum.INFO);
     return userCourses;
   }
 
@@ -1646,7 +1648,7 @@ public final class Util {
             ElasticSearchUtil.getEsResultByListOfIds(organisationIds, fields, EsType.organisation);
 
         for (Map<String, Object> tempMap : userOrgList) {
-          tempMap.putAll(orgInfoMap.get(tempMap.get(JsonKey.ID)));
+          tempMap.putAll(orgInfoMap.get(tempMap.get(JsonKey.ORGANISATION_ID)));
           organisations.add(tempMap);
         }
       }

@@ -40,6 +40,7 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 
 /**
@@ -56,6 +57,8 @@ public class CourseMetricsActorTest {
   private static final Props props = Props.create(CourseMetricsActor.class);
   private static String userId = "dnk298voopir80249";
   private static String batchId = "jkwf6t3r083fp4h";
+  private static int limit = 200;
+  private static int offset = 0;
   private static final String orgId = "vdckcyigc68569";
   private static Map<String, Object> infoMap = new HashMap<>();
   private static Map<String, Object> userOrgMap = new HashMap<>();
@@ -123,6 +126,48 @@ public class CourseMetricsActorTest {
     ProjectCommonException e =
         probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
     Assert.assertEquals("INVALID_PERIOD", e.getCode());
+  }
+
+  @Test
+  public void testCourseProgressMetricsV2WithInvalidBatchId() {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request actorMessage = new Request();
+    actorMessage.put(JsonKey.REQUESTED_BY, userId);
+    actorMessage.put(JsonKey.BATCH_ID, batchId);
+    actorMessage.put(JsonKey.LIMIT, limit);
+    actorMessage.put(JsonKey.OFFSET, offset);
+    actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_V2.getValue());
+    when(ElasticSearchUtil.getDataByIdentifier(
+            EsIndex.sunbird.getIndexName(), EsType.course.getTypeName(), batchId))
+        .thenReturn(null);
+    subject.tell(actorMessage, probe.getRef());
+    ProjectCommonException e =
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    Assert.assertEquals(ResponseCode.invalidCourseBatchId.getErrorCode(), e.getCode());
+  }
+
+  @Test
+  public void testCourseProgressMetricsV2WithvalidBatchId() {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request actorMessage = new Request();
+    actorMessage.put(JsonKey.REQUESTED_BY, userId);
+    actorMessage.put(JsonKey.BATCH_ID, batchId);
+    actorMessage.put(JsonKey.LIMIT, limit);
+    actorMessage.put(JsonKey.OFFSET, offset);
+    actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_V2.getValue());
+    //    when(ElasticSearchUtil.getDataByIdentifier(
+    //            EsIndex.sunbird.getIndexName(), EsType.course.getTypeName(), batchId))
+    //            .thenReturn(getBatchData());
+    subject.tell(actorMessage, probe.getRef());
+    ProjectCommonException e =
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    Assert.assertEquals(ResponseCode.invalidCourseBatchId.getErrorCode(), e.getCode());
   }
 
   @Test
@@ -420,4 +465,8 @@ public class CourseMetricsActorTest {
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(userOrgMap);
   }
+
+  //  public Map<String,Object> getBatchData() {
+  //    return batchData;
+  //  }
 }

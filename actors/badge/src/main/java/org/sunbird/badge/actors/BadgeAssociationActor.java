@@ -187,7 +187,7 @@ public class BadgeAssociationActor extends BaseActor {
               .stream()
               .map(q -> (String) q.get(BadgingJsonKey.BADGE_ID))
               .collect(Collectors.toList());
-      List<String> mismatchBadgeIds =
+      List<String> invalidBadgeIdsList =
           newBadgeIdsList
               .stream()
               .filter(q -> !badgeIdsFoundList.contains(q))
@@ -196,7 +196,7 @@ public class BadgeAssociationActor extends BaseActor {
           ResponseCode.invalidParameterValue,
           MessageFormat.format(
               ResponseCode.invalidParameterValue.getErrorMessage(),
-              StringFormatter.joinByComma(mismatchBadgeIds.toArray(new String[0])),
+              StringFormatter.joinByComma(invalidBadgeIdsList.toArray(new String[0])),
               BadgingJsonKey.BADGE_IDs));
     }
     return newBadgesDetails;

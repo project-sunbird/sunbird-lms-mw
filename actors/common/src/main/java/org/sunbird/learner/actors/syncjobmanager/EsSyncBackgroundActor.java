@@ -218,7 +218,7 @@ public class EsSyncBackgroundActor extends BaseActor {
           JsonKey.ROOT_ORG_NAME,
           Util.getRootOrgIdOrNameFromChannel((String) userMap.get(JsonKey.CHANNEL), true));
     } catch (ProjectCommonException e) {
-      ProjectLogger.log(e.getMessage(), e);
+      ProjectLogger.log("EsSyncBackgroundActor:getUserDetails: Exception occurred with error message = " + e.getMessage(), e);
     }
 
     // save masked email and phone number

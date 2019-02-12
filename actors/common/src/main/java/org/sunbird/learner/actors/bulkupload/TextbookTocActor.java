@@ -566,20 +566,22 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     List<String> contentIds = new ArrayList<>();
     for (int i = 1; i <= max_allowed_content_size; i++) {
       String key = MessageFormat.format(linkedContentKey, i).trim();
-      String contentId = validateLinkedContentUrlAndGetContentId(record.get(key), rowNumber);
-      if (StringUtils.isNotBlank(contentId)) {
-        if (contentIds.contains(contentId)) {
-          String message =
-              MessageFormat.format(
-                  ResponseCode.errorDuplicateLinkedContentUrl.getErrorMessage(),
-                  record.get(key),
-                  rowNumber);
-          ProjectCommonException.throwClientErrorException(
-              ResponseCode.errorDuplicateLinkedContentUrl, message);
+      if (record.isMapped(key)) {
+        String contentId = validateLinkedContentUrlAndGetContentId(record.get(key), rowNumber);
+        if (StringUtils.isNotBlank(contentId)) {
+          if (contentIds.contains(contentId)) {
+            String message =
+                MessageFormat.format(
+                    ResponseCode.errorDuplicateLinkedContentUrl.getErrorMessage(),
+                    record.get(key),
+                    rowNumber);
+            ProjectCommonException.throwClientErrorException(
+                ResponseCode.errorDuplicateLinkedContentUrl, message);
+          }
+          contentIds.add(contentId);
+        } else {
+          break;
         }
-        contentIds.add(contentId);
-      } else {
-        break;
       }
     }
     return contentIds;
@@ -996,7 +998,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     }
   }
 
-  public List<Map<String, Object>> getParentChildHierarchy(
+  private List<Map<String, Object>> getParentChildHierarchy(
       String parentId, String name, List<Map<String, Object>> children) {
     List<Map<String, Object>> hierarchyList = new ArrayList<>();
     Map<String, Object> hierarchy = new HashMap<>();

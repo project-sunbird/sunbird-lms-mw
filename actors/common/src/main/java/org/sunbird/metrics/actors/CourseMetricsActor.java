@@ -56,7 +56,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
   private DecryptionService decryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
           null);
-  private int limit = 200;
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -229,6 +228,10 @@ public class CourseMetricsActor extends BaseMetricsActor {
           ResponseCode.invalidUserId.getErrorCode(),
           ResponseCode.invalidUserId.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+
+    if (StringUtils.isBlank((String) requestedByInfo.get(JsonKey.ENC_EMAIL))) {
+      ProjectCommonException.throwClientErrorException(ResponseCode.emailRequired);
     }
 
     String batchId = (String) actorMessage.getRequest().get(JsonKey.BATCH_ID);

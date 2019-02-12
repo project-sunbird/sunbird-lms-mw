@@ -214,13 +214,22 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                       ResponseCode.errorInvalidLinkedContentUrl, errorMsg);
                 }
               } else {
+                ProjectLogger.log(
+                    "TextbookTocActor:callSearchApiForContentIdsValidation : Content is Empty.",
+                    LoggerEnum.INFO.name());
                 throwCompositeSearchFailureError();
               }
             }
           } else {
+            ProjectLogger.log(
+                "TextbookTocActor:callSearchApiForContentIdsValidation : response.getResponseCode().getResponseCode() is not 200",
+                LoggerEnum.INFO.name());
             throwCompositeSearchFailureError();
           }
         } else {
+          ProjectLogger.log(
+              "TextbookTocActor:callSearchApiForContentIdsValidation : update response is null.",
+              LoggerEnum.INFO.name());
           throwCompositeSearchFailureError();
         }
       } catch (Exception e) {

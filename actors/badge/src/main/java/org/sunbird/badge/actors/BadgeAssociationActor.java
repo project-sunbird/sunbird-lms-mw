@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -180,6 +181,24 @@ public class BadgeAssociationActor extends BaseActor {
       List<Map<String, Object>> activeBadgesList, List<String> requestedBadges) {
     List<String> newBadgeIdsList = getUncommonBadgeIds(requestedBadges, activeBadgesList);
     List<Map<String, Object>> newBadgesDetails = getBadgesDetails(newBadgeIdsList);
+    if (newBadgesDetails.size() != newBadgeIdsList.size()) {
+      List<String> badgeIdsFoundList =
+          newBadgesDetails
+              .stream()
+              .map(q -> (String) q.get(BadgingJsonKey.BADGE_ID))
+              .collect(Collectors.toList());
+      List<String> invalidBadgeIdsList =
+          newBadgeIdsList
+              .stream()
+              .filter(q -> !badgeIdsFoundList.contains(q))
+              .collect(Collectors.toList());
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.invalidParameterValue,
+          MessageFormat.format(
+              ResponseCode.invalidParameterValue.getErrorMessage(),
+              StringFormatter.joinByComma(invalidBadgeIdsList.toArray(new String[0])),
+              BadgingJsonKey.BADGE_IDs));
+    }
     return newBadgesDetails;
   }
 
@@ -200,13 +219,14 @@ public class BadgeAssociationActor extends BaseActor {
         .collect(Collectors.toList());
   }
 
+  @SuppressWarnings("unchecked")
   private List<Map<String, Object>> getBadgesDetails(List<String> badgeIds) {
-    List<Map<String, Object>> badgesDetails = new ArrayList<>();
-    for (String badgeId : badgeIds) {
-      Response response = service.getBadgeClassDetails(badgeId);
-      badgesDetails.add(response.getResult());
-    }
-    return badgesDetails;
+    Request request = new Request();
+    Map<String, Object> requestMap = new HashMap<>();
+    requestMap.put(BadgingJsonKey.BADGE_LIST, badgeIds);
+    request.put(JsonKey.FILTERS, requestMap);
+    Response response = service.searchBadgeClass(request);
+    return (List<Map<String, Object>>) response.get(BadgingJsonKey.BADGES);
   }
 
   private List<Map<String, Object>> newActiveBadgeMap(
@@ -222,7 +242,8 @@ public class BadgeAssociationActor extends BaseActor {
 
   private List<Map<String, Object>> createActiveBadgeForContentUpdate(
       List<Map<String, Object>> badgesTobeAddedList, List<Map<String, Object>> activeBadges) {
-    List<Map<String, Object>> badgesList = new ArrayList<>();
+    List<Map<String, Object>> badgesList =
+        CollectionUtils.isEmpty(activeBadges) ? new ArrayList<>() : activeBadges;
     for (Map<String, Object> badgeDetails : badgesTobeAddedList) {
       long timeStamp = System.currentTimeMillis();
       badgeDetails.put(BadgingJsonKey.CREATED_TS, timeStamp);
@@ -230,12 +251,7 @@ public class BadgeAssociationActor extends BaseActor {
       badgeDetails.put(BadgingJsonKey.ASSOCIATION_ID, associationId);
       badgesList.add(associationService.getBadgeAssociationMapForContentUpdate(badgeDetails));
     }
-    if (CollectionUtils.isEmpty(activeBadges)) {
-      activeBadges = badgesList;
-    } else {
-      activeBadges.addAll(badgesList);
-    }
-    return activeBadges;
+    return badgesList;
   }
 
   @SuppressWarnings("unchecked")

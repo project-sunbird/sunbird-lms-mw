@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -180,6 +181,24 @@ public class BadgeAssociationActor extends BaseActor {
       List<Map<String, Object>> activeBadgesList, List<String> requestedBadges) {
     List<String> newBadgeIdsList = getUncommonBadgeIds(requestedBadges, activeBadgesList);
     List<Map<String, Object>> newBadgesDetails = getBadgesDetails(newBadgeIdsList);
+    if (newBadgesDetails.size() != newBadgeIdsList.size()) {
+      List<String> badgeIdsFoundList =
+          newBadgesDetails
+              .stream()
+              .map(q -> (String) q.get(BadgingJsonKey.BADGE_ID))
+              .collect(Collectors.toList());
+      List<String> mismatchBadgeIds =
+          newBadgeIdsList
+              .stream()
+              .filter(q -> !badgeIdsFoundList.contains(q))
+              .collect(Collectors.toList());
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.invalidParameterValue,
+          MessageFormat.format(
+              ResponseCode.invalidParameterValue.getErrorMessage(),
+              StringFormatter.joinByComma(mismatchBadgeIds.toArray(new String[0])),
+              BadgingJsonKey.BADGE_IDs));
+    }
     return newBadgesDetails;
   }
 
@@ -200,13 +219,14 @@ public class BadgeAssociationActor extends BaseActor {
         .collect(Collectors.toList());
   }
 
+  @SuppressWarnings("unchecked")
   private List<Map<String, Object>> getBadgesDetails(List<String> badgeIds) {
-    List<Map<String, Object>> badgesDetails = new ArrayList<>();
-    for (String badgeId : badgeIds) {
-      Response response = service.getBadgeClassDetails(badgeId);
-      badgesDetails.add(response.getResult());
-    }
-    return badgesDetails;
+    Request request = new Request();
+    Map<String, Object> requestMap = new HashMap<>();
+    requestMap.put(BadgingJsonKey.BADGE_LIST, badgeIds);
+    request.put(JsonKey.FILTERS, requestMap);
+    Response response = service.searchBadgeClass(request);
+    return (List<Map<String, Object>>) response.get(BadgingJsonKey.BADGES);
   }
 
   private List<Map<String, Object>> newActiveBadgeMap(

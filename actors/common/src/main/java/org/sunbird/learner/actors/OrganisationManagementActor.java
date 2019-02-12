@@ -791,8 +791,8 @@ public class OrganisationManagementActor extends BaseActor {
         request.put(JsonKey.PROVIDER, ((String) request.get(JsonKey.PROVIDER)).toLowerCase());
       }
       String passedExternalId = (String) request.get(JsonKey.EXTERNAL_ID);
-      passedExternalId = passedExternalId.toLowerCase();
       if (StringUtils.isNotBlank(passedExternalId)) {
+        passedExternalId = passedExternalId.toLowerCase();
         String channel = (String) request.get(JsonKey.CHANNEL);
         if (!validateChannelExternalIdUniqueness(
             channel, passedExternalId, (String) request.get(JsonKey.ORGANISATION_ID))) {

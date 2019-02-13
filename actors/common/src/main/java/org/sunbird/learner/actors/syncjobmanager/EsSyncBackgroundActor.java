@@ -215,8 +215,7 @@ public class EsSyncBackgroundActor extends BaseActor {
     userMap.put(JsonKey.BATCHES, Util.getUserCourseBatch(userId));
     try {
       userMap.put(
-          JsonKey.ROOT_ORG_NAME,
-          Util.getRootOrgIdOrNameFromChannel((String) userMap.get(JsonKey.CHANNEL), true));
+          JsonKey.ROOT_ORG_NAME, Util.getRootOrgName((String) userMap.get(JsonKey.ROOT_ORG_ID)));
     } catch (ProjectCommonException e) {
       ProjectLogger.log(
           "EsSyncBackgroundActor:getUserDetails: Exception occurred with error message = "

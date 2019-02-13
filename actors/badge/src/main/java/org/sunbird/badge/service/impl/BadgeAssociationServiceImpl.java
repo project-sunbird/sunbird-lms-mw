@@ -1,8 +1,5 @@
 package org.sunbird.badge.service.impl;
 
-import java.sql.Timestamp;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,7 +34,7 @@ public class BadgeAssociationServiceImpl implements BadgeAssociationService {
     associatedBadgeMap.put(BadgingJsonKey.BADGE_ID, badgeMap.get(BadgingJsonKey.BADGE_ID));
     associatedBadgeMap.put(BadgingJsonKey.ISSUER_ID, badgeMap.get(BadgingJsonKey.ISSUER_ID));
     associatedBadgeMap.put(BadgingJsonKey.BADGE_CLASS_IMAGE, badgeMap.get(BadgingJsonKey.IMAGE));
-    associatedBadgeMap.put(JsonKey.CREATED_ON, new Timestamp(new Date().getTime()));
+    associatedBadgeMap.put(JsonKey.CREATED_ON, ProjectUtil.getFormattedDate());
     associatedBadgeMap.put(JsonKey.CREATED_BY, requestedBy);
     associatedBadgeMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
     associatedBadgeMap.put(BadgingJsonKey.BADGE_CLASS_NANE, badgeMap.get(BadgingJsonKey.NAME));
@@ -50,8 +47,7 @@ public class BadgeAssociationServiceImpl implements BadgeAssociationService {
     Map<String, Object> associatedBadgeMap = new HashMap<>();
     associatedBadgeMap.put(JsonKey.ID, associationId);
     associatedBadgeMap.put(JsonKey.LAST_UPDATED_BY, requestedBy);
-    associatedBadgeMap.put(
-        JsonKey.LAST_UPDATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
+    associatedBadgeMap.put(JsonKey.LAST_UPDATED_ON, ProjectUtil.getFormattedDate());
     associatedBadgeMap.put(JsonKey.STATUS, ProjectUtil.Status.INACTIVE.getValue());
     return associatedBadgeMap;
   }

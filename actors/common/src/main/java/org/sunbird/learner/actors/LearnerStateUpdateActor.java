@@ -111,6 +111,8 @@ public class LearnerStateUpdateActor extends BaseActor {
           map.put(JsonKey.DATE_TIME, new Timestamp(new Date().getTime()));
 
           try {
+            ProjectLogger.log(
+                "LearnerStateUpdateActor:onReceive: map  " + map, LoggerEnum.INFO.name());
             cassandraOperation.upsertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), map);
             response.getResult().put((String) map.get(JsonKey.CONTENT_ID), JsonKey.SUCCESS);
             // create telemetry for user for each content ...
@@ -359,6 +361,14 @@ public class LearnerStateUpdateActor extends BaseActor {
 
   public static void syncUserCourseBatchProgress(
       String batchId, String userId, Integer progress, Timestamp lastAccessedOn) {
+    ProjectLogger.log(
+        "LearnerStateUpdateActor:syncUserCourseBatchProgress: data"
+            + userId
+            + "=="
+            + progress
+            + "  timeStamp =="
+            + lastAccessedOn,
+        LoggerEnum.INFO.name());
     Map<String, Object> userMap =
         ElasticSearchUtil.getDataByIdentifier(
             ProjectUtil.EsIndex.sunbird.getIndexName(),

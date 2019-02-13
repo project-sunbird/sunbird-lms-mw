@@ -97,8 +97,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
         (Map<String, Object>) courseBatchResult.get(JsonKey.COURSE_ADDITIONAL_INFO);
     if (!MapUtils.isEmpty(tempMap)) {
       String leafCount = (String) tempMap.get(JsonKey.LEAF_NODE_COUNT);
-      if (!StringUtils.isEmpty(leafCount) && StringUtils.isNumeric(leafCount)) ;
-      {
+      if (!StringUtils.isEmpty(leafCount) && StringUtils.isNumeric(leafCount)) {
         leafNodeCount = Integer.parseInt(leafCount);
       }
     }
@@ -185,11 +184,18 @@ public class CourseMetricsActor extends BaseMetricsActor {
     Map<String, Object> result =
         ElasticSearchUtil.complexSearch(
             searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
+
     if (isNull(result) || result.size() == 0) {
       ProjectLogger.log(
           "CourseMetricsActor:getCompletedCount: No search results found.", LoggerEnum.INFO.name());
       return 0L;
     } else {
+      ProjectLogger.log(
+          "CourseMetricsActor:getCompletedCount: search results found."
+              + result.get(JsonKey.COUNT)
+              + " LeafNodeCount = "
+              + leafNodeCount,
+          LoggerEnum.INFO.name());
       return (Long) result.get(JsonKey.COUNT);
     }
   }

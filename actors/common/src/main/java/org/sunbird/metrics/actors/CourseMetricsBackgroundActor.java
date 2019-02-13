@@ -4,6 +4,7 @@ import static org.sunbird.common.models.util.ProjectUtil.isNotNull;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -29,6 +30,7 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.ReportTrackingStatus;
+import org.sunbird.common.models.util.datasecurity.DataMaskingService;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -46,6 +48,9 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
   private Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
   private DecryptionService decryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
+          null);
+  private DataMaskingService maskingService =
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance(
           null);
 
   @Override
@@ -95,7 +100,10 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
             JsonKey.ORG_NAME_HEADER,
             JsonKey.SCHOOL_NAME_HEADER,
             JsonKey.COURSE_ENROLL_DATE_HEADER,
-            JsonKey.PROGRESS_HEADER);
+            JsonKey.PROGRESS_HEADER,
+            JsonKey.DATE_TIME_HEADER,
+            JsonKey.PHONE_HEADER,
+            JsonKey.EMAIL_HEADER);
     finalList.add(columnNames);
     String periodStr = (String) reportDbInfo.get(JsonKey.PERIOD);
     String batchId = (String) reportDbInfo.get(JsonKey.RESOURCE_ID);
@@ -149,6 +157,8 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
       userfields.add(JsonKey.ORGANISATIONS + DOT + JsonKey.ORGANISATION_ID);
       userfields.add(JsonKey.ROOT_ORG_ID);
       userfields.add(JsonKey.GENDER);
+      userfields.add(JsonKey.ENC_EMAIL);
+      userfields.add(JsonKey.ENC_PHONE);
 
       Map<String, Object> userresult =
           ElasticSearchUtil.complexSearch(
@@ -189,12 +199,18 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
           list.add(getCommaSepSubOrgName(userMap, orgDetails));
           list.add(map.get(JsonKey.COURSE_ENROLL_DATE));
           list.add(map.get(JsonKey.PROGRESS));
+          list.add(ProjectUtil.formatDate(new Timestamp(new Date().getTime())));
+          list.add(maskEmailOrPhone((String) userMap.get(JsonKey.ENC_PHONE), JsonKey.PHONE));
+          list.add(maskEmailOrPhone((String) userMap.get(JsonKey.ENC_EMAIL), JsonKey.EMAIL));
         } else {
           list.add(null);
           list.add(null);
           list.add(null);
           list.add(null);
           list.add(map.get(JsonKey.PROGRESS));
+          list.add(ProjectUtil.formatDate(new Timestamp(new Date().getTime())));
+          list.add(null);
+          list.add(null);
         }
         finalList.add(list);
       }
@@ -295,6 +311,18 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
       if (!CollectionUtils.isEmpty(orgNames)) {
         return String.join(",", orgNames);
       }
+    }
+    return StringUtils.EMPTY;
+  }
+
+  private String maskEmailOrPhone(String encryptedEmailOrPhone, String type) {
+    if (StringUtils.isEmpty(encryptedEmailOrPhone)) {
+      return StringUtils.EMPTY;
+    }
+    if (JsonKey.PHONE.equals(type)) {
+      return maskingService.maskPhone(decryptionService.decryptData(encryptedEmailOrPhone));
+    } else if (JsonKey.EMAIL.equals(type)) {
+      return maskingService.maskEmail(decryptionService.decryptData(encryptedEmailOrPhone));
     }
     return StringUtils.EMPTY;
   }

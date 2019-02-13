@@ -1008,6 +1008,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
               }
             });
         hierarchyData.putAll(hierarchy);
+        ProjectLogger.log(
+            "TextbookTocActor:updateTextbook : hierarchyData structure : "
+                + mapper.writeValueAsString(hierarchyData),
+            LoggerEnum.INFO.name());
       }
 
       Map<String, Object> updateRequest = new HashMap<String, Object>();
@@ -1045,6 +1049,14 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                 (String) child.get(JsonKey.NAME),
                 (List<Map<String, Object>>) child.get(JsonKey.CHILDREN)));
       }
+    }
+    try {
+      ProjectLogger.log(
+          "TextbookTocActor:getParentChildHierarchy : ParentChildHierarchy structure : "
+              + mapper.writeValueAsString(hierarchyList),
+          LoggerEnum.INFO.name());
+    } catch (Exception e) {
+      ProjectLogger.log("TextbookTocActor:getParentChildHierarchy : ", e);
     }
     return hierarchyList;
   }
@@ -1160,6 +1172,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             .headers(getDefaultHeaders())
             .body(mapper.writeValueAsString(updateRequest))
             .asString();
+    ProjectLogger.log(
+        "TextbookTocActor:updateHierarchy : Request for update hierarchy : "
+            + mapper.writeValueAsString(updateRequest),
+        LoggerEnum.INFO.name());
     if (null != updateResponse) {
       try {
         Response response = mapper.readValue(updateResponse.getBody(), Response.class);

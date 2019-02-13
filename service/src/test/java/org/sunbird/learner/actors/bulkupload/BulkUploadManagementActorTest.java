@@ -23,7 +23,7 @@ import org.junit.runner.RunWith;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
-import org.sunbird.BaseActorTest;
+import org.sunbird.common.BaseActorTest;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -227,7 +227,7 @@ public class BulkUploadManagementActorTest extends BaseActorTest {
   }
 
   @Override
-  public Response getRecordByIdResponse() {
+  public Response getRecordByIdCassandra() {
     Response response = new Response();
     List<Map<String, Object>> list = new ArrayList<>();
     Map<String, Object> orgMap = new HashMap<>();
@@ -239,22 +239,18 @@ public class BulkUploadManagementActorTest extends BaseActorTest {
   }
 
   @Override
-  protected Response getFirstEsInterServiceCommunicationResponse() {
+  protected List<Response> getResponseList(
+      boolean isLocation, boolean isFirstRequired, boolean isSecondRequired) {
     return null;
   }
 
   @Override
-  protected Response getSecondEsInterServiceCommunicationResponse() {
+  protected Map<String, Object> getDataByIdentifierElasticSearch() {
     return null;
   }
 
   @Override
-  protected Map<String, Object> getEsDataByIdentifierResponse() {
-    return null;
-  }
-
-  @Override
-  public Response getCassandraRecordByIdForBulkUploadResponse() {
+  public Response getRecordByIdWithFieldsCassandra() {
     Response response = new Response();
     List<Map<String, Object>> list = new ArrayList<>();
     Map<String, Object> bulkUploadProcessMap = new HashMap<>();

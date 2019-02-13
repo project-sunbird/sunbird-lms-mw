@@ -1,13 +1,10 @@
-package org.sunbird;
+package org.sunbird.common;
 
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.when;
 
 import akka.actor.ActorRef;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.keycloak.admin.client.Keycloak;
@@ -15,6 +12,7 @@ import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.representations.idm.UserRepresentation;
+import org.mockito.AdditionalAnswers;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
@@ -27,7 +25,6 @@ import org.sunbird.actorutil.InterServiceCommunicationFactory;
 import org.sunbird.actorutil.impl.InterServiceCommunicationImpl;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.KeyCloakConnectionProvider;
@@ -96,18 +93,19 @@ public abstract class BaseActorTest {
             Mockito.anyObject()))
         .thenReturn(new HashMap<>());
 
-    cassandraMock();
-    elasticSearchMock();
+    mockCassandraOperations();
+    mockElasticSearch();
   }
 
-  protected void interServiceCommunication() {
+  protected void mockInterserviceCommunication(
+      boolean isLocation, boolean isFirstPresent, boolean isSecondPresent) {
+    List<Response> logEntryList = getResponseList(isLocation, isFirstPresent, isSecondPresent);
     when(interServiceCommunication.getResponse(
             Mockito.any(ActorRef.class), Mockito.any(Request.class)))
-        .thenReturn(getFirstEsInterServiceCommunicationResponse())
-        .thenReturn(getSecondEsInterServiceCommunicationResponse());
+        .thenAnswer(AdditionalAnswers.returnsElementsOf(logEntryList));
   }
 
-  private void elasticSearchMock() {
+  private void mockElasticSearch() {
 
     when(ElasticSearchUtil.complexSearch(
             Mockito.any(SearchDTO.class),
@@ -117,10 +115,10 @@ public abstract class BaseActorTest {
 
     when(ElasticSearchUtil.getDataByIdentifier(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getEsDataByIdentifierResponse());
+        .thenReturn(getDataByIdentifierElasticSearch());
   }
 
-  private void cassandraMock() {
+  private void mockCassandraOperations() {
 
     when(cassandraOperation.updateRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
@@ -135,11 +133,11 @@ public abstract class BaseActorTest {
 
     when(cassandraOperation.getRecordById(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getRecordByIdResponse());
+        .thenReturn(getRecordByIdCassandra());
 
     when(cassandraOperation.getRecordById(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyList()))
-        .thenReturn(getCassandraRecordByIdForBulkUploadResponse());
+        .thenReturn(getRecordByIdWithFieldsCassandra());
   }
 
   private static Response getSuccessResponse() {
@@ -158,13 +156,12 @@ public abstract class BaseActorTest {
     return response;
   }
 
-  protected abstract Map<String, Object> getEsDataByIdentifierResponse();
+  protected abstract Map<String, Object> getDataByIdentifierElasticSearch();
 
-  protected abstract Response getCassandraRecordByIdForBulkUploadResponse();
+  protected abstract Response getRecordByIdWithFieldsCassandra();
 
-  protected abstract Response getRecordByIdResponse();
+  protected abstract Response getRecordByIdCassandra();
 
-  protected abstract Response getFirstEsInterServiceCommunicationResponse();
-
-  protected abstract Response getSecondEsInterServiceCommunicationResponse();
+  protected abstract List<Response> getResponseList(
+      boolean isLocation, boolean isFirstRequired, boolean isSecondRequired);
 }

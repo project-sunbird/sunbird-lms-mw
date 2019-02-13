@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.Test;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.sunbird.BaseActorTest;
+import org.sunbird.common.BaseActorTest;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -96,17 +96,17 @@ public class UserStatusActorTest extends BaseActorTest {
   }
 
   @Override
-  protected Map<String, Object> getEsDataByIdentifierResponse() {
+  protected Map<String, Object> getDataByIdentifierElasticSearch() {
     return null;
   }
 
   @Override
-  protected Response getCassandraRecordByIdForBulkUploadResponse() {
+  protected Response getRecordByIdWithFieldsCassandra() {
     return null;
   }
 
   @Override
-  public Response getRecordByIdResponse() {
+  public Response getRecordByIdCassandra() {
 
     Response response = new Response();
     List<Map<String, Object>> resMapList = new ArrayList<>();
@@ -118,12 +118,8 @@ public class UserStatusActorTest extends BaseActorTest {
   }
 
   @Override
-  protected Response getFirstEsInterServiceCommunicationResponse() {
-    return null;
-  }
-
-  @Override
-  protected Response getSecondEsInterServiceCommunicationResponse() {
+  protected List<Response> getResponseList(
+      boolean isLocation, boolean isFirstRequired, boolean isSecondRequired) {
     return null;
   }
 }

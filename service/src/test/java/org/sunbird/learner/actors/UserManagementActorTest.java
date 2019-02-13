@@ -18,8 +18,8 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
-import org.sunbird.BaseActorTest;
 import org.sunbird.actorutil.location.impl.LocationClientImpl;
+import org.sunbird.common.BaseActorTest;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -46,8 +46,6 @@ public class UserManagementActorTest extends BaseActorTest {
   private static final Props props = Props.create(UserManagementActor.class);
   private static Map<String, Object> reqMap;
   private static final HashMap esResponseMap = getEsResponseMap();
-  private static Response firstEsInterServiceCommunicationResponse;
-  private static Response secondEsInterServiceCommunicationResponse;
 
   @Before
   public void beforeEachTest() throws Exception {
@@ -269,19 +267,6 @@ public class UserManagementActorTest extends BaseActorTest {
     assertTrue(result);
   }
 
-  private void getInterServiceCommunicationResponse(
-      boolean isFirstPresent, boolean isSecondPresent, boolean isLocation) {
-
-    if (isFirstPresent) {
-      firstEsInterServiceCommunicationResponse = getEsResponseForLocation(isLocation);
-    } else firstEsInterServiceCommunicationResponse = null;
-
-    if (isSecondPresent) {
-      secondEsInterServiceCommunicationResponse = getEsResponse();
-    } else secondEsInterServiceCommunicationResponse = null;
-    interServiceCommunication();
-  }
-
   @Test
   public void testUpdateUserSuccessWithoutUserCallerId() {
 
@@ -311,7 +296,7 @@ public class UserManagementActorTest extends BaseActorTest {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
-    getInterServiceCommunicationResponse(isFirstPresent, isSecondPresent, isLocation);
+    mockInterserviceCommunication(isLocation, isFirstPresent, isSecondPresent);
     subject.tell(reqObj, probe.getRef());
 
     if (errorCode == null) {
@@ -374,15 +359,6 @@ public class UserManagementActorTest extends BaseActorTest {
     return reqObj;
   }
 
-  protected static Response getEsResponse() {
-
-    Response response = new Response();
-    Map<String, Object> map = new HashMap<>();
-    map.put("anyString", new Object());
-    response.put(JsonKey.RESPONSE, map);
-    return response;
-  }
-
   private static HashMap getEsResponseMap() {
     HashMap<String, Object> map = new HashMap<>();
     map.put(JsonKey.IS_ROOT_ORG, true);
@@ -399,39 +375,56 @@ public class UserManagementActorTest extends BaseActorTest {
   }
 
   @Override
-  protected Map<String, Object> getEsDataByIdentifierResponse() {
+  protected Map<String, Object> getDataByIdentifierElasticSearch() {
     return esResponseMap;
   }
 
   @Override
-  protected Response getCassandraRecordByIdForBulkUploadResponse() {
+  protected Response getRecordByIdWithFieldsCassandra() {
     return null;
   }
 
   @Override
-  public Response getRecordByIdResponse() {
+  protected Response getRecordByIdCassandra() {
     return null;
   }
 
   @Override
-  protected Response getFirstEsInterServiceCommunicationResponse() {
-    return firstEsInterServiceCommunicationResponse;
+  protected List<Response> getResponseList(
+      boolean isLocation, boolean isFirstRequired, boolean isSecondRequired) {
+    List<Response> listResponse = new ArrayList<>();
+    listResponse.add(getEsResponseForLocation(isLocation, isFirstRequired));
+    listResponse.add(getEsResponse(isSecondRequired));
+    return listResponse;
   }
 
-  @Override
-  protected Response getSecondEsInterServiceCommunicationResponse() {
-    return secondEsInterServiceCommunicationResponse;
-  }
+  private static Response getEsResponseForLocation(boolean isLocation, boolean isFirstRequired) {
 
-  private static Response getEsResponseForLocation(boolean isLocation) {
-    Response response = new Response();
-    if (isLocation) {
-      response.put(JsonKey.RESPONSE, Arrays.asList("location"));
+    Response response = null;
+    if (isFirstRequired) {
+      response = new Response();
+      if (isLocation) {
+        response.put(JsonKey.RESPONSE, Arrays.asList("location"));
+        return response;
+      }
+      Map<String, Object> map = new HashMap<>();
+      map.put(JsonKey.ID, "anyId");
+      response.put(JsonKey.RESPONSE, map);
       return response;
     }
-    Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.ID, "anyId");
-    response.put(JsonKey.RESPONSE, map);
+    return response;
+  }
+
+  protected static Response getEsResponse(boolean isSecondRequired) {
+
+    Response response = null;
+    if (isSecondRequired) {
+      response = new Response();
+      Map<String, Object> map = new HashMap<>();
+      map.put("anyString", new Object());
+      response.put(JsonKey.RESPONSE, map);
+      return response;
+    }
     return response;
   }
 }

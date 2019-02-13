@@ -8,9 +8,10 @@ import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.Test;
-import org.sunbird.BaseActorTest;
+import org.sunbird.common.BaseActorTest;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -81,29 +82,25 @@ public class UserProfileActorTest extends BaseActorTest {
   }
 
   @Override
-  protected Map<String, Object> getEsDataByIdentifierResponse() {
+  protected Map<String, Object> getDataByIdentifierElasticSearch() {
     if (isSuccessStatic) {
       return getEsResponseMap();
     } else return new HashMap<>();
   }
 
   @Override
-  protected Response getCassandraRecordByIdForBulkUploadResponse() {
+  protected Response getRecordByIdWithFieldsCassandra() {
     return null;
   }
 
   @Override
-  public Response getRecordByIdResponse() {
+  protected Response getRecordByIdCassandra() {
     return null;
   }
 
   @Override
-  protected Response getFirstEsInterServiceCommunicationResponse() {
-    return null;
-  }
-
-  @Override
-  protected Response getSecondEsInterServiceCommunicationResponse() {
+  protected List<Response> getResponseList(
+      boolean isLocation, boolean isFirstRequired, boolean isSecondRequired) {
     return null;
   }
 }

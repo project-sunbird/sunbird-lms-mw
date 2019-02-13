@@ -257,7 +257,7 @@ public class OrganisationManagementActor extends BaseActor {
   /** Method to create an Organisation . */
   @SuppressWarnings("unchecked")
   private void createOrg(Request actorMessage) {
-    ProjectLogger.log("Create org method call start");
+    ProjectLogger.log("OrgManagementActor: Create org method call start", LoggerEnum.INFO);
     // object of telemetry event...
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
@@ -329,7 +329,7 @@ public class OrganisationManagementActor extends BaseActor {
                   JsonKey.EXTERNAL_ID));
         }
         request.put(JsonKey.EXTERNAL_ID, passedExternalId);
-        request.put(JsonKey.PROVIDER, channel.toLowerCase());
+        request.put(JsonKey.PROVIDER, StringUtils.lowerCase(channel));
       } else {
         request.remove(JsonKey.EXTERNAL_ID);
         request.remove(JsonKey.PROVIDER);
@@ -432,7 +432,8 @@ public class OrganisationManagementActor extends BaseActor {
         String channel = (String) request.get(JsonKey.CHANNEL);
         createOrgExternalIdRecord(channel, passedExternalId, uniqueId);
       }
-      ProjectLogger.log("Org data saved into cassandra.");
+      ProjectLogger.log(
+          "OrgManagementActor : CreateOrg : Org data saved into cassandra.", LoggerEnum.INFO);
       // create org_map if parentOrgId is present in request
       if (isValidParent) {
         upsertOrgMap(
@@ -443,7 +444,8 @@ public class OrganisationManagementActor extends BaseActor {
             relation);
       }
 
-      ProjectLogger.log("Created org id is ----." + uniqueId);
+      ProjectLogger.log(
+          "OrgManagementActor : createOrg : Created org id is ----." + uniqueId, LoggerEnum.INFO);
       result.getResult().put(JsonKey.ORGANISATION_ID, uniqueId);
       sender().tell(result, self());
 
@@ -467,10 +469,14 @@ public class OrganisationManagementActor extends BaseActor {
       Request orgReq = new Request();
       orgReq.getRequest().put(JsonKey.ORGANISATION, request);
       orgReq.setOperation(ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
-      ProjectLogger.log("Calling background job to save org data into ES" + uniqueId);
+      ProjectLogger.log(
+          "OrgManagementActor : createOrg : Calling background job to save org data into ES"
+              + uniqueId,
+          LoggerEnum.INFO);
       tellToAnother(orgReq);
     } catch (ProjectCommonException e) {
-      ProjectLogger.log("Some error occurs" + e.getMessage());
+      ProjectLogger.log(
+          "OrgManagementActor : createOrg : Some error occurs" + e.getMessage(), LoggerEnum.INFO);
       sender().tell(e, self());
       return;
     }
@@ -478,8 +484,8 @@ public class OrganisationManagementActor extends BaseActor {
 
   private void createOrgExternalIdRecord(String channel, String externalId, String orgId) {
     Map<String, Object> orgExtIdRequest = new HashMap<String, Object>();
-    orgExtIdRequest.put(JsonKey.PROVIDER, channel.toLowerCase());
-    orgExtIdRequest.put(JsonKey.EXTERNAL_ID, externalId.toLowerCase());
+    orgExtIdRequest.put(JsonKey.PROVIDER, StringUtils.lowerCase(channel));
+    orgExtIdRequest.put(JsonKey.EXTERNAL_ID, StringUtils.lowerCase(externalId));
     orgExtIdRequest.put(JsonKey.ORG_ID, orgId);
 
     cassandraOperation.insertRecord(JsonKey.SUNBIRD, JsonKey.ORG_EXT_ID_DB, orgExtIdRequest);
@@ -487,8 +493,8 @@ public class OrganisationManagementActor extends BaseActor {
 
   private void deleteOrgExternalIdRecord(String channel, String externalId) {
     Map<String, String> orgExtIdRequest = new HashMap<String, String>();
-    orgExtIdRequest.put(JsonKey.PROVIDER, channel.toLowerCase());
-    orgExtIdRequest.put(JsonKey.EXTERNAL_ID, externalId.toLowerCase());
+    orgExtIdRequest.put(JsonKey.PROVIDER, StringUtils.lowerCase(channel));
+    orgExtIdRequest.put(JsonKey.EXTERNAL_ID, StringUtils.lowerCase(externalId));
 
     cassandraOperation.deleteRecord(JsonKey.SUNBIRD, JsonKey.ORG_EXT_ID_DB, orgExtIdRequest);
   }
@@ -1768,8 +1774,8 @@ public class OrganisationManagementActor extends BaseActor {
   private boolean validateChannelExternalIdUniqueness(
       String channel, String externalId, String orgId) {
     Map<String, Object> compositeKeyMap = new HashMap<String, Object>();
-    compositeKeyMap.put(JsonKey.PROVIDER, channel.toLowerCase());
-    compositeKeyMap.put(JsonKey.EXTERNAL_ID, externalId.toLowerCase());
+    compositeKeyMap.put(JsonKey.PROVIDER, StringUtils.lowerCase(channel));
+    compositeKeyMap.put(JsonKey.EXTERNAL_ID, StringUtils.lowerCase(externalId));
     return handleChannelExternalIdUniqueness(compositeKeyMap, orgId);
   }
 

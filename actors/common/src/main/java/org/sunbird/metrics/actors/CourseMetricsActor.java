@@ -17,6 +17,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.hamcrest.core.IsNull;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
@@ -91,6 +92,15 @@ public class CourseMetricsActor extends BaseMetricsActor {
     String requestedBy = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
     validateUserId(requestedBy);
     Map<String, Object> courseBatchResult = validateAndGetCourseBatch(batchId);
+    int leafNodeCount =0;
+    Map<String,Object> tempMap =(Map<String, Object>) courseBatchResult.get(JsonKey.ADDITIONAL_INFO);
+    if(!isNull(tempMap)){
+      String leafCount= (String)tempMap.get(JsonKey.LEAF_NODE_COUNT);
+      if(!StringUtils.isEmpty(leafCount) && StringUtils.isNumeric(leafCount));{
+        leafNodeCount = Integer.parseInt(leafCount);
+      }
+
+    }
     Map<String, Object> filter = new HashMap<>();
     filter.put(JsonKey.BATCHES + "." + JsonKey.BATCH_ID, batchId);
 
@@ -146,6 +156,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
       for (Map<String, Object> batchMap :
           (List<Map<String, Object>>) esContent.get(JsonKey.BATCHES)) {
         if (batchId.equalsIgnoreCase((String) batchMap.get(JsonKey.BATCH_ID))) {
+
           map.putAll(batchMap);
         }
       }
@@ -156,18 +167,18 @@ public class CourseMetricsActor extends BaseMetricsActor {
     courseProgressResult.put(JsonKey.DATA, userData);
     courseProgressResult.put(JsonKey.START_DATE, courseBatchResult.get(JsonKey.START_DATE));
     courseProgressResult.put(JsonKey.END_DATE, courseBatchResult.get(JsonKey.END_DATE));
-    courseProgressResult.put(JsonKey.COMPLETED_COUNT, getCompletedCount(batchId));
+    courseProgressResult.put(JsonKey.COMPLETED_COUNT, getCompletedCount(batchId,leafNodeCount));
     Response response = new Response();
     response.put("response", "SUCCESS");
     response.getResult().putAll(courseProgressResult);
     sender().tell(response, self());
   }
 
-  private Long getCompletedCount(String batchId) {
+  private Long getCompletedCount(String batchId,int leafNodeCount) {
     SearchDTO searchDTO = new SearchDTO();
     Map<String, Object> filter = new HashMap<>();
     filter.put(JsonKey.BATCHES + "." + JsonKey.BATCH_ID, batchId);
-    filter.put(JsonKey.BATCHES + "." + JsonKey.PROGRESS, 100);
+    filter.put(JsonKey.BATCHES + "." + JsonKey.PROGRESS, leafNodeCount);
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filter);
 
     Map<String, Object> result =

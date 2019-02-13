@@ -143,7 +143,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     sender().tell(response, sender());
   }
 
-  private void validateLinkedContents(Map<Integer, List<String>> rowNumVsContentIdsMap) {
+  private void validateLinkedContents(Map<Integer, List<String>> rowNumVsContentIdsMap)
+      throws Exception {
     // rowNumVsContentIdsMap convert to contentIdVsrowListMap
     if (MapUtils.isNotEmpty(rowNumVsContentIdsMap)) {
       Map<String, List<Integer>> contentIdVsRowNumMap = new HashMap<>();
@@ -165,8 +166,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   }
 
   @SuppressWarnings("unchecked")
-  private void callSearchApiForContentIdsValidation(
-      Map<String, List<Integer>> contentIdVsRowNumMap) {
+  private void callSearchApiForContentIdsValidation(Map<String, List<Integer>> contentIdVsRowNumMap)
+      throws Exception {
     List<String> contentIds = new ArrayList<>();
     contentIds.addAll(contentIdVsRowNumMap.keySet());
     Map<String, Object> requestMap = new HashMap<>();
@@ -252,6 +253,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           throwCompositeSearchFailureError();
         }
       } catch (Exception e) {
+        if (e instanceof ProjectCommonException) {
+          throw e;
+        }
         ProjectLogger.log(
             "TextbookTocActor:validateLinkedContents : Error occurred with message "
                 + e.getMessage(),

@@ -506,22 +506,24 @@ public abstract class BaseMetricsActor extends BaseActor {
 
   protected void calculateCourseProgressPercentage(List<Map<String, Object>> esContent) {
     for (Map<String, Object> map : esContent) {
-      Integer progress = (Integer) map.get(JsonKey.PROGRESS);
-      Integer leafNodeCont = (Integer) map.get(JsonKey.LEAF_NODE_COUNT);
-
-      Integer progressPercentage = Integer.valueOf("0");
-
-      if (null != progress && progress > 0) {
-        if (null == leafNodeCont || leafNodeCont == 0) {
-          progressPercentage = Integer.valueOf("100");
-        } else {
-          // making percentage as round of value.
-          progressPercentage = (int) Math.round((progress * 100.0) / leafNodeCont);
-        }
-      }
-      map.put(JsonKey.PROGRESS, progressPercentage);
+      Integer leafNodeCount = (Integer) map.get(JsonKey.LEAF_NODE_COUNT);
+      if (leafNodeCount == null) leafNodeCount = Integer.valueOf("0");
+      calculateCourseProgressPercentage(map, leafNodeCount);
       map.remove(JsonKey.LEAF_NODE_COUNT);
     }
+  }
+
+  protected void calculateCourseProgressPercentage(
+      Map<String, Object> batchMap, int leafNodeCount) {
+    Integer progress = (Integer) batchMap.get(JsonKey.PROGRESS);
+    Integer progressPercentage = Integer.valueOf("0");
+    if (leafNodeCount == 0) {
+      progressPercentage = Integer.valueOf("100");
+    } else if (null != progress && progress > 0) {
+      // making percentage as round of value.
+      progressPercentage = (int) Math.round((progress * 100.0) / leafNodeCount);
+    }
+    batchMap.put(JsonKey.PROGRESS, progressPercentage);
   }
 
   /**

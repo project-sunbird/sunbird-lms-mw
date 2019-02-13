@@ -180,10 +180,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     fields.add(JsonKey.IDENTIFIER);
     request.put(JsonKey.FIELDS, fields);
     if (CollectionUtils.isNotEmpty(contentIds)) {
-      String requestUrl =
-          getConfigValue(JsonKey.SUNBIRD_WEB_URL)
-              + "/api"
-              + getConfigValue(JsonKey.SUNBIRD_CS_SEARCH_PATH);
+      String requestUrl = getConfigValue(JsonKey.SUNBIRD_WEB_URL) + "/api/composite/v1/search";
+      // + getConfigValue(JsonKey.SUNBIRD_CS_SEARCH_PATH);
       ProjectLogger.log(
           "TextbookTocActor:callSearchApiForContentIdsValidation : requestUrl : " + requestUrl,
           LoggerEnum.INFO.name());

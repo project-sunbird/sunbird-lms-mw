@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -94,7 +95,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     int leafNodeCount = 0;
     Map<String, Object> tempMap =
         (Map<String, Object>) courseBatchResult.get(JsonKey.ADDITIONAL_INFO);
-    if (!isNull(tempMap)) {
+    if (!MapUtils.isEmpty(tempMap)) {
       String leafCount = (String) tempMap.get(JsonKey.LEAF_NODE_COUNT);
       if (!StringUtils.isEmpty(leafCount) && StringUtils.isNumeric(leafCount)) ;
       {
@@ -156,7 +157,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
       for (Map<String, Object> batchMap :
           (List<Map<String, Object>>) esContent.get(JsonKey.BATCHES)) {
         if (batchId.equalsIgnoreCase((String) batchMap.get(JsonKey.BATCH_ID))) {
-          calculateCourseProgress(batchMap, leafNodeCount);
+          calculateCourseProgressPercentage(batchMap, leafNodeCount);
           map.putAll(batchMap);
         }
       }

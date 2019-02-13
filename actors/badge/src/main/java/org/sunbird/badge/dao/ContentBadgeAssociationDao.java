@@ -22,22 +22,6 @@ public interface ContentBadgeAssociationDao {
    */
   public Response updateBadgeAssociation(Map<String, Object> updateMap);
 
-  /*
-   * This method will retrieve active content-badge association details.
-   *
-   * @param String contentId
-   * @return List<Map<String, Object>> badgesInfo
-   */
-  public List<Map<String, Object>> esGetAllActiveAssociatedBadges(String contentId);
-
-  /*
-   * This method will retrieve all the content-badge association details.
-   *
-   * @param String contentId
-   * @return List<Map<String, Object>> badgesInfo
-   */
-  public List<Map<String, Object>> esGetAllAssociatedBadges(String contentId);
-
   public void createDataToES(Map<String, Object> badgeMap);
 
   public void updateDataToES(Map<String, Object> badgeMap);

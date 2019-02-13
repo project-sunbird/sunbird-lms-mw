@@ -7,6 +7,8 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.helper.ServiceFactory;
 
@@ -37,6 +39,10 @@ public class ContentBadgeAssociationDaoImpl implements ContentBadgeAssociationDa
 
   @Override
   public void updateDataToES(Map<String, Object> badgeMap) {
+    ProjectLogger.log(
+        "ContentBadgeAssociationDaoImpl:updateDataToES: Updating data to ES for associationId: "
+            + (String) badgeMap.get(JsonKey.ID),
+        LoggerEnum.INFO);
     ElasticSearchUtil.updateData(
         ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.badgeassociations.getTypeName(),

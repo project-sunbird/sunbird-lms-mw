@@ -1534,8 +1534,9 @@ public class OrganisationManagementActor extends BaseActor {
     if (!StringUtils.isBlank((String) req.get(JsonKey.ORGANISATION_ID))) {
       requestDbMap.put(JsonKey.ID, req.get(JsonKey.ORGANISATION_ID));
     } else {
-      requestDbMap.put(JsonKey.PROVIDER, req.get(JsonKey.PROVIDER));
-      requestDbMap.put(JsonKey.EXTERNAL_ID, req.get(JsonKey.EXTERNAL_ID));
+      requestDbMap.put(JsonKey.PROVIDER, StringUtils.lowerCase((String) req.get(JsonKey.PROVIDER)));
+      requestDbMap.put(
+          JsonKey.EXTERNAL_ID, StringUtils.lowerCase((String) req.get(JsonKey.EXTERNAL_ID)));
     }
     SearchDTO searchDTO = new SearchDTO();
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, requestDbMap);

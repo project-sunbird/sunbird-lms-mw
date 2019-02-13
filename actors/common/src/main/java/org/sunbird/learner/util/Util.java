@@ -2102,17 +2102,6 @@ public final class Util {
     }
     return systemSetting;
   }
-
-  public static String getRootOrgName(String id) {
-    Map<String, Object> orgMap =
-        ElasticSearchUtil.getDataByIdentifier(
-            EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName(), id);
-    if (!MapUtils.isEmpty(orgMap)) {
-      return (String) orgMap.get(JsonKey.ORG_NAME);
-    } else {
-      return "";
-    }
-  }
 }
 
 @FunctionalInterface

@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -214,8 +215,12 @@ public class EsSyncBackgroundActor extends BaseActor {
     userMap.put(BadgingJsonKey.BADGE_ASSERTIONS, Util.getUserBadge(userId));
     userMap.put(JsonKey.BATCHES, Util.getUserCourseBatch(userId));
     try {
-      userMap.put(
-          JsonKey.ROOT_ORG_NAME, Util.getRootOrgName((String) userMap.get(JsonKey.ROOT_ORG_ID)));
+      Map<String, Object> orgMap = Util.getOrgDetails((String) userMap.get(JsonKey.ROOT_ORG_ID));
+      if (!MapUtils.isEmpty(orgMap)) {
+        userMap.put(JsonKey.ROOT_ORG_NAME, orgMap.get(JsonKey.ORG_NAME));
+      } else {
+        userMap.put(JsonKey.ROOT_ORG_NAME, "");
+      }
     } catch (ProjectCommonException e) {
       ProjectLogger.log(
           "EsSyncBackgroundActor:getUserDetails: Exception occurred with error message = "

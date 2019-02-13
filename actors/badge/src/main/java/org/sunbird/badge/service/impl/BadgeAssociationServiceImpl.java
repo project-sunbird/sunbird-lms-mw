@@ -61,8 +61,8 @@ public class BadgeAssociationServiceImpl implements BadgeAssociationService {
       if (toBeCreated) {
         associationDao.createDataToES(badgeMap);
       } else {
-        badgeMap.put(
-            JsonKey.LAST_UPDATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
+        badgeMap.put(JsonKey.UPDATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
+        badgeMap.remove(JsonKey.LAST_UPDATED_ON);
         associationDao.updateDataToES(badgeMap);
       }
     }

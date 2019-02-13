@@ -43,10 +43,19 @@ public class ContentBadgeAssociationDaoImpl implements ContentBadgeAssociationDa
         "ContentBadgeAssociationDaoImpl:updateDataToES: Updating data to ES for associationId: "
             + (String) badgeMap.get(JsonKey.ID),
         LoggerEnum.INFO);
-    ElasticSearchUtil.updateData(
-        ProjectUtil.EsIndex.sunbird.getIndexName(),
-        ProjectUtil.EsType.badgeassociations.getTypeName(),
-        (String) badgeMap.get(JsonKey.ID),
-        badgeMap);
+    try {
+      ElasticSearchUtil.updateData(
+          ProjectUtil.EsIndex.sunbird.getIndexName(),
+          ProjectUtil.EsType.badgeassociations.getTypeName(),
+          (String) badgeMap.get(JsonKey.ID),
+          badgeMap);
+    } catch (Exception e) {
+      ProjectLogger.log(
+          "ContentBadgeAssociationDaoImpl:updateDataToES: Exception occured while Updating data to ES for associationId: "
+              + (String) badgeMap.get(JsonKey.ID)
+              + " with exception "
+              + e.getMessage(),
+          LoggerEnum.INFO);
+    }
   }
 }

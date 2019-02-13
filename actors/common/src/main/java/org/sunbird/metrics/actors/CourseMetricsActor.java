@@ -174,20 +174,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
     sender().tell(response, self());
   }
 
-  private void calculateCourseProgress(Map<String, Object> batchMap, int leafNodeCount) {
-    Integer progress = (Integer) batchMap.get(JsonKey.PROGRESS);
-    Integer progressPercentage = Integer.valueOf("0");
-    if (null != progress && progress > 0) {
-      if (leafNodeCount == 0) {
-        progressPercentage = Integer.valueOf("100");
-      } else {
-        // making percentage as round of value.
-        progressPercentage = (int) Math.round((progress * 100.0) / leafNodeCount);
-      }
-    }
-    batchMap.put(JsonKey.PROGRESS, progressPercentage);
-  }
-
   private Long getCompletedCount(String batchId, int leafNodeCount) {
     SearchDTO searchDTO = new SearchDTO();
     Map<String, Object> filter = new HashMap<>();

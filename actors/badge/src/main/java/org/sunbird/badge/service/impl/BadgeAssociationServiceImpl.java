@@ -1,6 +1,7 @@
 package org.sunbird.badge.service.impl;
 
 import java.sql.Timestamp;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -49,7 +50,8 @@ public class BadgeAssociationServiceImpl implements BadgeAssociationService {
     Map<String, Object> associatedBadgeMap = new HashMap<>();
     associatedBadgeMap.put(JsonKey.ID, associationId);
     associatedBadgeMap.put(JsonKey.LAST_UPDATED_BY, requestedBy);
-    associatedBadgeMap.put(JsonKey.LAST_UPDATED_ON, new Timestamp(new Date().getTime()));
+    associatedBadgeMap.put(
+        JsonKey.LAST_UPDATED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
     associatedBadgeMap.put(JsonKey.STATUS, ProjectUtil.Status.INACTIVE.getValue());
     return associatedBadgeMap;
   }

@@ -143,7 +143,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     sender().tell(response, sender());
   }
 
-  private void validateLinkedContents(Map<Integer, List<String>> rowNumVsContentIdsMap) {
+  private void validateLinkedContents(Map<Integer, List<String>> rowNumVsContentIdsMap)
+      throws Exception {
     // rowNumVsContentIdsMap convert to contentIdVsrowListMap
     if (MapUtils.isNotEmpty(rowNumVsContentIdsMap)) {
       Map<String, List<Integer>> contentIdVsRowNumMap = new HashMap<>();
@@ -165,8 +166,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   }
 
   @SuppressWarnings("unchecked")
-  private void callSearchApiForContentIdsValidation(
-      Map<String, List<Integer>> contentIdVsRowNumMap) {
+  private void callSearchApiForContentIdsValidation(Map<String, List<Integer>> contentIdVsRowNumMap)
+      throws Exception {
     List<String> contentIds = new ArrayList<>();
     contentIds.addAll(contentIdVsRowNumMap.keySet());
     Map<String, Object> requestMap = new HashMap<>();
@@ -252,6 +253,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           throwCompositeSearchFailureError();
         }
       } catch (Exception e) {
+        if (e instanceof ProjectCommonException) {
+          throw e;
+        }
         ProjectLogger.log(
             "TextbookTocActor:validateLinkedContents : Error occurred with message "
                 + e.getMessage(),
@@ -950,6 +954,13 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     List<Map<String, Object>> data =
         (List<Map<String, Object>>)
             ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.FILE_DATA);
+    String tbId = (String) request.get(TEXTBOOK_ID);
+    Set<String> identifierList = new HashSet<>();
+    identifierList.add(tbId);
+    data.forEach(
+        s -> {
+          identifierList.add((String) s.get(JsonKey.IDENTIFIER));
+        });
     if (CollectionUtils.isEmpty(data)) {
       throw new ProjectCommonException(
           ResponseCode.invalidRequestData.getErrorCode(),
@@ -960,7 +971,6 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           "Update Textbook - UpdateHierarchy input data : " + mapper.writeValueAsString(data),
           INFO.name());
       Map<String, Object> nodesModified = new HashMap<>();
-      String tbId = (String) request.get(TEXTBOOK_ID);
       nodesModified.put(
           tbId,
           new HashMap<String, Object>() {
@@ -993,6 +1003,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                 tbId,
                 (String) textbookData.get(JsonKey.NAME),
                 (List<Map<String, Object>>) textbookHierarchy.get(JsonKey.CHILDREN));
+        ProjectLogger.log(
+            "TextbookTocActor:updateTextbook : ParentChildHierarchy structure : "
+                + mapper.writeValueAsString(hierarchyList),
+            LoggerEnum.INFO.name());
         Map<String, Object> hierarchy = populateHierarchyDataForUpdate(hierarchyList, tbId);
         data.forEach(
             s -> {
@@ -1008,6 +1022,16 @@ public class TextbookTocActor extends BaseBulkUploadActor {
               }
             });
         hierarchyData.putAll(hierarchy);
+        hierarchyData
+            .entrySet()
+            .removeIf(
+                entry -> {
+                  if (!identifierList.contains(entry.getKey())) {
+                    return true;
+                  }
+                  return false;
+                });
+
         ProjectLogger.log(
             "TextbookTocActor:updateTextbook : hierarchyData structure : "
                 + mapper.writeValueAsString(hierarchyData),
@@ -1048,15 +1072,14 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                 (String) child.get(JsonKey.IDENTIFIER),
                 (String) child.get(JsonKey.NAME),
                 (List<Map<String, Object>>) child.get(JsonKey.CHILDREN)));
+      } else {
+        List<Map<String, Object>> newChildren = new ArrayList<>();
+        hierarchyList.addAll(
+            getParentChildHierarchy(
+                (String) child.get(JsonKey.IDENTIFIER),
+                (String) child.get(JsonKey.NAME),
+                newChildren));
       }
-    }
-    try {
-      ProjectLogger.log(
-          "TextbookTocActor:getParentChildHierarchy : ParentChildHierarchy structure : "
-              + mapper.writeValueAsString(hierarchyList),
-          LoggerEnum.INFO.name());
-    } catch (Exception e) {
-      ProjectLogger.log("TextbookTocActor:getParentChildHierarchy : ", e);
     }
     return hierarchyList;
   }

@@ -506,8 +506,9 @@ public abstract class BaseMetricsActor extends BaseActor {
 
   protected void calculateCourseProgressPercentage(List<Map<String, Object>> esContent) {
     for (Map<String, Object> map : esContent) {
-      Integer leafNodeCont = (Integer) map.get(JsonKey.LEAF_NODE_COUNT);
-      calculateCourseProgressPercentage(map, leafNodeCont);
+      Integer leafNodeCount = (Integer) map.get(JsonKey.LEAF_NODE_COUNT);
+      if (leafNodeCount == null) leafNodeCount = Integer.valueOf("0");
+      calculateCourseProgressPercentage(map, leafNodeCount);
       map.remove(JsonKey.LEAF_NODE_COUNT);
     }
   }

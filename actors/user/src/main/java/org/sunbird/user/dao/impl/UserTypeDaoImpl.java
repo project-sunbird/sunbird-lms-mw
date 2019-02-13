@@ -6,7 +6,7 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.user.dao.UserTypeDao;
 
-public class userTypeDaoImpl implements UserTypeDao {
+public class UserTypeDaoImpl implements UserTypeDao {
 
   private static final String TABLE_NAME = "user_type";
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -14,7 +14,7 @@ public class userTypeDaoImpl implements UserTypeDao {
 
   public static UserTypeDao getInstance() {
     if (userTypeDao == null) {
-      userTypeDao = new userTypeDaoImpl();
+      userTypeDao = new UserTypeDaoImpl();
     }
     return userTypeDao;
   }

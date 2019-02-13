@@ -7,7 +7,7 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.user.dao.UserTypeDao;
-import org.sunbird.user.dao.impl.userTypeDaoImpl;
+import org.sunbird.user.dao.impl.UserTypeDaoImpl;
 
 @ActorConfig(
   tasks = {"getUserTypes"},
@@ -15,7 +15,7 @@ import org.sunbird.user.dao.impl.userTypeDaoImpl;
 )
 public class UserTypeActor extends UserBaseActor {
 
-  private UserTypeDao userTypeDao = userTypeDaoImpl.getInstance();
+  private UserTypeDao userTypeDao = UserTypeDaoImpl.getInstance();
 
   @Override
   public void onReceive(Request request) throws Throwable {

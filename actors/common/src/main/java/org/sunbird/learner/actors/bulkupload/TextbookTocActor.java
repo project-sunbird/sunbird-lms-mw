@@ -180,8 +180,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     fields.add(JsonKey.IDENTIFIER);
     request.put(JsonKey.FIELDS, fields);
     if (CollectionUtils.isNotEmpty(contentIds)) {
-      String requestUrl =
-          getConfigValue(JsonKey.EKSTEP_BASE_URL) + getConfigValue(JsonKey.SUNBIRD_CS_SEARCH_PATH);
+      String requestUrl = getConfigValue(JsonKey.SUNBIRD_WEB_URL) + "/api/composite/v1/search";
+      // + getConfigValue(JsonKey.SUNBIRD_CS_SEARCH_PATH);
       ProjectLogger.log(
           "TextbookTocActor:callSearchApiForContentIdsValidation : requestUrl : " + requestUrl,
           LoggerEnum.INFO.name());
@@ -950,6 +950,13 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     List<Map<String, Object>> data =
         (List<Map<String, Object>>)
             ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.FILE_DATA);
+    String tbId = (String) request.get(TEXTBOOK_ID);
+    Set<String> identifierList = new HashSet<>();
+    identifierList.add(tbId);
+    data.forEach(
+        s -> {
+          identifierList.add((String) s.get(JsonKey.IDENTIFIER));
+        });
     if (CollectionUtils.isEmpty(data)) {
       throw new ProjectCommonException(
           ResponseCode.invalidRequestData.getErrorCode(),
@@ -960,7 +967,6 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           "Update Textbook - UpdateHierarchy input data : " + mapper.writeValueAsString(data),
           INFO.name());
       Map<String, Object> nodesModified = new HashMap<>();
-      String tbId = (String) request.get(TEXTBOOK_ID);
       nodesModified.put(
           tbId,
           new HashMap<String, Object>() {
@@ -993,6 +999,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                 tbId,
                 (String) textbookData.get(JsonKey.NAME),
                 (List<Map<String, Object>>) textbookHierarchy.get(JsonKey.CHILDREN));
+        ProjectLogger.log(
+            "TextbookTocActor:updateTextbook : ParentChildHierarchy structure : "
+                + mapper.writeValueAsString(hierarchyList),
+            LoggerEnum.INFO.name());
         Map<String, Object> hierarchy = populateHierarchyDataForUpdate(hierarchyList, tbId);
         data.forEach(
             s -> {
@@ -1008,6 +1018,20 @@ public class TextbookTocActor extends BaseBulkUploadActor {
               }
             });
         hierarchyData.putAll(hierarchy);
+        hierarchyData
+            .entrySet()
+            .removeIf(
+                entry -> {
+                  if (!identifierList.contains(entry.getKey())) {
+                    return true;
+                  }
+                  return false;
+                });
+
+        ProjectLogger.log(
+            "TextbookTocActor:updateTextbook : hierarchyData structure : "
+                + mapper.writeValueAsString(hierarchyData),
+            LoggerEnum.INFO.name());
       }
 
       Map<String, Object> updateRequest = new HashMap<String, Object>();
@@ -1044,6 +1068,13 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                 (String) child.get(JsonKey.IDENTIFIER),
                 (String) child.get(JsonKey.NAME),
                 (List<Map<String, Object>>) child.get(JsonKey.CHILDREN)));
+      } else {
+        List<Map<String, Object>> newChildren = new ArrayList<>();
+        hierarchyList.addAll(
+            getParentChildHierarchy(
+                (String) child.get(JsonKey.IDENTIFIER),
+                (String) child.get(JsonKey.NAME),
+                newChildren));
       }
     }
     return hierarchyList;
@@ -1160,6 +1191,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             .headers(getDefaultHeaders())
             .body(mapper.writeValueAsString(updateRequest))
             .asString();
+    ProjectLogger.log(
+        "TextbookTocActor:updateHierarchy : Request for update hierarchy : "
+            + mapper.writeValueAsString(updateRequest),
+        LoggerEnum.INFO.name());
     if (null != updateResponse) {
       try {
         Response response = mapper.readValue(updateResponse.getBody(), Response.class);

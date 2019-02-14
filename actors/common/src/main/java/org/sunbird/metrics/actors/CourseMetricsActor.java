@@ -174,7 +174,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     sender().tell(response, self());
   }
 
-  private Long getCompletedCount(String batchId, int leafNodeCount) {
+  private int getCompletedCount(String batchId, int leafNodeCount) {
     SearchDTO searchDTO = new SearchDTO();
     Map<String, Object> filter = new HashMap<>();
     filter.put(JsonKey.BATCHES + "." + JsonKey.BATCH_ID, batchId);
@@ -188,15 +188,29 @@ public class CourseMetricsActor extends BaseMetricsActor {
     if (isNull(result) || result.size() == 0) {
       ProjectLogger.log(
           "CourseMetricsActor:getCompletedCount: No search results found.", LoggerEnum.INFO.name());
-      return 0L;
+      return 0;
     } else {
+      List<Map<String, Object>> esContents =
+          (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+      int count = 0;
+      if (!CollectionUtils.isEmpty(esContents)) {
+        for (Map<String, Object> esContent : esContents) {
+          for (Map<String, Object> batchMap :
+              (List<Map<String, Object>>) esContent.get(JsonKey.BATCHES)) {
+            if (batchId.equalsIgnoreCase((String) batchMap.get(JsonKey.BATCH_ID))
+                && leafNodeCount == (Integer) batchMap.get(JsonKey.PROGRESS)) {
+              count++;
+            }
+          }
+        }
+      }
       ProjectLogger.log(
           "CourseMetricsActor:getCompletedCount: search results found."
               + result.get(JsonKey.COUNT)
               + " LeafNodeCount = "
               + leafNodeCount,
           LoggerEnum.INFO.name());
-      return (Long) result.get(JsonKey.COUNT);
+      return count;
     }
   }
 

@@ -1,401 +1,144 @@
 package org.sunbird.learner.actors;
 
 import static akka.testkit.JavaTestKit.duration;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.when;
+import static org.junit.Assert.assertEquals;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
 import java.math.BigInteger;
-import java.util.*;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mockito;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
-import org.sunbird.actor.router.RequestRouter;
-import org.sunbird.cassandraimpl.CassandraOperationImpl;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.apache.commons.lang3.StringUtils;
+import org.junit.*;
+import org.junit.runners.MethodSorters;
+import org.sunbird.actor.service.SunbirdMWService;
+import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.ProjectUtil.EsIndex;
+import org.sunbird.common.models.util.ProjectUtil.EsType;
+import org.sunbird.common.models.util.ProjectUtil.OrgStatus;
+import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
-import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.DataCacheHandler;
+import org.sunbird.learner.util.Util;
+import org.sunbird.user.actors.UserManagementActor;
 
-@RunWith(PowerMockRunner.class)
-@PrepareForTest({
-  ElasticSearchUtil.class,
-  ServiceFactory.class,
-  DataCacheHandler.class,
-  RequestRouter.class,
-  ElasticSearchUtil.class
-})
-@PowerMockIgnore({"javax.management.*"})
+/** @author arvind. */
+// @Ignore
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@Ignore
 public class OrganisationManagementActorTest {
 
-  private static final ActorSystem system = ActorSystem.create("system");
+  private static ActorSystem system;
+  private static CassandraOperation operation = ServiceFactory.getInstance();
   private static final Props props = Props.create(OrganisationManagementActor.class);
-  //    private static Response getAllRecordValue = getCassandraSuccessResponse();
-  private static CassandraOperationImpl cassandraOperation;
+  private static final Props propsUser = Props.create(UserManagementActor.class);
+  private static Util.DbInfo orgTypeDbInfo = null;
+  // private static Util.DbInfo userManagementDB = null;
+  private static Util.DbInfo addressDB = null;
+  private static Util.DbInfo orgDB = null;
+  private static Util.DbInfo locationDB = null;
+  private static String orgTypeId1 = "";
+  private static String orgTypeId2 = "";
+  private static String orgId = "";
+  private static String addressId = "";
+  private static String usrId = "123"; // TODO:change while committing
+  private static String OrgIDWithoutSourceAndExternalId = "";
+  private static String OrgIdWithSourceAndExternalId = "";
+  private static final String source = "Test";
+  private static final String externalId = "test123";
+  private static final String HASH_TAG_ID = "hashTag011";
+  private static final String LOCATION_ID = "icu9289w";
+  private static final String EXTERNAL_ID = "ex00001lvervk";
+  private static final String PROVIDER = "pr00001kfej";
+  private static final String CHANNEL = "hjryr9349";
+  private static final String parentOrgId = "778euffnvrj";
+  private static final String USER_ID = "vcurc633r89";
+  private static Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+  private static Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
 
-  @Before
-  public void beforeTest() {
+  @BeforeClass
+  public static void setUp() {
+    CassandraOperation operation = ServiceFactory.getInstance();
+    SunbirdMWService.init();
+    system = ActorSystem.create("system");
+    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
+    // userManagementDB = Util.dbInfoMap.get(JsonKey.USER_DB);
+    addressDB = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
+    orgTypeDbInfo = Util.dbInfoMap.get(JsonKey.ORG_TYPE_DB);
+    orgDB = Util.dbInfoMap.get(JsonKey.ORG_DB);
+    locationDB = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
+    Map<String, Object> geoLocation = new HashMap<>();
+    // need to delete in after class...
+    geoLocation.put(JsonKey.ID, LOCATION_ID);
+    // geoLocation.put(JsonKey.LOCATION_ID , LOCATION_ID);
+    operation.insertRecord(locationDB.getKeySpace(), locationDB.getTableName(), geoLocation);
+    Map<String, Object> parentOrg = new HashMap<>();
+    parentOrg.put(JsonKey.ID, parentOrgId);
+    operation.upsertRecord(orgDB.getKeySpace(), orgDB.getTableName(), parentOrg);
 
-    PowerMockito.mockStatic(ServiceFactory.class);
-    cassandraOperation = mock(CassandraOperationImpl.class);
-    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+    String rootOrgId = "ofure8ofp9yfpf9ego";
 
-    when(cassandraOperation.getRecordById(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getCassandraSuccessResponse());
-    when(cassandraOperation.getRecordsByProperties(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(getCassandraSuccessResponse());
-    when(cassandraOperation.insertRecord(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(getSuccessResponse());
-    when(cassandraOperation.updateRecord(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(getSuccessResponse());
-    when(cassandraOperation.getAllRecords(Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getCassandraSuccessResponse());
-    when(cassandraOperation.getRecordsByProperty(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getCassandraSuccessResponse());
+    Map<String, Object> rootOrg = new HashMap<>();
+    rootOrg.put(JsonKey.ID, "ofure8ofp9yfpf9ego");
+    rootOrg.put(JsonKey.IS_ROOT_ORG, true);
+    rootOrg.put(JsonKey.CHANNEL, CHANNEL);
+    rootOrg.put(JsonKey.PROVIDER, PROVIDER + "01");
+    rootOrg.put(JsonKey.EXTERNAL_ID, EXTERNAL_ID + "01");
 
-    PowerMockito.mockStatic(DataCacheHandler.class);
-    when(DataCacheHandler.getOrgTypeMap()).thenReturn(getOrgTypeMapResponse());
+    operation.upsertRecord(orgDB.getKeySpace(), orgDB.getTableName(), rootOrg);
+    ElasticSearchUtil.createData(
+        EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName(), rootOrgId, rootOrg);
 
-    PowerMockito.mockStatic(ElasticSearchUtil.class);
-    when(ElasticSearchUtil.getDataByIdentifier(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getEsDataByIdentifierResponse());
+    Map<String, Object> userMap = new HashMap<>();
+    userMap.put(JsonKey.ID, USER_ID);
+    // userMap.put(JsonKey.ROOT_ORG_ID, ROOT_ORG_ID);
+    operation.insertRecord(userDbInfo.getKeySpace(), userDbInfo.getTableName(), userMap);
+    userMap.put(JsonKey.USER_ID, USER_ID);
+    ElasticSearchUtil.createData(
+        EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), USER_ID, userMap);
 
-    when(ElasticSearchUtil.complexSearch(
-            Mockito.any(SearchDTO.class),
-            Mockito.eq(ProjectUtil.EsIndex.sunbird.getIndexName()),
-            Mockito.anyVararg()))
-        .thenReturn(getComplexSearchResponse());
+    Map<String, Object> userMap1 = new HashMap<>();
+    userMap1.put(JsonKey.ID, USER_ID + "01");
+    // userMap.put(JsonKey.ROOT_ORG_ID, ROOT_ORG_ID);
+    operation.insertRecord(userDbInfo.getKeySpace(), userDbInfo.getTableName(), userMap1);
+    userMap1.put(JsonKey.USER_ID, USER_ID + "01");
+    ElasticSearchUtil.createData(
+        EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), USER_ID, userMap1);
   }
 
-  private Map<String, Object> getComplexSearchResponse() {
+  // @Test
+  public void test10createUserForId() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(propsUser);
 
-    HashMap<String, Object> response = new HashMap<>();
-    List<Map<String, Object>> content = new ArrayList<>();
+    Request reqObj = new Request();
+    reqObj.setRequestId("1");
+    reqObj.setOperation(ActorOperations.CREATE_USER.getValue());
     HashMap<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.ID, "anyId");
-    innerMap.put(JsonKey.HASHTAGID, "anyHashTagId");
-    content.add(innerMap);
-    response.put(JsonKey.CONTENT, content);
-    return response;
-  }
+    innerMap.put(JsonKey.USERNAME, "test04buser");
+    innerMap.put(JsonKey.EMAIL, "test04buser@xyzab.com");
+    innerMap.put(JsonKey.PASSWORD, "password");
+    Map<String, Object> request = new HashMap<String, Object>();
+    request.put(JsonKey.USER, innerMap);
+    reqObj.setRequest(request);
 
-  private static Map<String, Object> getEsDataByIdentifierResponse() {
-    HashMap<String, Object> map = new HashMap<>();
-    map.put(JsonKey.IS_ROOT_ORG, true);
-    map.put(JsonKey.ID, "rootOrgId");
-    map.put(JsonKey.CHANNEL, "anyChannel");
-    return map;
-  }
-
-  private static Response getSuccessResponse() {
-    Response response = new Response();
-    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-    return response;
-  }
-
-  private static Response getCassandraSuccessResponse() {
-
-    Response response = new Response();
-    List<Map<String, Object>> list = new ArrayList<>();
-    Map<String, Object> orgMap = new HashMap<>();
-    orgMap.put(JsonKey.ID, "ORGANISATION_ID");
-    orgMap.put(JsonKey.STATUS, 1);
-    orgMap.put(JsonKey.IS_ROOT_ORG, false);
-    orgMap.put(JsonKey.IS_DELETED, false);
-    list.add(orgMap);
-    response.put(JsonKey.RESPONSE, list);
-    return response;
-  }
-
-  private static Map<String, String> getOrgTypeMapResponse() {
-    Map<String, String> orgMap = new HashMap<>();
-    orgMap.put("orgtype", "orgTypeId");
-    return orgMap;
+    subject.tell(reqObj, probe.getRef());
+    Response res = probe.expectMsgClass(Response.class);
+    usrId = (String) res.get(JsonKey.USER_ID);
   }
 
   @Test
-  public void testCreateOrgSuccess() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    Request reqObj = new Request();
-    HashMap<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.CALLER_ID, "calledId");
-
-    Map<String, Object> request = new HashMap();
-    request.put(JsonKey.LOCATION_CODES, Arrays.asList("invalidLocationCode"));
-    request.put(JsonKey.ORG_TYPE, "orgType");
-    request.put(JsonKey.LOC_ID, "locationId");
-    request.put(JsonKey.ADDRESS, new HashMap<>().put(JsonKey.CITY, "anyCity"));
-    request.put(JsonKey.RELATION, "relation");
-    request.put(JsonKey.PARENT_ORG_ID, "parentOrgId");
-    request.put(JsonKey.REQUESTED_BY, "requestedBy");
-    request.put(JsonKey.CHANNEL, "anyChannel");
-    request.put(JsonKey.EXTERNAL_ID, null);
-    request.put(JsonKey.ORGANISATION_ID, "orgId");
-
-    reqObj.setRequest(request);
-    reqObj.setContext(innerMap);
-    reqObj.setOperation(ActorOperations.CREATE_ORG.getValue());
-
-    subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("1000 second"), Response.class);
-    Assert.assertTrue(res != null && "SUCCESS".equals(res.getResult().get(JsonKey.RESPONSE)));
-  }
-
-  @Test
-  public void testUpdateOrgSuccess() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    Request reqObj = new Request();
-    HashMap<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.CALLER_ID, "calledId");
-
-    Map<String, Object> request = new HashMap();
-    request.put(JsonKey.LOCATION_CODES, Arrays.asList("invalidLocationCode"));
-    request.put(JsonKey.ORG_TYPE, "orgType");
-    request.put(JsonKey.LOC_ID, "locationId");
-    request.put(JsonKey.ADDRESS, new HashMap<>().put(JsonKey.CITY, "anyCity"));
-    request.put(JsonKey.RELATION, "relation");
-    //        request.put(JsonKey.PARENT_ORG_ID, "parentOrgId");
-    request.put(JsonKey.REQUESTED_BY, "requestedBy");
-    request.put(JsonKey.CHANNEL, "anyChannel");
-    request.put(JsonKey.EXTERNAL_ID, null);
-    request.put(JsonKey.ORGANISATION_ID, "orgId");
-
-    reqObj.setRequest(request);
-    reqObj.setContext(innerMap);
-    reqObj.setOperation(ActorOperations.UPDATE_ORG.getValue());
-
-    subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("1000 second"), Response.class);
-    Assert.assertTrue(res != null && "SUCCESS".equals(res.getResult().get(JsonKey.RESPONSE)));
-  }
-
-  @Test
-  public void testupdateOrgStatusSuccess() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    Request reqObj = new Request();
-    HashMap<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.CALLER_ID, "calledId");
-
-    Map<String, Object> request = new HashMap();
-
-    request.put(JsonKey.REQUESTED_BY, "requestedBy");
-    request.put(JsonKey.ORGANISATION_ID, "orgId");
-    request.put(JsonKey.STATUS, new BigInteger("1"));
-
-    reqObj.setRequest(request);
-    reqObj.setContext(innerMap);
-    reqObj.setOperation(ActorOperations.UPDATE_ORG_STATUS.getValue());
-
-    subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("1000 second"), Response.class);
-    Assert.assertTrue(res != null && "SUCCESS".equals(res.getResult().get(JsonKey.RESPONSE)));
-  }
-
-  @Test
-  public void testGetOrgDetailsSuccess() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    Request reqObj = new Request();
-    HashMap<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.CALLER_ID, "calledId");
-
-    Map<String, Object> request = new HashMap();
-
-    request.put(JsonKey.USER_ID, "anyUserId");
-    request.put(JsonKey.ORGANISATION_ID, "orgId");
-    request.put(JsonKey.REQUESTED_BY, "reqBy");
-    request.put(JsonKey.ROLES, Arrays.asList("anyRole"));
-    request.put(JsonKey.STATUS, new BigInteger("1"));
-
-    reqObj.setRequest(request);
-    reqObj.setContext(innerMap);
-    reqObj.setOperation(ActorOperations.GET_ORG_DETAILS.getValue());
-
-    subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("1000 second"), Response.class);
-    Assert.assertTrue(res != null);
-  }
-
-  @Test
-  public void testAddMemberOrganisationSuccess() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    Request reqObj = new Request();
-    HashMap<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.CALLER_ID, "calledId");
-
-    Map<String, Object> request = new HashMap();
-
-    request.put(JsonKey.USER_ID, "anyUserId");
-    request.put(JsonKey.ORGANISATION_ID, "orgId");
-    request.put(JsonKey.REQUESTED_BY, "reqBy");
-    request.put(JsonKey.ROLES, Arrays.asList("anyRole"));
-    request.put(JsonKey.STATUS, new BigInteger("1"));
-
-    reqObj.setRequest(request);
-    reqObj.setContext(innerMap);
-    reqObj.setOperation(ActorOperations.ADD_MEMBER_ORGANISATION.getValue());
-
-    subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("1000 second"), Response.class);
-    Assert.assertTrue(res != null);
-  }
-
-  @Test
-  public void testRemoveMemberOrganisationSuccess() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    Request reqObj = new Request();
-    HashMap<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.CALLER_ID, "calledId");
-
-    Map<String, Object> request = new HashMap();
-
-    request.put(JsonKey.USER_ID, "anyUserId");
-    request.put(JsonKey.ORGANISATION_ID, "orgId");
-    request.put(JsonKey.REQUESTED_BY, "reqBy");
-    request.put(JsonKey.ROLES, Arrays.asList("anyRole"));
-    request.put(JsonKey.STATUS, new BigInteger("1"));
-
-    reqObj.setRequest(request);
-    reqObj.setContext(innerMap);
-    reqObj.setOperation(ActorOperations.REMOVE_MEMBER_ORGANISATION.getValue());
-
-    subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("1000 second"), Response.class);
-    Assert.assertTrue(res != null);
-  }
-
-  @Test
-  public void testGetOrgTypeListSuccess() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    Request reqObj = new Request();
-    HashMap<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.CALLER_ID, "calledId");
-
-    Map<String, Object> request = new HashMap();
-
-    request.put(JsonKey.USER_ID, "anyUserId");
-    request.put(JsonKey.ORGANISATION_ID, "orgId");
-    request.put(JsonKey.REQUESTED_BY, "reqBy");
-    request.put(JsonKey.ROLES, Arrays.asList("anyRole"));
-    request.put(JsonKey.STATUS, new BigInteger("1"));
-
-    reqObj.setRequest(request);
-    reqObj.setContext(innerMap);
-    reqObj.setOperation(ActorOperations.GET_ORG_TYPE_LIST.getValue());
-
-    subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("1000 second"), Response.class);
-    Assert.assertTrue(res != null);
-  }
-
-  @Test
-  public void testCreateOrgTypeSuccess() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    when(cassandraOperation.getAllRecords(Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getCassandraSuccessResponseOne());
-
-    Request reqObj = new Request();
-    HashMap<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.CALLER_ID, "calledId");
-
-    Map<String, Object> request = new HashMap();
-
-    request.put(JsonKey.USER_ID, "anyUserId");
-    request.put(JsonKey.ORGANISATION_ID, "orgId");
-    request.put(JsonKey.REQUESTED_BY, "reqBy");
-    request.put(JsonKey.ROLES, Arrays.asList("anyRole"));
-    request.put(JsonKey.STATUS, new BigInteger("1"));
-
-    reqObj.setRequest(request);
-    reqObj.setContext(innerMap);
-    reqObj.setOperation(ActorOperations.CREATE_ORG_TYPE.getValue());
-
-    subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("1000 second"), Response.class);
-    Assert.assertTrue(res != null);
-  }
-
-  private Response getCassandraSuccessResponseOne() {
-
-    Response response = new Response();
-    response.put(JsonKey.RESPONSE, Arrays.asList());
-    return response;
-  }
-
-  @Test
-  public void testUpdateOrgTypeSuccess() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    when(cassandraOperation.getRecordsByProperty(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getCassandraSuccessResponseOne());
-
-    Request reqObj = new Request();
-    HashMap<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.CALLER_ID, "calledId");
-
-    Map<String, Object> request = new HashMap();
-    request.put(JsonKey.USER_ID, "anyUserId");
-    request.put(JsonKey.ORGANISATION_ID, "orgId");
-    request.put(JsonKey.REQUESTED_BY, "reqBy");
-    request.put(JsonKey.ROLES, Arrays.asList("anyRole"));
-    request.put(JsonKey.STATUS, new BigInteger("1"));
-
-    reqObj.setRequest(request);
-    reqObj.setContext(innerMap);
-    reqObj.setOperation(ActorOperations.UPDATE_ORG_TYPE.getValue());
-
-    subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("1000 second"), Response.class);
-    Assert.assertTrue(res != null);
-  }
-
-  /*@Test
   public void test11createOrgForId() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -896,12 +639,10 @@ public class OrganisationManagementActorTest {
     contactDetail.put("fax", "100");
     contactDetails.add(contactDetail);
     orgMap.put(JsonKey.CONTACT_DETAILS, contactDetails);
-    */
-  /*
-   * Map<String ,Object> address = new HashMap<>(); address.put(JsonKey.CITY ,
-   * "STATE"); //orgMap.put(JsonKey.ADDRESS , address);
-   */
-  /*
+    /*
+     * Map<String ,Object> address = new HashMap<>(); address.put(JsonKey.CITY ,
+     * "STATE"); //orgMap.put(JsonKey.ADDRESS , address);
+     */
     innerMap.put(JsonKey.ORGANISATION, orgMap);
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
@@ -1773,13 +1514,11 @@ public class OrganisationManagementActorTest {
         String id = (String) res.get(JsonKey.ID);
         System.out.println("ID is " + id);
         operation.deleteRecord(userOrgDbInfo.getKeySpace(), userOrgDbInfo.getTableName(), id);
-        */
-  /*
-   * ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
-   * ProjectUtil.EsType.organisation.getTypeName(), id);
-   */
-  /*
+        /*
+         * ElasticSearchUtil.removeData(ProjectUtil.EsIndex.sunbird.getIndexName(),
+         * ProjectUtil.EsType.organisation.getTypeName(), id);
+         */
       }
     }
-  }*/
+  }
 }

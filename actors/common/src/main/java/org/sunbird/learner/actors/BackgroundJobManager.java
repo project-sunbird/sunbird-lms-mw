@@ -2,6 +2,7 @@ package org.sunbird.learner.actors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -207,6 +208,11 @@ public class BackgroundJobManager extends BaseActor {
         ProjectUtil.EsType.usercourses.getTypeName(),
         (String) batch.get(JsonKey.ID),
         batch);
+    syncUserCourseBatchProgress(
+        (String) batch.get(JsonKey.BATCH_ID),
+        (String) batch.get(JsonKey.USER_ID),
+        (int) batch.get(JsonKey.PROGRESS),
+        (Timestamp) batch.get(JsonKey.DATE_TIME));
   }
 
   @SuppressWarnings("unchecked")
@@ -636,5 +642,49 @@ public class BackgroundJobManager extends BaseActor {
         ProjectUtil.EsType.usernotes.getTypeName(),
         (String) noteMap.get(JsonKey.ID),
         noteMap);
+  }
+
+  public void syncUserCourseBatchProgress(
+      String batchId, String userId, Integer progress, Timestamp lastAccessedOn) {
+    ProjectLogger.log(
+        "LearnerStateUpdateActor:syncUserCourseBatchProgress: data"
+            + userId
+            + "=="
+            + progress
+            + "  timeStamp =="
+            + lastAccessedOn,
+        LoggerEnum.INFO.name());
+    Map<String, Object> userMap =
+        ElasticSearchUtil.getDataByIdentifier(
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName(),
+            userId);
+    if (userMap != null) {
+      List<Map<String, Object>> batches;
+      if (userMap.get(JsonKey.BATCHES) != null) {
+        batches = (List<Map<String, Object>>) userMap.get(JsonKey.BATCHES);
+        for (Map<String, Object> map : batches) {
+          if (batchId.equalsIgnoreCase((String) map.get(JsonKey.BATCH_ID))) {
+            map.put(JsonKey.PROGRESS, progress);
+            map.put(JsonKey.LAST_ACCESSED_ON, lastAccessedOn);
+            batches.add(map);
+            break;
+          }
+        }
+        userMap.put(JsonKey.BATCHES, batches);
+      }
+    }
+    boolean response =
+        ElasticSearchUtil.upsertData(
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName(),
+            userId,
+            userMap);
+    ProjectLogger.log(
+        "LearnerStateUpdateActor:syncUserCourseBatchProgress: sync user courses batch and  response  "
+            + userId
+            + "=="
+            + response,
+        LoggerEnum.INFO.name());
   }
 }

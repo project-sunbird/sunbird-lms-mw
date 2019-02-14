@@ -16,7 +16,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
@@ -135,12 +134,6 @@ public class LearnerStateUpdateActor extends BaseActor {
             rollUp.put("l1", (String) map.get(JsonKey.COURSE_ID));
             rollUp.put("l2", (String) map.get(JsonKey.CONTENT_ID));
             TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
-            syncUserCourseBatchProgress(
-                (String) map.get(JsonKey.BATCH_ID),
-                userId,
-                (Integer) map.get(JsonKey.CONTENT_PROGRESS),
-                (Timestamp) map.get(JsonKey.DATE_TIME));
-
           } catch (Exception ex) {
             response.getResult().put((String) map.get(JsonKey.CONTENT_ID), JsonKey.FAILED);
             contentList.remove(map);
@@ -357,49 +350,5 @@ public class LearnerStateUpdateActor extends BaseActor {
 
   private boolean isNullCheck(Object obj) {
     return null == obj;
-  }
-
-  public static void syncUserCourseBatchProgress(
-      String batchId, String userId, Integer progress, Timestamp lastAccessedOn) {
-    ProjectLogger.log(
-        "LearnerStateUpdateActor:syncUserCourseBatchProgress: data"
-            + userId
-            + "=="
-            + progress
-            + "  timeStamp =="
-            + lastAccessedOn,
-        LoggerEnum.INFO.name());
-    Map<String, Object> userMap =
-        ElasticSearchUtil.getDataByIdentifier(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.user.getTypeName(),
-            userId);
-    if (userMap != null) {
-      List<Map<String, Object>> batches;
-      if (userMap.get(JsonKey.BATCHES) != null) {
-        batches = (List<Map<String, Object>>) userMap.get(JsonKey.BATCHES);
-        for (Map<String, Object> map : batches) {
-          if (batchId.equalsIgnoreCase((String) map.get(JsonKey.BATCH_ID))) {
-            map.put(JsonKey.PROGRESS, progress);
-            map.put(JsonKey.LAST_ACCESSED_ON, lastAccessedOn);
-            batches.add(map);
-            break;
-          }
-        }
-        userMap.put(JsonKey.BATCHES, batches);
-      }
-    }
-    boolean response =
-        ElasticSearchUtil.upsertData(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.user.getTypeName(),
-            userId,
-            userMap);
-    ProjectLogger.log(
-        "LearnerStateUpdateActor:syncUserCourseBatchProgress: sync user courses batch and  response  "
-            + userId
-            + "=="
-            + response,
-        LoggerEnum.INFO.name());
   }
 }

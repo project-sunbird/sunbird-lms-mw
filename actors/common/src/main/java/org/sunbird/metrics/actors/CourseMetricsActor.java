@@ -190,16 +190,19 @@ public class CourseMetricsActor extends BaseMetricsActor {
           "CourseMetricsActor:getCompletedCount: No search results found.", LoggerEnum.INFO.name());
       return 0;
     } else {
-      List<Map<String, Object>> esContents =
+      List<Map<String, Object>> esBatchResult =
           (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
       int count = 0;
-      if (!CollectionUtils.isEmpty(esContents)) {
-        for (Map<String, Object> esContent : esContents) {
-          for (Map<String, Object> batchMap :
-              (List<Map<String, Object>>) esContent.get(JsonKey.BATCHES)) {
-            if (batchId.equalsIgnoreCase((String) batchMap.get(JsonKey.BATCH_ID))
-                && leafNodeCount == (Integer) batchMap.get(JsonKey.PROGRESS)) {
-              count++;
+      if (!CollectionUtils.isEmpty(esBatchResult)) {
+        for (Map<String, Object> esContent : esBatchResult) {
+          List<Map<String, Object>> batches =
+              (List<Map<String, Object>>) esContent.get(JsonKey.BATCHES);
+          if (!CollectionUtils.isEmpty(batches)) {
+            for (Map<String, Object> batchMap : batches) {
+              if (batchId.equalsIgnoreCase((String) batchMap.get(JsonKey.BATCH_ID))
+                  && leafNodeCount == (Integer) batchMap.get(JsonKey.PROGRESS)) {
+                count++;
+              }
             }
           }
         }

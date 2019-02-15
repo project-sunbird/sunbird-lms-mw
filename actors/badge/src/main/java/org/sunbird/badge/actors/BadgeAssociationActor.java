@@ -190,37 +190,34 @@ public class BadgeAssociationActor extends BaseActor {
   private List<Map<String, Object>> getBadgesDetailsToBeAdded(
       List<Map<String, Object>> activeBadgesList, List<String> requestedBadges) {
     List<String> newBadgeIdsList = getUncommonBadgeIds(requestedBadges, activeBadgesList);
-    if (CollectionUtils.isEmpty(newBadgeIdsList)) {
-      ProjectCommonException.throwClientErrorException(ResponseCode.errorBadgesAlreadyAssociated);
-    }
     ProjectLogger.log(
         "BadgeAssociationAcotr: getBadgesDetailsToBeAdded: new BadgeIdsList is " + newBadgeIdsList,
         LoggerEnum.INFO);
-    if (CollectionUtils.isEmpty(newBadgeIdsList)) {
-      ProjectCommonException.throwClientErrorException(ResponseCode.errorBadgesAlreadyAssociated);
-    }
-    List<Map<String, Object>> newBadgesDetails = getBadgesDetails(newBadgeIdsList);
-    if (newBadgesDetails.size() != newBadgeIdsList.size()) {
-      List<String> badgeIdsFoundList =
-          newBadgesDetails
-              .stream()
-              .map(q -> (String) q.get(BadgingJsonKey.BADGE_ID))
-              .collect(Collectors.toList());
-      ProjectLogger.log(
-          "BadgeAssociationAcotr: getBadgesDetailsToBeAdded: valid non-associatied requested Badgeid is "
-              + badgeIdsFoundList,
-          LoggerEnum.INFO);
-      List<String> invalidBadgeIdsList =
-          newBadgeIdsList
-              .stream()
-              .filter(q -> !badgeIdsFoundList.contains(q))
-              .collect(Collectors.toList());
-      ProjectCommonException.throwClientErrorException(
-          ResponseCode.invalidParameterValue,
-          MessageFormat.format(
-              ResponseCode.invalidParameterValue.getErrorMessage(),
-              StringFormatter.joinByComma(invalidBadgeIdsList.toArray(new String[0])),
-              BadgingJsonKey.BADGE_IDs));
+    List<Map<String, Object>> newBadgesDetails = new ArrayList<>();
+    if (CollectionUtils.isNotEmpty(newBadgeIdsList)) {
+      newBadgesDetails = getBadgesDetails(newBadgeIdsList);
+      if (newBadgesDetails.size() != newBadgeIdsList.size()) {
+        List<String> badgeIdsFoundList =
+            newBadgesDetails
+                .stream()
+                .map(q -> (String) q.get(BadgingJsonKey.BADGE_ID))
+                .collect(Collectors.toList());
+        ProjectLogger.log(
+            "BadgeAssociationAcotr: getBadgesDetailsToBeAdded: valid non-associatied requested Badgeid is "
+                + badgeIdsFoundList,
+            LoggerEnum.INFO);
+        List<String> invalidBadgeIdsList =
+            newBadgeIdsList
+                .stream()
+                .filter(q -> !badgeIdsFoundList.contains(q))
+                .collect(Collectors.toList());
+        ProjectCommonException.throwClientErrorException(
+            ResponseCode.invalidParameterValue,
+            MessageFormat.format(
+                ResponseCode.invalidParameterValue.getErrorMessage(),
+                StringFormatter.joinByComma(invalidBadgeIdsList.toArray(new String[0])),
+                BadgingJsonKey.BADGE_IDs));
+      }
     }
     return newBadgesDetails;
   }

@@ -193,6 +193,9 @@ public class BadgeAssociationActor extends BaseActor {
     ProjectLogger.log(
         "BadgeAssociationAcotr: getBadgesDetailsToBeAdded: new BadgeIdsList is " + newBadgeIdsList,
         LoggerEnum.INFO);
+    if (CollectionUtils.isEmpty(newBadgeIdsList)) {
+      ProjectCommonException.throwClientErrorException(ResponseCode.errorBadgesAlreadyAssociated);
+    }
     List<Map<String, Object>> newBadgesDetails = getBadgesDetails(newBadgeIdsList);
     if (newBadgesDetails.size() != newBadgeIdsList.size()) {
       List<String> badgeIdsFoundList =

@@ -643,7 +643,7 @@ public class BackgroundJobManager extends BaseActor {
   public void syncUserCourseBatchProgress(
       String batchId, String userId, Integer progress, Timestamp lastAccessedOn) {
     ProjectLogger.log(
-        "LearnerStateUpdateActor:syncUserCourseBatchProgress: data"
+        "BackgroundJobManager:syncUserCourseBatchProgress: data"
             + userId
             + "=="
             + progress
@@ -677,7 +677,7 @@ public class BackgroundJobManager extends BaseActor {
             userId,
             userMap);
     ProjectLogger.log(
-        "LearnerStateUpdateActor:syncUserCourseBatchProgress: sync user courses batch and  response  "
+        "BackgroundJobManager:syncUserCourseBatchProgress: sync user courses batch and  response  "
             + userId
             + "=="
             + response,

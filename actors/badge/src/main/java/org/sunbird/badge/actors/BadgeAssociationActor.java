@@ -190,6 +190,9 @@ public class BadgeAssociationActor extends BaseActor {
   private List<Map<String, Object>> getBadgesDetailsToBeAdded(
       List<Map<String, Object>> activeBadgesList, List<String> requestedBadges) {
     List<String> newBadgeIdsList = getUncommonBadgeIds(requestedBadges, activeBadgesList);
+    if (CollectionUtils.isEmpty(newBadgeIdsList)) {
+      ProjectCommonException.throwClientErrorException(ResponseCode.errorBadgesAlreadyAssociated);
+    }
     ProjectLogger.log(
         "BadgeAssociationAcotr: getBadgesDetailsToBeAdded: new BadgeIdsList is " + newBadgeIdsList,
         LoggerEnum.INFO);

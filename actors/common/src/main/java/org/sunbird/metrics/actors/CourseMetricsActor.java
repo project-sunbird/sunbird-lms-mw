@@ -97,8 +97,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
         (Map<String, Object>) courseBatchResult.get(JsonKey.COURSE_ADDITIONAL_INFO);
     if (!MapUtils.isEmpty(tempMap)) {
       String leafCount = (String) tempMap.get(JsonKey.LEAF_NODE_COUNT);
-      if (!StringUtils.isEmpty(leafCount) && StringUtils.isNumeric(leafCount)) ;
-      {
+      if (!StringUtils.isEmpty(leafCount) && StringUtils.isNumeric(leafCount)) {
         leafNodeCount = Integer.parseInt(leafCount);
       }
     }
@@ -175,7 +174,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     sender().tell(response, self());
   }
 
-  private Long getCompletedCount(String batchId, int leafNodeCount) {
+  private int getCompletedCount(String batchId, int leafNodeCount) {
     SearchDTO searchDTO = new SearchDTO();
     Map<String, Object> filter = new HashMap<>();
     filter.put(JsonKey.BATCHES + "." + JsonKey.BATCH_ID, batchId);
@@ -185,12 +184,36 @@ public class CourseMetricsActor extends BaseMetricsActor {
     Map<String, Object> result =
         ElasticSearchUtil.complexSearch(
             searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
+
     if (isNull(result) || result.size() == 0) {
       ProjectLogger.log(
           "CourseMetricsActor:getCompletedCount: No search results found.", LoggerEnum.INFO.name());
-      return 0L;
+      return 0;
     } else {
-      return (Long) result.get(JsonKey.COUNT);
+      List<Map<String, Object>> esBatchResult =
+          (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+      int count = 0;
+      if (!CollectionUtils.isEmpty(esBatchResult)) {
+        for (Map<String, Object> esContent : esBatchResult) {
+          List<Map<String, Object>> batches =
+              (List<Map<String, Object>>) esContent.get(JsonKey.BATCHES);
+          if (!CollectionUtils.isEmpty(batches)) {
+            for (Map<String, Object> batchMap : batches) {
+              if (batchId.equalsIgnoreCase((String) batchMap.get(JsonKey.BATCH_ID))
+                  && leafNodeCount == (Integer) batchMap.get(JsonKey.PROGRESS)) {
+                count++;
+              }
+            }
+          }
+        }
+      }
+      ProjectLogger.log(
+          "CourseMetricsActor:getCompletedCount: search results found."
+              + result.get(JsonKey.COUNT)
+              + " LeafNodeCount = "
+              + leafNodeCount,
+          LoggerEnum.INFO.name());
+      return count;
     }
   }
 

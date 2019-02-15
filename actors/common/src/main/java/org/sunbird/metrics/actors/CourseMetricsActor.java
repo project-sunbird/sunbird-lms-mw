@@ -157,6 +157,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
           (List<Map<String, Object>>) esContent.get(JsonKey.BATCHES)) {
         if (batchId.equalsIgnoreCase((String) batchMap.get(JsonKey.BATCH_ID))) {
           calculateCourseProgressPercentage(batchMap, leafNodeCount);
+          formatEnrolledOn(batchMap);
           map.putAll(batchMap);
         }
       }
@@ -172,6 +173,18 @@ public class CourseMetricsActor extends BaseMetricsActor {
     response.put("response", "SUCCESS");
     response.getResult().putAll(courseProgressResult);
     sender().tell(response, self());
+  }
+
+  private void formatEnrolledOn(Map<String, Object> batchMap) {
+    String timeStamp = (String) batchMap.get(JsonKey.LAST_ACCESSED_ON);
+    try {
+      SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+      Date parsedDate = sdf.parse(timeStamp);
+      batchMap.put(JsonKey.LAST_ACCESSED_ON, ProjectUtil.formatDate(parsedDate));
+    } catch (Exception e) { // this generic but you can control another types of exception
+      // look the origin of excption
+      ProjectLogger.log("formatEnrolledOn : " + e.getMessage(), LoggerEnum.INFO);
+    }
   }
 
   private int getCompletedCount(String batchId, int leafNodeCount) {

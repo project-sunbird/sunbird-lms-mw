@@ -3,11 +3,7 @@ package org.sunbird.learner.actors;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONException;
@@ -212,7 +208,7 @@ public class BackgroundJobManager extends BaseActor {
         (String) batch.get(JsonKey.BATCH_ID),
         (String) batch.get(JsonKey.USER_ID),
         (int) batch.get(JsonKey.PROGRESS),
-        (Timestamp) batch.get(JsonKey.DATE_TIME));
+        new Timestamp(new Date().getTime()));
   }
 
   @SuppressWarnings("unchecked")

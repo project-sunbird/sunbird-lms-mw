@@ -8,7 +8,6 @@ import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import org.junit.Test;
 import org.sunbird.common.BaseActorTest;
@@ -95,12 +94,6 @@ public class UserProfileActorTest extends BaseActorTest {
 
   @Override
   protected Response getRecordByIdCassandra() {
-    return null;
-  }
-
-  @Override
-  protected List<Response> getResponseList(
-      boolean isLocation, boolean isFirstRequired, boolean isSecondRequired) {
     return null;
   }
 }

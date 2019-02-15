@@ -116,10 +116,4 @@ public class UserStatusActorTest extends BaseActorTest {
     response.put(JsonKey.RESPONSE, resMapList);
     return response;
   }
-
-  @Override
-  protected List<Response> getResponseList(
-      boolean isLocation, boolean isFirstRequired, boolean isSecondRequired) {
-    return null;
-  }
 }

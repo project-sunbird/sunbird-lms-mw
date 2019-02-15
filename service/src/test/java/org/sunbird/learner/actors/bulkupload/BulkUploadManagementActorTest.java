@@ -239,12 +239,6 @@ public class BulkUploadManagementActorTest extends BaseActorTest {
   }
 
   @Override
-  protected List<Response> getResponseList(
-      boolean isLocation, boolean isFirstRequired, boolean isSecondRequired) {
-    return null;
-  }
-
-  @Override
   protected Map<String, Object> getDataByIdentifierElasticSearch() {
     return null;
   }

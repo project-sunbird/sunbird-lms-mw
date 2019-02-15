@@ -97,12 +97,10 @@ public abstract class BaseActorTest {
     mockElasticSearch();
   }
 
-  protected void mockInterserviceCommunication(
-      boolean isLocation, boolean isFirstPresent, boolean isSecondPresent) {
-    List<Response> logEntryList = getResponseList(isLocation, isFirstPresent, isSecondPresent);
+  protected void mockInterserviceCommunication(List list) {
     when(interServiceCommunication.getResponse(
             Mockito.any(ActorRef.class), Mockito.any(Request.class)))
-        .thenAnswer(AdditionalAnswers.returnsElementsOf(logEntryList));
+        .thenAnswer(AdditionalAnswers.returnsElementsOf(list));
   }
 
   private void mockElasticSearch() {
@@ -161,7 +159,4 @@ public abstract class BaseActorTest {
   protected abstract Response getRecordByIdWithFieldsCassandra();
 
   protected abstract Response getRecordByIdCassandra();
-
-  protected abstract List<Response> getResponseList(
-      boolean isLocation, boolean isFirstRequired, boolean isSecondRequired);
 }

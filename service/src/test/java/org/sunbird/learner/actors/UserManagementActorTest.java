@@ -296,7 +296,10 @@ public class UserManagementActorTest extends BaseActorTest {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
-    mockInterserviceCommunication(isLocation, isFirstPresent, isSecondPresent);
+    List<Response> listResponse = new ArrayList<>();
+    listResponse.add(getEsResponseForLocation(isLocation, isFirstPresent));
+    listResponse.add(getEsResponse(isSecondPresent));
+    mockInterserviceCommunication(listResponse);
     subject.tell(reqObj, probe.getRef());
 
     if (errorCode == null) {
@@ -374,30 +377,6 @@ public class UserManagementActorTest extends BaseActorTest {
     return lst;
   }
 
-  @Override
-  protected Map<String, Object> getDataByIdentifierElasticSearch() {
-    return esResponseMap;
-  }
-
-  @Override
-  protected Response getRecordByIdWithFieldsCassandra() {
-    return null;
-  }
-
-  @Override
-  protected Response getRecordByIdCassandra() {
-    return null;
-  }
-
-  @Override
-  protected List<Response> getResponseList(
-      boolean isLocation, boolean isFirstRequired, boolean isSecondRequired) {
-    List<Response> listResponse = new ArrayList<>();
-    listResponse.add(getEsResponseForLocation(isLocation, isFirstRequired));
-    listResponse.add(getEsResponse(isSecondRequired));
-    return listResponse;
-  }
-
   private static Response getEsResponseForLocation(boolean isLocation, boolean isFirstRequired) {
 
     Response response = null;
@@ -426,5 +405,20 @@ public class UserManagementActorTest extends BaseActorTest {
       return response;
     }
     return response;
+  }
+
+  @Override
+  protected Map<String, Object> getDataByIdentifierElasticSearch() {
+    return esResponseMap;
+  }
+
+  @Override
+  protected Response getRecordByIdWithFieldsCassandra() {
+    return null;
+  }
+
+  @Override
+  protected Response getRecordByIdCassandra() {
+    return null;
   }
 }

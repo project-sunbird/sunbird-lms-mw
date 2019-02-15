@@ -94,7 +94,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     Map<String, Object> courseBatchResult = validateAndGetCourseBatch(batchId);
     int leafNodeCount = 0;
     Map<String, Object> tempMap =
-        (Map<String, Object>) courseBatchResult.get(JsonKey.ADDITIONAL_INFO);
+        (Map<String, Object>) courseBatchResult.get(JsonKey.COURSE_ADDITIONAL_INFO);
     if (!MapUtils.isEmpty(tempMap)) {
       String leafCount = (String) tempMap.get(JsonKey.LEAF_NODE_COUNT);
       if (!StringUtils.isEmpty(leafCount) && StringUtils.isNumeric(leafCount)) ;

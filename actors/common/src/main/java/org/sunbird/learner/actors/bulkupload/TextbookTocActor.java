@@ -468,9 +468,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             .getOrDefault(JsonKey.IDENTIFIER, StringUtils.capitalize(JsonKey.IDENTIFIER))
             .toString();
     metadata.putAll(fwMetadata);
-
     CSVParser csvFileParser = null;
-
     CSVFormat csvFileFormat = CSVFormat.DEFAULT.withHeader();
 
     try (InputStreamReader reader = new InputStreamReader(inputStream, "UTF8"); ) {

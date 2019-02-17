@@ -150,6 +150,27 @@ public class CourseMetricsActorTest {
   }
 
   @Test
+  public void testCourseProgressMetricsV2WithInvalidUserId() {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request actorMessage = new Request();
+    actorMessage.put(JsonKey.REQUESTED_BY, userId);
+    actorMessage.put(JsonKey.BATCH_ID, batchId);
+    actorMessage.put(JsonKey.LIMIT, limit);
+    actorMessage.put(JsonKey.OFFSET, offset);
+    actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_V2.getValue());
+    when(ElasticSearchUtil.getDataByIdentifier(
+            EsIndex.sunbird.getIndexName(), EsType.course.getTypeName(), batchId))
+            .thenReturn(getBatchData());
+    subject.tell(actorMessage, probe.getRef());
+    ProjectCommonException e =
+            probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    Assert.assertEquals(ResponseCode.invalidCourseBatchId.getErrorCode(), e.getCode());
+  }
+
+  @Test
   public void testCourseProgressMetricsV2WithvalidBatchId() {
 
     TestKit probe = new TestKit(system);
@@ -464,6 +485,11 @@ public class CourseMetricsActorTest {
     when(ElasticSearchUtil.getDataByIdentifier(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(userOrgMap);
+  }
+
+  public Map<String,Object> getBatchData() {
+
+    return batchData;
   }
 
   //  public Map<String,Object> getBatchData() {

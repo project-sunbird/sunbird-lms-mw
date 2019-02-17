@@ -7,6 +7,8 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.helper.ServiceFactory;
 
@@ -37,10 +39,23 @@ public class ContentBadgeAssociationDaoImpl implements ContentBadgeAssociationDa
 
   @Override
   public void updateDataToES(Map<String, Object> badgeMap) {
-    ElasticSearchUtil.updateData(
-        ProjectUtil.EsIndex.sunbird.getIndexName(),
-        ProjectUtil.EsType.badgeassociations.getTypeName(),
-        (String) badgeMap.get(JsonKey.ID),
-        badgeMap);
+    ProjectLogger.log(
+        "ContentBadgeAssociationDaoImpl:updateDataToES: Updating data to ES for associationId: "
+            + (String) badgeMap.get(JsonKey.ID),
+        LoggerEnum.INFO);
+    try {
+      ElasticSearchUtil.updateData(
+          ProjectUtil.EsIndex.sunbird.getIndexName(),
+          ProjectUtil.EsType.badgeassociations.getTypeName(),
+          (String) badgeMap.get(JsonKey.ID),
+          badgeMap);
+    } catch (Exception e) {
+      ProjectLogger.log(
+          "ContentBadgeAssociationDaoImpl:updateDataToES: Exception occured while Updating data to ES for associationId: "
+              + (String) badgeMap.get(JsonKey.ID)
+              + " with exception "
+              + e.getMessage(),
+          LoggerEnum.INFO);
+    }
   }
 }

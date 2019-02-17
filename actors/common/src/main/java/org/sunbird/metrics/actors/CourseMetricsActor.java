@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -91,6 +92,15 @@ public class CourseMetricsActor extends BaseMetricsActor {
     String requestedBy = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
     validateUserId(requestedBy);
     Map<String, Object> courseBatchResult = validateAndGetCourseBatch(batchId);
+    int leafNodeCount = 0;
+    Map<String, Object> tempMap =
+        (Map<String, Object>) courseBatchResult.get(JsonKey.COURSE_ADDITIONAL_INFO);
+    if (!MapUtils.isEmpty(tempMap)) {
+      String leafCount = (String) tempMap.get(JsonKey.LEAF_NODE_COUNT);
+      if (!StringUtils.isEmpty(leafCount) && StringUtils.isNumeric(leafCount)) {
+        leafNodeCount = Integer.parseInt(leafCount);
+      }
+    }
     Map<String, Object> filter = new HashMap<>();
     filter.put(JsonKey.BATCHES + "." + JsonKey.BATCH_ID, batchId);
 
@@ -125,7 +135,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
             searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
     if (isNull(result) || result.size() == 0) {
       ProjectLogger.log(
-          "CourseMetricsActor:courseProgressMetricsV2: No search results found.", LoggerEnum.INFO.name());
+          "CourseMetricsActor:courseProgressMetricsV2: No search results found.",
+          LoggerEnum.INFO.name());
       ProjectCommonException.throwClientErrorException(ResponseCode.invalidCourseBatchId);
     }
 
@@ -134,13 +145,19 @@ public class CourseMetricsActor extends BaseMetricsActor {
     List<Map<String, Object>> userData = new ArrayList<>();
     for (Map<String, Object> esContent : esContents) {
       Map<String, Object> map = new HashMap<>();
-      map.put(
-          JsonKey.USER_NAME,
-          esContent.get(JsonKey.FIRST_NAME) + " " + esContent.get(JsonKey.LAST_NAME));
+      String firstName = (String) esContent.get(JsonKey.FIRST_NAME);
+      String lastName = (String) esContent.get(JsonKey.LAST_NAME);
+      if (StringUtils.isEmpty(lastName)) {
+        map.put(JsonKey.USER_NAME, firstName);
+      } else {
+        map.put(JsonKey.USER_NAME, firstName + " " + lastName);
+      }
       map.put(JsonKey.ORG_NAME, esContent.get(JsonKey.ROOT_ORG_NAME));
       for (Map<String, Object> batchMap :
           (List<Map<String, Object>>) esContent.get(JsonKey.BATCHES)) {
         if (batchId.equalsIgnoreCase((String) batchMap.get(JsonKey.BATCH_ID))) {
+          calculateCourseProgressPercentage(batchMap, leafNodeCount);
+          formatEnrolledOn(batchMap);
           map.putAll(batchMap);
         }
       }
@@ -151,29 +168,64 @@ public class CourseMetricsActor extends BaseMetricsActor {
     courseProgressResult.put(JsonKey.DATA, userData);
     courseProgressResult.put(JsonKey.START_DATE, courseBatchResult.get(JsonKey.START_DATE));
     courseProgressResult.put(JsonKey.END_DATE, courseBatchResult.get(JsonKey.END_DATE));
-    courseProgressResult.put(JsonKey.COMPLETED_COUNT, getCompletedCount(batchId));
+    courseProgressResult.put(JsonKey.COMPLETED_COUNT, getCompletedCount(batchId, leafNodeCount));
     Response response = new Response();
     response.put("response", "SUCCESS");
     response.getResult().putAll(courseProgressResult);
     sender().tell(response, self());
   }
 
-  private Long getCompletedCount(String batchId) {
+  private void formatEnrolledOn(Map<String, Object> batchMap) {
+    String timeStamp = (String) batchMap.get(JsonKey.LAST_ACCESSED_ON);
+    try {
+      SimpleDateFormat sdf = new SimpleDateFormat(ProjectUtil.ELASTIC_DATE_FORMAT);
+      Date parsedDate = sdf.parse(timeStamp);
+      batchMap.put(JsonKey.LAST_ACCESSED_ON, ProjectUtil.formatDate(parsedDate));
+    } catch (Exception e) {
+      ProjectLogger.log("formatEnrolledOn : " + e.getMessage(), LoggerEnum.INFO);
+    }
+  }
+
+  private int getCompletedCount(String batchId, int leafNodeCount) {
     SearchDTO searchDTO = new SearchDTO();
     Map<String, Object> filter = new HashMap<>();
     filter.put(JsonKey.BATCHES + "." + JsonKey.BATCH_ID, batchId);
-    filter.put(JsonKey.BATCHES + "." + JsonKey.PROGRESS, 100);
+    filter.put(JsonKey.BATCHES + "." + JsonKey.PROGRESS, leafNodeCount);
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filter);
 
     Map<String, Object> result =
         ElasticSearchUtil.complexSearch(
             searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
+
     if (isNull(result) || result.size() == 0) {
       ProjectLogger.log(
           "CourseMetricsActor:getCompletedCount: No search results found.", LoggerEnum.INFO.name());
-      return 0L;
+      return 0;
     } else {
-      return (Long) result.get(JsonKey.COUNT);
+      List<Map<String, Object>> esBatchResult =
+          (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+      int count = 0;
+      if (!CollectionUtils.isEmpty(esBatchResult)) {
+        for (Map<String, Object> esContent : esBatchResult) {
+          List<Map<String, Object>> batches =
+              (List<Map<String, Object>>) esContent.get(JsonKey.BATCHES);
+          if (!CollectionUtils.isEmpty(batches)) {
+            for (Map<String, Object> batchMap : batches) {
+              if (batchId.equalsIgnoreCase((String) batchMap.get(JsonKey.BATCH_ID))
+                  && leafNodeCount == (Integer) batchMap.get(JsonKey.PROGRESS)) {
+                count++;
+              }
+            }
+          }
+        }
+      }
+      ProjectLogger.log(
+          "CourseMetricsActor:getCompletedCount: search results found."
+              + result.get(JsonKey.COUNT)
+              + " LeafNodeCount = "
+              + leafNodeCount,
+          LoggerEnum.INFO.name());
+      return count;
     }
   }
 
@@ -190,7 +242,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
             EsIndex.sunbird.getIndexName(), EsType.course.getTypeName(), batchId);
     if (isNull(courseBatchResult) || courseBatchResult.size() == 0) {
       ProjectLogger.log(
-          "CourseMetricsActor:validateAndGetCourseBatch: batchId not found.", LoggerEnum.INFO.name());
+          "CourseMetricsActor:validateAndGetCourseBatch: batchId not found.",
+          LoggerEnum.INFO.name());
       ProjectCommonException.throwClientErrorException(ResponseCode.invalidCourseBatchId);
     }
     return courseBatchResult;

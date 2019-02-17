@@ -143,7 +143,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     sender().tell(response, sender());
   }
 
-  private void validateLinkedContents(Map<Integer, List<String>> rowNumVsContentIdsMap) {
+  private void validateLinkedContents(Map<Integer, List<String>> rowNumVsContentIdsMap)
+      throws Exception {
     // rowNumVsContentIdsMap convert to contentIdVsrowListMap
     if (MapUtils.isNotEmpty(rowNumVsContentIdsMap)) {
       Map<String, List<Integer>> contentIdVsRowNumMap = new HashMap<>();
@@ -165,8 +166,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   }
 
   @SuppressWarnings("unchecked")
-  private void callSearchApiForContentIdsValidation(
-      Map<String, List<Integer>> contentIdVsRowNumMap) {
+  private void callSearchApiForContentIdsValidation(Map<String, List<Integer>> contentIdVsRowNumMap)
+      throws Exception {
     List<String> contentIds = new ArrayList<>();
     contentIds.addAll(contentIdVsRowNumMap.keySet());
     Map<String, Object> requestMap = new HashMap<>();
@@ -181,7 +182,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     request.put(JsonKey.FIELDS, fields);
     if (CollectionUtils.isNotEmpty(contentIds)) {
       String requestUrl =
-          getConfigValue(JsonKey.EKSTEP_BASE_URL) + getConfigValue(JsonKey.SUNBIRD_CS_SEARCH_PATH);
+          getConfigValue(JsonKey.SUNBIRD_CS_BASE_URL)
+              + getConfigValue(JsonKey.SUNBIRD_CONTENT_SEARCH_URL);
       HttpResponse<String> updateResponse = null;
       try {
         updateResponse =
@@ -191,6 +193,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                 .asString();
         if (null != updateResponse) {
           Response response = mapper.readValue(updateResponse.getBody(), Response.class);
+          ProjectLogger.log(
+              "TextbookTocActor:callSearchApiForContentIdsValidation : response.getResponseCode().getResponseCode() : "
+                  + response.getResponseCode().getResponseCode(),
+              LoggerEnum.INFO.name());
           if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
             Map<String, Object> result = response.getResult();
             List<String> searchedContentIds = new ArrayList<>();
@@ -233,6 +239,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           throwCompositeSearchFailureError();
         }
       } catch (Exception e) {
+        if (e instanceof ProjectCommonException) {
+          throw e;
+        }
         ProjectLogger.log(
             "TextbookTocActor:validateLinkedContents : Error occurred with message "
                 + e.getMessage(),
@@ -459,9 +468,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             .getOrDefault(JsonKey.IDENTIFIER, StringUtils.capitalize(JsonKey.IDENTIFIER))
             .toString();
     metadata.putAll(fwMetadata);
-
     CSVParser csvFileParser = null;
-
     CSVFormat csvFileFormat = CSVFormat.DEFAULT.withHeader();
 
     try (InputStreamReader reader = new InputStreamReader(inputStream, "UTF8"); ) {
@@ -931,6 +938,13 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     List<Map<String, Object>> data =
         (List<Map<String, Object>>)
             ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.FILE_DATA);
+    String tbId = (String) request.get(TEXTBOOK_ID);
+    Set<String> identifierList = new HashSet<>();
+    identifierList.add(tbId);
+    data.forEach(
+        s -> {
+          identifierList.add((String) s.get(JsonKey.IDENTIFIER));
+        });
     if (CollectionUtils.isEmpty(data)) {
       throw new ProjectCommonException(
           ResponseCode.invalidRequestData.getErrorCode(),
@@ -941,7 +955,6 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           "Update Textbook - UpdateHierarchy input data : " + mapper.writeValueAsString(data),
           INFO.name());
       Map<String, Object> nodesModified = new HashMap<>();
-      String tbId = (String) request.get(TEXTBOOK_ID);
       nodesModified.put(
           tbId,
           new HashMap<String, Object>() {
@@ -974,6 +987,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                 tbId,
                 (String) textbookData.get(JsonKey.NAME),
                 (List<Map<String, Object>>) textbookHierarchy.get(JsonKey.CHILDREN));
+        ProjectLogger.log(
+            "TextbookTocActor:updateTextbook : ParentChildHierarchy structure : "
+                + mapper.writeValueAsString(hierarchyList),
+            LoggerEnum.INFO.name());
         Map<String, Object> hierarchy = populateHierarchyDataForUpdate(hierarchyList, tbId);
         data.forEach(
             s -> {
@@ -989,6 +1006,20 @@ public class TextbookTocActor extends BaseBulkUploadActor {
               }
             });
         hierarchyData.putAll(hierarchy);
+        hierarchyData
+            .entrySet()
+            .removeIf(
+                entry -> {
+                  if (!identifierList.contains(entry.getKey())) {
+                    return true;
+                  }
+                  return false;
+                });
+
+        ProjectLogger.log(
+            "TextbookTocActor:updateTextbook : hierarchyData structure : "
+                + mapper.writeValueAsString(hierarchyData),
+            LoggerEnum.INFO.name());
       }
 
       Map<String, Object> updateRequest = new HashMap<String, Object>();
@@ -1025,6 +1056,13 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                 (String) child.get(JsonKey.IDENTIFIER),
                 (String) child.get(JsonKey.NAME),
                 (List<Map<String, Object>>) child.get(JsonKey.CHILDREN)));
+      } else {
+        List<Map<String, Object>> newChildren = new ArrayList<>();
+        hierarchyList.addAll(
+            getParentChildHierarchy(
+                (String) child.get(JsonKey.IDENTIFIER),
+                (String) child.get(JsonKey.NAME),
+                newChildren));
       }
     }
     return hierarchyList;
@@ -1141,6 +1179,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             .headers(getDefaultHeaders())
             .body(mapper.writeValueAsString(updateRequest))
             .asString();
+    ProjectLogger.log(
+        "TextbookTocActor:updateHierarchy : Request for update hierarchy : "
+            + mapper.writeValueAsString(updateRequest),
+        LoggerEnum.INFO.name());
     if (null != updateResponse) {
       try {
         Response response = mapper.readValue(updateResponse.getBody(), Response.class);

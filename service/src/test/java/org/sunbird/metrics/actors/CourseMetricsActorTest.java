@@ -59,6 +59,7 @@ public class CourseMetricsActorTest {
   private static String batchId = "jkwf6t3r083fp4h";
   private static int limit = 200;
   private static int offset = 0;
+  private static int progress = 4;
   private static final String orgId = "vdckcyigc68569";
   private static Map<String, Object> infoMap = new HashMap<>();
   private static Map<String, Object> userOrgMap = new HashMap<>();
@@ -150,7 +151,7 @@ public class CourseMetricsActorTest {
   }
 
   @Test
-  public void testCourseProgressMetricsV2WithInvalidUserId() {
+  public void testCourseProgressMetricsV2WithNoUser() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -163,11 +164,60 @@ public class CourseMetricsActorTest {
     actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_V2.getValue());
     when(ElasticSearchUtil.getDataByIdentifier(
             EsIndex.sunbird.getIndexName(), EsType.course.getTypeName(), batchId))
-            .thenReturn(getBatchData());
+        .thenReturn(getBatchData())
+        .thenReturn(null);
     subject.tell(actorMessage, probe.getRef());
     ProjectCommonException e =
-            probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
     Assert.assertEquals(ResponseCode.invalidCourseBatchId.getErrorCode(), e.getCode());
+  }
+
+  @Test
+  public void testCourseProgressMetricsV2WithUser() {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request actorMessage = new Request();
+    actorMessage.getContext().put(JsonKey.REQUESTED_BY, userId);
+    actorMessage.getContext().put(JsonKey.BATCH_ID, batchId);
+    actorMessage.getContext().put(JsonKey.LIMIT, limit);
+    actorMessage.getContext().put(JsonKey.OFFSET, offset);
+    actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_V2.getValue());
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(getMockUser())
+        .thenReturn(getBatchData());
+    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(mockUserData())
+        .thenReturn(null);
+    subject.tell(actorMessage, probe.getRef());
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+    Assert.assertEquals(ResponseCode.OK, res.getResponseCode());
+  }
+
+  @Test
+  public void testCourseProgressMetricsV2WithCompletedCount() {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request actorMessage = new Request();
+    actorMessage.getContext().put(JsonKey.REQUESTED_BY, userId);
+    actorMessage.getContext().put(JsonKey.BATCH_ID, batchId);
+    actorMessage.getContext().put(JsonKey.LIMIT, limit);
+    actorMessage.getContext().put(JsonKey.OFFSET, offset);
+    actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_V2.getValue());
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(getMockUser())
+        .thenReturn(getBatchData());
+    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(mockUserData())
+        .thenReturn(getCompleteUserCount());
+    subject.tell(actorMessage, probe.getRef());
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+    Assert.assertEquals(1, res.getResult().get(JsonKey.COMPLETED_COUNT));
   }
 
   @Test
@@ -487,9 +537,43 @@ public class CourseMetricsActorTest {
         .thenReturn(userOrgMap);
   }
 
-  public Map<String,Object> getBatchData() {
-
+  public Map<String, Object> getBatchData() {
+    Map<String, Object> batchData = new HashMap<>();
+    batchData.put(JsonKey.START_DATE, "startDate");
+    batchData.put(JsonKey.END_DATE, "endDate");
+    Map<String, Object> additionalInfo = new HashMap<>();
+    additionalInfo.put(JsonKey.LEAF_NODE_COUNT, progress + "");
+    batchData.put(JsonKey.COURSE_ADDITIONAL_INFO, additionalInfo);
     return batchData;
+  }
+
+  private Map<String, Object> mockUserData() {
+    Map<String, Object> data = new HashMap<>();
+    List<Map<String, Object>> users = new ArrayList<>();
+    data.put(JsonKey.CONTENT, users);
+
+    return data;
+  }
+
+  private Map<String, Object> getCompleteUserCount() {
+    Map<String, Object> esMap = new HashMap<>();
+    List<Map<String, Object>> dataList = new ArrayList<>();
+    Map<String, Object> data = new HashMap<>();
+    List<Map<String, Object>> list = new ArrayList<>();
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.BATCH_ID, batchId);
+    map.put(JsonKey.PROGRESS, progress);
+    list.add(map);
+    data.put(JsonKey.BATCHES, list);
+    dataList.add(data);
+    esMap.put(JsonKey.CONTENT, dataList);
+    return esMap;
+  }
+
+  public Map<String, Object> getMockUser() {
+    Map<String, Object> mockUser = new HashMap<>();
+    mockUser.put(JsonKey.FIRST_NAME, "anyName");
+    return mockUser;
   }
 
   //  public Map<String,Object> getBatchData() {

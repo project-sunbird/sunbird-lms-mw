@@ -31,7 +31,7 @@ public class UserTypeActor extends UserBaseActor {
 
     Response response = new Response();
     List<Map<String, String>> userTypeList = getUserTypeList();
-    response.getResult().put(JsonKey.USER_TYPES, userTypeList);
+    response.getResult().put(JsonKey.RESPONSE, userTypeList);
     sender().tell(response, self());
   }
 

@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -112,6 +113,7 @@ public class UserManagementActor extends BaseActor {
       isPrivate = (boolean) actorMessage.getContext().get(JsonKey.PRIVATE);
     }
     if (!isPrivate) {
+      actorMessage.getRequest().remove(JsonKey.USER_ORG);
       if (StringUtils.isNotBlank(callerId)) {
         userService.validateUploader(actorMessage);
       } else {
@@ -149,11 +151,15 @@ public class UserManagementActor extends BaseActor {
     Response response =
         cassandraOperation.updateRecord(
             usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
+
     if (StringUtils.isNotBlank(callerId)) {
       userMap.put(JsonKey.ROOT_ORG_ID, actorMessage.getContext().get(JsonKey.ROOT_ORG_ID));
     }
     Response resp = null;
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+      if (isPrivate) {
+        updateUserOrganisations(actorMessage);
+      }
       Map<String, Object> userRequest = new HashMap<>(userMap);
       userRequest.put(JsonKey.OPERATION_TYPE, JsonKey.UPDATE);
       resp = saveUserAttributes(userRequest);
@@ -173,6 +179,60 @@ public class UserManagementActor extends BaseActor {
         TelemetryUtil.generateTargetObject(
             (String) userMap.get(JsonKey.USER_ID), JsonKey.USER, JsonKey.UPDATE, null);
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
+  }
+
+  private void updateUserOrganisations(Request actorMessage) {
+    if (null != actorMessage.getRequest().get(JsonKey.USER_ORG)) {
+      ProjectLogger.log(
+          "UserManagementActor:updateUserOrganisations : "
+              + "updateUserOrganisation Called with valide data",
+          LoggerEnum.INFO);
+      List<Map<String, Object>> orgList =
+          (List<Map<String, Object>>) actorMessage.getRequest().get(JsonKey.USER_ORG);
+      String userId = (String) actorMessage.getContext().get(JsonKey.USER_ID);
+      List<Map<String, Object>> orgListDb = UserUtil.getUserOrgDetails(userId);
+      Map<String, Object> orgDbMap = new HashMap<>();
+      if (CollectionUtils.isNotEmpty(orgListDb)) {
+        orgListDb.forEach(org -> orgDbMap.put((String) org.get(JsonKey.ORGANISATION_ID), org));
+      }
+      List<String> userOrgTobeRemoved = new ArrayList<>();
+
+      for (Map<String, Object> org : orgList) {
+        if (MapUtils.isNotEmpty(org)) {
+          String id = (String) org.get(JsonKey.ORGANISATION_ID);
+          org.put(JsonKey.USER_ID, userId);
+          org.put(JsonKey.IS_DELETED, false);
+
+          if (null != id && orgDbMap.containsKey(id)) {
+            org.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+            org.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
+            UserUtil.updateUserOrg(
+                org,
+                new HashMap<String, Object>() {
+                  {
+                    put(JsonKey.ID, ((Map<String, Object>) orgDbMap.get(id)).get(JsonKey.ID));
+                  }
+                });
+            orgDbMap.remove(id);
+          } else {
+            org.put(JsonKey.ORG_JOIN_DATE, ProjectUtil.getFormattedDate());
+            org.put(JsonKey.ADDED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
+            org.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv()));
+            UserUtil.createUserOrg(org);
+          }
+        }
+      }
+      Set<String> ids = orgDbMap.keySet();
+      for (String id : ids) {
+        userOrgTobeRemoved.add((String) ((Map<String, Object>) orgDbMap.get(id)).get(JsonKey.ID));
+      }
+      if (CollectionUtils.isNotEmpty(userOrgTobeRemoved)) {
+        UserUtil.deleteUserOrg(userOrgTobeRemoved);
+      }
+      ProjectLogger.log(
+          "UserManagementActor:updateUserOrganisations : " + "updateUserOrganisation Completed",
+          LoggerEnum.INFO);
+    }
   }
 
   private void validateUserTypeForUpdate(Map<String, Object> userMap) {

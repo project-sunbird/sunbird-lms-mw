@@ -17,6 +17,7 @@ import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
@@ -624,6 +625,35 @@ public class UserUtil {
       ProjectLogger.log(e.getMessage(), e);
     }
     return organisations;
+  }
+
+  public static void updateUserOrg(Map<String, Object> userOrg, Map<String, Object> key) {
+    Util.DbInfo orgUsrDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
+    try {
+      cassandraOperation.updateRecord(
+          orgUsrDbInfo.getKeySpace(), orgUsrDbInfo.getTableName(), userOrg, key);
+      ProjectLogger.log("UserUtil : updateUserOrg : Success ", LoggerEnum.INFO);
+    } catch (Exception e) {
+      ProjectLogger.log("UserUtil : updateUserOrg : Failed ", e);
+    }
+  }
+
+  public static void createUserOrg(Map<String, Object> userOrg) {
+    Util.DbInfo orgUsrDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
+    Response result =
+        cassandraOperation.insertRecord(
+            orgUsrDbInfo.getKeySpace(), orgUsrDbInfo.getTableName(), userOrg);
+    String response = (String) result.get(JsonKey.RESPONSE);
+    if (JsonKey.SUCCESS.equals(response)) {
+      ProjectLogger.log("UserUtil : createUserOrg : Success ", LoggerEnum.INFO);
+    } else {
+      ProjectLogger.log("UserUtil : createUserOrg : Failed ", LoggerEnum.INFO);
+    }
+  }
+
+  public static void deleteUserOrg(List<String> ids) {
+    Util.DbInfo orgUsrDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
+    cassandraOperation.deleteRecords(orgUsrDbInfo.getKeySpace(), orgUsrDbInfo.getTableName(), ids);
   }
 
   public static void toLower(Map<String, Object> userMap) {

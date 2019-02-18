@@ -181,7 +181,7 @@ public class BadgingUtil {
       return mapper.writeValueAsString(node);
     } catch (JsonProcessingException e) {
       ProjectLogger.log(
-          "BadgingUtil :createAssertionReqData : JsonProcessingException ", LoggerEnum.INFO.name());
+          "BadgingUtil :createAssertionReqData : JsonProcessingException " + e.getMessage(), e);
     }
     return null;
   }

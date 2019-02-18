@@ -513,9 +513,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             for (String dCode : dialCodeList) {
               if (!dialCodes.add(dCode.trim())) {
                 throwClientErrorException(
-                    ResponseCode.errorDuplicateEntries,
+                    ResponseCode.errorDduplicateDialCodeEntry,
                     MessageFormat.format(
-                        ResponseCode.errorDuplicateEntries.getErrorMessage(), dialCode));
+                        ResponseCode.errorDduplicateDialCodeEntry.getErrorMessage(), dialCode));
               }
             }
           }

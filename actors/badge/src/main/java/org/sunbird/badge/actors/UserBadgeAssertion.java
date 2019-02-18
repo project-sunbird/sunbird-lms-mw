@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.badge.BadgeOperations;
@@ -69,8 +71,16 @@ public class UserBadgeAssertion extends BaseActor {
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.user.getTypeName(),
             (String) map.get(JsonKey.USER_ID));
-    if (result.containsKey(BadgingJsonKey.BADGE_ASSERTIONS)
-        && null != result.get(BadgingJsonKey.BADGE_ASSERTIONS)) {
+    if (MapUtils.isEmpty(result)) {
+      ProjectLogger.log(
+          "UserBadgeAssertion:updateUserBadgeDataToES user with userId "
+              + (String) map.get(JsonKey.USER_ID)
+              + " not found",
+          LoggerEnum.INFO.name());
+      return;
+    }
+    if (CollectionUtils.isNotEmpty(
+        (List<Map<String, Object>>) result.get(BadgingJsonKey.BADGE_ASSERTIONS))) {
       List<Map<String, Object>> badgeAssertionsList =
           (List<Map<String, Object>>) result.get(BadgingJsonKey.BADGE_ASSERTIONS);
 

@@ -5,15 +5,7 @@ import static org.sunbird.common.models.util.ProjectUtil.isNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
@@ -23,11 +15,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.ReportTrackingStatus;
@@ -37,6 +25,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 
 @ActorConfig(
@@ -185,8 +174,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
   }
 
   private String decryptAndMaskPhone(String phone) {
-    String decryptedPHone = decryptionService.decryptData(phone);
-    return maskEmailOrPhone(decryptedPHone, JsonKey.PHONE);
+    return UserUtility.maskEmailOrPhone(phone, JsonKey.PHONE);
   }
 
   private void formatEnrolledOn(Map<String, Object> batchMap) {
@@ -923,17 +911,5 @@ public class CourseMetricsActor extends BaseMetricsActor {
       ProjectLogger.log("Error occurred", e);
     }
     return result;
-  }
-
-  private String maskEmailOrPhone(String encryptedEmailOrPhone, String type) {
-    if (StringUtils.isEmpty(encryptedEmailOrPhone)) {
-      return StringUtils.EMPTY;
-    }
-    if (JsonKey.PHONE.equals(type)) {
-      return maskingService.maskPhone(decryptionService.decryptData(encryptedEmailOrPhone));
-    } else if (JsonKey.EMAIL.equals(type)) {
-      return maskingService.maskEmail(decryptionService.decryptData(encryptedEmailOrPhone));
-    }
-    return StringUtils.EMPTY;
   }
 }

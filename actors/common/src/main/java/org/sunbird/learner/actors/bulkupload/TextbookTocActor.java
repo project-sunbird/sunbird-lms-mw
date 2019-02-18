@@ -181,11 +181,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     fields.add(JsonKey.IDENTIFIER);
     request.put(JsonKey.FIELDS, fields);
     if (CollectionUtils.isNotEmpty(contentIds)) {
-      String requestUrl = getConfigValue(JsonKey.SUNBIRD_WEB_URL) + "/api/composite/v1/search";
-      // + getConfigValue(JsonKey.SUNBIRD_CS_SEARCH_PATH);
-      ProjectLogger.log(
-          "TextbookTocActor:callSearchApiForContentIdsValidation : requestUrl : " + requestUrl,
-          LoggerEnum.INFO.name());
+      String requestUrl =
+          getConfigValue(JsonKey.SUNBIRD_CS_BASE_URL)
+              + getConfigValue(JsonKey.SUNBIRD_CONTENT_SEARCH_URL);
       HttpResponse<String> updateResponse = null;
       try {
         updateResponse =
@@ -193,14 +191,6 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                 .headers(getDefaultHeaders())
                 .body(mapper.writeValueAsString(requestMap))
                 .asString();
-        ProjectLogger.log(
-            "TextbookTocActor:callSearchApiForContentIdsValidation : headers : "
-                + mapper.writeValueAsString(getDefaultHeaders()),
-            LoggerEnum.INFO.name());
-        ProjectLogger.log(
-            "TextbookTocActor:callSearchApiForContentIdsValidation : request : "
-                + mapper.writeValueAsString(requestMap),
-            LoggerEnum.INFO.name());
         if (null != updateResponse) {
           Response response = mapper.readValue(updateResponse.getBody(), Response.class);
           ProjectLogger.log(
@@ -209,10 +199,6 @@ public class TextbookTocActor extends BaseBulkUploadActor {
               LoggerEnum.INFO.name());
           if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
             Map<String, Object> result = response.getResult();
-            ProjectLogger.log(
-                "TextbookTocActor:callSearchApiForContentIdsValidation : request : "
-                    + mapper.writeValueAsString(result),
-                LoggerEnum.INFO.name());
             List<String> searchedContentIds = new ArrayList<>();
             if (MapUtils.isNotEmpty(result)) {
               int count = (int) result.get(JsonKey.COUNT);
@@ -482,9 +468,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             .getOrDefault(JsonKey.IDENTIFIER, StringUtils.capitalize(JsonKey.IDENTIFIER))
             .toString();
     metadata.putAll(fwMetadata);
-
     CSVParser csvFileParser = null;
-
     CSVFormat csvFileFormat = CSVFormat.DEFAULT.withHeader();
 
     try (InputStreamReader reader = new InputStreamReader(inputStream, "UTF8"); ) {
@@ -529,9 +513,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             for (String dCode : dialCodeList) {
               if (!dialCodes.add(dCode.trim())) {
                 throwClientErrorException(
-                    ResponseCode.errorDuplicateEntries,
+                    ResponseCode.errorDduplicateDialCodeEntry,
                     MessageFormat.format(
-                        ResponseCode.errorDuplicateEntries.getErrorMessage(), dialCode));
+                        ResponseCode.errorDduplicateDialCodeEntry.getErrorMessage(), dialCode));
               }
             }
           }

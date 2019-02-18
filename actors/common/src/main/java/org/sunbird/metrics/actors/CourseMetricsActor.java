@@ -31,6 +31,7 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.ReportTrackingStatus;
+import org.sunbird.common.models.util.datasecurity.DataMaskingService;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -56,6 +57,9 @@ public class CourseMetricsActor extends BaseMetricsActor {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private DecryptionService decryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
+          null);
+  private DataMaskingService maskingService =
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance(
           null);
 
   @Override
@@ -152,6 +156,11 @@ public class CourseMetricsActor extends BaseMetricsActor {
       } else {
         map.put(JsonKey.USER_NAME, firstName + " " + lastName);
       }
+      String phone = null;
+      if (esContent.containsKey(JsonKey.ENC_PHONE)) {
+        phone = decryptAndMaskPhone((String) esContent.get(JsonKey.ENC_PHONE));
+      }
+      map.put(JsonKey.PHONE, phone);
       map.put(JsonKey.ORG_NAME, esContent.get(JsonKey.ROOT_ORG_NAME));
       for (Map<String, Object> batchMap :
           (List<Map<String, Object>>) esContent.get(JsonKey.BATCHES)) {
@@ -173,6 +182,11 @@ public class CourseMetricsActor extends BaseMetricsActor {
     response.put("response", "SUCCESS");
     response.getResult().putAll(courseProgressResult);
     sender().tell(response, self());
+  }
+
+  private String decryptAndMaskPhone(String phone) {
+    String decryptedPHone = decryptionService.decryptData(phone);
+    return maskEmailOrPhone(decryptedPHone, JsonKey.PHONE);
   }
 
   private void formatEnrolledOn(Map<String, Object> batchMap) {
@@ -909,5 +923,17 @@ public class CourseMetricsActor extends BaseMetricsActor {
       ProjectLogger.log("Error occurred", e);
     }
     return result;
+  }
+
+  private String maskEmailOrPhone(String encryptedEmailOrPhone, String type) {
+    if (StringUtils.isEmpty(encryptedEmailOrPhone)) {
+      return StringUtils.EMPTY;
+    }
+    if (JsonKey.PHONE.equals(type)) {
+      return maskingService.maskPhone(decryptionService.decryptData(encryptedEmailOrPhone));
+    } else if (JsonKey.EMAIL.equals(type)) {
+      return maskingService.maskEmail(decryptionService.decryptData(encryptedEmailOrPhone));
+    }
+    return StringUtils.EMPTY;
   }
 }

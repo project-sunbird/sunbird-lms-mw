@@ -221,7 +221,7 @@ public class BadgingUtil {
     } catch (JsonProcessingException e) {
       ProjectLogger.log(
           "BadgingUtil :createAssertionRevokeData : JsonProcessingException ",
-          LoggerEnum.INFO.name());
+          LoggerEnum.ERROR);
     }
     return null;
   }
@@ -268,7 +268,7 @@ public class BadgingUtil {
       int statusCode, String errorMsg, String objectType) throws ProjectCommonException {
     ProjectLogger.log(
         "throwBadgeClassExceptionOnErrorStatus called with statusCode = " + statusCode,
-        LoggerEnum.INFO.name());
+        LoggerEnum.ERROR);
     if (statusCode < 200 || statusCode > 300) {
       ResponseCode customError;
       String specificErrorMsg;

@@ -1,7 +1,9 @@
 package org.sunbird.user.actors;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
@@ -28,16 +30,19 @@ public class UserTypeActor extends UserBaseActor {
   private void getUserTypes() {
 
     Response response = new Response();
-    List<String> userTypeList = getUserTypeList();
+    List<Map<String, String>> userTypeList = getUserTypeList();
     response.getResult().put(JsonKey.USER_TYPES, userTypeList);
     sender().tell(response, self());
   }
 
-  private List<String> getUserTypeList() {
-    List<String> userTypeList = new ArrayList<>();
+  private List<Map<String, String>> getUserTypeList() {
+    List<Map<String, String>> userTypeList = new ArrayList<>();
 
     for (UserType userType : UserType.values()) {
-      userTypeList.add(userType.getTypeName());
+      Map<String, String> userTypeMap = new HashMap<>();
+      userTypeMap.put(JsonKey.ID, userType.getTypeName());
+      userTypeMap.put(JsonKey.NAME, userType.getTypeName());
+      userTypeList.add(userTypeMap);
     }
     return userTypeList;
   }

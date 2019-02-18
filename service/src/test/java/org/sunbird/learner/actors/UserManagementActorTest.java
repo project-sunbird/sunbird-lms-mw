@@ -9,7 +9,10 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -18,7 +21,11 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
+import org.sunbird.actorutil.InterServiceCommunication;
+import org.sunbird.actorutil.InterServiceCommunicationFactory;
+import org.sunbird.actorutil.impl.InterServiceCommunicationImpl;
 import org.sunbird.actorutil.location.impl.LocationClientImpl;
+import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.common.BaseActorTest;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -37,7 +44,8 @@ import org.sunbird.user.util.UserUtil;
   Util.class,
   UserServiceImpl.class,
   UserUtil.class,
-  LocationClientImpl.class,
+  InterServiceCommunicationFactory.class,
+  LocationClientImpl.class
 })
 @PowerMockIgnore({"javax.management.*"})
 public class UserManagementActorTest extends BaseActorTest {
@@ -46,15 +54,26 @@ public class UserManagementActorTest extends BaseActorTest {
   private static final Props props = Props.create(UserManagementActor.class);
   private static Map<String, Object> reqMap;
   private static final HashMap esResponseMap = getEsResponseMap();
+  private static InterServiceCommunication interServiceCommunication =
+      mock(InterServiceCommunicationImpl.class);
 
   @Before
-  public void beforeEachTest() throws Exception {
+  public void beforeEachTest() {
 
-    PowerMockito.mockStatic(LocationClientImpl.class);
-    LocationClientImpl locationClient = mock(LocationClientImpl.class);
-    PowerMockito.whenNew(LocationClientImpl.class).withNoArguments().thenReturn(locationClient);
-    when(locationClient.getRelatedLocationIds(Mockito.any(ActorRef.class), Mockito.anyList()))
-        .thenReturn(getLocationList());
+    PowerMockito.mockStatic(InterServiceCommunicationFactory.class);
+    when(InterServiceCommunicationFactory.getInstance())
+        .thenReturn(interServiceCommunication)
+        .thenReturn(interServiceCommunication);
+
+    PowerMockito.mockStatic(SystemSettingClientImpl.class);
+    SystemSettingClientImpl systemSettingClient = mock(SystemSettingClientImpl.class);
+    when(SystemSettingClientImpl.getInstance()).thenReturn(systemSettingClient);
+    when(systemSettingClient.getSystemSettingByFieldAndKey(
+            Mockito.any(ActorRef.class),
+            Mockito.anyString(),
+            Mockito.anyString(),
+            Mockito.anyObject()))
+        .thenReturn(new HashMap<>());
 
     PowerMockito.mockStatic(UserServiceImpl.class);
     UserServiceImpl userService = mock(UserServiceImpl.class);
@@ -296,10 +315,7 @@ public class UserManagementActorTest extends BaseActorTest {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
-    List<Response> listResponse = new ArrayList<>();
-    listResponse.add(getEsResponseForLocation(isLocation, isFirstPresent));
-    listResponse.add(getEsResponse(isSecondPresent));
-    mockInterserviceCommunication(listResponse);
+    getInterServiceCommunicationResponse(isFirstPresent, isSecondPresent, isLocation);
     subject.tell(reqObj, probe.getRef());
 
     if (errorCode == null) {
@@ -311,6 +327,15 @@ public class UserManagementActorTest extends BaseActorTest {
       return res.getCode().equals(errorCode.getErrorCode())
           || res.getResponseCode() == errorCode.getResponseCode();
     }
+  }
+
+  private void getInterServiceCommunicationResponse(
+      boolean isFirstPresent, boolean isSecondPresent, boolean isLocation) {
+
+    when(interServiceCommunication.getResponse(
+            Mockito.any(ActorRef.class), Mockito.any(Request.class)))
+        .thenReturn(getEsResponseForLocation(isFirstPresent, isLocation))
+        .thenReturn(getEsResponse(isSecondPresent));
   }
 
   private Map<String, Object> getExternalIdMap() {
@@ -370,14 +395,7 @@ public class UserManagementActorTest extends BaseActorTest {
     return map;
   }
 
-  private List getLocationList() {
-
-    List<String> lst = new ArrayList<>();
-    lst.add("anyCode");
-    return lst;
-  }
-
-  private static Response getEsResponseForLocation(boolean isLocation, boolean isFirstRequired) {
+  private static Response getEsResponseForLocation(boolean isFirstRequired, boolean isLocation) {
 
     Response response = null;
     if (isFirstRequired) {

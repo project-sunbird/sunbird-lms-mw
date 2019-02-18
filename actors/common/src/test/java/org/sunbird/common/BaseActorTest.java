@@ -12,7 +12,6 @@ import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.representations.idm.UserRepresentation;
-import org.mockito.AdditionalAnswers;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
@@ -20,16 +19,13 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.core.classloader.annotations.SuppressStaticInitializationFor;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.actor.router.RequestRouter;
-import org.sunbird.actorutil.InterServiceCommunication;
-import org.sunbird.actorutil.InterServiceCommunicationFactory;
-import org.sunbird.actorutil.impl.InterServiceCommunicationImpl;
+import org.sunbird.actorutil.location.impl.LocationClientImpl;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.KeyCloakConnectionProvider;
 import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.request.Request;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
@@ -40,17 +36,15 @@ import org.sunbird.learner.util.Util;
   ServiceFactory.class,
   RequestRouter.class,
   KeyCloakConnectionProvider.class,
-  InterServiceCommunicationFactory.class,
   SystemSettingClientImpl.class,
-  Util.class
+  Util.class,
+  LocationClientImpl.class
 })
 @SuppressStaticInitializationFor({"util.AuthenticationHelper", "util.Global"})
 @PowerMockIgnore("javax.management.*")
 public abstract class BaseActorTest {
 
   private static CassandraOperationImpl cassandraOperation = mock(CassandraOperationImpl.class);
-  static InterServiceCommunication interServiceCommunication =
-      mock(InterServiceCommunicationImpl.class);
 
   @Before
   public void before() {
@@ -77,30 +71,8 @@ public abstract class BaseActorTest {
     PowerMockito.mockStatic(RequestRouter.class);
     when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
 
-    PowerMockito.mockStatic(InterServiceCommunicationFactory.class);
-
-    when(InterServiceCommunicationFactory.getInstance())
-        .thenReturn(interServiceCommunication)
-        .thenReturn(interServiceCommunication);
-
-    PowerMockito.mockStatic(SystemSettingClientImpl.class);
-    SystemSettingClientImpl systemSettingClient = mock(SystemSettingClientImpl.class);
-    when(SystemSettingClientImpl.getInstance()).thenReturn(systemSettingClient);
-    when(systemSettingClient.getSystemSettingByFieldAndKey(
-            Mockito.any(ActorRef.class),
-            Mockito.anyString(),
-            Mockito.anyString(),
-            Mockito.anyObject()))
-        .thenReturn(new HashMap<>());
-
     mockCassandraOperations();
     mockElasticSearch();
-  }
-
-  protected void mockInterserviceCommunication(List list) {
-    when(interServiceCommunication.getResponse(
-            Mockito.any(ActorRef.class), Mockito.any(Request.class)))
-        .thenAnswer(AdditionalAnswers.returnsElementsOf(list));
   }
 
   private void mockElasticSearch() {

@@ -1,7 +1,8 @@
 package org.sunbird.badge.util;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.JsonObject;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.Calendar;
@@ -38,6 +39,7 @@ public class BadgingUtil {
   private static final String DEFAULT_BADGE_ID = "badge-def";
   private static PropertiesCache propertiesCache = PropertiesCache.getInstance();
   private static BadgingService service = BadgingFactory.getInstance();
+  private static ObjectMapper mapper = new ObjectMapper();
 
   public static String getBadgrBaseUrl() {
     String badgerBaseUrl = SUNBIRD_BADGR_SERVER_URL_DEFAULT;
@@ -165,14 +167,23 @@ public class BadgingUtil {
    * @return String
    */
   public static String createAssertionReqData(Map<String, Object> map) {
-    JsonObject json = new JsonObject();
-    json.addProperty(
-        BadgingJsonKey.RECIPIENT_IDENTIFIER, (String) map.get(BadgingJsonKey.RECIPIENT_EMAIL));
+
+    ObjectNode node = mapper.createObjectNode();
+    ((ObjectNode) node)
+        .put(BadgingJsonKey.RECIPIENT_IDENTIFIER, (String) map.get(BadgingJsonKey.RECIPIENT_EMAIL));
+
     if (!StringUtils.isBlank((String) map.get(BadgingJsonKey.EVIDENCE))) {
-      json.addProperty(BadgingJsonKey.EVIDENCE, (String) map.get(BadgingJsonKey.EVIDENCE));
+      ((ObjectNode) node).put(BadgingJsonKey.EVIDENCE, (String) map.get(BadgingJsonKey.EVIDENCE));
     }
-    json.addProperty(BadgingJsonKey.CREATE_NOTIFICATION, false);
-    return json.toString();
+    ((ObjectNode) node).put(BadgingJsonKey.CREATE_NOTIFICATION, false);
+
+    try {
+      return mapper.writeValueAsString(node);
+    } catch (JsonProcessingException e) {
+      ProjectLogger.log(
+          "BadgingUtil :createAssertionReqData : JsonProcessingException " + e.getMessage(), e);
+    }
+    return null;
   }
 
   public static void prepareBadgeIssuerResponse(String inputJson, Map<String, Object> outputMap)
@@ -201,9 +212,17 @@ public class BadgingUtil {
    * @return String
    */
   public static String createAssertionRevokeData(Map<String, Object> map) {
-    JsonObject json = new JsonObject();
-    json.addProperty("revocation_reason", (String) map.get(BadgingJsonKey.REVOCATION_REASON));
-    return json.toString();
+
+    ObjectNode node = mapper.createObjectNode();
+    ((ObjectNode) node)
+        .put("revocation_reason", (String) map.get(BadgingJsonKey.REVOCATION_REASON));
+    try {
+      return mapper.writeValueAsString(node);
+    } catch (JsonProcessingException e) {
+      ProjectLogger.log(
+          "BadgingUtil :createAssertionRevokeData : JsonProcessingException ", LoggerEnum.ERROR);
+    }
+    return null;
   }
 
   /**
@@ -248,7 +267,7 @@ public class BadgingUtil {
       int statusCode, String errorMsg, String objectType) throws ProjectCommonException {
     ProjectLogger.log(
         "throwBadgeClassExceptionOnErrorStatus called with statusCode = " + statusCode,
-        LoggerEnum.INFO.name());
+        LoggerEnum.ERROR);
     if (statusCode < 200 || statusCode > 300) {
       ResponseCode customError;
       String specificErrorMsg;

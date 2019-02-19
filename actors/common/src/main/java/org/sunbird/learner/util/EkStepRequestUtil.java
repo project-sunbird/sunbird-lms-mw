@@ -1,6 +1,7 @@
 /** */
 package org.sunbird.learner.util;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.HashMap;
@@ -9,8 +10,6 @@ import java.util.Map;
 import javax.ws.rs.core.MediaType;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHeaders;
-import org.json.JSONException;
-import org.json.JSONObject;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -37,9 +36,8 @@ public final class EkStepRequestUtil {
   public static Map<String, Object> searchContent(String params, Map<String, String> headers) {
     Map<String, Object> resMap = new HashMap<>();
     String response = "";
-    JSONObject jObject;
     try {
-    	  String baseSearchUrl = ProjectUtil.getConfigValue(JsonKey.SEARCH_SERVICE_API_BASE_URL);
+      String baseSearchUrl = ProjectUtil.getConfigValue(JsonKey.SEARCH_SERVICE_API_BASE_URL);
       headers.put(
           JsonKey.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.EKSTEP_AUTHORIZATION));
       headers.put(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
@@ -58,10 +56,10 @@ public final class EkStepRequestUtil {
               params,
               headers);
       ProjectLogger.log("Content serach response is ==" + response, LoggerEnum.INFO.name());
-      jObject = new JSONObject(response);
-      String resmsgId = (String) jObject.getJSONObject("params").get("resmsgid");
-      String apiId = jObject.getString("id");
-      String resultStr = jObject.getString(JsonKey.RESULT);
+      JsonNode jsonNode = mapper.readTree(response);
+      String resmsgId = jsonNode.get("params").get("resmsgid").asText();
+      String apiId = jsonNode.get("id").asText();
+      String resultStr = mapper.writeValueAsString(jsonNode.get(JsonKey.RESULT));
       Map<String, Object> data = mapper.readValue(resultStr, Map.class);
       ProjectLogger.log(
           "Total number of content fetched from Ekstep while assembling page data : "
@@ -80,7 +78,7 @@ public final class EkStepRequestUtil {
           resMap.put(entry.getKey(), entry.getValue());
         }
       }
-    } catch (IOException | JSONException e) {
+    } catch (IOException e) {
       ProjectLogger.log("Error found during contnet search parse==" + e.getMessage(), e);
     }
     return resMap;

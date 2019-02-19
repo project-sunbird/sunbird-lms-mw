@@ -191,10 +191,8 @@ public class MetricsBackGroundJobActor extends BaseActor {
       throw ex;
     }
 
-    ProjectLogger.log("generated file " + file.getAbsolutePath(), LoggerEnum.INFO);
     String storageUrl = null;
     try {
-      // TODO : confirm the container name ...
       storageUrl = processFileUpload(file, "testContainer");
 
     } catch (Exception e) {
@@ -251,10 +249,10 @@ public class MetricsBackGroundJobActor extends BaseActor {
             (String) reportDbInfo.get(JsonKey.CREATED_DATE),
             DateTimeFormatter.ofPattern(ProjectUtil.getDateFormatter().toPattern()));
     String zonedDateTime =
-        date.atZone(ZoneId.of(ProjectUtil.getConfigValue("course_stat_mail_timezone")))
+        date.atZone(ZoneId.of(ProjectUtil.getConfigValue(JsonKey.COURSE_STAT_MAIL_TIMEZONE)))
             .format(
                 DateTimeFormatter.ofPattern(
-                    ProjectUtil.getConfigValue("course_stat_mail_date_time_pattern")));
+                    ProjectUtil.getConfigValue(JsonKey.COURSE_STAT_MAIL_DATE_TIME_PATTERN)));
     templateMap.put(JsonKey.DATE_TIME, zonedDateTime);
     if (StringUtils.isNotEmpty((String) requestMap.get(JsonKey.ROOT_ORG_ID))) {
       Response response =

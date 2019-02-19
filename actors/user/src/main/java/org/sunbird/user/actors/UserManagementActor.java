@@ -113,7 +113,10 @@ public class UserManagementActor extends BaseActor {
       isPrivate = (boolean) actorMessage.getContext().get(JsonKey.PRIVATE);
     }
     if (!isPrivate) {
-      actorMessage.getRequest().remove(JsonKey.USER_ORG);
+      actorMessage.getRequest().remove(JsonKey.ORGANISATIONS);
+      ProjectLogger.log(
+          "UserManagementActor : updateUser : removed Organisations as request was not private",
+          LoggerEnum.INFO);
       if (StringUtils.isNotBlank(callerId)) {
         userService.validateUploader(actorMessage);
       } else {
@@ -182,13 +185,12 @@ public class UserManagementActor extends BaseActor {
   }
 
   private void updateUserOrganisations(Request actorMessage) {
-    if (null != actorMessage.getRequest().get(JsonKey.USER_ORG)) {
+    if (null != actorMessage.getRequest().get(JsonKey.ORGANISATIONS)) {
       ProjectLogger.log(
-          "UserManagementActor:updateUserOrganisations : "
-              + "updateUserOrganisation Called with valide data",
+          "UserManagementActor:updateUserOrganisations : updateUserOrganisation Called with valide data",
           LoggerEnum.INFO);
       List<Map<String, Object>> orgList =
-          (List<Map<String, Object>>) actorMessage.getRequest().get(JsonKey.USER_ORG);
+          (List<Map<String, Object>>) actorMessage.getRequest().get(JsonKey.ORGANISATIONS);
       String userId = (String) actorMessage.getContext().get(JsonKey.USER_ID);
       List<Map<String, Object>> orgListDb = UserUtil.getUserOrgDetails(userId);
       Map<String, Object> orgDbMap = new HashMap<>();
@@ -196,29 +198,30 @@ public class UserManagementActor extends BaseActor {
         orgListDb.forEach(org -> orgDbMap.put((String) org.get(JsonKey.ORGANISATION_ID), org));
       }
       List<String> userOrgTobeRemoved = new ArrayList<>();
+      if (!orgList.isEmpty()) {
+        for (Map<String, Object> org : orgList) {
+          if (MapUtils.isNotEmpty(org)) {
+            String id = (String) org.get(JsonKey.ORGANISATION_ID);
+            org.put(JsonKey.USER_ID, userId);
+            org.put(JsonKey.IS_DELETED, false);
 
-      for (Map<String, Object> org : orgList) {
-        if (MapUtils.isNotEmpty(org)) {
-          String id = (String) org.get(JsonKey.ORGANISATION_ID);
-          org.put(JsonKey.USER_ID, userId);
-          org.put(JsonKey.IS_DELETED, false);
-
-          if (null != id && orgDbMap.containsKey(id)) {
-            org.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-            org.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
-            UserUtil.updateUserOrg(
-                org,
-                new HashMap<String, Object>() {
-                  {
-                    put(JsonKey.ID, ((Map<String, Object>) orgDbMap.get(id)).get(JsonKey.ID));
-                  }
-                });
-            orgDbMap.remove(id);
-          } else {
-            org.put(JsonKey.ORG_JOIN_DATE, ProjectUtil.getFormattedDate());
-            org.put(JsonKey.ADDED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
-            org.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv()));
-            UserUtil.createUserOrg(org);
+            if (null != id && orgDbMap.containsKey(id)) {
+              org.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+              org.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
+              UserUtil.updateUserOrg(
+                  org,
+                  new HashMap<String, Object>() {
+                    {
+                      put(JsonKey.ID, ((Map<String, Object>) orgDbMap.get(id)).get(JsonKey.ID));
+                    }
+                  });
+              orgDbMap.remove(id);
+            } else {
+              org.put(JsonKey.ORG_JOIN_DATE, ProjectUtil.getFormattedDate());
+              org.put(JsonKey.ADDED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
+              org.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv()));
+              UserUtil.createUserOrg(org);
+            }
           }
         }
       }

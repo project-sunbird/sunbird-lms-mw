@@ -322,6 +322,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
     String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
     String fileFormat = (String) actorMessage.getRequest().get(JsonKey.FORMAT);
+    String courseName = getCourseNameFromBatch(courseBatchResult);
+    String batchName = (String) courseBatchResult.get(JsonKey.NAME);
 
     Map<String, Object> requestDbInfo = new HashMap<>();
     requestDbInfo.put(JsonKey.ID, requestId);
@@ -351,6 +353,11 @@ public class CourseMetricsActor extends BaseMetricsActor {
     backGroundRequest.setOperation(ActorOperations.PROCESS_DATA.getValue());
     backGroundRequest.getRequest().put(JsonKey.REQUEST, JsonKey.CourseProgress);
     backGroundRequest.getRequest().put(JsonKey.REQUEST_ID, requestId);
+    backGroundRequest.getRequest().put(JsonKey.COURSE_NAME, courseName);
+    backGroundRequest.getRequest().put(JsonKey.BATCH_NAME, batchName);
+    backGroundRequest
+        .getRequest()
+        .put(JsonKey.ROOT_ORG_ID, (String) requestedByInfo.get(JsonKey.ROOT_ORG_ID));
     tellToAnother(backGroundRequest);
   }
 

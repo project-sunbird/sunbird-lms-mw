@@ -4,8 +4,9 @@ import static org.sunbird.common.models.util.ProjectUtil.isNotNull;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
@@ -38,6 +39,10 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
   private DecryptionService decryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
           null);
+  private static final DateTimeFormatter sunbirdDateTimeFormatter =
+      DateTimeFormatter.ofPattern(ProjectUtil.getDateFormatter().toPattern());
+  private static final DateTimeFormatter dmyDateTimeFormatter =
+      DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -83,13 +88,13 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
     List<Object> columnNames =
         Arrays.asList(
             JsonKey.USER_NAME_HEADER,
+            JsonKey.PHONE_HEADER,
+            JsonKey.EMAIL_HEADER,
             JsonKey.ORG_NAME_HEADER,
             JsonKey.SCHOOL_NAME_HEADER,
             JsonKey.COURSE_ENROLL_DATE_HEADER,
-            JsonKey.PROGRESS_HEADER,
-            JsonKey.DATE_TIME_HEADER,
-            JsonKey.PHONE_HEADER,
-            JsonKey.EMAIL_HEADER);
+            JsonKey.PROGRESS_HEADER);
+
     finalList.add(columnNames);
     String periodStr = (String) reportDbInfo.get(JsonKey.PERIOD);
     String batchId = (String) reportDbInfo.get(JsonKey.RESOURCE_ID);
@@ -179,26 +184,29 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
       for (Map<String, Object> map : userCoursesContent) {
         List<Object> list = new ArrayList<>();
         Map<String, Object> userMap = userInfoCache.get(map.get(JsonKey.USER_ID));
+
+        LocalDateTime date =
+            LocalDateTime.parse(
+                (String) map.get(JsonKey.COURSE_ENROLL_DATE), sunbirdDateTimeFormatter);
+        String processedDate = date.format(dmyDateTimeFormatter);
         if (isNotNull(userMap)) {
           list.add(getFullName(userMap));
-          list.add(getRootOrgName(userMap, orgDetails));
-          list.add(getCommaSepSubOrgName(userMap, orgDetails));
-          list.add(map.get(JsonKey.COURSE_ENROLL_DATE));
-          list.add(map.get(JsonKey.PROGRESS));
-          list.add(ProjectUtil.formatDate(new Timestamp(new Date().getTime())));
           list.add(
               UserUtility.maskEmailOrPhone((String) userMap.get(JsonKey.ENC_PHONE), JsonKey.PHONE));
           list.add(
               UserUtility.maskEmailOrPhone((String) userMap.get(JsonKey.ENC_EMAIL), JsonKey.EMAIL));
+          list.add(getRootOrgName(userMap, orgDetails));
+          list.add(getCommaSepSubOrgName(userMap, orgDetails));
+          list.add(processedDate);
+          list.add(map.get(JsonKey.PROGRESS));
         } else {
           list.add(null);
           list.add(null);
           list.add(null);
           list.add(null);
+          list.add(null);
+          list.add(null);
           list.add(map.get(JsonKey.PROGRESS));
-          list.add(ProjectUtil.formatDate(new Timestamp(new Date().getTime())));
-          list.add(null);
-          list.add(null);
         }
         finalList.add(list);
       }
@@ -223,10 +231,14 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
     cassandraOperation.updateRecord(
         reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(), requestDbInfo);
 
+    ProjectLogger.log("request map " + req, LoggerEnum.INFO);
     Request backGroundRequest = new Request();
     backGroundRequest.setOperation(ActorOperations.FILE_GENERATION_AND_UPLOAD.getValue());
     backGroundRequest.getRequest().put(JsonKey.DATA, finalList);
     backGroundRequest.getRequest().put(JsonKey.REQUEST_ID, requestId);
+    backGroundRequest.getRequest().put(JsonKey.COURSE_NAME, req.get(JsonKey.COURSE_NAME));
+    backGroundRequest.getRequest().put(JsonKey.BATCH_NAME, req.get(JsonKey.BATCH_NAME));
+    backGroundRequest.getRequest().put(JsonKey.ROOT_ORG_ID, req.get(JsonKey.ROOT_ORG_ID));
     tellToAnother(backGroundRequest);
   }
 

@@ -38,6 +38,7 @@ public class UserProfileActorTest extends BaseActorTest {
   }
 
   @Test
+  @Ignore
   public void testGetMediaTypesSuccess() {
 
     boolean result = testScenario(ActorOperations.GET_MEDIA_TYPES, true, null);
@@ -45,6 +46,7 @@ public class UserProfileActorTest extends BaseActorTest {
   }
 
   @Test
+  @Ignore
   public void testSetProfileVisibilitySuccess() {
 
     boolean result = testScenario(ActorOperations.PROFILE_VISIBILITY, true, null);

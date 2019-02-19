@@ -19,6 +19,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -29,6 +30,7 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ContentSearchUtil;
 import org.sunbird.learner.util.DataCacheHandler;
@@ -551,10 +553,12 @@ public class PageManagementActor extends BaseActor {
     ProjectLogger.log(
         "PageManagementActor:getContentData: Page assemble final search query: " + queryRequestBody,
         LoggerEnum.INFO.name());
-
-    Future<Map<String, Object>> result =
-        ContentSearchUtil.searchContent(urlQueryString, queryRequestBody, headers);
-
+    Future<Map<String, Object>> result = null;
+    if (StringUtils.isEmpty((String) section.get(JsonKey.DATA_SOURCE))) {
+      result = ContentSearchUtil.searchContent(urlQueryString, queryRequestBody, headers);
+    } else {
+      //      result = searchFromES(map);
+    }
     return result.map(
         new Mapper<Map<String, Object>, Map<String, Object>>() {
           @Override
@@ -578,6 +582,20 @@ public class PageManagementActor extends BaseActor {
           }
         },
         getContext().dispatcher());
+  }
+
+  private Map<String, Object> searchFromES(Map<String, Object> map) {
+    SearchDTO searcDto = new SearchDTO();
+    searcDto.setQuery((String) map.get(JsonKey.QUERY));
+    searcDto.setLimit((Integer) map.get(JsonKey.LIMIT));
+    searcDto.getAdditionalProperties().put(JsonKey.FILTERS, map.get(JsonKey.FILTERS));
+
+    Map<String, Object> result =
+        ElasticSearchUtil.complexSearch(
+            searcDto,
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.course.getTypeName());
+    return result;
   }
 
   @SuppressWarnings("unchecked")

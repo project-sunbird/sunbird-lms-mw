@@ -319,11 +319,11 @@ public class UserManagementActorTest extends BaseActorTest {
     subject.tell(reqObj, probe.getRef());
 
     if (errorCode == null) {
-      Response res = probe.expectMsgClass(duration("1000 second"), Response.class);
+      Response res = probe.expectMsgClass(duration("10 second"), Response.class);
       return null != res && res.getResponseCode() == ResponseCode.OK;
     } else {
       ProjectCommonException res =
-          probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
+          probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
       return res.getCode().equals(errorCode.getErrorCode())
           || res.getResponseCode() == errorCode.getResponseCode();
     }

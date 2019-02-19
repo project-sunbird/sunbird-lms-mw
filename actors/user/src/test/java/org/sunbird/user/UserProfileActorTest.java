@@ -58,11 +58,11 @@ public class UserProfileActorTest extends BaseActorTest {
     subject.tell(getRequestedObj(actorOperation), probe.getRef());
 
     if (isSuccess) {
-      Response res = probe.expectMsgClass(duration("1000 second"), Response.class);
+      Response res = probe.expectMsgClass(duration("10 second"), Response.class);
       return null != res && res.getResponseCode() == ResponseCode.OK;
     }
     ProjectCommonException exception =
-        probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
     return (((ProjectCommonException) exception).getCode().equals(expectedErrorResponse));
   }
 

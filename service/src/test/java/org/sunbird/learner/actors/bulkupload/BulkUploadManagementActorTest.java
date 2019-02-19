@@ -173,7 +173,7 @@ public class BulkUploadManagementActorTest extends BaseActorTest {
     subject.tell(reqObj, probe.getRef());
 
     if (isSuccess) {
-      Response res = probe.expectMsgClass(duration("1000 second"), Response.class);
+      Response res = probe.expectMsgClass(duration("10 second"), Response.class);
 
       if (isGetRequest) {
         List<Map<String, Object>> list = (List<Map<String, Object>>) res.get(JsonKey.RESPONSE);
@@ -187,7 +187,7 @@ public class BulkUploadManagementActorTest extends BaseActorTest {
       }
     } else {
       ProjectCommonException res =
-          probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
+          probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
       return null != res;
     }
     return false;

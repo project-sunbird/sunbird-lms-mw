@@ -86,11 +86,11 @@ public class UserStatusActorTest extends BaseActorTest {
 
     Response res;
     if (isSuccess) {
-      res = probe.expectMsgClass(duration("1000 second"), Response.class);
+      res = probe.expectMsgClass(duration("10 second"), Response.class);
       return (res != null && "SUCCESS".equals(res.getResult().get(JsonKey.RESPONSE)));
     } else {
       ProjectCommonException exception =
-          probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
+          probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
       return (((ProjectCommonException) exception).getCode().equals(expectedErrorResponse));
     }
   }

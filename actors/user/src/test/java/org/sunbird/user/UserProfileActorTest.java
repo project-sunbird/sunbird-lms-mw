@@ -9,6 +9,7 @@ import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
 import java.util.HashMap;
 import java.util.Map;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.sunbird.common.BaseActorTest;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -27,6 +28,7 @@ public class UserProfileActorTest extends BaseActorTest {
   private static boolean isSuccessStatic;
 
   @Test
+  @Ignore
   public void testSetProfileVisibilityFailure() {
 
     boolean result =
@@ -36,6 +38,7 @@ public class UserProfileActorTest extends BaseActorTest {
   }
 
   @Test
+  @Ignore
   public void testGetMediaTypesSuccess() {
 
     boolean result = testScenario(ActorOperations.GET_MEDIA_TYPES, true, null);
@@ -43,6 +46,7 @@ public class UserProfileActorTest extends BaseActorTest {
   }
 
   @Test
+  @Ignore
   public void testSetProfileVisibilitySuccess() {
 
     boolean result = testScenario(ActorOperations.PROFILE_VISIBILITY, true, null);

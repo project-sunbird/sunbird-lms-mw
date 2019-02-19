@@ -34,12 +34,6 @@
 			<groupId>org.sunbird</groupId>
 			<artifactId>sunbird-opensaber-bridge</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
-			<exclusions>
-				<exclusion>
-					<groupId>com.google.code.gson</groupId>
-					<artifactId>gson</artifactId>
-				</exclusion>
-			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>org.sunbird</groupId>
@@ -76,12 +70,6 @@
 			<groupId>org.sunbird</groupId>
 			<artifactId>common-util</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
-			<exclusions>
-				<exclusion>
-					<groupId>com.google.code.gson</groupId>
-					<artifactId>gson</artifactId>
-				</exclusion>
-			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>com.typesafe.akka</groupId>
@@ -123,11 +111,6 @@
 			<artifactId>akka-testkit_2.11</artifactId>
 			<version>2.5.16</version>
 			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>com.google.code.gson</groupId>
-			<artifactId>gson</artifactId>
-			<version>2.2.4</version>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
@@ -178,14 +161,6 @@
 			<artifactId>postgresql</artifactId>
 			<version>42.1.4</version>
 		</dependency>
-
-		<!-- https://mvnrepository.com/artifact/com.googlecode.json-simple/json-simple -->
-		<dependency>
-			<groupId>com.googlecode.json-simple</groupId>
-			<artifactId>json-simple</artifactId>
-			<version>1.1</version>
-		</dependency>
-
 		<dependency>
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
@@ -198,17 +173,12 @@
 			<artifactId>netty-codec</artifactId>
 			<version>4.1.11.Final</version>
 		</dependency>
-
-
 		<!-- https://mvnrepository.com/artifact/io.netty/netty-transport -->
 		<dependency>
 			<groupId>io.netty</groupId>
 			<artifactId>netty-transport</artifactId>
 			<version>4.1.11.Final</version>
 		</dependency>
-
-
-		<!-- https://mvnrepository.com/artifact/io.netty/netty-buffer -->
 		<dependency>
 			<groupId>io.netty</groupId>
 			<artifactId>netty-buffer</artifactId>
@@ -226,10 +196,7 @@
 		  <artifactId>googleauth</artifactId>
 		  <version>1.1.2</version>
 		</dependency>
-		
-
 	</dependencies>
-
 	<build>
 		<sourceDirectory>${basedir}/src/main/java</sourceDirectory>
 		<testSourceDirectory>${basedir}/src/test/java</testSourceDirectory>

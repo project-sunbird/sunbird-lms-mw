@@ -18,10 +18,7 @@ import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -113,6 +110,8 @@ public class LearnerStateUpdateActor extends BaseActor {
           map.put(JsonKey.DATE_TIME, new Timestamp(new Date().getTime()));
 
           try {
+            ProjectLogger.log(
+                "LearnerStateUpdateActor:onReceive: map  " + map, LoggerEnum.INFO.name());
             cassandraOperation.upsertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), map);
             response.getResult().put((String) map.get(JsonKey.CONTENT_ID), JsonKey.SUCCESS);
             // create telemetry for user for each content ...
@@ -135,7 +134,6 @@ public class LearnerStateUpdateActor extends BaseActor {
             rollUp.put("l1", (String) map.get(JsonKey.COURSE_ID));
             rollUp.put("l2", (String) map.get(JsonKey.CONTENT_ID));
             TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
-
           } catch (Exception ex) {
             response.getResult().put((String) map.get(JsonKey.CONTENT_ID), JsonKey.FAILED);
             contentList.remove(map);

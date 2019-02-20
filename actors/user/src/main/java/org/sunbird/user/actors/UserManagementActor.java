@@ -190,14 +190,33 @@ public class UserManagementActor extends BaseActor {
     if (null != actorMessage.getRequest().get(JsonKey.ORGANISATIONS)) {
       List<Map<String, Object>> userOrgList =
           (List<Map<String, Object>>) actorMessage.getRequest().get(JsonKey.ORGANISATIONS);
-      for (Map<String, Object> userOrg : userOrgList) {
-        String orgId = (String) userOrg.get(JsonKey.ORGANISATION_ID);
-        Organisation organisation = organisationClient.esGetOrgById(orgId);
-        if (null == organisation) {
-          ProjectCommonException.throwClientErrorException(ResponseCode.invalidOrgData);
+      if (CollectionUtils.isNotEmpty(userOrgList)) {
+        List<String> orgIdList = new ArrayList<>();
+        userOrgList.forEach(org -> orgIdList.add((String) org.get(JsonKey.ORGANISATION_ID)));
+        List<String> fields = new ArrayList<>();
+        fields.add(JsonKey.HASHTAGID);
+        fields.add(JsonKey.ID);
+        List<Organisation> orgList = organisationClient.esSearchOrgByIds(orgIdList, fields);
+        Map<String, Object> orgMap = new HashMap<>();
+        orgList.forEach(org -> orgMap.put(org.getId(), org));
+        List<String> missingOrgIds = new ArrayList<>();
+        for (Map<String, Object> userOrg : userOrgList) {
+          String orgId = (String) userOrg.get(JsonKey.ORGANISATION_ID);
+          Organisation organisation = (Organisation) orgMap.get(orgId);
+          if (null == organisation) {
+            missingOrgIds.add(orgId);
+          } else {
+            userOrg.put(JsonKey.HASH_TAG_ID, organisation.getHashTagId());
+            RoleService.validateRoles((List<String>) userOrg.get(JsonKey.ROLES));
+          }
         }
-        userOrg.put(JsonKey.HASH_TAG_ID, organisation.getHashTagId());
-        RoleService.validateRoles((List<String>) userOrg.get(JsonKey.ROLES));
+        if (!missingOrgIds.isEmpty()) {
+          ProjectCommonException.throwClientErrorException(
+              ResponseCode.invalidOrgId,
+              ResponseCode.invalidOrgId.getErrorMessage()
+                  + " : invalid organisationIds are : "
+                  + missingOrgIds);
+        }
       }
     }
   }
@@ -244,7 +263,7 @@ public class UserManagementActor extends BaseActor {
         userOrg.setUpdatedDate(ProjectUtil.getFormattedDate());
         userOrg.setUpdatedBy((String) (actorMessage.getContext().get(JsonKey.REQUESTED_BY)));
         userOrg.setId((String) ((Map<String, Object>) orgDbMap.get(orgId)).get(JsonKey.ID));
-        userOrgDao.updateUserOrgById(userOrg);
+        userOrgDao.updateUserOrg(userOrg);
         orgDbMap.remove(orgId);
       } else {
         userOrg.setHashTagId((String) (org.get(JsonKey.HASH_TAG_ID)));

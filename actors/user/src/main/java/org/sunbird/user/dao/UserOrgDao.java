@@ -10,6 +10,4 @@ public interface UserOrgDao {
   Response createUserOrg(UserOrg userOrg);
 
   void deleteUserOrgs(List<String> ids);
-
-  void updateUserOrgById(UserOrg userOrg);
 }

@@ -1,12 +1,10 @@
 package org.sunbird.user.dao.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.org.UserOrg;
@@ -45,15 +43,5 @@ public final class UserOrgDaoImpl implements UserOrgDao {
   public void deleteUserOrgs(List<String> ids) {
     // TODO Auto-generated method stub
     cassandraOperation.deleteRecords(Util.KEY_SPACE_NAME, TABLE_NAME, ids);
-  }
-
-  @Override
-  public void updateUserOrgById(UserOrg userOrg) {
-    String id = userOrg.getId();
-    userOrg.setId(null);
-    Map<String, Object> key = new HashMap<>();
-    key.put(JsonKey.ID, id);
-    cassandraOperation.updateRecord(
-        Util.KEY_SPACE_NAME, TABLE_NAME, mapper.convertValue(userOrg, Map.class), key);
   }
 }

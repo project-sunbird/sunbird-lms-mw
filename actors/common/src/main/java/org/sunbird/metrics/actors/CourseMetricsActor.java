@@ -5,15 +5,7 @@ import static org.sunbird.common.models.util.ProjectUtil.isNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
@@ -23,11 +15,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.ReportTrackingStatus;
@@ -36,6 +24,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 
 @ActorConfig(
@@ -152,6 +141,11 @@ public class CourseMetricsActor extends BaseMetricsActor {
       } else {
         map.put(JsonKey.USER_NAME, firstName + " " + lastName);
       }
+      String phone = null;
+      if (esContent.containsKey(JsonKey.ENC_PHONE)) {
+        phone = decryptAndMaskPhone((String) esContent.get(JsonKey.ENC_PHONE));
+      }
+      map.put(JsonKey.PHONE, phone);
       map.put(JsonKey.ORG_NAME, esContent.get(JsonKey.ROOT_ORG_NAME));
       for (Map<String, Object> batchMap :
           (List<Map<String, Object>>) esContent.get(JsonKey.BATCHES)) {
@@ -173,6 +167,10 @@ public class CourseMetricsActor extends BaseMetricsActor {
     response.put("response", "SUCCESS");
     response.getResult().putAll(courseProgressResult);
     sender().tell(response, self());
+  }
+
+  private String decryptAndMaskPhone(String phone) {
+    return UserUtility.maskEmailOrPhone(phone, JsonKey.PHONE);
   }
 
   private void formatEnrolledOn(Map<String, Object> batchMap) {
@@ -324,6 +322,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
     String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
     String fileFormat = (String) actorMessage.getRequest().get(JsonKey.FORMAT);
+    String courseName = getCourseNameFromBatch(courseBatchResult);
+    String batchName = (String) courseBatchResult.get(JsonKey.NAME);
 
     Map<String, Object> requestDbInfo = new HashMap<>();
     requestDbInfo.put(JsonKey.ID, requestId);
@@ -353,6 +353,11 @@ public class CourseMetricsActor extends BaseMetricsActor {
     backGroundRequest.setOperation(ActorOperations.PROCESS_DATA.getValue());
     backGroundRequest.getRequest().put(JsonKey.REQUEST, JsonKey.CourseProgress);
     backGroundRequest.getRequest().put(JsonKey.REQUEST_ID, requestId);
+    backGroundRequest.getRequest().put(JsonKey.COURSE_NAME, courseName);
+    backGroundRequest.getRequest().put(JsonKey.BATCH_NAME, batchName);
+    backGroundRequest
+        .getRequest()
+        .put(JsonKey.ROOT_ORG_ID, (String) requestedByInfo.get(JsonKey.ROOT_ORG_ID));
     tellToAnother(backGroundRequest);
   }
 

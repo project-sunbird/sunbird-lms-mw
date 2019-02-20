@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Timestamp;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +72,7 @@ public class UserManagementActor extends BaseActor {
   private static InterServiceCommunication interServiceCommunication =
       InterServiceCommunicationFactory.getInstance();
   private ActorRef systemSettingActorRef = null;
+  private static final String PUBLIC_ROLE = "PUBLIC";
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -207,15 +209,20 @@ public class UserManagementActor extends BaseActor {
             missingOrgIds.add(orgId);
           } else {
             userOrg.put(JsonKey.HASH_TAG_ID, organisation.getHashTagId());
-            RoleService.validateRoles((List<String>) userOrg.get(JsonKey.ROLES));
+            if (userOrg.get(JsonKey.ROLES) != null) {
+              RoleService.validateRoles((List<String>) userOrg.get(JsonKey.ROLES));
+            } else {
+              userOrg.put(JsonKey.ROLES, Arrays.asList(PUBLIC_ROLE));
+            }
           }
         }
         if (!missingOrgIds.isEmpty()) {
           ProjectCommonException.throwClientErrorException(
-              ResponseCode.invalidOrgId,
-              ResponseCode.invalidOrgId.getErrorMessage()
-                  + " : invalid organisationIds are : "
-                  + missingOrgIds);
+              ResponseCode.invalidParameterValue,
+              MessageFormat.format(
+                  ResponseCode.invalidParameterValue.getErrorMessage(),
+                  JsonKey.ORGANISATION_ID,
+                  missingOrgIds));
         }
       }
     }

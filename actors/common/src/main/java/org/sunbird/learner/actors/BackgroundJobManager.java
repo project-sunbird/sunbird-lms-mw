@@ -2,7 +2,6 @@ package org.sunbird.learner.actors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
-import java.sql.Timestamp;
 import java.util.*;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -207,8 +206,7 @@ public class BackgroundJobManager extends BaseActor {
     syncUserCourseBatchProgress(
         (String) batch.get(JsonKey.BATCH_ID),
         (String) batch.get(JsonKey.USER_ID),
-        (int) batch.get(JsonKey.PROGRESS),
-        new Timestamp(new Date().getTime()));
+        (int) batch.get(JsonKey.PROGRESS));
   }
 
   @SuppressWarnings("unchecked")
@@ -640,15 +638,13 @@ public class BackgroundJobManager extends BaseActor {
         noteMap);
   }
 
-  public void syncUserCourseBatchProgress(
-      String batchId, String userId, Integer progress, Timestamp lastAccessedOn) {
+  public void syncUserCourseBatchProgress(String batchId, String userId, Integer progress) {
     ProjectLogger.log(
         "BackgroundJobManager:syncUserCourseBatchProgress: data"
             + userId
             + "=="
             + progress
-            + "  timeStamp =="
-            + lastAccessedOn,
+            + "  timeStamp ==",
         LoggerEnum.INFO.name());
     Map<String, Object> userMap =
         ElasticSearchUtil.getDataByIdentifier(

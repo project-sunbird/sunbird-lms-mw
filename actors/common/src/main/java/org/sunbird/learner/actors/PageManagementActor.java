@@ -556,6 +556,8 @@ public class PageManagementActor extends BaseActor {
         LoggerEnum.INFO.name());
     Future<Map<String, Object>> result = null;
     String dataSource = (String) section.get(JsonKey.DATA_SOURCE);
+    section.put(JsonKey.GROUP, group);
+    section.put(JsonKey.INDEX, index);
     if (StringUtils.isEmpty(dataSource) || JsonKey.CONTENT.equalsIgnoreCase(dataSource)) {
       result = ContentSearchUtil.searchContent(urlQueryString, queryRequestBody, headers);
       return result.map(
@@ -566,12 +568,10 @@ public class PageManagementActor extends BaseActor {
                   "PageManagementActor:getContentData:apply: result = ", LoggerEnum.INFO.name());
               if (MapUtils.isNotEmpty(result)) {
                 section.putAll(result);
-                section.remove(JsonKey.PARAMS);
                 Map<String, Object> tempMap = (Map<String, Object>) result.get(JsonKey.PARAMS);
+                section.remove(JsonKey.PARAMS);
                 section.put(JsonKey.RES_MSG_ID, tempMap.get(JsonKey.RES_MSG_ID));
                 section.put(JsonKey.API_ID, tempMap.get(JsonKey.API_ID));
-                section.put(JsonKey.GROUP, group);
-                section.put(JsonKey.INDEX, index);
                 removeUnwantedData(section, "getPageData");
                 ProjectLogger.log(
                     "PageManagementActor:getContentData:apply: section = " + section,
@@ -583,9 +583,6 @@ public class PageManagementActor extends BaseActor {
           getContext().dispatcher());
     } else {
       section.putAll(searchFromES((Map<String, Object>) map.get(JsonKey.REQUEST), dataSource));
-      section.remove(JsonKey.PARAMS);
-      section.put(JsonKey.GROUP, group);
-      section.put(JsonKey.INDEX, index);
       removeUnwantedData(section, "getPageData");
       final Promise promise = Futures.promise();
       promise.success(section);
@@ -600,8 +597,10 @@ public class PageManagementActor extends BaseActor {
     searcDto.setLimit((Integer) map.get(JsonKey.LIMIT));
     searcDto.getAdditionalProperties().put(JsonKey.FILTERS, map.get(JsonKey.FILTERS));
     String type = "";
-    if (dataSource.equalsIgnoreCase(JsonKey.BATCH)) {
+    if (JsonKey.BATCH.equalsIgnoreCase(dataSource)) {
       type = ProjectUtil.EsType.course.getTypeName();
+    } else {
+      return null;
     }
     Map<String, Object> result =
         ElasticSearchUtil.complexSearch(searcDto, ProjectUtil.EsIndex.sunbird.getIndexName(), type);

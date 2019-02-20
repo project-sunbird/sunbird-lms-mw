@@ -19,6 +19,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -29,12 +30,14 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ContentSearchUtil;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import scala.concurrent.Future;
+import scala.concurrent.Promise;
 
 /**
  * This actor will handle page management operation .
@@ -551,33 +554,57 @@ public class PageManagementActor extends BaseActor {
     ProjectLogger.log(
         "PageManagementActor:getContentData: Page assemble final search query: " + queryRequestBody,
         LoggerEnum.INFO.name());
-
-    Future<Map<String, Object>> result =
-        ContentSearchUtil.searchContent(urlQueryString, queryRequestBody, headers);
-
-    return result.map(
-        new Mapper<Map<String, Object>, Map<String, Object>>() {
-          @Override
-          public Map<String, Object> apply(Map<String, Object> result) {
-            ProjectLogger.log(
-                "PageManagementActor:getContentData:apply: result = ", LoggerEnum.INFO.name());
-            if (MapUtils.isNotEmpty(result)) {
-              section.putAll(result);
-              section.remove(JsonKey.PARAMS);
-              Map<String, Object> tempMap = (Map<String, Object>) result.get(JsonKey.PARAMS);
-              section.put(JsonKey.RES_MSG_ID, tempMap.get(JsonKey.RES_MSG_ID));
-              section.put(JsonKey.API_ID, tempMap.get(JsonKey.API_ID));
-              section.put(JsonKey.GROUP, group);
-              section.put(JsonKey.INDEX, index);
-              removeUnwantedData(section, "getPageData");
+    Future<Map<String, Object>> result = null;
+    String dataSource = (String) section.get(JsonKey.DATA_SOURCE);
+    section.put(JsonKey.GROUP, group);
+    section.put(JsonKey.INDEX, index);
+    if (StringUtils.isEmpty(dataSource) || JsonKey.CONTENT.equalsIgnoreCase(dataSource)) {
+      result = ContentSearchUtil.searchContent(urlQueryString, queryRequestBody, headers);
+      return result.map(
+          new Mapper<Map<String, Object>, Map<String, Object>>() {
+            @Override
+            public Map<String, Object> apply(Map<String, Object> result) {
               ProjectLogger.log(
-                  "PageManagementActor:getContentData:apply: section = " + section,
-                  LoggerEnum.DEBUG.name());
+                  "PageManagementActor:getContentData:apply: result = ", LoggerEnum.INFO.name());
+              if (MapUtils.isNotEmpty(result)) {
+                section.putAll(result);
+                Map<String, Object> tempMap = (Map<String, Object>) result.get(JsonKey.PARAMS);
+                section.remove(JsonKey.PARAMS);
+                section.put(JsonKey.RES_MSG_ID, tempMap.get(JsonKey.RES_MSG_ID));
+                section.put(JsonKey.API_ID, tempMap.get(JsonKey.API_ID));
+                removeUnwantedData(section, "getPageData");
+                ProjectLogger.log(
+                    "PageManagementActor:getContentData:apply: section = " + section,
+                    LoggerEnum.DEBUG.name());
+              }
+              return section;
             }
-            return section;
-          }
-        },
-        getContext().dispatcher());
+          },
+          getContext().dispatcher());
+    } else {
+      section.putAll(searchFromES((Map<String, Object>) map.get(JsonKey.REQUEST), dataSource));
+      removeUnwantedData(section, "getPageData");
+      final Promise promise = Futures.promise();
+      promise.success(section);
+      result = promise.future();
+      return result;
+    }
+  }
+
+  private Map<String, Object> searchFromES(Map<String, Object> map, String dataSource) {
+    SearchDTO searcDto = new SearchDTO();
+    searcDto.setQuery(map.get(JsonKey.QUERY) + "");
+    searcDto.setLimit((Integer) map.get(JsonKey.LIMIT));
+    searcDto.getAdditionalProperties().put(JsonKey.FILTERS, map.get(JsonKey.FILTERS));
+    String type = "";
+    if (JsonKey.BATCH.equalsIgnoreCase(dataSource)) {
+      type = ProjectUtil.EsType.course.getTypeName();
+    } else {
+      return null;
+    }
+    Map<String, Object> result =
+        ElasticSearchUtil.complexSearch(searcDto, ProjectUtil.EsIndex.sunbird.getIndexName(), type);
+    return result;
   }
 
   @SuppressWarnings("unchecked")

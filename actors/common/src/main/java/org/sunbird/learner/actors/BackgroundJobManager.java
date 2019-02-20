@@ -662,8 +662,7 @@ public class BackgroundJobManager extends BaseActor {
         for (Map<String, Object> map : batches) {
           if (batchId.equalsIgnoreCase((String) map.get(JsonKey.BATCH_ID))) {
             map.put(JsonKey.PROGRESS, progress);
-            map.put(JsonKey.LAST_ACCESSED_ON, lastAccessedOn);
-            batches.add(map);
+            map.put(JsonKey.LAST_ACCESSED_ON, new Date());
             break;
           }
         }

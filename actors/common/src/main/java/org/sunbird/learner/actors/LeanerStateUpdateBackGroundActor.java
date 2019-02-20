@@ -149,6 +149,8 @@ public class LeanerStateUpdateBackGroundActor extends BaseActor {
           // TODO: for some reason, ES indexing is failing with Timestamp value. need to
           // check and
           // correct it.
+          updateDb.put(JsonKey.BATCH_ID, course.get(JsonKey.BATCH_ID));
+          updateDb.put(JsonKey.USER_ID, course.get(JsonKey.USER_ID));
           updateDb.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(ts));
           updateUserCoursesToES(updateDb);
         } catch (Exception ex) {

@@ -200,7 +200,8 @@ public class CourseBatchManagementActor extends BaseActor {
     validateUserPermission(courseBatch, requestedBy);
     validateContentOrg(courseBatch.getCreatedFor());
     validateMentors(courseBatch);
-    if (participants != null) {
+    if (participants != null
+        && (courseBatch.getEnrollmentType()).equalsIgnoreCase(JsonKey.INVITE_ONLY)) {
       validateParticipants(participants, courseBatch);
       participantsMap = getParticipantsMap(participants, courseBatch);
 

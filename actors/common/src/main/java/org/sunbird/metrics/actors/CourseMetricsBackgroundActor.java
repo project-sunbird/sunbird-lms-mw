@@ -4,16 +4,10 @@ import static org.sunbird.common.models.util.ProjectUtil.isNotNull;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
@@ -23,18 +17,14 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.ReportTrackingStatus;
-import org.sunbird.common.models.util.datasecurity.DataMaskingService;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 
 @ActorConfig(
@@ -49,9 +39,10 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
   private DecryptionService decryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
           null);
-  private DataMaskingService maskingService =
-      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance(
-          null);
+  private static final DateTimeFormatter sunbirdDateTimeFormatter =
+      DateTimeFormatter.ofPattern(ProjectUtil.getDateFormatter().toPattern());
+  private static final DateTimeFormatter dmyDateTimeFormatter =
+      DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -97,13 +88,13 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
     List<Object> columnNames =
         Arrays.asList(
             JsonKey.USER_NAME_HEADER,
+            JsonKey.PHONE_HEADER,
+            JsonKey.EMAIL_HEADER,
             JsonKey.ORG_NAME_HEADER,
             JsonKey.SCHOOL_NAME_HEADER,
             JsonKey.COURSE_ENROLL_DATE_HEADER,
-            JsonKey.PROGRESS_HEADER,
-            JsonKey.DATE_TIME_HEADER,
-            JsonKey.PHONE_HEADER,
-            JsonKey.EMAIL_HEADER);
+            JsonKey.PROGRESS_HEADER);
+
     finalList.add(columnNames);
     String periodStr = (String) reportDbInfo.get(JsonKey.PERIOD);
     String batchId = (String) reportDbInfo.get(JsonKey.RESOURCE_ID);
@@ -193,24 +184,29 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
       for (Map<String, Object> map : userCoursesContent) {
         List<Object> list = new ArrayList<>();
         Map<String, Object> userMap = userInfoCache.get(map.get(JsonKey.USER_ID));
+
+        LocalDateTime date =
+            LocalDateTime.parse(
+                (String) map.get(JsonKey.COURSE_ENROLL_DATE), sunbirdDateTimeFormatter);
+        String processedDate = date.format(dmyDateTimeFormatter);
         if (isNotNull(userMap)) {
           list.add(getFullName(userMap));
+          list.add(
+              UserUtility.maskEmailOrPhone((String) userMap.get(JsonKey.ENC_PHONE), JsonKey.PHONE));
+          list.add(
+              UserUtility.maskEmailOrPhone((String) userMap.get(JsonKey.ENC_EMAIL), JsonKey.EMAIL));
           list.add(getRootOrgName(userMap, orgDetails));
           list.add(getCommaSepSubOrgName(userMap, orgDetails));
-          list.add(map.get(JsonKey.COURSE_ENROLL_DATE));
+          list.add(processedDate);
           list.add(map.get(JsonKey.PROGRESS));
-          list.add(ProjectUtil.formatDate(new Timestamp(new Date().getTime())));
-          list.add(maskEmailOrPhone((String) userMap.get(JsonKey.ENC_PHONE), JsonKey.PHONE));
-          list.add(maskEmailOrPhone((String) userMap.get(JsonKey.ENC_EMAIL), JsonKey.EMAIL));
         } else {
           list.add(null);
           list.add(null);
           list.add(null);
           list.add(null);
+          list.add(null);
+          list.add(null);
           list.add(map.get(JsonKey.PROGRESS));
-          list.add(ProjectUtil.formatDate(new Timestamp(new Date().getTime())));
-          list.add(null);
-          list.add(null);
         }
         finalList.add(list);
       }
@@ -235,10 +231,14 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
     cassandraOperation.updateRecord(
         reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(), requestDbInfo);
 
+    ProjectLogger.log("request map " + req, LoggerEnum.INFO);
     Request backGroundRequest = new Request();
     backGroundRequest.setOperation(ActorOperations.FILE_GENERATION_AND_UPLOAD.getValue());
     backGroundRequest.getRequest().put(JsonKey.DATA, finalList);
     backGroundRequest.getRequest().put(JsonKey.REQUEST_ID, requestId);
+    backGroundRequest.getRequest().put(JsonKey.COURSE_NAME, req.get(JsonKey.COURSE_NAME));
+    backGroundRequest.getRequest().put(JsonKey.BATCH_NAME, req.get(JsonKey.BATCH_NAME));
+    backGroundRequest.getRequest().put(JsonKey.ROOT_ORG_ID, req.get(JsonKey.ROOT_ORG_ID));
     tellToAnother(backGroundRequest);
   }
 
@@ -311,18 +311,6 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
       if (!CollectionUtils.isEmpty(orgNames)) {
         return String.join(",", orgNames);
       }
-    }
-    return StringUtils.EMPTY;
-  }
-
-  private String maskEmailOrPhone(String encryptedEmailOrPhone, String type) {
-    if (StringUtils.isEmpty(encryptedEmailOrPhone)) {
-      return StringUtils.EMPTY;
-    }
-    if (JsonKey.PHONE.equals(type)) {
-      return maskingService.maskPhone(decryptionService.decryptData(encryptedEmailOrPhone));
-    } else if (JsonKey.EMAIL.equals(type)) {
-      return maskingService.maskEmail(decryptionService.decryptData(encryptedEmailOrPhone));
     }
     return StringUtils.EMPTY;
   }

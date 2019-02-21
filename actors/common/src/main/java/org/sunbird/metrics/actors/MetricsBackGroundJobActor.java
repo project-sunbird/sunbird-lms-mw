@@ -3,11 +3,14 @@ package org.sunbird.metrics.actors;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.Collections;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.velocity.VelocityContext;
 import org.sunbird.actor.core.BaseActor;
@@ -18,6 +21,7 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.FileUtil;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.ReportTrackingStatus;
@@ -28,6 +32,8 @@ import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.actors.notificationservice.dao.EmailTemplateDao;
+import org.sunbird.learner.actors.notificationservice.dao.impl.EmailTemplateDaoImpl;
 import org.sunbird.learner.util.Util;
 
 /** Created by arvind on 28/8/17. */
@@ -38,7 +44,9 @@ import org.sunbird.learner.util.Util;
 public class MetricsBackGroundJobActor extends BaseActor {
 
   private Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
+  private Util.DbInfo organisationDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private EmailTemplateDao emailTemplateDao = EmailTemplateDaoImpl.getInstance();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -74,6 +82,9 @@ public class MetricsBackGroundJobActor extends BaseActor {
       tellToAnother(metricsRequest);
     } else if (JsonKey.CourseProgress.equalsIgnoreCase(operation)) {
       metricsRequest.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_DATA.getValue());
+      request.put(JsonKey.COURSE_NAME, actorMessage.getRequest().get(JsonKey.COURSE_NAME));
+      request.put(JsonKey.BATCH_NAME, actorMessage.getRequest().get(JsonKey.BATCH_NAME));
+      request.put(JsonKey.ROOT_ORG_ID, actorMessage.getRequest().get(JsonKey.ROOT_ORG_ID));
       metricsRequest.setRequest(request);
       tellToAnother(metricsRequest);
     }
@@ -105,7 +116,7 @@ public class MetricsBackGroundJobActor extends BaseActor {
     Map<String, Object> dbReqMap = new HashMap<>();
     dbReqMap.put(JsonKey.ID, requestId);
 
-    if (processMailSending(reportDbInfo)) {
+    if (processMailSending(reportDbInfo, map)) {
       dbReqMap.put(JsonKey.STATUS, ReportTrackingStatus.SENDING_MAIL_SUCCESS.getValue());
       dbReqMap.put(JsonKey.UPDATED_DATE, simpleDateFormat.format(new Date()));
       cassandraOperation.updateRecord(
@@ -182,7 +193,6 @@ public class MetricsBackGroundJobActor extends BaseActor {
 
     String storageUrl = null;
     try {
-      // TODO : confirm the container name ...
       storageUrl = processFileUpload(file, "testContainer");
 
     } catch (Exception e) {
@@ -217,36 +227,58 @@ public class MetricsBackGroundJobActor extends BaseActor {
 
     Request backGroundRequest = new Request();
     backGroundRequest.setOperation(ActorOperations.SEND_MAIL.getValue());
-
     Map<String, Object> innerMap = new HashMap<>();
     innerMap.put(JsonKey.REQUEST_ID, requestId);
-
+    innerMap.put(JsonKey.COURSE_NAME, map.get(JsonKey.COURSE_NAME));
+    innerMap.put(JsonKey.BATCH_NAME, map.get(JsonKey.BATCH_NAME));
+    innerMap.put(JsonKey.ROOT_ORG_ID, map.get(JsonKey.ROOT_ORG_ID));
     backGroundRequest.setRequest(innerMap);
     self().tell(backGroundRequest, self());
   }
 
-  private boolean processMailSending(Map<String, Object> reportDbInfo) {
+  private boolean processMailSending(
+      Map<String, Object> reportDbInfo, Map<String, Object> requestMap) {
 
     Map<String, Object> templateMap = new HashMap<>();
     templateMap.put(JsonKey.ACTION_URL, reportDbInfo.get(JsonKey.FILE_URL));
     templateMap.put(JsonKey.NAME, reportDbInfo.get(JsonKey.FIRST_NAME));
+    templateMap.put(JsonKey.COURSE_NAME, requestMap.get(JsonKey.COURSE_NAME));
+    templateMap.put(JsonKey.BATCH_NAME, requestMap.get(JsonKey.BATCH_NAME));
+    LocalDateTime date =
+        LocalDateTime.parse(
+            (String) reportDbInfo.get(JsonKey.CREATED_DATE),
+            DateTimeFormatter.ofPattern(ProjectUtil.getDateFormatter().toPattern()));
+    String zonedDateTime =
+        date.atZone(ZoneId.of(ProjectUtil.getConfigValue(JsonKey.COURSE_STAT_MAIL_TIMEZONE)))
+            .format(
+                DateTimeFormatter.ofPattern(
+                    ProjectUtil.getConfigValue(JsonKey.COURSE_STAT_MAIL_DATE_TIME_PATTERN)));
+    templateMap.put(JsonKey.DATE_TIME, zonedDateTime);
+    if (StringUtils.isNotEmpty((String) requestMap.get(JsonKey.ROOT_ORG_ID))) {
+      Response response =
+          cassandraOperation.getRecordById(
+              organisationDbInfo.getKeySpace(),
+              organisationDbInfo.getTableName(),
+              (String) requestMap.get(JsonKey.ROOT_ORG_ID));
+      List<Map<String, Object>> responseList =
+          (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+      if (!responseList.isEmpty() && MapUtils.isNotEmpty(responseList.get(0))) {
+        templateMap.put(JsonKey.ORG_NAME, responseList.get(0).get(JsonKey.ORG_NAME));
+      }
+    }
+    ProjectLogger.log(
+        "MetricsBackGroundJobActor: processMailSending template map " + templateMap,
+        LoggerEnum.DEBUG);
     String resource = getReportResourceName(reportDbInfo);
-    templateMap.put(
-        JsonKey.BODY,
-        "Please Find Attached Report for "
-            + resource
-            + " for the Period  "
-            + getPeriod((String) reportDbInfo.get(JsonKey.PERIOD))
-            + " as requested on : "
-            + reportDbInfo.get(JsonKey.CREATED_DATE));
     templateMap.put(JsonKey.ACTION_NAME, "DOWNLOAD REPORT");
     VelocityContext context = ProjectUtil.getContext(templateMap);
-
-    return SendMail.sendMail(
+    String courseProgressMailTemplate =
+        emailTemplateDao.getTemplate(JsonKey.COURSE_PROGRESS_MAIL_TEMPLATE);
+    return SendMail.sendMailWithBody(
         new String[] {(String) reportDbInfo.get(JsonKey.EMAIL)},
         reportDbInfo.get(JsonKey.TYPE) + " for " + resource,
         context,
-        ProjectUtil.getTemplate(Collections.emptyMap()));
+        courseProgressMailTemplate);
   }
 
   private String getReportResourceName(Map<String, Object> reportDbInfo) {

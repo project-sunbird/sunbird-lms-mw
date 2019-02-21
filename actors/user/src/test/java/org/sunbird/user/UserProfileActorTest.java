@@ -48,7 +48,6 @@ public class UserProfileActorTest {
 
   private final Props props = Props.create(UserProfileActor.class);
   private CassandraOperationImpl cassandraOperation;
- 
 
   @Before
   public void beforeEachTest() {

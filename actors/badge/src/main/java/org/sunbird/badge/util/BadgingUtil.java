@@ -220,8 +220,7 @@ public class BadgingUtil {
       return mapper.writeValueAsString(node);
     } catch (JsonProcessingException e) {
       ProjectLogger.log(
-          "BadgingUtil :createAssertionRevokeData : JsonProcessingException ",
-          LoggerEnum.ERROR);
+          "BadgingUtil :createAssertionRevokeData : JsonProcessingException ", LoggerEnum.ERROR);
     }
     return null;
   }

@@ -1312,6 +1312,11 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       newMeta.remove(JsonKey.GRADE_LEVEL);
       newMeta.remove(JsonKey.DIAL_CODES);
       newMeta.remove(JsonKey.TOPIC);
+      if (JsonKey.NO.equalsIgnoreCase((String) newMeta.get(JsonKey.DIAL_CODE_REQUIRED))) {
+        newMeta.put(JsonKey.DIAL_CODE_REQUIRED, JsonKey.NO);
+      } else if (JsonKey.YES.equalsIgnoreCase((String) newMeta.get(JsonKey.DIAL_CODE_REQUIRED))) {
+        newMeta.put(JsonKey.DIAL_CODE_REQUIRED, JsonKey.YES);
+      }
       if (CollectionUtils.isNotEmpty(keywords)) newMeta.put(JsonKey.KEYWORDS, keywords);
       if (CollectionUtils.isNotEmpty(gradeLevel)) newMeta.put(JsonKey.GRADE_LEVEL, gradeLevel);
       if (CollectionUtils.isNotEmpty(dialCodes)) {

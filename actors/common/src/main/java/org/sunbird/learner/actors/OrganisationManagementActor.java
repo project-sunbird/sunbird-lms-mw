@@ -495,16 +495,7 @@ public class OrganisationManagementActor extends BaseActor {
 
     cassandraOperation.deleteRecord(JsonKey.SUNBIRD, JsonKey.ORG_EXT_ID_DB, orgExtIdRequest);
   }
-  /*
-    private void validateCodeAndAddLocationIds(Map<String, Object> req) {
-      List<String> locationIdList =
-          validator.getValidatedLocationIds(
-              getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()),
-              (List<String>) req.get(JsonKey.LOCATION_CODE));
-      req.put(JsonKey.LOCATION_IDS, locationIdList);
-      req.remove(JsonKey.LOCATION_CODE);
-    }
-  */
+ 
   private String validateHashTagId(String hashTagId, String opType, String orgId) {
     Map<String, Object> filters = new HashMap<>();
     filters.put(JsonKey.HASHTAGID, hashTagId);

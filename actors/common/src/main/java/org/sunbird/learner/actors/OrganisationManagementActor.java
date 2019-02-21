@@ -495,7 +495,7 @@ public class OrganisationManagementActor extends BaseActor {
 
     cassandraOperation.deleteRecord(JsonKey.SUNBIRD, JsonKey.ORG_EXT_ID_DB, orgExtIdRequest);
   }
- 
+
   private String validateHashTagId(String hashTagId, String opType, String orgId) {
     Map<String, Object> filters = new HashMap<>();
     filters.put(JsonKey.HASHTAGID, hashTagId);
@@ -1832,16 +1832,14 @@ public class OrganisationManagementActor extends BaseActor {
   @SuppressWarnings("unchecked")
   private void validateLocationCodeAndIds(Map<String, Object> request) {
     List<String> locationIdsList = new ArrayList<>();
-    if (request.containsKey(JsonKey.LOCATION_IDS)
-        && !CollectionUtils.isEmpty((List<String>) request.get(JsonKey.LOCATION_IDS))) {
+    if (CollectionUtils.isNotEmpty((List<String>) request.get(JsonKey.LOCATION_IDS))) {
       locationIdsList =
           validator.getHierarchyLocationIds(
               getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()),
               (List<String>) request.get(JsonKey.LOCATION_IDS));
       request.put(JsonKey.LOCATION_IDS, locationIdsList);
     } else {
-      if (request.containsKey(JsonKey.LOCATION_CODE)
-          && !CollectionUtils.isEmpty((List<String>) request.get(JsonKey.LOCATION_CODE))) {
+      if (CollectionUtils.isNotEmpty((List<String>) request.get(JsonKey.LOCATION_CODE))) {
         locationIdsList =
             validator.getValidatedLocationIds(
                 getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()),

@@ -72,7 +72,6 @@ public class UserManagementActor extends BaseActor {
   private static InterServiceCommunication interServiceCommunication =
       InterServiceCommunicationFactory.getInstance();
   private ActorRef systemSettingActorRef = null;
-  private static final String PUBLIC_ROLE = "PUBLIC";
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -124,11 +123,10 @@ public class UserManagementActor extends BaseActor {
       } else {
         userService.validateUserId(actorMessage);
       }
-    } else {
-      validateUserOrganisations(actorMessage);
     }
     Map<String, Object> userMap = actorMessage.getRequest();
     userRequestValidator.validateUpdateUserRequest(actorMessage);
+    validateUserOrganisations(actorMessage, isPrivate);
     Map<String, Object> userDbRecord = UserUtil.validateExternalIdsAndReturnActiveUser(userMap);
     validateUserFrameworkData(userMap, userDbRecord);
     validateUserTypeForUpdate(userMap);
@@ -188,8 +186,8 @@ public class UserManagementActor extends BaseActor {
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
   }
 
-  private void validateUserOrganisations(Request actorMessage) {
-    if (null != actorMessage.getRequest().get(JsonKey.ORGANISATIONS)) {
+  private void validateUserOrganisations(Request actorMessage, boolean isPrivate) {
+    if (isPrivate && null != actorMessage.getRequest().get(JsonKey.ORGANISATIONS)) {
       List<Map<String, Object>> userOrgList =
           (List<Map<String, Object>>) actorMessage.getRequest().get(JsonKey.ORGANISATIONS);
       if (CollectionUtils.isNotEmpty(userOrgList)) {
@@ -212,7 +210,7 @@ public class UserManagementActor extends BaseActor {
             if (userOrg.get(JsonKey.ROLES) != null) {
               RoleService.validateRoles((List<String>) userOrg.get(JsonKey.ROLES));
             } else {
-              userOrg.put(JsonKey.ROLES, Arrays.asList(PUBLIC_ROLE));
+              userOrg.put(JsonKey.ROLES, Arrays.asList(ProjectUtil.UserRole.PUBLIC));
             }
           }
         }

@@ -135,12 +135,7 @@ public class CourseMetricsActorTest {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
-    Request actorMessage = new Request();
-    actorMessage.put(JsonKey.REQUESTED_BY, userId);
-    actorMessage.put(JsonKey.BATCH_ID, batchId);
-    actorMessage.put(JsonKey.LIMIT, limit);
-    actorMessage.put(JsonKey.OFFSET, offset);
-    actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_V2.getValue());
+    Request actorMessage = getProgressV2Request();
     when(ElasticSearchUtil.getDataByIdentifier(
             EsIndex.sunbird.getIndexName(), EsType.course.getTypeName(), batchId))
         .thenReturn(null);
@@ -156,20 +151,14 @@ public class CourseMetricsActorTest {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
-    Request actorMessage = new Request();
-    actorMessage.put(JsonKey.REQUESTED_BY, userId);
-    actorMessage.put(JsonKey.BATCH_ID, batchId);
-    actorMessage.put(JsonKey.LIMIT, limit);
-    actorMessage.put(JsonKey.OFFSET, offset);
-    actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_V2.getValue());
+    Request actorMessage = getProgressV2Request();
     when(ElasticSearchUtil.getDataByIdentifier(
-            EsIndex.sunbird.getIndexName(), EsType.course.getTypeName(), batchId))
-        .thenReturn(getBatchData())
+            Mockito.any(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(null);
     subject.tell(actorMessage, probe.getRef());
     ProjectCommonException e =
         probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    Assert.assertEquals(ResponseCode.invalidCourseBatchId.getErrorCode(), e.getCode());
+    Assert.assertEquals(ResponseCode.invalidUserId.getErrorCode(), e.getCode());
   }
 
   @Test
@@ -178,12 +167,7 @@ public class CourseMetricsActorTest {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
-    Request actorMessage = new Request();
-    actorMessage.getContext().put(JsonKey.REQUESTED_BY, userId);
-    actorMessage.getContext().put(JsonKey.BATCH_ID, batchId);
-    actorMessage.getContext().put(JsonKey.LIMIT, limit);
-    actorMessage.getContext().put(JsonKey.OFFSET, offset);
-    actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_V2.getValue());
+    Request actorMessage = getProgressV2Request();
     when(ElasticSearchUtil.getDataByIdentifier(
             Mockito.any(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(getMockUser())
@@ -202,12 +186,7 @@ public class CourseMetricsActorTest {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
-    Request actorMessage = new Request();
-    actorMessage.getContext().put(JsonKey.REQUESTED_BY, userId);
-    actorMessage.getContext().put(JsonKey.BATCH_ID, batchId);
-    actorMessage.getContext().put(JsonKey.LIMIT, limit);
-    actorMessage.getContext().put(JsonKey.OFFSET, offset);
-    actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_V2.getValue());
+    Request actorMessage = getProgressV2Request();
     when(ElasticSearchUtil.getDataByIdentifier(
             Mockito.any(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(getMockUser())
@@ -218,27 +197,6 @@ public class CourseMetricsActorTest {
     subject.tell(actorMessage, probe.getRef());
     Response res = probe.expectMsgClass(duration("10 second"), Response.class);
     Assert.assertEquals(1, res.getResult().get(JsonKey.COMPLETED_COUNT));
-  }
-
-  @Test
-  public void testCourseProgressMetricsV2WithvalidBatchId() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    Request actorMessage = new Request();
-    actorMessage.put(JsonKey.REQUESTED_BY, userId);
-    actorMessage.put(JsonKey.BATCH_ID, batchId);
-    actorMessage.put(JsonKey.LIMIT, limit);
-    actorMessage.put(JsonKey.OFFSET, offset);
-    actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_V2.getValue());
-    //    when(ElasticSearchUtil.getDataByIdentifier(
-    //            EsIndex.sunbird.getIndexName(), EsType.course.getTypeName(), batchId))
-    //            .thenReturn(getBatchData());
-    subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException e =
-        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    Assert.assertEquals(ResponseCode.invalidCourseBatchId.getErrorCode(), e.getCode());
   }
 
   @Test
@@ -574,6 +532,16 @@ public class CourseMetricsActorTest {
     Map<String, Object> mockUser = new HashMap<>();
     mockUser.put(JsonKey.FIRST_NAME, "anyName");
     return mockUser;
+  }
+
+  private Request getProgressV2Request() {
+    Request actorMessage = new Request();
+    actorMessage.getContext().put(JsonKey.REQUESTED_BY, userId);
+    actorMessage.getContext().put(JsonKey.BATCH_ID, batchId);
+    actorMessage.getContext().put(JsonKey.LIMIT, limit);
+    actorMessage.getContext().put(JsonKey.OFFSET, offset);
+    actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_V2.getValue());
+    return actorMessage;
   }
 
   //  public Map<String,Object> getBatchData() {

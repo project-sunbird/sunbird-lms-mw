@@ -265,10 +265,7 @@ public class OrganisationManagementActor extends BaseActor {
     try {
       actorMessage.toLower();
       Map<String, Object> request = actorMessage.getRequest();
-      if (request.containsKey(JsonKey.LOCATION_CODE)
-          && !CollectionUtils.isEmpty((List<String>) request.get(JsonKey.LOCATION_CODE))) {
-        validateCodeAndAddLocationIds(request);
-      }
+      validateLocationCodeAndIds(request);
       if (request.containsKey(JsonKey.ORG_TYPE)
           && !StringUtils.isBlank((String) request.get(JsonKey.ORG_TYPE))) {
         request.put(JsonKey.ORG_TYPE_ID, validateOrgType((String) request.get(JsonKey.ORG_TYPE)));
@@ -498,16 +495,16 @@ public class OrganisationManagementActor extends BaseActor {
 
     cassandraOperation.deleteRecord(JsonKey.SUNBIRD, JsonKey.ORG_EXT_ID_DB, orgExtIdRequest);
   }
-
-  private void validateCodeAndAddLocationIds(Map<String, Object> req) {
-    List<String> locationIdList =
-        validator.getValidatedLocationIds(
-            getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()),
-            (List<String>) req.get(JsonKey.LOCATION_CODE));
-    req.put(JsonKey.LOCATION_IDS, locationIdList);
-    req.remove(JsonKey.LOCATION_CODE);
-  }
-
+  /*
+    private void validateCodeAndAddLocationIds(Map<String, Object> req) {
+      List<String> locationIdList =
+          validator.getValidatedLocationIds(
+              getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()),
+              (List<String>) req.get(JsonKey.LOCATION_CODE));
+      req.put(JsonKey.LOCATION_IDS, locationIdList);
+      req.remove(JsonKey.LOCATION_CODE);
+    }
+  */
   private String validateHashTagId(String hashTagId, String opType, String orgId) {
     Map<String, Object> filters = new HashMap<>();
     filters.put(JsonKey.HASHTAGID, hashTagId);
@@ -712,16 +709,7 @@ public class OrganisationManagementActor extends BaseActor {
         }
         request.put(JsonKey.CHANNEL, channelFromDB);
       }
-
-      if (request.containsKey(JsonKey.LOCATION_IDS)) {
-        validateLocationIdsForUpdate(
-            (List<String>) orgDao.get(JsonKey.LOCATION_IDS),
-            (List<String>) request.get(JsonKey.LOCATION_IDS));
-      }
-      if (request.containsKey(JsonKey.LOCATION_CODE)
-          && !CollectionUtils.isEmpty((List<String>) request.get(JsonKey.LOCATION_CODE))) {
-        validateCodeAndAddLocationIds(request);
-      }
+      validateLocationCodeAndIds(request);
       if (request.containsKey(JsonKey.ORG_TYPE)
           && !StringUtils.isBlank((String) request.get(JsonKey.ORG_TYPE))) {
         request.put(JsonKey.ORG_TYPE_ID, validateOrgType((String) request.get(JsonKey.ORG_TYPE)));
@@ -983,23 +971,6 @@ public class OrganisationManagementActor extends BaseActor {
     } catch (ProjectCommonException e) {
       sender().tell(e, self());
       return;
-    }
-  }
-
-  private void validateLocationIdsForUpdate(
-      List<String> dbLocationIds, List<String> updateLocationIds) {
-    if (dbLocationIds == null && updateLocationIds != null)
-      ProjectCommonException.throwClientErrorException(
-          ResponseCode.unupdatableField,
-          MessageFormat.format(
-              ResponseCode.unupdatableField.getErrorMessage(), JsonKey.LOCATION_IDS));
-    if (dbLocationIds != null && updateLocationIds != null) {
-      if (!CollectionUtils.isEqualCollection(dbLocationIds, updateLocationIds)) {
-        ProjectCommonException.throwClientErrorException(
-            ResponseCode.unupdatableField,
-            MessageFormat.format(
-                ResponseCode.unupdatableField.getErrorMessage(), JsonKey.LOCATION_IDS));
-      }
     }
   }
 
@@ -1861,6 +1832,32 @@ public class OrganisationManagementActor extends BaseActor {
           ResponseCode.channelUniquenessInvalid.getErrorCode(),
           ResponseCode.channelUniquenessInvalid.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+  }
+
+  /*
+   * This method will validate the locationId and locationCode.
+   */
+  @SuppressWarnings("unchecked")
+  private void validateLocationCodeAndIds(Map<String, Object> request) {
+    List<String> locationIdsList = new ArrayList<>();
+    if (request.containsKey(JsonKey.LOCATION_IDS)
+        && !CollectionUtils.isEmpty((List<String>) request.get(JsonKey.LOCATION_IDS))) {
+      locationIdsList =
+          validator.getHierarchyLocationIds(
+              getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()),
+              (List<String>) request.get(JsonKey.LOCATION_IDS));
+      request.put(JsonKey.LOCATION_IDS, locationIdsList);
+    } else {
+      if (request.containsKey(JsonKey.LOCATION_CODE)
+          && !CollectionUtils.isEmpty((List<String>) request.get(JsonKey.LOCATION_CODE))) {
+        locationIdsList =
+            validator.getValidatedLocationIds(
+                getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()),
+                (List<String>) request.get(JsonKey.LOCATION_CODE));
+        request.put(JsonKey.LOCATION_IDS, locationIdsList);
+        request.remove(JsonKey.LOCATION_CODE);
+      }
     }
   }
 }

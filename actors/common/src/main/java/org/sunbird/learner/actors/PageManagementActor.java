@@ -596,9 +596,10 @@ public class PageManagementActor extends BaseActor {
 
   private Map<String, Object> searchFromES(Map<String, Object> map, String dataSource) {
     SearchDTO searcDto = new SearchDTO();
-    searcDto.setQuery(map.get(JsonKey.QUERY) + "");
+    searcDto.setQuery((String) map.get(JsonKey.QUERY));
     searcDto.setLimit((Integer) map.get(JsonKey.LIMIT));
     searcDto.getAdditionalProperties().put(JsonKey.FILTERS, map.get(JsonKey.FILTERS));
+    searcDto.setSortBy((Map<String, String>) map.get(JsonKey.SORT_BY));
     String type = "";
     if (JsonKey.BATCH.equalsIgnoreCase(dataSource)) {
       type = ProjectUtil.EsType.course.getTypeName();

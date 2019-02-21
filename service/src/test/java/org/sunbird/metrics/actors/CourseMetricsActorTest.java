@@ -131,71 +131,27 @@ public class CourseMetricsActorTest {
 
   @Test
   public void testCourseProgressMetricsV2WithInvalidBatchId() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    Request actorMessage = getProgressV2Request();
-    when(ElasticSearchUtil.getDataByIdentifier(
-            EsIndex.sunbird.getIndexName(), EsType.course.getTypeName(), batchId))
-        .thenReturn(null);
-    subject.tell(actorMessage, probe.getRef());
     ProjectCommonException e =
-        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+        (ProjectCommonException) getResponseOfCourseMetrics(true, false, false, false, true);
     Assert.assertEquals(ResponseCode.invalidCourseBatchId.getErrorCode(), e.getCode());
   }
 
   @Test
   public void testCourseProgressMetricsV2WithNoUser() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    Request actorMessage = getProgressV2Request();
-    when(ElasticSearchUtil.getDataByIdentifier(
-            Mockito.any(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(null);
-    subject.tell(actorMessage, probe.getRef());
     ProjectCommonException e =
-        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+        (ProjectCommonException) getResponseOfCourseMetrics(false, false, false, false, true);
     Assert.assertEquals(ResponseCode.invalidUserId.getErrorCode(), e.getCode());
   }
 
   @Test
   public void testCourseProgressMetricsV2WithUser() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    Request actorMessage = getProgressV2Request();
-    when(ElasticSearchUtil.getDataByIdentifier(
-            Mockito.any(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getMockUser())
-        .thenReturn(getBatchData());
-    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(mockUserData())
-        .thenReturn(null);
-    subject.tell(actorMessage, probe.getRef());
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+    Response res = (Response) getResponseOfCourseMetrics(true, true, true, false, false);
     Assert.assertEquals(ResponseCode.OK, res.getResponseCode());
   }
 
   @Test
   public void testCourseProgressMetricsV2WithCompletedCount() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    Request actorMessage = getProgressV2Request();
-    when(ElasticSearchUtil.getDataByIdentifier(
-            Mockito.any(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getMockUser())
-        .thenReturn(getBatchData());
-    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(mockUserData())
-        .thenReturn(getCompleteUserCount());
-    subject.tell(actorMessage, probe.getRef());
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+    Response res = (Response) getResponseOfCourseMetrics(true, true, true, true, false);
     Assert.assertEquals(1, res.getResult().get(JsonKey.COMPLETED_COUNT));
   }
 
@@ -534,17 +490,70 @@ public class CourseMetricsActorTest {
     return mockUser;
   }
 
-  private Request getProgressV2Request() {
+  private Object getResponseOfCourseMetrics(
+      boolean isUserValid,
+      boolean isBatchValid,
+      boolean isUserMock,
+      boolean isGetCompltetedCount,
+      boolean errorCode) {
     Request actorMessage = new Request();
     actorMessage.getContext().put(JsonKey.REQUESTED_BY, userId);
     actorMessage.getContext().put(JsonKey.BATCH_ID, batchId);
     actorMessage.getContext().put(JsonKey.LIMIT, limit);
     actorMessage.getContext().put(JsonKey.OFFSET, offset);
     actorMessage.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_V2.getValue());
-    return actorMessage;
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    if (!isUserValid) {
+      when(ElasticSearchUtil.getDataByIdentifier(
+              Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+          .thenReturn(null);
+    } else if (isUserValid && !isBatchValid) {
+      when(ElasticSearchUtil.getDataByIdentifier(
+              Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+          .thenReturn(getMockUser())
+          .thenReturn(null);
+    } else {
+      when(ElasticSearchUtil.getDataByIdentifier(
+              Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+          .thenReturn(getMockUser())
+          .thenReturn(getBatchData());
+    }
+    if (isUserMock && !isGetCompltetedCount) {
+      when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+          .thenReturn(mockUserData());
+    } else {
+      when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+          .thenReturn(mockUserData())
+          .thenReturn(getCompleteUserCount());
+    }
+
+    subject.tell(actorMessage, probe.getRef());
+    if (!errorCode) {
+      Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+      return res;
+    } else {
+      ProjectCommonException projectCommonException =
+          probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+      return projectCommonException;
+    }
   }
 
-  //  public Map<String,Object> getBatchData() {
-  //    return batchData;
-  //  }
+  private boolean testScenario(Request reqObj, ResponseCode errorCode) {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    subject.tell(reqObj, probe.getRef());
+
+    if (errorCode == null) {
+      Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+      return null != res && res.getResponseCode() == ResponseCode.OK;
+    } else {
+      ProjectCommonException res =
+          probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+      return res.getCode().equals(errorCode.getErrorCode())
+          || res.getResponseCode() == errorCode.getResponseCode();
+    }
+  }
 }

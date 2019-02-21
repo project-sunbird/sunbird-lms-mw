@@ -582,7 +582,10 @@ public class PageManagementActor extends BaseActor {
           },
           getContext().dispatcher());
     } else {
-      section.putAll(searchFromES((Map<String, Object>) map.get(JsonKey.REQUEST), dataSource));
+      Map<String, Object> esResponse =
+          searchFromES((Map<String, Object>) map.get(JsonKey.REQUEST), dataSource);
+      section.put(JsonKey.COUNT, esResponse.get(JsonKey.COUNT));
+      section.put(JsonKey.CONTENTS, esResponse.get(JsonKey.CONTENT));
       removeUnwantedData(section, "getPageData");
       final Promise promise = Futures.promise();
       promise.success(section);

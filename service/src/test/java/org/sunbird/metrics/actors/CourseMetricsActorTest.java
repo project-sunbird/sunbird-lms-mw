@@ -539,21 +539,4 @@ public class CourseMetricsActorTest {
       return projectCommonException;
     }
   }
-
-  private boolean testScenario(Request reqObj, ResponseCode errorCode) {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    subject.tell(reqObj, probe.getRef());
-
-    if (errorCode == null) {
-      Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-      return null != res && res.getResponseCode() == ResponseCode.OK;
-    } else {
-      ProjectCommonException res =
-          probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-      return res.getCode().equals(errorCode.getErrorCode())
-          || res.getResponseCode() == errorCode.getResponseCode();
-    }
-  }
 }

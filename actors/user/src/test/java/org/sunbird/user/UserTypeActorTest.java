@@ -6,8 +6,7 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import org.junit.Assert;
 import org.junit.Test;
 import org.sunbird.common.models.response.Response;
@@ -36,11 +35,17 @@ public class UserTypeActorTest {
 
   private boolean getResponse(Response res) {
 
-    List<Map<String, Object>> lst =
-        (List<Map<String, Object>>) res.getResult().get(JsonKey.RESPONSE);
-    if (lst.get(0).get(JsonKey.ID) == "TEACHER"
-        && lst.get(1).get(JsonKey.ID) == "OTHER"
-        && lst.size() == 2) return true;
+    List<Map<String, String>> lst =
+        (List<Map<String, String>>) res.getResult().get(JsonKey.RESPONSE);
+    Set<String> types = new HashSet<>();
+    for (Map map : lst) {
+      Iterator<Map.Entry<String, String>> itr = map.entrySet().iterator();
+      while (itr.hasNext()) {
+        Map.Entry<String, String> entry = itr.next();
+        types.add(entry.getValue());
+      }
+    }
+    if (types.contains("OTHER") && types.contains("TEACHER") && types.size() == 2) return true;
     return false;
   }
 }

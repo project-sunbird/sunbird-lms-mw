@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -33,15 +34,19 @@ import org.sunbird.content.util.ContentStoreUtil;
 import org.sunbird.extension.user.UserExtension;
 import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.actors.role.service.RoleService;
 import org.sunbird.learner.organisation.external.identity.service.OrgExternalService;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
 import org.sunbird.models.user.User;
 import org.sunbird.models.user.UserType;
+import org.sunbird.models.user.org.UserOrg;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.telemetry.util.TelemetryUtil;
+import org.sunbird.user.dao.UserOrgDao;
+import org.sunbird.user.dao.impl.UserOrgDaoImpl;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.UserActorOperations;
@@ -117,6 +122,8 @@ public class UserManagementActor extends BaseActor {
       } else {
         userService.validateUserId(actorMessage);
       }
+    } else {
+      validateUserOrganisations(actorMessage);
     }
     Map<String, Object> userMap = actorMessage.getRequest();
     userRequestValidator.validateUpdateUserRequest(actorMessage);
@@ -149,11 +156,15 @@ public class UserManagementActor extends BaseActor {
     Response response =
         cassandraOperation.updateRecord(
             usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
+
     if (StringUtils.isNotBlank(callerId)) {
       userMap.put(JsonKey.ROOT_ORG_ID, actorMessage.getContext().get(JsonKey.ROOT_ORG_ID));
     }
     Response resp = null;
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+      if (isPrivate) {
+        updateUserOrganisations(actorMessage);
+      }
       Map<String, Object> userRequest = new HashMap<>(userMap);
       userRequest.put(JsonKey.OPERATION_TYPE, JsonKey.UPDATE);
       resp = saveUserAttributes(userRequest);
@@ -173,6 +184,108 @@ public class UserManagementActor extends BaseActor {
         TelemetryUtil.generateTargetObject(
             (String) userMap.get(JsonKey.USER_ID), JsonKey.USER, JsonKey.UPDATE, null);
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
+  }
+
+  private void validateUserOrganisations(Request actorMessage) {
+    if (null != actorMessage.getRequest().get(JsonKey.ORGANISATIONS)) {
+      List<Map<String, Object>> userOrgList =
+          (List<Map<String, Object>>) actorMessage.getRequest().get(JsonKey.ORGANISATIONS);
+      if (CollectionUtils.isNotEmpty(userOrgList)) {
+        List<String> orgIdList = new ArrayList<>();
+        userOrgList.forEach(org -> orgIdList.add((String) org.get(JsonKey.ORGANISATION_ID)));
+        List<String> fields = new ArrayList<>();
+        fields.add(JsonKey.HASHTAGID);
+        fields.add(JsonKey.ID);
+        List<Organisation> orgList = organisationClient.esSearchOrgByIds(orgIdList, fields);
+        Map<String, Object> orgMap = new HashMap<>();
+        orgList.forEach(org -> orgMap.put(org.getId(), org));
+        List<String> missingOrgIds = new ArrayList<>();
+        for (Map<String, Object> userOrg : userOrgList) {
+          String orgId = (String) userOrg.get(JsonKey.ORGANISATION_ID);
+          Organisation organisation = (Organisation) orgMap.get(orgId);
+          if (null == organisation) {
+            missingOrgIds.add(orgId);
+          } else {
+            userOrg.put(JsonKey.HASH_TAG_ID, organisation.getHashTagId());
+            RoleService.validateRoles((List<String>) userOrg.get(JsonKey.ROLES));
+          }
+        }
+        if (!missingOrgIds.isEmpty()) {
+          ProjectCommonException.throwClientErrorException(
+              ResponseCode.invalidOrgId,
+              ResponseCode.invalidOrgId.getErrorMessage()
+                  + " : invalid organisationIds are : "
+                  + missingOrgIds);
+        }
+      }
+    }
+  }
+
+  private void updateUserOrganisations(Request actorMessage) {
+    if (null != actorMessage.getRequest().get(JsonKey.ORGANISATIONS)) {
+      ProjectLogger.log("UserManagementActor: updateUserOrganisation called", LoggerEnum.INFO);
+      List<Map<String, Object>> orgList =
+          (List<Map<String, Object>>) actorMessage.getRequest().get(JsonKey.ORGANISATIONS);
+      String userId = (String) actorMessage.getRequest().get(JsonKey.USER_ID);
+      String rootOrgId = getUserRootOrgId(userId);
+      List<Map<String, Object>> orgListDb = UserUtil.getUserOrgDetails(userId);
+      Map<String, Object> orgDbMap = new HashMap<>();
+      if (CollectionUtils.isNotEmpty(orgListDb)) {
+        orgListDb.forEach(org -> orgDbMap.put((String) org.get(JsonKey.ORGANISATION_ID), org));
+      }
+      if (!orgList.isEmpty()) {
+        for (Map<String, Object> org : orgList) {
+          createOrUpdateOrganisations(org, orgDbMap, actorMessage);
+        }
+      }
+      removeOrganisations(orgDbMap, rootOrgId);
+      ProjectLogger.log(
+          "UserManagementActor:updateUserOrganisations : " + "updateUserOrganisation Completed",
+          LoggerEnum.INFO);
+    }
+  }
+
+  private String getUserRootOrgId(String userId) {
+    User user = userService.getUserById(userId);
+    return user.getRootOrgId();
+  }
+
+  private void createOrUpdateOrganisations(
+      Map<String, Object> org, Map<String, Object> orgDbMap, Request actorMessage) {
+    UserOrgDao userOrgDao = UserOrgDaoImpl.getInstance();
+    String userId = (String) actorMessage.getRequest().get(JsonKey.USER_ID);
+    if (MapUtils.isNotEmpty(org)) {
+      UserOrg userOrg = mapper.convertValue(org, UserOrg.class);
+      String orgId = (String) org.get(JsonKey.ORGANISATION_ID);
+      userOrg.setUserId(userId);
+      userOrg.setDeleted(false);
+      if (null != orgId && orgDbMap.containsKey(orgId)) {
+        userOrg.setUpdatedDate(ProjectUtil.getFormattedDate());
+        userOrg.setUpdatedBy((String) (actorMessage.getContext().get(JsonKey.REQUESTED_BY)));
+        userOrg.setId((String) ((Map<String, Object>) orgDbMap.get(orgId)).get(JsonKey.ID));
+        userOrgDao.updateUserOrg(userOrg);
+        orgDbMap.remove(orgId);
+      } else {
+        userOrg.setHashTagId((String) (org.get(JsonKey.HASH_TAG_ID)));
+        userOrg.setOrgJoinDate(ProjectUtil.getFormattedDate());
+        userOrg.setAddedBy((String) actorMessage.getContext().get(JsonKey.REQUESTED_BY));
+        userOrg.setId(ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv()));
+        userOrgDao.createUserOrg(userOrg);
+      }
+    }
+  }
+
+  private void removeOrganisations(Map<String, Object> orgDbMap, String rootOrgId) {
+    Set<String> ids = orgDbMap.keySet();
+    UserOrgDao userOrgDao = UserOrgDaoImpl.getInstance();
+    ids.remove(rootOrgId);
+    List<String> userOrgTobeRemoved = new ArrayList<>();
+    for (String id : ids) {
+      userOrgTobeRemoved.add((String) ((Map<String, Object>) orgDbMap.get(id)).get(JsonKey.ID));
+    }
+    if (CollectionUtils.isNotEmpty(userOrgTobeRemoved)) {
+      userOrgDao.deleteUserOrgs(userOrgTobeRemoved);
+    }
   }
 
   private void validateUserTypeForUpdate(Map<String, Object> userMap) {

@@ -1201,11 +1201,15 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
     String requestUrl =
         getConfigValue(JsonKey.EKSTEP_BASE_URL) + getConfigValue(JsonKey.UPDATE_HIERARCHY_API);
+    Map<String, String> headers = getDefaultHeaders();
     HttpResponse<String> updateResponse =
         Unirest.patch(requestUrl)
-            .headers(getDefaultHeaders())
+            .headers(headers)
             .body(mapper.writeValueAsString(updateRequest))
             .asString();
+    ProjectLogger.log(
+        "TextbookTocActor:updateHierarchy : access token  : " + mapper.writeValueAsString(headers),
+        LoggerEnum.INFO.name());
     ProjectLogger.log(
         "TextbookTocActor:updateHierarchy : Request for update hierarchy : "
             + mapper.writeValueAsString(updateRequest),
@@ -1256,11 +1260,11 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     headers.put("Content-Type", "application/json");
     headers.put(
         JsonKey.AUTHORIZATION, JsonKey.BEARER + getConfigValue(JsonKey.SUNBIRD_AUTHORIZATION));
-    headers.put(
-        "x-authenticated-user-token",
+    String accessToken =
         ssoManager.login(
             ProjectUtil.getConfigValue(JsonKey.SUNBIRD_SSO_USERNAME),
-            ProjectUtil.getConfigValue(JsonKey.SUNBIRD_SSO_PASSWORD)));
+            ProjectUtil.getConfigValue(JsonKey.SUNBIRD_SSO_PASSWORD));
+    headers.put("x-authenticated-user-token", accessToken);
     return headers;
   }
 

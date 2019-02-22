@@ -266,7 +266,7 @@ public class MetricsBackGroundJobActor extends BaseActor {
     }
     ProjectLogger.log(
         "MetricsBackGroundJobActor: processMailSending template map " + templateMap,
-        LoggerEnum.INFO);
+        LoggerEnum.DEBUG);
     String resource = getReportResourceName(reportDbInfo);
     templateMap.put(JsonKey.ACTION_NAME, "DOWNLOAD REPORT");
     VelocityContext context = ProjectUtil.getContext(templateMap);

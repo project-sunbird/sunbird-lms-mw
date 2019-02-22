@@ -164,11 +164,7 @@ public class UserRoleActor extends UserBaseActor {
       Map<String, Object> requestMap, String hashTagId, Map<String, Object> userOrgDBMap) {
     ObjectMapper mapper = new ObjectMapper();
     Map<String, Object> userOrgMap = (Map<String, Object>) userOrgDBMap.get(JsonKey.ORGANISATION);
-
-    final String organisationId = (String) requestMap.get(JsonKey.ORGANISATION_ID);
-
     UserOrg userOrg = mapper.convertValue(userOrgMap, UserOrg.class);
-
     List<String> roles = (List<String>) requestMap.get(JsonKey.ROLES);
     if (!roles.contains(ProjectUtil.UserRole.PUBLIC.name())) {
       roles.add(ProjectUtil.UserRole.PUBLIC.name());
@@ -178,10 +174,8 @@ public class UserRoleActor extends UserBaseActor {
     if (StringUtils.isNotBlank(hashTagId)) {
       userOrg.setHashTagId(hashTagId);
     }
-
     userOrg.setUpdatedDate(ProjectUtil.getFormattedDate());
     userOrg.setUpdatedBy((String) requestMap.get(JsonKey.REQUESTED_BY));
-
     return userOrg;
   }
 

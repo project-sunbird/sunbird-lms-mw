@@ -12,6 +12,7 @@ import akka.testkit.javadsl.TestKit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
@@ -36,6 +37,7 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
 import org.sunbird.user.actors.UserManagementActor;
@@ -52,7 +54,8 @@ import org.sunbird.user.util.UserUtil;
   UserServiceImpl.class,
   UserUtil.class,
   InterServiceCommunicationFactory.class,
-  LocationClientImpl.class
+  LocationClientImpl.class,
+  DataCacheHandler.class
 })
 @PowerMockIgnore({"javax.management.*"})
 public class UserManagementActorTest {
@@ -63,6 +66,7 @@ public class UserManagementActorTest {
   static InterServiceCommunication interServiceCommunication =
       mock(InterServiceCommunicationImpl.class);;
   private static UserServiceImpl userService;
+  private static CassandraOperationImpl cassandraOperation;
 
   @Before
   public void beforeEachTest() {
@@ -72,7 +76,7 @@ public class UserManagementActorTest {
     when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
 
     PowerMockito.mockStatic(ServiceFactory.class);
-    CassandraOperationImpl cassandraOperation = mock(CassandraOperationImpl.class);
+    cassandraOperation = mock(CassandraOperationImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     when(cassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
@@ -119,6 +123,9 @@ public class UserManagementActorTest {
     Map<String, Object> requestMap = new HashMap<>();
     requestMap.put(JsonKey.TNC_ACCEPTED_ON, 12345678L);
     when(UserUtil.encryptUserData(Mockito.anyMap())).thenReturn(requestMap);
+    PowerMockito.mockStatic(DataCacheHandler.class);
+    when(DataCacheHandler.getRoleMap()).thenReturn(roleMap(true));
+    when(UserUtil.getUserOrgDetails(Mockito.anyString())).thenReturn(getUserOrgDetails());
     reqMap = getMapObject();
   }
 
@@ -356,6 +363,157 @@ public class UserManagementActorTest {
             getRequest(false, true, true, req, ActorOperations.UPDATE_USER),
             ResponseCode.errorTeacherCannotBelongToCustodianOrg);
     assertTrue(result);
+  }
+
+  @Test
+  public void testUpdateUserOrgFailureWithoutUserIdPrivateApi() {
+    Map<String, Object> req = getUserOrgUpdateRequest(false);
+    Request request = getRequest(false, false, true, req, ActorOperations.UPDATE_USER);
+    boolean result = testScenario(request, ResponseCode.errorUnsupportedField);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testUpdateUserOrgFailureWithPublicApi() {
+    Map<String, Object> req = getUserOrgUpdateRequest(false);
+    req.remove(JsonKey.USER_ID);
+    Request request = getRequest(false, false, true, req, ActorOperations.UPDATE_USER);
+    boolean result = testScenario(request, ResponseCode.mandatoryParamsMissing);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testUpdateUserOrgFailureWithOrganisationsPrivateApi() {
+    Map<String, Object> req = getUserOrgUpdateRequest(false);
+    req.put(JsonKey.ORGANISATIONS, new HashMap<>());
+    Request request = getRequest(false, false, true, req, ActorOperations.UPDATE_USER);
+    request.getContext().put(JsonKey.PRIVATE, true);
+    boolean result = testScenario(request, ResponseCode.dataTypeError);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testUpdateUserOrgFailureWithInvalidOrganisationsPrivateApi() {
+    Map<String, Object> req = getUserOrgUpdateRequest(true);
+    req.put(JsonKey.ORGANISATIONS, Arrays.asList("a", "b"));
+    Request request = getRequest(false, false, true, req, ActorOperations.UPDATE_USER);
+    request.getContext().put(JsonKey.PRIVATE, true);
+    boolean result = testScenario(request, ResponseCode.dataTypeError);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testUpdateUserOrgFailureWithoutOrganisationsPrivateApi() {
+    Map<String, Object> req = getUserOrgUpdateRequest(true);
+    ((Map) ((List) req.get(JsonKey.ORGANISATIONS)).get(0)).put(JsonKey.ORGANISATION_ID, "");
+    Request request = getRequest(false, false, true, req, ActorOperations.UPDATE_USER);
+    request.getContext().put(JsonKey.PRIVATE, true);
+    boolean result = testScenario(request, ResponseCode.mandatoryParamsMissing);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testUpdateUserOrgFailureWithInvalidRolesDataTypePrivateApi() {
+    Map<String, Object> req = getUserOrgUpdateRequest(true);
+    ((Map) ((List) req.get(JsonKey.ORGANISATIONS)).get(0)).put(JsonKey.ROLES, "String");
+    Request request = getRequest(false, false, true, req, ActorOperations.UPDATE_USER);
+    request.getContext().put(JsonKey.PRIVATE, true);
+    boolean result = testScenario(request, ResponseCode.dataTypeError);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testUpdateUserOrgFailureWithEmptyRolesReqPrivateApi() {
+    Map<String, Object> req = getUserOrgUpdateRequest(true);
+    ((Map) ((List) req.get(JsonKey.ORGANISATIONS)).get(0)).put(JsonKey.ROLES, new ArrayList<>());
+    Request request = getRequest(false, false, true, req, ActorOperations.UPDATE_USER);
+    request.getContext().put(JsonKey.PRIVATE, true);
+    boolean result = testScenario(request, ResponseCode.emptyRolesProvided);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testUpdateUserOrgSuccessPrivateApi() {
+    Map<String, Object> req = getUserOrgUpdateRequest(true);
+    Request request = getRequest(false, false, true, req, ActorOperations.UPDATE_USER);
+    request.getContext().put(JsonKey.PRIVATE, true);
+    mockForUserOrgUpdate();
+    boolean result = testScenario(request, null);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testUpdateUserOrgSuccessWithoutRolesPrivateApi() {
+    Map<String, Object> req = getUserOrgUpdateRequest(true);
+    Request request = getRequest(false, false, true, req, ActorOperations.UPDATE_USER);
+    request.getContext().put(JsonKey.PRIVATE, true);
+    mockForUserOrgUpdate();
+    boolean result = testScenario(request, null);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testUpdateUserOrgFailureWithInvalidRolesPrivateApi() {
+    Map<String, Object> req = getUserOrgUpdateRequest(true);
+    Request request = getRequest(false, false, true, req, ActorOperations.UPDATE_USER);
+    request.getContext().put(JsonKey.PRIVATE, true);
+    mockForUserOrgUpdate();
+    when(DataCacheHandler.getRoleMap()).thenReturn(roleMap(false));
+    boolean result = testScenario(request, ResponseCode.invalidRole);
+    assertTrue(result);
+  }
+
+  private void mockForUserOrgUpdate() {
+    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(getListOrgResponse());
+    when(userService.getUserById(Mockito.anyString())).thenReturn(getUser(false));
+    when(cassandraOperation.insertRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(null);
+  }
+
+  private Map<String, Object> getListOrgResponse() {
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.ID, "org1");
+    map.put(JsonKey.HASHTAGID, "hashtagId");
+    map.put(JsonKey.CONTACT_DETAILS, "any");
+    Map<String, Object> response = new HashMap<>();
+    List<Map<String, Object>> content = new ArrayList<>();
+    content.add(map);
+    response.put(JsonKey.CONTENT, content);
+    return response;
+  }
+
+  private Map<String, Object> getUserOrgUpdateRequest(boolean validOrgReq) {
+    Map<String, Object> req = new HashMap<>();
+    req.put(JsonKey.USER_ID, "userId");
+    req.put(JsonKey.ORGANISATIONS, "any");
+    if (validOrgReq) {
+      Map<String, Object> map = new HashMap<>();
+      List<Map<String, Object>> list = new ArrayList<>();
+      map.put(JsonKey.ORGANISATION_ID, "org1");
+      map.put(JsonKey.ROLES, Arrays.asList("PUBLIC"));
+      list.add(map);
+      req.put(JsonKey.ORGANISATIONS, list);
+    }
+    return req;
+  }
+
+  private List<Map<String, Object>> getUserOrgDetails() {
+    List<Map<String, Object>> list = new ArrayList<>();
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.ORGANISATION_ID, "any");
+    list.add(map);
+    return list;
+  }
+
+  private Map<String, Object> roleMap(boolean validRole) {
+    Map<String, Object> map = new HashMap<>();
+    if (validRole) {
+      map.put("PUBLIC", "PUBLIC");
+    }
+    map.put("Invalid", "Invalid");
+    return map;
   }
 
   private Map<String, Object> getAdditionalMapData(Map<String, Object> reqMap) {

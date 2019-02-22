@@ -96,8 +96,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
     SearchDTO searchDTO = new SearchDTO();
     if (!StringUtils.isEmpty(userName)) {
       Map<String, Object> internalMap = new HashMap<>();
-      internalMap.put(JsonKey.FIRST_NAME, userName);
-      filter.put("startsWith", internalMap);
+      internalMap.put("startWith", userName);
+      filter.put(JsonKey.FIRST_NAME, internalMap);
     }
     searchDTO.setLimit(limit);
     searchDTO.setOffset(offset);
@@ -111,6 +111,9 @@ public class CourseMetricsActor extends BaseMetricsActor {
       }
       if (JsonKey.ENROLLED_ON.equalsIgnoreCase(sortBy)) {
         sortBy = JsonKey.BATCHES + "." + JsonKey.ENROLLED_ON;
+      }
+      if (JsonKey.ORG_NAME.equalsIgnoreCase(sortBy)) {
+        sortBy = JsonKey.ROOT_ORG_NAME;
       }
       if (StringUtils.isEmpty(sortOrder)) {
         sortMap.put(sortBy, JsonKey.ASC);

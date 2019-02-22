@@ -211,11 +211,10 @@ public class UserManagementActor extends BaseActor {
               RoleService.validateRoles((List<String>) userOrg.get(JsonKey.ROLES));
               if (!((List<String>) userOrg.get(JsonKey.ROLES))
                   .contains(ProjectUtil.UserRole.PUBLIC.getValue())) {
-                ((List<String>) userOrg.get(JsonKey.ROLES))
-                    .add(ProjectUtil.UserRole.PUBLIC.getValue());
+                ((List<String>) userOrg.get(JsonKey.ROLES)).add(ProjectUtil.UserRole.PUBLIC.name());
               }
             } else {
-              userOrg.put(JsonKey.ROLES, Arrays.asList(ProjectUtil.UserRole.PUBLIC));
+              userOrg.put(JsonKey.ROLES, Arrays.asList(ProjectUtil.UserRole.PUBLIC.name()));
             }
           }
         }

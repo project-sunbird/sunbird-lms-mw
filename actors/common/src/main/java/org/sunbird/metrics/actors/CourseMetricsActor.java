@@ -95,7 +95,9 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
     SearchDTO searchDTO = new SearchDTO();
     if (!StringUtils.isEmpty(userName)) {
-      searchDTO.setQuery(JsonKey.FIRST_NAME + " : " + userName);
+      Map<String, Object> internalMap = new HashMap<>();
+      internalMap.put("startWith", userName);
+      filter.put(JsonKey.FIRST_NAME, internalMap);
     }
     searchDTO.setLimit(limit);
     searchDTO.setOffset(offset);
@@ -109,6 +111,9 @@ public class CourseMetricsActor extends BaseMetricsActor {
       }
       if (JsonKey.ENROLLED_ON.equalsIgnoreCase(sortBy)) {
         sortBy = JsonKey.BATCHES + "." + JsonKey.ENROLLED_ON;
+      }
+      if (JsonKey.ORG_NAME.equalsIgnoreCase(sortBy)) {
+        sortBy = JsonKey.ROOT_ORG_NAME;
       }
       if (StringUtils.isEmpty(sortOrder)) {
         sortMap.put(sortBy, JsonKey.ASC);
@@ -134,13 +139,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     List<Map<String, Object>> userData = new ArrayList<>();
     for (Map<String, Object> esContent : esContents) {
       Map<String, Object> map = new HashMap<>();
-      String firstName = (String) esContent.get(JsonKey.FIRST_NAME);
-      String lastName = (String) esContent.get(JsonKey.LAST_NAME);
-      if (StringUtils.isEmpty(lastName)) {
-        map.put(JsonKey.USER_NAME, firstName);
-      } else {
-        map.put(JsonKey.USER_NAME, firstName + " " + lastName);
-      }
+      map.put(JsonKey.USER_NAME, (String) esContent.get(JsonKey.FIRST_NAME));
       String phone = null;
       if (esContent.containsKey(JsonKey.ENC_PHONE)) {
         phone = decryptAndMaskPhone((String) esContent.get(JsonKey.ENC_PHONE));

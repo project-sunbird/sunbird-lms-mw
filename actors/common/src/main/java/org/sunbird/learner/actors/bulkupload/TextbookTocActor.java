@@ -78,12 +78,16 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.content.textbook.FileExtension;
 import org.sunbird.content.textbook.TextBookTocUploader;
 import org.sunbird.content.util.TextBookTocUtil;
+import org.sunbird.services.sso.SSOManager;
+import org.sunbird.services.sso.SSOServiceFactory;
 
 @ActorConfig(
   tasks = {"textbookTocUpload", "textbookTocUrl", "textbookTocUpdate"},
   asyncTasks = {}
 )
 public class TextbookTocActor extends BaseBulkUploadActor {
+
+  private SSOManager ssoManager = SSOServiceFactory.getInstance();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -832,8 +836,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       linkDialCode(nodesModified, channel);
     } catch (Exception ex) {
       ProjectLogger.log(
-          "TextbookTocActor:callUpdateHierarchyAndLinkDialCodeApi : Exception occurred while linking dial code : "
-              + ex);
+          "TextbookTocActor:callUpdateHierarchyAndLinkDialCodeApi : Exception occurred while linking dial code : ",
+          ex);
       response
           .getResult()
           .put(
@@ -1197,11 +1201,15 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
     String requestUrl =
         getConfigValue(JsonKey.EKSTEP_BASE_URL) + getConfigValue(JsonKey.UPDATE_HIERARCHY_API);
+    Map<String, String> headers = getDefaultHeaders();
     HttpResponse<String> updateResponse =
         Unirest.patch(requestUrl)
-            .headers(getDefaultHeaders())
+            .headers(headers)
             .body(mapper.writeValueAsString(updateRequest))
             .asString();
+    ProjectLogger.log(
+        "TextbookTocActor:updateHierarchy : access token  : " + mapper.writeValueAsString(headers),
+        LoggerEnum.INFO.name());
     ProjectLogger.log(
         "TextbookTocActor:updateHierarchy : Request for update hierarchy : "
             + mapper.writeValueAsString(updateRequest),
@@ -1312,6 +1320,11 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       newMeta.remove(JsonKey.GRADE_LEVEL);
       newMeta.remove(JsonKey.DIAL_CODES);
       newMeta.remove(JsonKey.TOPIC);
+      if (JsonKey.NO.equalsIgnoreCase((String) newMeta.get(JsonKey.DIAL_CODE_REQUIRED))) {
+        newMeta.put(JsonKey.DIAL_CODE_REQUIRED, JsonKey.NO);
+      } else if (JsonKey.YES.equalsIgnoreCase((String) newMeta.get(JsonKey.DIAL_CODE_REQUIRED))) {
+        newMeta.put(JsonKey.DIAL_CODE_REQUIRED, JsonKey.YES);
+      }
       if (CollectionUtils.isNotEmpty(keywords)) newMeta.put(JsonKey.KEYWORDS, keywords);
       if (CollectionUtils.isNotEmpty(gradeLevel)) newMeta.put(JsonKey.GRADE_LEVEL, gradeLevel);
       if (CollectionUtils.isNotEmpty(dialCodes)) {

@@ -78,12 +78,16 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.content.textbook.FileExtension;
 import org.sunbird.content.textbook.TextBookTocUploader;
 import org.sunbird.content.util.TextBookTocUtil;
+import org.sunbird.services.sso.SSOManager;
+import org.sunbird.services.sso.SSOServiceFactory;
 
 @ActorConfig(
   tasks = {"textbookTocUpload", "textbookTocUrl", "textbookTocUpdate"},
   asyncTasks = {}
 )
 public class TextbookTocActor extends BaseBulkUploadActor {
+
+  private SSOManager ssoManager = SSOServiceFactory.getInstance();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -832,8 +836,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       linkDialCode(nodesModified, channel);
     } catch (Exception ex) {
       ProjectLogger.log(
-          "TextbookTocActor:callUpdateHierarchyAndLinkDialCodeApi : Exception occurred while linking dial code : "
-              + ex);
+          "TextbookTocActor:callUpdateHierarchyAndLinkDialCodeApi : Exception occurred while linking dial code : ",
+          ex);
       response
           .getResult()
           .put(
@@ -1252,6 +1256,11 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     headers.put("Content-Type", "application/json");
     headers.put(
         JsonKey.AUTHORIZATION, JsonKey.BEARER + getConfigValue(JsonKey.SUNBIRD_AUTHORIZATION));
+    headers.put(
+        "x-authenticated-user-token",
+        ssoManager.login(
+            ProjectUtil.getConfigValue(JsonKey.SUNBIRD_SSO_USERNAME),
+            ProjectUtil.getConfigValue(JsonKey.SUNBIRD_SSO_PASSWORD)));
     return headers;
   }
 

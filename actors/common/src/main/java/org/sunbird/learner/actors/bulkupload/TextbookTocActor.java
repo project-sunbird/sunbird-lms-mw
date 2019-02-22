@@ -1260,11 +1260,6 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     headers.put("Content-Type", "application/json");
     headers.put(
         JsonKey.AUTHORIZATION, JsonKey.BEARER + getConfigValue(JsonKey.SUNBIRD_AUTHORIZATION));
-    String accessToken =
-        ssoManager.login(
-            ProjectUtil.getConfigValue(JsonKey.SUNBIRD_SSO_USERNAME),
-            ProjectUtil.getConfigValue(JsonKey.SUNBIRD_SSO_PASSWORD));
-    headers.put("x-authenticated-user-token", accessToken);
     return headers;
   }
 

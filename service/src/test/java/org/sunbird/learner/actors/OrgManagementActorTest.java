@@ -238,7 +238,7 @@ public class OrgManagementActorTest {
   }
 
   @Test
-  public void testCreateOrgFailureWithOutChannel() {
+  public void testCreateOrgFailureWithoutChannel() {
     Map<String, Object> map = getRequestDataForOrgCreate(basicRequestData);
     map.remove(JsonKey.CHANNEL);
     boolean result =

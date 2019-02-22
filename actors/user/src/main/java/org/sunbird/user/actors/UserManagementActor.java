@@ -233,7 +233,7 @@ public class UserManagementActor extends BaseActor {
           (List<Map<String, Object>>) actorMessage.getRequest().get(JsonKey.ORGANISATIONS);
       String userId = (String) actorMessage.getRequest().get(JsonKey.USER_ID);
       String rootOrgId = getUserRootOrgId(userId);
-      List<Map<String, Object>> orgListDb = UserUtil.getUserOrgDetails(userId);
+      List<Map<String, Object>> orgListDb = UserUtil.getAllUserOrgDetails(userId);
       Map<String, Object> orgDbMap = new HashMap<>();
       if (CollectionUtils.isNotEmpty(orgListDb)) {
         orgListDb.forEach(org -> orgDbMap.put((String) org.get(JsonKey.ORGANISATION_ID), org));
@@ -243,7 +243,7 @@ public class UserManagementActor extends BaseActor {
           createOrUpdateOrganisations(org, orgDbMap, actorMessage);
         }
       }
-      removeOrganisations(orgDbMap, rootOrgId);
+      removeOrganisations(orgDbMap, rootOrgId, actorMessage);
       ProjectLogger.log(
           "UserManagementActor:updateUserOrganisations : " + "updateUserOrganisation Completed",
           LoggerEnum.INFO);
@@ -268,6 +268,7 @@ public class UserManagementActor extends BaseActor {
         userOrg.setUpdatedDate(ProjectUtil.getFormattedDate());
         userOrg.setUpdatedBy((String) (actorMessage.getContext().get(JsonKey.REQUESTED_BY)));
         userOrg.setId((String) ((Map<String, Object>) orgDbMap.get(orgId)).get(JsonKey.ID));
+        userOrg.setOrgLeftDate(null);
         userOrgDao.updateUserOrg(userOrg);
         orgDbMap.remove(orgId);
       } else {
@@ -280,16 +281,19 @@ public class UserManagementActor extends BaseActor {
     }
   }
 
-  private void removeOrganisations(Map<String, Object> orgDbMap, String rootOrgId) {
+  private void removeOrganisations(
+      Map<String, Object> orgDbMap, String rootOrgId, Request actorMessage) {
     Set<String> ids = orgDbMap.keySet();
     UserOrgDao userOrgDao = UserOrgDaoImpl.getInstance();
     ids.remove(rootOrgId);
-    List<String> userOrgTobeRemoved = new ArrayList<>();
     for (String id : ids) {
-      userOrgTobeRemoved.add((String) ((Map<String, Object>) orgDbMap.get(id)).get(JsonKey.ID));
-    }
-    if (CollectionUtils.isNotEmpty(userOrgTobeRemoved)) {
-      userOrgDao.deleteUserOrgs(userOrgTobeRemoved);
+      UserOrg userOrg = mapper.convertValue(orgDbMap.get(id), UserOrg.class);
+      userOrg.setDeleted(true);
+      userOrg.setId((String) ((Map<String, Object>) orgDbMap.get(id)).get(JsonKey.ID));
+      userOrg.setUpdatedDate(ProjectUtil.getFormattedDate());
+      userOrg.setUpdatedBy((String) (actorMessage.getContext().get(JsonKey.REQUESTED_BY)));
+      userOrg.setOrgLeftDate(ProjectUtil.getFormattedDate());
+      userOrgDao.updateUserOrg(userOrg);
     }
   }
 

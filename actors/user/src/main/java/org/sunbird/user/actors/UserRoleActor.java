@@ -80,19 +80,15 @@ public class UserRoleActor extends UserBaseActor {
     // update userOrg role with requested roles.
     Map<String, Object> userOrgDBMap = new HashMap<>();
 
-    if ((boolean) actorMessage.getContext().get(JsonKey.PRIVATE)) {
-      Map<String, Object> searchMap = new HashMap<>();
-      searchMap.put(JsonKey.USER_ID, userId);
-      searchMap.put(JsonKey.ORGANISATION_ID, organisationId);
-      Response res =
-          cassandraOperation.getRecordsByProperties(JsonKey.SUNBIRD, JsonKey.USER_ORG, searchMap);
-      List<Map<String, Object>> responseList =
-          (List<Map<String, Object>>) res.get(JsonKey.RESPONSE);
-      if (CollectionUtils.isNotEmpty(responseList)) {
-        userOrgDBMap.put(JsonKey.ORGANISATIONS, responseList);
-      }
-    } else {
-      userOrgDBMap = getUserService().esGetUserOrg(userId, organisationId);
+    Map<String, Object> searchMap = new HashMap<>();
+    searchMap.put(JsonKey.USER_ID, userId);
+    searchMap.put(JsonKey.ORGANISATION_ID, organisationId);
+    searchMap.put(JsonKey.IS_DELETED, false);
+    Response res =
+        cassandraOperation.getRecordsByProperties(JsonKey.SUNBIRD, JsonKey.USER_ORG, searchMap);
+    List<Map<String, Object>> responseList = (List<Map<String, Object>>) res.get(JsonKey.RESPONSE);
+    if (CollectionUtils.isNotEmpty(responseList)) {
+      userOrgDBMap.put(JsonKey.ORGANISATION, responseList.get(0));
     }
 
     if (MapUtils.isEmpty(userOrgDBMap)) {
@@ -167,18 +163,10 @@ public class UserRoleActor extends UserBaseActor {
   private UserOrg prepareUserOrg(
       Map<String, Object> requestMap, String hashTagId, Map<String, Object> userOrgDBMap) {
     ObjectMapper mapper = new ObjectMapper();
-    List<Map<String, Object>> userOrgs =
-        (List<Map<String, Object>>) userOrgDBMap.get(JsonKey.ORGANISATIONS);
+    Map<String, Object> userOrgMap = (Map<String, Object>) userOrgDBMap.get(JsonKey.ORGANISATION);
+
     final String organisationId = (String) requestMap.get(JsonKey.ORGANISATION_ID);
-    Map<String, Object> userOrgMap =
-        userOrgs
-            .stream()
-            .filter(
-                aUserOrg -> {
-                  return organisationId.equals(aUserOrg.get(JsonKey.ORGANISATION_ID));
-                })
-            .findFirst()
-            .get();
+
     UserOrg userOrg = mapper.convertValue(userOrgMap, UserOrg.class);
 
     List<String> roles = (List<String>) requestMap.get(JsonKey.ROLES);

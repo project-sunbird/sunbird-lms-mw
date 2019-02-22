@@ -626,6 +626,29 @@ public class UserUtil {
     return organisations;
   }
 
+  @SuppressWarnings("unchecked")
+  public static List<Map<String, Object>> getAllUserOrgDetails(String userId) {
+    List<Map<String, Object>> userOrgList = null;
+    List<Map<String, Object>> organisations = new ArrayList<>();
+    try {
+      Map<String, Object> reqMap = new WeakHashMap<>();
+      reqMap.put(JsonKey.USER_ID, userId);
+      Util.DbInfo orgUsrDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
+      Response result =
+          cassandraOperation.getRecordsByProperties(
+              orgUsrDbInfo.getKeySpace(), orgUsrDbInfo.getTableName(), reqMap);
+      userOrgList = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+      if (CollectionUtils.isNotEmpty(userOrgList)) {
+        for (Map<String, Object> tempMap : userOrgList) {
+          organisations.add(tempMap);
+        }
+      }
+    } catch (Exception e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
+    return organisations;
+  }
+
   public static void toLower(Map<String, Object> userMap) {
     Arrays.asList(
             ProjectUtil.getConfigValue(JsonKey.SUNBIRD_API_REQUEST_LOWER_CASE_FIELDS).split(","))

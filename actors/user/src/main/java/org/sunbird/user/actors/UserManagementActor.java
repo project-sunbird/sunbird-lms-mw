@@ -209,6 +209,11 @@ public class UserManagementActor extends BaseActor {
             userOrg.put(JsonKey.HASH_TAG_ID, organisation.getHashTagId());
             if (userOrg.get(JsonKey.ROLES) != null) {
               RoleService.validateRoles((List<String>) userOrg.get(JsonKey.ROLES));
+              if (!((List<String>) userOrg.get(JsonKey.ROLES))
+                  .contains(ProjectUtil.UserRole.PUBLIC.getValue())) {
+                ((List<String>) userOrg.get(JsonKey.ROLES))
+                    .add(ProjectUtil.UserRole.PUBLIC.getValue());
+              }
             } else {
               userOrg.put(JsonKey.ROLES, Arrays.asList(ProjectUtil.UserRole.PUBLIC));
             }
@@ -268,7 +273,6 @@ public class UserManagementActor extends BaseActor {
         userOrg.setUpdatedDate(ProjectUtil.getFormattedDate());
         userOrg.setUpdatedBy((String) (actorMessage.getContext().get(JsonKey.REQUESTED_BY)));
         userOrg.setId((String) ((Map<String, Object>) orgDbMap.get(orgId)).get(JsonKey.ID));
-        userOrg.setOrgLeftDate(null);
         userOrgDao.updateUserOrg(userOrg);
         orgDbMap.remove(orgId);
       } else {

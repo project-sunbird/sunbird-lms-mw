@@ -219,7 +219,7 @@ public class OrgManagementActorTest {
   }
 
   @Test
-  public void testCreateOrgSuccessWithOutExternalIdAndProvider() {
+  public void testCreateOrgSuccessWithoutExternalIdAndProvider() {
     when(cassandraOperation.getRecordsByCompositeKey(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(getRecordsByProperty(true));

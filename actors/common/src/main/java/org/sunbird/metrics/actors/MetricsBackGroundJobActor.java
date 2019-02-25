@@ -3,8 +3,8 @@ package org.sunbird.metrics.actors;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.HashMap;
@@ -241,16 +241,16 @@ public class MetricsBackGroundJobActor extends BaseActor {
 
     Map<String, Object> templateMap = new HashMap<>();
     templateMap.put(JsonKey.ACTION_URL, reportDbInfo.get(JsonKey.FILE_URL));
-    templateMap.put(JsonKey.NAME, reportDbInfo.get(JsonKey.FIRST_NAME));
+    templateMap.put(JsonKey.FIRST_NAME, reportDbInfo.get(JsonKey.FIRST_NAME));
     templateMap.put(JsonKey.COURSE_NAME, requestMap.get(JsonKey.COURSE_NAME));
     templateMap.put(JsonKey.BATCH_NAME, requestMap.get(JsonKey.BATCH_NAME));
-    LocalDateTime date =
-        LocalDateTime.parse(
-            (String) reportDbInfo.get(JsonKey.CREATED_DATE),
-            DateTimeFormatter.ofPattern(ProjectUtil.getDateFormatter().toPattern()));
     String zonedDateTime =
-        date.atZone(ZoneId.of(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_TIMEZONE)))
-            .format(DateTimeFormatter.ofPattern(JsonKey.COURSE_STAT_MAIL_DATE_TIME_PATTERN));
+        ZonedDateTime.parse(
+                (String) reportDbInfo.get(JsonKey.CREATED_DATE),
+                DateTimeFormatter.ofPattern(ProjectUtil.getDateFormatter().toPattern()))
+            .format(
+                DateTimeFormatter.ofPattern(JsonKey.COURSE_STAT_MAIL_DATE_TIME_PATTERN)
+                    .withZone(ZoneId.of(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_TIMEZONE))));
     templateMap.put(JsonKey.DATE_TIME, zonedDateTime);
     if (StringUtils.isNotEmpty((String) requestMap.get(JsonKey.ROOT_ORG_ID))) {
       Response response =

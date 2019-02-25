@@ -47,12 +47,14 @@ import org.sunbird.location.util.LocationRequestValidator;
   LocationRequestValidator.class
 })
 @PowerMockIgnore("javax.management.*")
-public class OrgManagementActorAddMemberToOrgTest {
+public class OrgManagementActorTest {
 
   private ActorSystem system = ActorSystem.create("system");
   private static final Props props = Props.create(OrganisationManagementActor.class);
   private static CassandraOperationImpl cassandraOperation;
   private static Map<String, Object> basicRequestData;
+  private static final String ADD_MEMBER_TO_ORG =
+      ActorOperations.ADD_MEMBER_ORGANISATION.getValue();
 
   @Before
   public void beforeEachTest() {
@@ -103,7 +105,10 @@ public class OrgManagementActorAddMemberToOrgTest {
   public void testAddUserToOrgSuccessWithUserIdAndOrgId() {
 
     boolean result =
-        testScenario(getRequest(getRequestData(true, true, false, false, basicRequestData)), null);
+        testScenario(
+            getRequest(
+                getRequestData(true, true, false, false, basicRequestData), ADD_MEMBER_TO_ORG),
+            null);
     assertTrue(result);
   }
 
@@ -111,7 +116,10 @@ public class OrgManagementActorAddMemberToOrgTest {
   public void testAddUserToOrgSuccessWithUserExtIdAndOrgId() {
 
     boolean result =
-        testScenario(getRequest(getRequestData(false, true, true, false, basicRequestData)), null);
+        testScenario(
+            getRequest(
+                getRequestData(false, true, true, false, basicRequestData), ADD_MEMBER_TO_ORG),
+            null);
     assertTrue(result);
   }
 
@@ -119,7 +127,10 @@ public class OrgManagementActorAddMemberToOrgTest {
   public void testAddUserToOrgSuccessWithUserIdAndOrgExtId() {
 
     boolean result =
-        testScenario(getRequest(getRequestData(true, false, false, true, basicRequestData)), null);
+        testScenario(
+            getRequest(
+                getRequestData(true, false, false, true, basicRequestData), ADD_MEMBER_TO_ORG),
+            null);
     assertTrue(result);
   }
 
@@ -127,7 +138,10 @@ public class OrgManagementActorAddMemberToOrgTest {
   public void testAddUserToOrgSuccessWithUserExtIdAndOrgExtId() {
 
     boolean result =
-        testScenario(getRequest(getRequestData(false, false, true, true, basicRequestData)), null);
+        testScenario(
+            getRequest(
+                getRequestData(false, false, true, true, basicRequestData), ADD_MEMBER_TO_ORG),
+            null);
     assertTrue(result);
   }
 
@@ -138,7 +152,8 @@ public class OrgManagementActorAddMemberToOrgTest {
         .thenReturn(getRecordsByProperty(true));
     boolean result =
         testScenario(
-            getRequest(getRequestData(true, false, true, true, basicRequestData)),
+            getRequest(
+                getRequestData(true, false, true, true, basicRequestData), ADD_MEMBER_TO_ORG),
             ResponseCode.invalidUsrData);
     assertTrue(result);
   }
@@ -149,7 +164,8 @@ public class OrgManagementActorAddMemberToOrgTest {
         .thenReturn(getEsResponse(true));
     boolean result =
         testScenario(
-            getRequest(getRequestData(true, false, true, true, basicRequestData)),
+            getRequest(
+                getRequestData(true, false, true, true, basicRequestData), ADD_MEMBER_TO_ORG),
             ResponseCode.invalidOrgData);
     assertTrue(result);
   }
@@ -162,7 +178,8 @@ public class OrgManagementActorAddMemberToOrgTest {
 
     boolean result =
         testScenario(
-            getRequest(getRequestData(false, false, true, true, basicRequestData)),
+            getRequest(
+                getRequestData(false, false, true, true, basicRequestData), ADD_MEMBER_TO_ORG),
             ResponseCode.invalidUsrData);
     assertTrue(result);
   }
@@ -173,9 +190,87 @@ public class OrgManagementActorAddMemberToOrgTest {
         .thenReturn(getEsResponse(true));
     boolean result =
         testScenario(
-            getRequest(getRequestData(true, false, true, true, basicRequestData)),
+            getRequest(
+                getRequestData(true, false, true, true, basicRequestData), ADD_MEMBER_TO_ORG),
             ResponseCode.invalidOrgData);
     assertTrue(result);
+  }
+
+  @Test
+  public void testCreateOrgSuccessWithExternalIdAndProvider() {
+    when(cassandraOperation.getRecordsByCompositeKey(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(getRecordsByProperty(true));
+    when(cassandraOperation.insertRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(getSuccess());
+    when(cassandraOperation.getRecordsByProperties(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(getOrgStatus())
+        .thenReturn(getOrgStatus())
+        .thenReturn(getRecordsByProperty(true));
+    boolean result =
+        testScenario(
+            getRequest(
+                getRequestDataForOrgCreate(basicRequestData),
+                ActorOperations.CREATE_ORG.getValue()),
+            null);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testCreateOrgSuccessWithoutExternalIdAndProvider() {
+    when(cassandraOperation.getRecordsByCompositeKey(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(getRecordsByProperty(true));
+    when(cassandraOperation.insertRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(getSuccess());
+    when(cassandraOperation.getRecordsByProperties(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(getOrgStatus())
+        .thenReturn(getOrgStatus())
+        .thenReturn(getRecordsByProperty(true));
+    Map<String, Object> map = getRequestDataForOrgCreate(basicRequestData);
+    map.remove(JsonKey.EXTERNAL_ID);
+    boolean result = testScenario(getRequest(map, ActorOperations.CREATE_ORG.getValue()), null);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testCreateOrgFailureWithoutChannel() {
+    Map<String, Object> map = getRequestDataForOrgCreate(basicRequestData);
+    map.remove(JsonKey.CHANNEL);
+    boolean result =
+        testScenario(
+            getRequest(map, ActorOperations.CREATE_ORG.getValue()),
+            ResponseCode.mandatoryParamsMissing);
+    assertTrue(result);
+  }
+
+  private Response getOrgStatus() {
+    Response res = new Response();
+    List<Map<String, Object>> list = new ArrayList<>();
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.STATUS, 1);
+    map.put(JsonKey.ID, "id");
+    list.add(map);
+    res.put(JsonKey.RESPONSE, list);
+    return res;
+  }
+
+  private Response getSuccess() {
+    Response res = new Response();
+    res.setResponseCode(ResponseCode.OK);
+    return res;
+  }
+
+  private Map<String, Object> getRequestDataForOrgCreate(Map<String, Object> map) {
+    map.put(JsonKey.CHANNEL, "channel");
+    map.put(JsonKey.IS_ROOT_ORG, false);
+    map.put(JsonKey.EXTERNAL_ID, "externalId");
+
+    return map;
   }
 
   private Map<String, Object> getRequestData(
@@ -240,10 +335,10 @@ public class OrgManagementActorAddMemberToOrgTest {
     }
   }
 
-  private Request getRequest(Map<String, Object> requestData) {
+  private Request getRequest(Map<String, Object> requestData, String actorOperation) {
     Request reqObj = new Request();
     reqObj.setRequest(requestData);
-    reqObj.setOperation(ActorOperations.ADD_MEMBER_ORGANISATION.getValue());
+    reqObj.setOperation(actorOperation);
     return reqObj;
   }
 

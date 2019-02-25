@@ -1626,7 +1626,7 @@ public final class Util {
 
   public static List<Map<String, Object>> getUserOrgDetails(String userId) {
     List<Map<String, Object>> userOrgList = null;
-    List<Map<String, Object>> organisations = new ArrayList<>();
+    List<Map<String, Object>> userOrganisations = new ArrayList<>();
     try {
       Map<String, Object> reqMap = new WeakHashMap<>();
       reqMap.put(JsonKey.USER_ID, userId);
@@ -1648,15 +1648,17 @@ public final class Util {
         Map<String, Map<String, Object>> orgInfoMap =
             ElasticSearchUtil.getEsResultByListOfIds(organisationIds, fields, EsType.organisation);
 
-        for (Map<String, Object> tempMap : userOrgList) {
-          tempMap.putAll(orgInfoMap.get(tempMap.get(JsonKey.ORGANISATION_ID)));
-          organisations.add(tempMap);
+        for (Map<String, Object> userOrg : userOrgList) {
+          Map<String, Object> esOrgMap = orgInfoMap.get(userOrg.get(JsonKey.ORGANISATION_ID));
+          esOrgMap.remove(JsonKey.ID);
+          userOrg.putAll(esOrgMap);
+          userOrganisations.add(userOrg);
         }
       }
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }
-    return organisations;
+    return userOrganisations;
   }
 
   public static List<Map<String, Object>> getJobProfileDetails(String userId) {

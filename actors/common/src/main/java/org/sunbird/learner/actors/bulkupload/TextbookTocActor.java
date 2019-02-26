@@ -44,6 +44,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -463,11 +464,14 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           ssoManager.login(
               getConfigValue(JsonKey.SUNBIRD_SSO_USERNAME),
               getConfigValue(JsonKey.SUNBIRD_SSO_PASSWORD)));
-      updateResponse =
-          Unirest.post(requestUrl)
-              .headers(headers)
-              .body(mapper.writeValueAsString(requestMap))
-              .asString();
+      String reqBody = mapper.writeValueAsString(requestMap);
+      ProjectLogger.log(
+          "TextbookTocActor:callDialcodeSearchApi : request : " + reqBody, LoggerEnum.INFO.name());
+      updateResponse = Unirest.post(requestUrl).headers(headers).body(reqBody).asString();
+      ProjectLogger.log(
+          "TextbookTocActor:callDialcodeSearchApi : updateResponse.getBody() : "
+              + updateResponse.getBody(),
+          LoggerEnum.INFO.name());
       if (null != updateResponse) {
         Response response = mapper.readValue(updateResponse.getBody(), Response.class);
         ProjectLogger.log(
@@ -543,8 +547,12 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             ByteOrderMark.UTF_16LE,
             ByteOrderMark.UTF_32BE,
             ByteOrderMark.UTF_32LE);
-
-    try (InputStreamReader reader = new InputStreamReader(bomInputStream, "UTF8"); ) {
+    String character = StandardCharsets.UTF_8.name();
+    if (bomInputStream.hasBOM()) {
+      character = bomInputStream.getBOMCharsetName();
+      ProjectLogger.log("TextbookTocActor:readAndValidateCSV : BOM charset", LoggerEnum.INFO);
+    }
+    try (InputStreamReader reader = new InputStreamReader(bomInputStream, character); ) {
       csvFileParser = csvFileFormat.parse(reader);
       Map<String, Integer> csvHeaders = csvFileParser.getHeaderMap();
 

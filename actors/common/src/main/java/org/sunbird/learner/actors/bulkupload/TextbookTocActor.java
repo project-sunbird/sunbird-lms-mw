@@ -69,7 +69,6 @@ import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.TextbookActorOperation;
@@ -334,7 +333,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     String character = StandardCharsets.UTF_8.name();
     if (bomInputStream.hasBOM()) {
       character = bomInputStream.getBOMCharsetName();
-      ProjectLogger.log("TextbookTocActor:readAndValidateCSV : BOM charset", LoggerEnum.INFO);
+      ProjectLogger.log("TextbookTocActor:readAndValidateCSV : BOM charset", INFO);
     }
 
     try (InputStreamReader reader = new InputStreamReader(bomInputStream, character); ) {
@@ -420,8 +419,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         if (null != csvFileParser) csvFileParser.close();
       } catch (IOException e) {
         ProjectLogger.log(
-            "TextbookTocActor:readAndValidateCSV : Exception occurred while closing stream",
-            LoggerEnum.ERROR);
+            "TextbookTocActor:readAndValidateCSV : Exception occurred while closing stream", ERROR);
       }
     }
     return result;
@@ -571,7 +569,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     } else {
       log(
           "Create Textbook - UpdateHierarchy input data : " + mapper.writeValueAsString(data),
-          LoggerEnum.INFO);
+          INFO);
       String tbId = (String) request.get(TEXTBOOK_ID);
       Map<String, Object> nodesModified = new HashMap<>();
       Map<String, Object> hierarchyData = new HashMap<>();

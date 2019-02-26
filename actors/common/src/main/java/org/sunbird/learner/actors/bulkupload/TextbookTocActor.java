@@ -62,6 +62,8 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.io.ByteOrderMark;
+import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -473,8 +475,16 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     metadata.putAll(fwMetadata);
     CSVParser csvFileParser = null;
     CSVFormat csvFileFormat = CSVFormat.DEFAULT.withHeader();
+    BOMInputStream bomInputStream =
+        new BOMInputStream(
+            inputStream,
+            ByteOrderMark.UTF_16BE,
+            ByteOrderMark.UTF_8,
+            ByteOrderMark.UTF_16LE,
+            ByteOrderMark.UTF_32BE,
+            ByteOrderMark.UTF_32LE);
 
-    try (InputStreamReader reader = new InputStreamReader(inputStream, "UTF8"); ) {
+    try (InputStreamReader reader = new InputStreamReader(bomInputStream, "UTF8"); ) {
       csvFileParser = csvFileFormat.parse(reader);
       Map<String, Integer> csvHeaders = csvFileParser.getHeaderMap();
 

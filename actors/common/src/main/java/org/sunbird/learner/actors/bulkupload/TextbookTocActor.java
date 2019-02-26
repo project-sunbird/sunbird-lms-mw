@@ -60,12 +60,15 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.io.ByteOrderMark;
+import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.TextbookActorOperation;
@@ -74,7 +77,6 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.content.textbook.FileExtension;
 import org.sunbird.content.textbook.TextBookTocUploader;
 import org.sunbird.content.util.TextBookTocUtil;
-import org.sunbird.common.models.util.LoggerEnum;
 
 @ActorConfig(
   tasks = {"textbookTocUpload", "textbookTocUrl", "textbookTocUpdate"},
@@ -319,8 +321,16 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     CSVParser csvFileParser = null;
 
     CSVFormat csvFileFormat = CSVFormat.DEFAULT.withHeader();
+    BOMInputStream bomInputStream =
+        new BOMInputStream(
+            inputStream,
+            ByteOrderMark.UTF_16BE,
+            ByteOrderMark.UTF_8,
+            ByteOrderMark.UTF_16LE,
+            ByteOrderMark.UTF_32BE,
+            ByteOrderMark.UTF_32LE);
 
-    try (InputStreamReader reader = new InputStreamReader(inputStream, "UTF8"); ) {
+    try (InputStreamReader reader = new InputStreamReader(bomInputStream, "UTF8"); ) {
       csvFileParser = csvFileFormat.parse(reader);
       Map<String, Integer> csvHeaders = csvFileParser.getHeaderMap();
 
@@ -403,7 +413,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         if (null != csvFileParser) csvFileParser.close();
       } catch (IOException e) {
         ProjectLogger.log(
-            "TextbookTocActor:readAndValidateCSV : Exception occurred while closing stream", LoggerEnum.ERROR);
+            "TextbookTocActor:readAndValidateCSV : Exception occurred while closing stream",
+            LoggerEnum.ERROR);
       }
     }
     return result;
@@ -551,7 +562,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           ResponseCode.invalidRequestData.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     } else {
-     log("Create Textbook - UpdateHierarchy input data : " + mapper.writeValueAsString(data),LoggerEnum.INFO); 
+      log(
+          "Create Textbook - UpdateHierarchy input data : " + mapper.writeValueAsString(data),
+          LoggerEnum.INFO);
       String tbId = (String) request.get(TEXTBOOK_ID);
       Map<String, Object> nodesModified = new HashMap<>();
       Map<String, Object> hierarchyData = new HashMap<>();

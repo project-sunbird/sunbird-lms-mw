@@ -102,26 +102,42 @@ public class CourseMetricsActor extends BaseMetricsActor {
     searchDTO.setLimit(limit);
     searchDTO.setOffset(offset);
     if (!StringUtils.isEmpty(sortBy)) {
-      Map<String, String> sortMap = new HashMap<>();
+      Map<String, Object> sortMap = new HashMap<>();
+      boolean isNestedSearch = false;
       if (JsonKey.USERNAME.equalsIgnoreCase(sortBy)) {
         sortBy = JsonKey.FIRST_NAME;
       }
       if (JsonKey.PROGRESS.equalsIgnoreCase(sortBy)) {
         sortBy = JsonKey.BATCHES + "." + JsonKey.PROGRESS;
+        isNestedSearch = true;
       }
       if (JsonKey.ENROLLED_ON.equalsIgnoreCase(sortBy)) {
         sortBy = JsonKey.BATCHES + "." + JsonKey.ENROLLED_ON;
+        isNestedSearch = true;
       }
       if (JsonKey.ORG_NAME.equalsIgnoreCase(sortBy)) {
         sortBy = JsonKey.ROOT_ORG_NAME;
       }
-      if (StringUtils.isEmpty(sortOrder)) {
-        sortMap.put(sortBy, JsonKey.ASC);
+      if (!isNestedSearch) {
+        if (StringUtils.isEmpty(sortOrder)) {
+          sortMap.put(sortBy, JsonKey.ASC);
+        } else {
+          sortMap.put(sortBy, sortOrder);
+        }
       } else {
-        sortMap.put(sortBy, sortOrder);
+        Map<String, Object> map = new HashMap<>();
+        map.put(JsonKey.ORDER, StringUtils.isEmpty(sortOrder) ? JsonKey.ASC : sortOrder);
+        Map<String, Object> nestedMap = new HashMap<>();
+        nestedMap.put(JsonKey.BATCHES + "." + JsonKey.BATCH_ID, batchId);
+        Map<String, Object> nestedTermMap = new HashMap<>();
+        nestedTermMap.put("term", nestedMap);
+        map.put("nested_filter", nestedTermMap);
+        sortMap.put(sortBy, map);
       }
       searchDTO.setSortBy(sortMap);
+      searchDTO.setNestedSearch(isNestedSearch);
     }
+
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filter);
 
     Map<String, Object> result =

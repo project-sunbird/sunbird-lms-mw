@@ -458,6 +458,11 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       Map<String, String> headers = new HashMap<>();
       headers.putAll(getDefaultHeaders());
       headers.put("X-Channel-Id", channel);
+      headers.put(
+          "x-authenticated-user-token",
+          ssoManager.login(
+              getConfigValue(JsonKey.SUNBIRD_SSO_USERNAME),
+              getConfigValue(JsonKey.SUNBIRD_SSO_PASSWORD)));
       updateResponse =
           Unirest.post(requestUrl)
               .headers(headers)

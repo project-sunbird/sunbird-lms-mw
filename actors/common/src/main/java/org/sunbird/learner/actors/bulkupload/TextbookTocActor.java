@@ -295,7 +295,6 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     List<String> identifier = new ArrayList<>();
     identifier.addAll(dialCodes);
     search.put(JsonKey.IDENTIFIER, identifier);
-
     String requestUrl =
         getConfigValue(JsonKey.SUNBIRD_CS_BASE_URL)
             + getConfigValue(JsonKey.SUNBIRD_DIALCODE_SEARCH_API);

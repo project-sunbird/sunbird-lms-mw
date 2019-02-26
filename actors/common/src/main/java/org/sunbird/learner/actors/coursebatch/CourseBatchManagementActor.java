@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
@@ -643,8 +644,12 @@ public class CourseBatchManagementActor extends BaseActor {
   }
 
   private void validateUserPermission(CourseBatch courseBatch, String requestedBy) {
-    if (!(requestedBy.equalsIgnoreCase(courseBatch.getCreatedBy())
-        || (courseBatch.getParticipant()).containsKey(requestedBy))) {
+    List<String> canUpdateList = new ArrayList<>();
+    canUpdateList.add(courseBatch.getCreatedBy());
+    if (CollectionUtils.isNotEmpty(courseBatch.getMentors())) {
+      canUpdateList.addAll(courseBatch.getMentors());
+    }
+    if (!canUpdateList.contains(requestedBy)) {
       throw new ProjectCommonException(
           ResponseCode.unAuthorized.getErrorCode(),
           ResponseCode.unAuthorized.getErrorMessage(),

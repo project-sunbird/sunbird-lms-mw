@@ -75,12 +75,16 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.content.textbook.FileExtension;
 import org.sunbird.content.textbook.TextBookTocUploader;
 import org.sunbird.content.util.TextBookTocUtil;
+import org.sunbird.services.sso.SSOManager;
+import org.sunbird.services.sso.SSOServiceFactory;
 
 @ActorConfig(
   tasks = {"textbookTocUpload", "textbookTocUrl", "textbookTocUpdate"},
   asyncTasks = {}
 )
 public class TextbookTocActor extends BaseBulkUploadActor {
+
+  private SSOManager ssoManager = SSOServiceFactory.getInstance();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -304,6 +308,11 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       Map<String, String> headers = new HashMap<>();
       headers.putAll(getDefaultHeaders());
       headers.put("X-Channel-Id", channel);
+      headers.put(
+          "x-authenticated-user-token",
+          ssoManager.login(
+              getConfigValue(JsonKey.SUNBIRD_SSO_USERNAME),
+              getConfigValue(JsonKey.SUNBIRD_SSO_PASSWORD)));
       updateResponse =
           Unirest.post(requestUrl)
               .headers(headers)

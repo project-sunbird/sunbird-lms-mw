@@ -44,6 +44,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -330,7 +331,13 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             ByteOrderMark.UTF_32BE,
             ByteOrderMark.UTF_32LE);
 
-    try (InputStreamReader reader = new InputStreamReader(bomInputStream, "UTF8"); ) {
+    String character = StandardCharsets.UTF_8.name();
+    if (bomInputStream.hasBOM()) {
+      character = bomInputStream.getBOMCharsetName();
+      ProjectLogger.log("TextbookTocActor:readAndValidateCSV : BOM charset", LoggerEnum.INFO);
+    }
+
+    try (InputStreamReader reader = new InputStreamReader(bomInputStream, character); ) {
       csvFileParser = csvFileFormat.parse(reader);
       Map<String, Integer> csvHeaders = csvFileParser.getHeaderMap();
 

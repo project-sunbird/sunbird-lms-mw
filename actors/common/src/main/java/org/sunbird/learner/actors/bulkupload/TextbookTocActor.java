@@ -66,6 +66,7 @@ import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.TextbookActorOperation;
@@ -74,7 +75,6 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.content.textbook.FileExtension;
 import org.sunbird.content.textbook.TextBookTocUploader;
 import org.sunbird.content.util.TextBookTocUtil;
-import org.sunbird.common.models.util.LoggerEnum;
 
 @ActorConfig(
   tasks = {"textbookTocUpload", "textbookTocUrl", "textbookTocUpdate"},
@@ -264,36 +264,91 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     return topics;
   }
 
-  @SuppressWarnings("unchecked")
   private void validateDialCodesWithReservedDialCodes(
-      Set<String> dialCodes, Map<String, Object> textBookdata) {
-    Map<String, Integer> reservedDialcodeMap =
-        (Map<String, Integer>) textBookdata.get(JsonKey.RESERVED_DIAL_CODES);
-    Set<String> invalidDialCodes = new HashSet<>();
-    if (MapUtils.isNotEmpty(reservedDialcodeMap)) {
-      Set<String> reservedDialCodes = reservedDialcodeMap.keySet();
-      dialCodes.forEach(
-          dialCode -> {
-            if (!reservedDialCodes.contains(dialCode)) {
-              invalidDialCodes.add(dialCode);
-            }
-          });
-      if (CollectionUtils.isNotEmpty(invalidDialCodes)) {
-        throwDialCodeNotReservedError(textBookdata, invalidDialCodes);
+      Set<String> dialCodes, Map<String, Object> textbookData) {
+    String channel = (String) textbookData.get(JsonKey.CHANNEL);
+    if (CollectionUtils.isNotEmpty(dialCodes)) {
+      Set<String> invalidDialCodes = new HashSet<>();
+      List<String> searchedDialcodes = callDialcodeSearchApi(dialCodes, channel);
+      if (CollectionUtils.isNotEmpty(searchedDialcodes)) {
+        dialCodes.forEach(
+            dialCode -> {
+              if (!searchedDialcodes.contains(dialCode)) {
+                invalidDialCodes.add(dialCode);
+              }
+            });
+        if (CollectionUtils.isNotEmpty(invalidDialCodes)) {
+          throwInvalidDialCodeError(invalidDialCodes);
+        }
+      } else if (CollectionUtils.isNotEmpty(dialCodes)) {
+        throwInvalidDialCodeError(dialCodes);
       }
-    } else if (CollectionUtils.isNotEmpty(dialCodes)) {
-      throwDialCodeNotReservedError(textBookdata, dialCodes);
     }
   }
 
-  private void throwDialCodeNotReservedError(
-      Map<String, Object> textBookdata, Set<String> invalidDialCodes) {
+  private List<String> callDialcodeSearchApi(Set<String> dialCodes, String channel) {
+    Map<String, Object> requestMap = new HashMap<>();
+    Map<String, Object> request = new HashMap<>();
+    requestMap.put(JsonKey.REQUEST, request);
+    Map<String, Object> search = new HashMap<>();
+    request.put(JsonKey.SEARCH, search);
+    List<String> identifier = new ArrayList<>();
+    identifier.addAll(dialCodes);
+    search.put(JsonKey.IDENTIFIER, identifier);
+
+    String requestUrl =
+        getConfigValue(JsonKey.SUNBIRD_CS_BASE_URL)
+            + getConfigValue(JsonKey.SUNBIRD_DIALCODE_SEARCH_API);
+    HttpResponse<String> updateResponse = null;
+    List<String> resDialcodes = new ArrayList<>();
+    try {
+      Map<String, String> headers = new HashMap<>();
+      headers.putAll(getDefaultHeaders());
+      headers.put("X-Channel-Id", channel);
+      updateResponse =
+          Unirest.post(requestUrl)
+              .headers(headers)
+              .body(mapper.writeValueAsString(requestMap))
+              .asString();
+      if (null != updateResponse) {
+        Response response = mapper.readValue(updateResponse.getBody(), Response.class);
+        ProjectLogger.log(
+            "TextbookTocActor:callDialcodeSearchApi : response.getResponseCode().getResponseCode() : "
+                + response.getResponseCode().getResponseCode(),
+            LoggerEnum.INFO.name());
+        if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
+          Map<String, Object> result = response.getResult();
+          if (MapUtils.isNotEmpty(result)) {
+            List<Map<String, Object>> dialcodes =
+                (List<Map<String, Object>>) result.get(JsonKey.DIAL_CODES);
+            if (CollectionUtils.isNotEmpty(dialcodes)) {
+              dialcodes
+                  .stream()
+                  .forEach(
+                      map -> {
+                        resDialcodes.add((String) map.get(JsonKey.IDENTIFIER));
+                      });
+              return resDialcodes;
+            }
+          }
+        }
+      }
+    } catch (Exception ex) {
+      ProjectLogger.log(
+          "TextbookTocActor:callDialcodeSearchApi : Exception occurred with message:"
+              + ex.getMessage(),
+          ex);
+      ProjectCommonException.throwServerErrorException(ResponseCode.SERVER_ERROR);
+    }
+    return resDialcodes;
+  }
+
+  private void throwInvalidDialCodeError(Set<String> invalidDialCodes) {
     throwClientErrorException(
-        ResponseCode.errorDialCodeNotReservedForTextBook,
+        ResponseCode.errorInvalidDialCode,
         MessageFormat.format(
-            ResponseCode.errorDialCodeNotReservedForTextBook.getErrorMessage(),
-            StringUtils.join(invalidDialCodes, ','),
-            textBookdata.get(JsonKey.IDENTIFIER)));
+            ResponseCode.errorInvalidDialCode.getErrorMessage(),
+            StringUtils.join(invalidDialCodes, ',')));
   }
 
   @SuppressWarnings("unchecked")
@@ -403,7 +458,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         if (null != csvFileParser) csvFileParser.close();
       } catch (IOException e) {
         ProjectLogger.log(
-            "TextbookTocActor:readAndValidateCSV : Exception occurred while closing stream", LoggerEnum.ERROR);
+            "TextbookTocActor:readAndValidateCSV : Exception occurred while closing stream",
+            LoggerEnum.ERROR);
       }
     }
     return result;
@@ -551,7 +607,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           ResponseCode.invalidRequestData.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     } else {
-     log("Create Textbook - UpdateHierarchy input data : " + mapper.writeValueAsString(data),LoggerEnum.INFO); 
+      log(
+          "Create Textbook - UpdateHierarchy input data : " + mapper.writeValueAsString(data),
+          LoggerEnum.INFO);
       String tbId = (String) request.get(TEXTBOOK_ID);
       Map<String, Object> nodesModified = new HashMap<>();
       Map<String, Object> hierarchyData = new HashMap<>();

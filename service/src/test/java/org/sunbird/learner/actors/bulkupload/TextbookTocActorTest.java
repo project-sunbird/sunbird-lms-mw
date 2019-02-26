@@ -88,8 +88,7 @@ public class TextbookTocActorTest {
     tocData = addTocDataRow(tocData, JsonKey.YES, "2019", "", "", false);
     tocData = addTocDataRow(tocData, JsonKey.YES, "2096", "", "", true);
     ProjectCommonException res = (ProjectCommonException) doRequest(true, tocData.toString());
-    Assert.assertEquals(
-        res.getCode(), ResponseCode.errorDialCodeNotReservedForTextBook.getErrorCode());
+    Assert.assertEquals(res.getCode(), ResponseCode.errorInvalidDialCode.getErrorCode());
   }
 
   @Test
@@ -133,8 +132,7 @@ public class TextbookTocActorTest {
     StringBuffer tocData = new StringBuffer(VALID_HEADER);
     tocData = addTocDataRow(tocData, JsonKey.YES, "2089", "", "", true);
     ProjectCommonException res = (ProjectCommonException) doRequest(true, tocData.toString());
-    Assert.assertEquals(
-        res.getCode(), ResponseCode.errorDialCodeNotReservedForTextBook.getErrorCode());
+    Assert.assertEquals(res.getCode(), ResponseCode.errorInvalidDialCode.getErrorCode());
   }
 
   @Test

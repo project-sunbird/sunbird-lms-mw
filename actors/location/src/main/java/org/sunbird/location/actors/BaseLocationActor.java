@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
@@ -64,16 +63,14 @@ public abstract class BaseLocationActor extends BaseActor {
 
   private List<Map<String, Object>> generateTopNResult(Map<String, Object> result) {
     List<Map<String, Object>> dataMapList = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-    List<Map<String, Object>> list = new ArrayList<>();
     Integer topN =
         Integer.parseInt(PropertiesCache.getInstance().getProperty(JsonKey.SEARCH_TOP_N));
-    if (CollectionUtils.isNotEmpty(dataMapList)) {
-      int count = Math.min(topN, dataMapList.size());
-      for (int i = 0; i < count; i++) {
-        Map<String, Object> m = new HashMap<>();
-        m.put(JsonKey.ID, dataMapList.get(i).get(JsonKey.ID));
-        list.add(m);
-      }
+    int count = Math.min(topN, dataMapList.size());
+    List<Map<String, Object>> list = new ArrayList<>();
+    for (int i = 0; i < count; i++) {
+      Map<String, Object> m = new HashMap<>();
+      m.put(JsonKey.ID, dataMapList.get(i).get(JsonKey.ID));
+      list.add(m);
     }
     return list;
   }

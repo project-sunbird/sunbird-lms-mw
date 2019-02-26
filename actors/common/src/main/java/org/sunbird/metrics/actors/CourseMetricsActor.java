@@ -129,7 +129,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
         map.put(JsonKey.ORDER, StringUtils.isEmpty(sortOrder) ? JsonKey.ASC : sortOrder);
         Map<String, Object> nestedMap = new HashMap<>();
         nestedMap.put(JsonKey.BATCHES + "." + JsonKey.BATCH_ID, batchId);
-        map.put("term", nestedMap);
+        map.put(JsonKey.TERM, nestedMap);
         sortMap.put(sortBy, map);
       }
       searchDTO.setSortBy(sortMap);

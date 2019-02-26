@@ -129,13 +129,10 @@ public class CourseMetricsActor extends BaseMetricsActor {
         map.put(JsonKey.ORDER, StringUtils.isEmpty(sortOrder) ? JsonKey.ASC : sortOrder);
         Map<String, Object> nestedMap = new HashMap<>();
         nestedMap.put(JsonKey.BATCHES + "." + JsonKey.BATCH_ID, batchId);
-        Map<String, Object> nestedTermMap = new HashMap<>();
-        nestedTermMap.put("term", nestedMap);
-        map.put("nested_filter", nestedTermMap);
+        map.put("term", nestedMap);
         sortMap.put(sortBy, map);
       }
       searchDTO.setSortBy(sortMap);
-      searchDTO.setNestedSearch(isNestedSearch);
     }
 
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filter);

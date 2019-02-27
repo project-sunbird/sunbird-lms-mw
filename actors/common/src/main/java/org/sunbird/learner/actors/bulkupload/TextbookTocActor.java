@@ -44,6 +44,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -62,6 +63,8 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.io.ByteOrderMark;
+import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -415,36 +418,99 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     return topics;
   }
 
-  @SuppressWarnings("unchecked")
   private void validateDialCodesWithReservedDialCodes(
-      Set<String> dialCodes, Map<String, Object> textBookdata) {
-    Map<String, Integer> reservedDialcodeMap =
-        (Map<String, Integer>) textBookdata.get(JsonKey.RESERVED_DIAL_CODES);
-    Set<String> invalidDialCodes = new HashSet<>();
-    if (MapUtils.isNotEmpty(reservedDialcodeMap)) {
-      Set<String> reservedDialCodes = reservedDialcodeMap.keySet();
-      dialCodes.forEach(
-          dialCode -> {
-            if (!reservedDialCodes.contains(dialCode)) {
-              invalidDialCodes.add(dialCode);
-            }
-          });
-      if (CollectionUtils.isNotEmpty(invalidDialCodes)) {
-        throwDialCodeNotReservedError(textBookdata, invalidDialCodes);
+      Set<String> dialCodes, Map<String, Object> textbookData) {
+    String channel = (String) textbookData.get(JsonKey.CHANNEL);
+    if (CollectionUtils.isNotEmpty(dialCodes)) {
+      Set<String> invalidDialCodes = new HashSet<>();
+      List<String> searchedDialcodes = callDialcodeSearchApi(dialCodes, channel);
+      if (CollectionUtils.isNotEmpty(searchedDialcodes)) {
+        dialCodes.forEach(
+            dialCode -> {
+              if (!searchedDialcodes.contains(dialCode)) {
+                invalidDialCodes.add(dialCode);
+              }
+            });
+        if (CollectionUtils.isNotEmpty(invalidDialCodes)) {
+          throwInvalidDialCodeError(invalidDialCodes);
+        }
+      } else if (CollectionUtils.isNotEmpty(dialCodes)) {
+        throwInvalidDialCodeError(dialCodes);
       }
-    } else if (CollectionUtils.isNotEmpty(dialCodes)) {
-      throwDialCodeNotReservedError(textBookdata, dialCodes);
     }
   }
 
-  private void throwDialCodeNotReservedError(
-      Map<String, Object> textBookdata, Set<String> invalidDialCodes) {
+  private List<String> callDialcodeSearchApi(Set<String> dialCodes, String channel) {
+    Map<String, Object> requestMap = new HashMap<>();
+    Map<String, Object> request = new HashMap<>();
+    requestMap.put(JsonKey.REQUEST, request);
+    Map<String, Object> search = new HashMap<>();
+    request.put(JsonKey.SEARCH, search);
+    List<String> identifier = new ArrayList<>();
+    identifier.addAll(dialCodes);
+    search.put(JsonKey.IDENTIFIER, identifier);
+
+    String requestUrl =
+        getConfigValue(JsonKey.SUNBIRD_CS_BASE_URL)
+            + getConfigValue(JsonKey.SUNBIRD_DIALCODE_SEARCH_API);
+    HttpResponse<String> updateResponse = null;
+    List<String> resDialcodes = new ArrayList<>();
+    try {
+      Map<String, String> headers = new HashMap<>();
+      headers.putAll(getDefaultHeaders());
+      headers.put("X-Channel-Id", channel);
+      headers.put(
+          "x-authenticated-user-token",
+          ssoManager.login(
+              getConfigValue(JsonKey.SUNBIRD_SSO_USERNAME),
+              getConfigValue(JsonKey.SUNBIRD_SSO_PASSWORD)));
+      String reqBody = mapper.writeValueAsString(requestMap);
+      ProjectLogger.log(
+          "TextbookTocActor:callDialcodeSearchApi : request : " + reqBody, LoggerEnum.INFO.name());
+      updateResponse = Unirest.post(requestUrl).headers(headers).body(reqBody).asString();
+      ProjectLogger.log(
+          "TextbookTocActor:callDialcodeSearchApi : updateResponse.getBody() : "
+              + updateResponse.getBody(),
+          LoggerEnum.INFO.name());
+      if (null != updateResponse) {
+        Response response = mapper.readValue(updateResponse.getBody(), Response.class);
+        ProjectLogger.log(
+            "TextbookTocActor:callDialcodeSearchApi : response.getResponseCode().getResponseCode() : "
+                + response.getResponseCode().getResponseCode(),
+            LoggerEnum.INFO.name());
+        if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
+          Map<String, Object> result = response.getResult();
+          if (MapUtils.isNotEmpty(result)) {
+            List<Map<String, Object>> dialcodes =
+                (List<Map<String, Object>>) result.get(JsonKey.DIAL_CODES);
+            if (CollectionUtils.isNotEmpty(dialcodes)) {
+              dialcodes
+                  .stream()
+                  .forEach(
+                      map -> {
+                        resDialcodes.add((String) map.get(JsonKey.IDENTIFIER));
+                      });
+              return resDialcodes;
+            }
+          }
+        }
+      }
+    } catch (Exception ex) {
+      ProjectLogger.log(
+          "TextbookTocActor:callDialcodeSearchApi : Exception occurred with message:"
+              + ex.getMessage(),
+          ex);
+      ProjectCommonException.throwServerErrorException(ResponseCode.SERVER_ERROR);
+    }
+    return resDialcodes;
+  }
+
+  private void throwInvalidDialCodeError(Set<String> invalidDialCodes) {
     throwClientErrorException(
-        ResponseCode.errorDialCodeNotReservedForTextBook,
+        ResponseCode.errorInvalidDialCode,
         MessageFormat.format(
-            ResponseCode.errorDialCodeNotReservedForTextBook.getErrorMessage(),
-            StringUtils.join(invalidDialCodes, ','),
-            textBookdata.get(JsonKey.IDENTIFIER)));
+            ResponseCode.errorInvalidDialCode.getErrorMessage(),
+            StringUtils.join(invalidDialCodes, ',')));
   }
 
   @SuppressWarnings("unchecked")
@@ -473,8 +539,20 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     metadata.putAll(fwMetadata);
     CSVParser csvFileParser = null;
     CSVFormat csvFileFormat = CSVFormat.DEFAULT.withHeader();
-
-    try (InputStreamReader reader = new InputStreamReader(inputStream, "UTF8"); ) {
+    BOMInputStream bomInputStream =
+        new BOMInputStream(
+            inputStream,
+            ByteOrderMark.UTF_16BE,
+            ByteOrderMark.UTF_8,
+            ByteOrderMark.UTF_16LE,
+            ByteOrderMark.UTF_32BE,
+            ByteOrderMark.UTF_32LE);
+    String character = StandardCharsets.UTF_8.name();
+    if (bomInputStream.hasBOM()) {
+      character = bomInputStream.getBOMCharsetName();
+      ProjectLogger.log("TextbookTocActor:readAndValidateCSV : BOM charset", LoggerEnum.INFO);
+    }
+    try (InputStreamReader reader = new InputStreamReader(bomInputStream, character); ) {
       csvFileParser = csvFileFormat.parse(reader);
       Map<String, Integer> csvHeaders = csvFileParser.getHeaderMap();
 

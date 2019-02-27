@@ -599,7 +599,7 @@ public class PageManagementActor extends BaseActor {
     searcDto.setQuery((String) map.get(JsonKey.QUERY));
     searcDto.setLimit((Integer) map.get(JsonKey.LIMIT));
     searcDto.getAdditionalProperties().put(JsonKey.FILTERS, map.get(JsonKey.FILTERS));
-    searcDto.setSortBy((Map<String, String>) map.get(JsonKey.SORT_BY));
+    searcDto.setSortBy((Map<String, Object>) map.get(JsonKey.SORT_BY));
     String type = "";
     if (JsonKey.BATCH.equalsIgnoreCase(dataSource)) {
       type = ProjectUtil.EsType.course.getTypeName();

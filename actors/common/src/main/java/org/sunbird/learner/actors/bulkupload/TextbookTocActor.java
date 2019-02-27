@@ -573,7 +573,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         throwClientErrorException(
             ResponseCode.mandatoryHeadersMissing,
             MessageFormat.format(
-                "mandatory column(s) {0} is missing",
+                "Mandatory column(s) {0} are missing",
                 String.join(", ", new ArrayList<>(missingColumns))));
       }
 

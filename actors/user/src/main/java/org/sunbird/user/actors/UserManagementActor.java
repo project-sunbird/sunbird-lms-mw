@@ -208,13 +208,13 @@ public class UserManagementActor extends BaseActor {
           } else {
             userOrg.put(JsonKey.HASH_TAG_ID, organisation.getHashTagId());
             if (userOrg.get(JsonKey.ROLES) != null) {
-              RoleService.validateRoles((List<String>) userOrg.get(JsonKey.ROLES));
-              if (!((List<String>) userOrg.get(JsonKey.ROLES))
-                  .contains(ProjectUtil.UserRole.PUBLIC.getValue())) {
-                ((List<String>) userOrg.get(JsonKey.ROLES)).add(ProjectUtil.UserRole.PUBLIC.name());
+              List<String> rolesList = (List<String>) userOrg.get(JsonKey.ROLES);
+              RoleService.validateRoles(rolesList);
+              if (!rolesList.contains(ProjectUtil.UserRole.PUBLIC.getValue())) {
+                rolesList.add(ProjectUtil.UserRole.PUBLIC.getValue());
               }
             } else {
-              userOrg.put(JsonKey.ROLES, Arrays.asList(ProjectUtil.UserRole.PUBLIC.name()));
+              userOrg.put(JsonKey.ROLES, Arrays.asList(ProjectUtil.UserRole.PUBLIC.getValue()));
             }
           }
         }
@@ -247,7 +247,8 @@ public class UserManagementActor extends BaseActor {
           createOrUpdateOrganisations(org, orgDbMap, actorMessage);
         }
       }
-      removeOrganisations(orgDbMap, rootOrgId, actorMessage);
+      String requestedBy = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
+      removeOrganisations(orgDbMap, rootOrgId, requestedBy);
       ProjectLogger.log(
           "UserManagementActor:updateUserOrganisations : " + "updateUserOrganisation Completed",
           LoggerEnum.INFO);
@@ -285,7 +286,7 @@ public class UserManagementActor extends BaseActor {
   }
 
   private void removeOrganisations(
-      Map<String, Object> orgDbMap, String rootOrgId, Request actorMessage) {
+      Map<String, Object> orgDbMap, String rootOrgId, String requestedBy) {
     Set<String> ids = orgDbMap.keySet();
     UserOrgDao userOrgDao = UserOrgDaoImpl.getInstance();
     ids.remove(rootOrgId);
@@ -294,7 +295,7 @@ public class UserManagementActor extends BaseActor {
       userOrg.setDeleted(true);
       userOrg.setId((String) ((Map<String, Object>) orgDbMap.get(id)).get(JsonKey.ID));
       userOrg.setUpdatedDate(ProjectUtil.getFormattedDate());
-      userOrg.setUpdatedBy((String) (actorMessage.getContext().get(JsonKey.REQUESTED_BY)));
+      userOrg.setUpdatedBy(requestedBy);
       userOrg.setOrgLeftDate(ProjectUtil.getFormattedDate());
       userOrgDao.updateUserOrg(userOrg);
     }

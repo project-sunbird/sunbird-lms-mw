@@ -125,7 +125,7 @@ public class UserManagementActorTest {
     when(UserUtil.encryptUserData(Mockito.anyMap())).thenReturn(requestMap);
     PowerMockito.mockStatic(DataCacheHandler.class);
     when(DataCacheHandler.getRoleMap()).thenReturn(roleMap(true));
-    when(UserUtil.getUserOrgDetails(Mockito.anyString())).thenReturn(getUserOrgDetails());
+    when(UserUtil.getActiveUserOrgDetails(Mockito.anyString())).thenReturn(getUserOrgDetails());
     reqMap = getMapObject();
   }
 

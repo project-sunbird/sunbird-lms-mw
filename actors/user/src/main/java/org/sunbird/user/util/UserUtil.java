@@ -602,14 +602,20 @@ public class UserUtil {
     return dbResExternalIds;
   }
 
+  public static List<Map<String, Object>> getActiveUserOrgDetails(String userId) {
+    return getUserOrgDetails(false, userId);
+  }
+
   @SuppressWarnings("unchecked")
-  public static List<Map<String, Object>> getUserOrgDetails(String userId) {
+  private static List<Map<String, Object>> getUserOrgDetails(boolean isdeleted, String userId) {
     List<Map<String, Object>> userOrgList = null;
     List<Map<String, Object>> organisations = new ArrayList<>();
     try {
       Map<String, Object> reqMap = new WeakHashMap<>();
       reqMap.put(JsonKey.USER_ID, userId);
-      reqMap.put(JsonKey.IS_DELETED, false);
+      if (!isdeleted) {
+        reqMap.put(JsonKey.IS_DELETED, false);
+      }
       Util.DbInfo orgUsrDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
       Response result =
           cassandraOperation.getRecordsByProperties(
@@ -624,6 +630,10 @@ public class UserUtil {
       ProjectLogger.log(e.getMessage(), e);
     }
     return organisations;
+  }
+
+  public static List<Map<String, Object>> getAllUserOrgDetails(String userId) {
+    return getUserOrgDetails(true, userId);
   }
 
   public static void toLower(Map<String, Object> userMap) {

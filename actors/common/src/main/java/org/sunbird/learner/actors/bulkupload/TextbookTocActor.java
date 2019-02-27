@@ -206,7 +206,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
               LoggerEnum.INFO.name());
           if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
             Map<String, Object> result = response.getResult();
-            List<String> searchedContentIds = new ArrayList<>();
+            Set<String> searchedContentIds = new HashSet<>();
             if (MapUtils.isNotEmpty(result)) {
               int count = (int) result.get(JsonKey.COUNT);
               if (0 == count) {
@@ -221,7 +221,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                     contentMap -> {
                       searchedContentIds.add((String) contentMap.get(JsonKey.IDENTIFIER));
                     });
-                if (content.size() != contentIds.size()) {
+                if (searchedContentIds.size() != contentIds.size()) {
                   String errorMsg = prepareErrorMsg(contentIdVsRowNumMap, searchedContentIds);
                   ProjectCommonException.throwClientErrorException(
                       ResponseCode.errorInvalidLinkedContentUrl, errorMsg);
@@ -259,7 +259,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   }
 
   private String prepareErrorMsg(
-      Map<String, List<Integer>> contentIdVsRowNumMap, List<String> searchedContentIds) {
+      Map<String, List<Integer>> contentIdVsRowNumMap, Set<String> searchedContentIds) {
     StringBuilder errorMsg = new StringBuilder();
     contentIdVsRowNumMap
         .keySet()
@@ -465,13 +465,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
               getConfigValue(JsonKey.SUNBIRD_SSO_USERNAME),
               getConfigValue(JsonKey.SUNBIRD_SSO_PASSWORD)));
       String reqBody = mapper.writeValueAsString(requestMap);
-      ProjectLogger.log(
-          "TextbookTocActor:callDialcodeSearchApi : request : " + reqBody, LoggerEnum.INFO.name());
       updateResponse = Unirest.post(requestUrl).headers(headers).body(reqBody).asString();
-      ProjectLogger.log(
-          "TextbookTocActor:callDialcodeSearchApi : updateResponse.getBody() : "
-              + updateResponse.getBody(),
-          LoggerEnum.INFO.name());
       if (null != updateResponse) {
         Response response = mapper.readValue(updateResponse.getBody(), Response.class);
         ProjectLogger.log(

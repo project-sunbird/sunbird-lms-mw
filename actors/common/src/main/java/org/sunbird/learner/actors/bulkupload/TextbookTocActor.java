@@ -559,6 +559,24 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       } else {
         throwClientErrorException(ResponseCode.blankCsvData);
       }
+
+      String mandatoryFields = getConfigValue(JsonKey.TEXTBOOK_TOC_MANDATORY_FIELDS);
+      Map<String, String> mandatoryFieldsMap =
+          mapper.readValue(mandatoryFields, new TypeReference<Map<String, String>>() {});
+      List<String> missingColumns =
+          mandatoryFieldsMap
+              .values()
+              .stream()
+              .filter(field -> !csvHeaders.keySet().contains(field))
+              .collect(Collectors.toList());
+      if (CollectionUtils.isNotEmpty(missingColumns)) {
+        throwClientErrorException(
+            ResponseCode.mandatoryHeadersMissing,
+            MessageFormat.format(
+                "Mandatory column(s) {0} are missing",
+                String.join(", ", new ArrayList<>(missingColumns))));
+      }
+
       List<CSVRecord> csvRecords = csvFileParser.getRecords();
       validateCSV(csvRecords);
       Set<String> dialCodes = new HashSet<>();
@@ -635,6 +653,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       result.put(JsonKey.TOPICS, topics);
       result.put(JsonKey.DIAL_CODE_IDENTIFIER_MAP, dialCodeIdentifierMap);
       result.put(JsonKey.LINKED_CONTENT, rowNumVsContentIdsMap);
+    } catch (IllegalArgumentException e) {
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.customClientError, e.getMessage());
     } catch (ProjectCommonException e) {
       throw e;
     } catch (Exception e) {

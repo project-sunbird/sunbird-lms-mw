@@ -1465,6 +1465,13 @@ public final class Util {
       userDetails.put(JsonKey.ORGANISATIONS, getUserOrgDetails(userId));
       userDetails.put(JsonKey.BADGE_ASSERTIONS, getUserBadge(userId));
       userDetails.put(JsonKey.SKILLS, getUserSkills(userId));
+      userDetails.put(JsonKey.BATCHES, getUserCourseBatch(userId));
+      Map<String, Object> orgMap = getOrgDetails((String) userDetails.get(JsonKey.ROOT_ORG_ID));
+      if (!MapUtils.isEmpty(orgMap)) {
+        userDetails.put(JsonKey.ROOT_ORG_NAME, orgMap.get(JsonKey.ORG_NAME));
+      } else {
+        userDetails.put(JsonKey.ROOT_ORG_NAME, "");
+      }
       // save masked email and phone number
       addMaskEmailAndPhone(userDetails);
       checkProfileCompleteness(userDetails);

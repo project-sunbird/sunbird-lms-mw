@@ -204,9 +204,10 @@ public class CourseMetricsActor extends BaseMetricsActor {
     filter.put(JsonKey.BATCHES + "." + JsonKey.BATCH_ID, batchId);
     filter.put(JsonKey.BATCHES + "." + JsonKey.PROGRESS, leafNodeCount);
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filter);
-    searchDTO.setOffset(0);
+
     if (limit != null) {
       searchDTO.setLimit(limit.intValue());
+      searchDTO.setOffset(0);
     }
     Map<String, Object> result =
         ElasticSearchUtil.complexSearch(

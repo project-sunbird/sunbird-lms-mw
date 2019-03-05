@@ -632,8 +632,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           try {
             contentIds =
                 validateLinkedContentUrlAndGetContentIds(
-                    max_allowed_content_size, linkedContentKey, record, i);
-            rowNumVsContentIdsMap.put(i, contentIds);
+                    max_allowed_content_size, linkedContentKey, record, i + 1);
+            rowNumVsContentIdsMap.put(i + 1, contentIds);
           } catch (Exception ex) {
             exceptionMsgs.append(ex.getMessage());
             exceptionMsgs.append(" ");
@@ -1076,16 +1076,22 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             nodesModified,
             false);
       }
-      List<Map<String, Object>> hierarchyList =
-          getParentChildHierarchy(
-              tbId,
-              (String) textbookData.get(JsonKey.NAME),
-              (List<Map<String, Object>>) textbookHierarchy.get(JsonKey.CHILDREN));
+      List<Map<String, Object>> hierarchyList = null;
+      if (CollectionUtils.isNotEmpty(
+          (List<Map<String, Object>>) textbookHierarchy.get(JsonKey.CHILDREN))) {
+        hierarchyList =
+            getParentChildHierarchy(
+                tbId,
+                (String) textbookData.get(JsonKey.NAME),
+                (List<Map<String, Object>>) textbookHierarchy.get(JsonKey.CHILDREN));
+      }
       ProjectLogger.log(
           "TextbookTocActor:updateTextbook : ParentChildHierarchy structure : "
               + mapper.writeValueAsString(hierarchyList),
           LoggerEnum.INFO.name());
-      validateTextbookUnitIds(identifierList, hierarchyList);
+      if (CollectionUtils.isNotEmpty(hierarchyList)) {
+        validateTextbookUnitIds(identifierList, hierarchyList);
+      }
       if (BooleanUtils.isTrue(linkContent)) {
         Map<String, Object> hierarchy = populateHierarchyDataForUpdate(hierarchyList, tbId);
         data.forEach(

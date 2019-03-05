@@ -1092,7 +1092,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       if (CollectionUtils.isNotEmpty(hierarchyList)) {
         validateTextbookUnitIds(identifierList, hierarchyList);
       }
-      if (BooleanUtils.isTrue(linkContent)) {
+      if (BooleanUtils.isTrue(linkContent) && CollectionUtils.isNotEmpty(hierarchyList)) {
         Map<String, Object> hierarchy = populateHierarchyDataForUpdate(hierarchyList, tbId);
         data.forEach(
             s -> {

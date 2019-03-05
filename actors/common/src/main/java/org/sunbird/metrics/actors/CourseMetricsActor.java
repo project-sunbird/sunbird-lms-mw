@@ -174,7 +174,9 @@ public class CourseMetricsActor extends BaseMetricsActor {
     courseProgressResult.put(JsonKey.DATA, userData);
     courseProgressResult.put(JsonKey.START_DATE, courseBatchResult.get(JsonKey.START_DATE));
     courseProgressResult.put(JsonKey.END_DATE, courseBatchResult.get(JsonKey.END_DATE));
-    courseProgressResult.put(JsonKey.COMPLETED_COUNT, getCompletedCount(batchId, leafNodeCount));
+    courseProgressResult.put(
+        JsonKey.COMPLETED_COUNT,
+        getCompletedCount(batchId, leafNodeCount, (Long) result.get(JsonKey.COUNT)));
     Response response = new Response();
     response.put("response", "SUCCESS");
     response.getResult().putAll(courseProgressResult);
@@ -196,13 +198,16 @@ public class CourseMetricsActor extends BaseMetricsActor {
     }
   }
 
-  private int getCompletedCount(String batchId, int leafNodeCount) {
+  private int getCompletedCount(String batchId, int leafNodeCount, Long limit) {
     SearchDTO searchDTO = new SearchDTO();
     Map<String, Object> filter = new HashMap<>();
     filter.put(JsonKey.BATCHES + "." + JsonKey.BATCH_ID, batchId);
     filter.put(JsonKey.BATCHES + "." + JsonKey.PROGRESS, leafNodeCount);
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filter);
-
+    searchDTO.setOffset(0);
+    if (limit != null) {
+      searchDTO.setLimit(limit.intValue());
+    }
     Map<String, Object> result =
         ElasticSearchUtil.complexSearch(
             searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());

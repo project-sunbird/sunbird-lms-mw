@@ -670,6 +670,10 @@ public class CourseBatchManagementActor extends BaseActor {
     fields.add(JsonKey.REGISTERED_ORG);
 
     SearchDTO searchDTO = new SearchDTO();
+    if (CollectionUtils.isNotEmpty(userIds)) {
+      searchDTO.setLimit(userIds.size());
+      searchDTO.setOffset(0);
+    }
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
     searchDTO.setFields(fields);
 

@@ -1283,6 +1283,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         ProjectCommonException.throwClientErrorException(ResponseCode.errorDialCodeLinkingFail);
       }
     } catch (Exception ex) {
+      ProjectLogger.log("TextbookTocActor:updateHierarchy : link dial code error ", ex);
       if (ex instanceof ProjectCommonException) {
         throw ex;
       } else {
@@ -1301,11 +1302,16 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     String requestUrl =
         getConfigValue(JsonKey.EKSTEP_BASE_URL) + getConfigValue(JsonKey.UPDATE_HIERARCHY_API);
     Map<String, String> headers = getDefaultHeaders();
-    HttpResponse<String> updateResponse =
-        Unirest.patch(requestUrl)
-            .headers(headers)
-            .body(mapper.writeValueAsString(updateRequest))
-            .asString();
+    HttpResponse<String> updateResponse = null;
+    try {
+      updateResponse =
+          Unirest.patch(requestUrl)
+              .headers(headers)
+              .body(mapper.writeValueAsString(updateRequest))
+              .asString();
+    } catch (Exception ex) {
+      ProjectLogger.log("TextbookTocActor:updateHierarchy : Update response call ", ex);
+    }
     ProjectLogger.log(
         "TextbookTocActor:updateHierarchy : access token  : " + mapper.writeValueAsString(headers),
         LoggerEnum.INFO.name());
@@ -1315,6 +1321,12 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         LoggerEnum.INFO.name());
     if (null != updateResponse) {
       try {
+        ProjectLogger.log(
+            "TextbookTocActor:updateHierarchy : status response code : "
+                + updateResponse.getStatus()
+                + "status message "
+                + updateResponse.getStatusText(),
+            INFO);
         Response response = mapper.readValue(updateResponse.getBody(), Response.class);
         if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
           return response;
@@ -1337,6 +1349,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
               ResponseCode.CLIENT_ERROR.getResponseCode());
         }
       } catch (Exception ex) {
+        ProjectLogger.log(
+            "TextbookTocActor:updateHierarchy : Update response body " + updateResponse.getBody(),
+            ex);
         if (ex instanceof ProjectCommonException) {
           throw ex;
         } else {
@@ -1347,6 +1362,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         }
       }
     } else {
+      ProjectLogger.log("TextbookTocActor:updateHierarchy : null response ", INFO);
       throw new ProjectCommonException(
           ResponseCode.errorTbUpdate.getErrorCode(),
           ResponseCode.errorTbUpdate.getErrorMessage(),

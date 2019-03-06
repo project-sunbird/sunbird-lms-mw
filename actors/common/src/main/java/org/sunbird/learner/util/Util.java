@@ -561,6 +561,9 @@ public final class Util {
     if (searchQueryMap.containsKey(JsonKey.QUERY)) {
       search.setQuery((String) searchQueryMap.get(JsonKey.QUERY));
     }
+    if (searchQueryMap.containsKey(JsonKey.QUERY_FIELDS)) {
+      search.setQueryFields((List<String>) searchQueryMap.get(JsonKey.QUERY_FIELDS));
+    }
     if (searchQueryMap.containsKey(JsonKey.FACETS)) {
       search.setFacets((List<Map<String, String>>) searchQueryMap.get(JsonKey.FACETS));
     }

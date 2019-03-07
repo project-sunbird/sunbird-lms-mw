@@ -5,41 +5,33 @@ import static org.sunbird.common.models.util.ProjectUtil.isNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.ReportTrackingStatus;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 
 @ActorConfig(
   tasks = {
     "courseProgressMetrics",
     "courseConsumptionMetrics",
+    "courseProgressMetricsV2",
     "courseProgressMetricsReport",
     "courseConsumptionMetricsReport"
   },
@@ -57,20 +49,233 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
-    if (request
-        .getOperation()
-        .equalsIgnoreCase(ActorOperations.COURSE_PROGRESS_METRICS.getValue())) {
-      courseProgressMetrics(request);
-    } else if (request
-        .getOperation()
-        .equalsIgnoreCase(ActorOperations.COURSE_CREATION_METRICS.getValue())) {
-      courseConsumptionMetrics(request);
-    } else if (request
-        .getOperation()
-        .equalsIgnoreCase(ActorOperations.COURSE_PROGRESS_METRICS_REPORT.getValue())) {
-      courseProgressMetricsReport(request);
+    String requestedOperation = request.getOperation();
+    switch (requestedOperation) {
+      case "courseProgressMetrics":
+        courseProgressMetrics(request);
+        break;
+      case "courseConsumptionMetrics":
+        courseConsumptionMetrics(request);
+        break;
+      case "courseProgressMetricsV2":
+        courseProgressMetricsV2(request);
+        break;
+      case "courseProgressMetricsReport":
+        courseProgressMetricsReport(request);
+        break;
+      default:
+        onReceiveUnsupportedOperation(request.getOperation());
+        break;
+    }
+  }
+
+  private void courseProgressMetricsV2(Request actorMessage) {
+    ProjectLogger.log("CourseMetricsActor: courseProgressMetrics called.", LoggerEnum.INFO.name());
+    Integer limit = (Integer) actorMessage.getContext().get(JsonKey.LIMIT);
+    String sortBy = (String) actorMessage.getContext().get(JsonKey.SORTBY);
+    String batchId = (String) actorMessage.getContext().get(JsonKey.BATCH_ID);
+    Integer offset = (Integer) actorMessage.getContext().get(JsonKey.OFFSET);
+    String userName = (String) actorMessage.getContext().get(JsonKey.USERNAME);
+    String sortOrder = (String) actorMessage.getContext().get(JsonKey.SORT_ORDER);
+
+    String requestedBy = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
+    validateUserId(requestedBy);
+    Map<String, Object> courseBatchResult = validateAndGetCourseBatch(batchId);
+    int leafNodeCount = 0;
+    Map<String, Object> tempMap =
+        (Map<String, Object>) courseBatchResult.get(JsonKey.COURSE_ADDITIONAL_INFO);
+    if (!MapUtils.isEmpty(tempMap)) {
+      String leafCount = (String) tempMap.get(JsonKey.LEAF_NODE_COUNT);
+      if (!StringUtils.isEmpty(leafCount) && StringUtils.isNumeric(leafCount)) {
+        leafNodeCount = Integer.parseInt(leafCount);
+      }
+    }
+    Map<String, Object> filter = new HashMap<>();
+    filter.put(JsonKey.BATCHES + "." + JsonKey.BATCH_ID, batchId);
+
+    SearchDTO searchDTO = new SearchDTO();
+    if (!StringUtils.isEmpty(userName)) {
+      Map<String, Object> internalMap = new HashMap<>();
+      internalMap.put(ElasticSearchUtil.STARTS_WITH, userName);
+      filter.put(JsonKey.FIRST_NAME, internalMap);
+    }
+    searchDTO.setLimit(limit);
+    searchDTO.setOffset(offset);
+    if (!StringUtils.isEmpty(sortBy)) {
+      Map<String, Object> sortMap = new HashMap<>();
+      boolean isNestedSearch = false;
+      if (JsonKey.USERNAME.equalsIgnoreCase(sortBy)) {
+        sortBy = JsonKey.FIRST_NAME;
+      }
+      if (JsonKey.PROGRESS.equalsIgnoreCase(sortBy)) {
+        sortBy = JsonKey.BATCHES + "." + JsonKey.PROGRESS;
+        isNestedSearch = true;
+      }
+      if (JsonKey.ENROLLED_ON.equalsIgnoreCase(sortBy)) {
+        sortBy = JsonKey.BATCHES + "." + JsonKey.ENROLLED_ON;
+        isNestedSearch = true;
+      }
+      if (JsonKey.ORG_NAME.equalsIgnoreCase(sortBy)) {
+        sortBy = JsonKey.ROOT_ORG_NAME;
+      }
+      if (!isNestedSearch) {
+        if (StringUtils.isEmpty(sortOrder)) {
+          sortMap.put(sortBy, JsonKey.ASC);
+        } else {
+          sortMap.put(sortBy, sortOrder);
+        }
+      } else {
+        Map<String, Object> map = new HashMap<>();
+        map.put(JsonKey.ORDER, StringUtils.isEmpty(sortOrder) ? JsonKey.ASC : sortOrder);
+        Map<String, Object> nestedMap = new HashMap<>();
+        nestedMap.put(JsonKey.BATCHES + "." + JsonKey.BATCH_ID, batchId);
+        map.put(JsonKey.TERM, nestedMap);
+        sortMap.put(sortBy, map);
+      }
+      searchDTO.setSortBy(sortMap);
+    }
+
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filter);
+
+    Map<String, Object> result =
+        ElasticSearchUtil.complexSearch(
+            searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
+    if (isNull(result) || result.size() == 0) {
+      ProjectLogger.log(
+          "CourseMetricsActor:courseProgressMetricsV2: No search results found.",
+          LoggerEnum.INFO.name());
+      ProjectCommonException.throwClientErrorException(ResponseCode.invalidCourseBatchId);
+    }
+
+    List<Map<String, Object>> esContents = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+    Map<String, Object> courseProgressResult = new HashMap<>();
+    List<Map<String, Object>> userData = new ArrayList<>();
+    for (Map<String, Object> esContent : esContents) {
+      Map<String, Object> map = new HashMap<>();
+      map.put(JsonKey.USER_NAME, (String) esContent.get(JsonKey.FIRST_NAME));
+      String phone = null;
+      if (esContent.containsKey(JsonKey.ENC_PHONE)) {
+        phone = decryptAndMaskPhone((String) esContent.get(JsonKey.ENC_PHONE));
+      }
+      map.put(JsonKey.PHONE, phone);
+      map.put(JsonKey.ORG_NAME, esContent.get(JsonKey.ROOT_ORG_NAME));
+      for (Map<String, Object> batchMap :
+          (List<Map<String, Object>>) esContent.get(JsonKey.BATCHES)) {
+        if (batchId.equalsIgnoreCase((String) batchMap.get(JsonKey.BATCH_ID))) {
+          calculateCourseProgressPercentage(batchMap, leafNodeCount);
+          formatEnrolledOn(batchMap);
+          map.putAll(batchMap);
+        }
+      }
+      userData.add(map);
+    }
+
+    courseProgressResult.put(JsonKey.COUNT, result.get(JsonKey.COUNT));
+    courseProgressResult.put(JsonKey.DATA, userData);
+    courseProgressResult.put(JsonKey.START_DATE, courseBatchResult.get(JsonKey.START_DATE));
+    courseProgressResult.put(JsonKey.END_DATE, courseBatchResult.get(JsonKey.END_DATE));
+    courseProgressResult.put(
+        JsonKey.COMPLETED_COUNT,
+        getCompletedCount(batchId, leafNodeCount, (Long) result.get(JsonKey.COUNT)));
+    Response response = new Response();
+    response.put("response", "SUCCESS");
+    response.getResult().putAll(courseProgressResult);
+    sender().tell(response, self());
+  }
+
+  private String decryptAndMaskPhone(String phone) {
+    return UserUtility.maskEmailOrPhone(phone, JsonKey.PHONE);
+  }
+
+  private void formatEnrolledOn(Map<String, Object> batchMap) {
+    String timeStamp = (String) batchMap.get(JsonKey.LAST_ACCESSED_ON);
+    try {
+      SimpleDateFormat sdf = new SimpleDateFormat(ProjectUtil.ELASTIC_DATE_FORMAT);
+      Date parsedDate = sdf.parse(timeStamp);
+      batchMap.put(JsonKey.LAST_ACCESSED_ON, ProjectUtil.formatDate(parsedDate));
+    } catch (Exception e) {
+      ProjectLogger.log("formatEnrolledOn : " + e.getMessage(), LoggerEnum.INFO);
+    }
+  }
+
+  private int getCompletedCount(String batchId, int leafNodeCount, Long limit) {
+    SearchDTO searchDTO = new SearchDTO();
+    Map<String, Object> filter = new HashMap<>();
+    filter.put(JsonKey.BATCHES + "." + JsonKey.BATCH_ID, batchId);
+    filter.put(JsonKey.BATCHES + "." + JsonKey.PROGRESS, leafNodeCount);
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filter);
+
+    if (limit != null) {
+      searchDTO.setLimit(limit.intValue());
+      searchDTO.setOffset(0);
+    }
+    Map<String, Object> result =
+        ElasticSearchUtil.complexSearch(
+            searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
+
+    if (isNull(result) || result.size() == 0) {
+      ProjectLogger.log(
+          "CourseMetricsActor:getCompletedCount: No search results found.", LoggerEnum.INFO.name());
+      return 0;
     } else {
-      onReceiveUnsupportedOperation(request.getOperation());
+      List<Map<String, Object>> esBatchResult =
+          (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+      int count = 0;
+      if (!CollectionUtils.isEmpty(esBatchResult)) {
+        for (Map<String, Object> esContent : esBatchResult) {
+          List<Map<String, Object>> batches =
+              (List<Map<String, Object>>) esContent.get(JsonKey.BATCHES);
+          if (!CollectionUtils.isEmpty(batches)) {
+            for (Map<String, Object> batchMap : batches) {
+              if (batchId.equalsIgnoreCase((String) batchMap.get(JsonKey.BATCH_ID))
+                  && leafNodeCount == (Integer) batchMap.get(JsonKey.PROGRESS)) {
+                count++;
+              }
+            }
+          }
+        }
+      }
+      ProjectLogger.log(
+          "CourseMetricsActor:getCompletedCount: search results found."
+              + result.get(JsonKey.COUNT)
+              + " LeafNodeCount = "
+              + leafNodeCount,
+          LoggerEnum.INFO.name());
+      return count;
+    }
+  }
+
+  private Map<String, Object> validateAndGetCourseBatch(String batchId) {
+    if (StringUtils.isBlank(batchId)) {
+      ProjectLogger.log(
+          "CourseMetricsActor:validateAndGetCourseBatch: batchId is invalid (blank).",
+          LoggerEnum.INFO.name());
+      ProjectCommonException.throwClientErrorException(ResponseCode.invalidCourseBatchId);
+    }
+    // check batch exist in ES or not
+    Map<String, Object> courseBatchResult =
+        ElasticSearchUtil.getDataByIdentifier(
+            EsIndex.sunbird.getIndexName(), EsType.course.getTypeName(), batchId);
+    if (isNull(courseBatchResult) || courseBatchResult.size() == 0) {
+      ProjectLogger.log(
+          "CourseMetricsActor:validateAndGetCourseBatch: batchId not found.",
+          LoggerEnum.INFO.name());
+      ProjectCommonException.throwClientErrorException(ResponseCode.invalidCourseBatchId);
+    }
+    return courseBatchResult;
+  }
+
+  private void validateUserId(String requestedBy) {
+
+    Map<String, Object> requestedByInfo =
+        ElasticSearchUtil.getDataByIdentifier(
+            EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), requestedBy);
+    if (isNull(requestedByInfo)
+        || StringUtils.isBlank((String) requestedByInfo.get(JsonKey.FIRST_NAME))) {
+      throw new ProjectCommonException(
+          ResponseCode.invalidUserId.getErrorCode(),
+          ResponseCode.invalidUserId.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
     }
   }
 
@@ -92,6 +297,10 @@ public class CourseMetricsActor extends BaseMetricsActor {
           ResponseCode.invalidUserId.getErrorCode(),
           ResponseCode.invalidUserId.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+
+    if (StringUtils.isBlank((String) requestedByInfo.get(JsonKey.ENC_EMAIL))) {
+      ProjectCommonException.throwClientErrorException(ResponseCode.emailRequired);
     }
 
     String batchId = (String) actorMessage.getRequest().get(JsonKey.BATCH_ID);
@@ -131,6 +340,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
     String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
     String fileFormat = (String) actorMessage.getRequest().get(JsonKey.FORMAT);
+    String courseName = getCourseNameFromBatch(courseBatchResult);
+    String batchName = (String) courseBatchResult.get(JsonKey.NAME);
 
     Map<String, Object> requestDbInfo = new HashMap<>();
     requestDbInfo.put(JsonKey.ID, requestId);
@@ -160,6 +371,11 @@ public class CourseMetricsActor extends BaseMetricsActor {
     backGroundRequest.setOperation(ActorOperations.PROCESS_DATA.getValue());
     backGroundRequest.getRequest().put(JsonKey.REQUEST, JsonKey.CourseProgress);
     backGroundRequest.getRequest().put(JsonKey.REQUEST_ID, requestId);
+    backGroundRequest.getRequest().put(JsonKey.COURSE_NAME, courseName);
+    backGroundRequest.getRequest().put(JsonKey.BATCH_NAME, batchName);
+    backGroundRequest
+        .getRequest()
+        .put(JsonKey.ROOT_ORG_ID, (String) requestedByInfo.get(JsonKey.ROOT_ORG_ID));
     tellToAnother(backGroundRequest);
   }
 

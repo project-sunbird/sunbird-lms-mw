@@ -2,37 +2,30 @@ package org.sunbird.metrics.actors;
 
 import static org.sunbird.common.models.util.ProjectUtil.isNotNull;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 import java.util.stream.Collectors;
-
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.ReportTrackingStatus;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @ActorConfig(
   tasks = {},
@@ -40,11 +33,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 )
 public class CourseMetricsBackgroundActor extends BaseMetricsActor {
 
+  private static final String DOT = ".";
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
   private DecryptionService decryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
           null);
+  private static final DateTimeFormatter sunbirdDateTimeFormatter =
+      DateTimeFormatter.ofPattern(ProjectUtil.getDateFormatter().toPattern());
+  private static final DateTimeFormatter dmyDateTimeFormatter =
+      DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -86,7 +84,18 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
 
     Map<String, Object> reportDbInfo = responseList.get(0);
 
-    List<List<Object>> finalList = null;
+    List<List<Object>> finalList = new ArrayList<>();
+    List<Object> columnNames =
+        Arrays.asList(
+            JsonKey.USER_NAME_HEADER,
+            JsonKey.PHONE_HEADER,
+            JsonKey.EMAIL_HEADER,
+            JsonKey.ORG_NAME_HEADER,
+            JsonKey.SCHOOL_NAME_HEADER,
+            JsonKey.COURSE_ENROLL_DATE_HEADER,
+            JsonKey.PROGRESS_HEADER);
+
+    finalList.add(columnNames);
     String periodStr = (String) reportDbInfo.get(JsonKey.PERIOD);
     String batchId = (String) reportDbInfo.get(JsonKey.RESOURCE_ID);
     // get start and end time ---
@@ -97,7 +106,7 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
     Map<String, Object> filter = new HashMap<>();
     filter.put(JsonKey.BATCH_ID, batchId);
     filter.put(JsonKey.ACTIVE, true);
-    if (!("fromBegining".equalsIgnoreCase(periodStr))) {
+    if (StringUtils.isNotBlank(periodStr) && !(JsonKey.FROM_BEGINING.equalsIgnoreCase(periodStr))) {
       Map<String, Object> dateRange = getStartAndEndDate(periodStr);
       dateRangeFilter.put(GTE, (String) dateRange.get(STARTDATE));
       dateRangeFilter.put(LTE, (String) dateRange.get(ENDDATE));
@@ -108,6 +117,7 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
     coursefields.add(JsonKey.USER_ID);
     coursefields.add(JsonKey.PROGRESS);
     coursefields.add(JsonKey.BATCH_ID);
+    coursefields.add(JsonKey.COURSE_ENROLL_DATE);
     coursefields.add(JsonKey.LEAF_NODE_COUNT);
 
     Map<String, Object> result =
@@ -133,14 +143,13 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
       userfilter.put(JsonKey.USER_ID, uniqueUserIds.stream().collect(Collectors.toList()));
       List<String> userfields = new ArrayList<>();
       userfields.add(JsonKey.USER_ID);
-      userfields.add(JsonKey.USERNAME);
       userfields.add(JsonKey.FIRST_NAME);
-      userfields.add(JsonKey.LOGIN_ID);
-      userfields.add(JsonKey.CREATED_DATE);
-      userfields.add(JsonKey.LANGUAGE);
-      userfields.add(JsonKey.SUBJECT);
-      userfields.add(JsonKey.GRADE);
+      userfields.add(JsonKey.LAST_NAME);
+      userfields.add(JsonKey.ORGANISATIONS + DOT + JsonKey.ORGANISATION_ID);
+      userfields.add(JsonKey.ROOT_ORG_ID);
       userfields.add(JsonKey.GENDER);
+      userfields.add(JsonKey.ENC_EMAIL);
+      userfields.add(JsonKey.ENC_PHONE);
 
       Map<String, Object> userresult =
           ElasticSearchUtil.complexSearch(
@@ -151,7 +160,7 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
           (List<Map<String, Object>>) userresult.get(JsonKey.CONTENT);
 
       Map<String, Map<String, Object>> userInfoCache = new HashMap<>();
-
+      Set<String> uniqueOrgIds = new HashSet<>();
       // decrypt the user info get from the elastic search
       useresContent = decryptionService.decryptData(useresContent);
       for (Map<String, Object> map : useresContent) {
@@ -159,30 +168,36 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
         map.put("user", userId);
         userInfoCache.put(userId, new HashMap<String, Object>(map));
         map.remove(JsonKey.USER_ID);
+        uniqueOrgIds.add((String) map.get(JsonKey.ROOT_ORG_ID));
+        List<Map<String, Object>> userOrgs =
+            (List<Map<String, Object>>) map.get(JsonKey.ORGANISATIONS);
+        if (!CollectionUtils.isEmpty(userOrgs)) {
+          uniqueOrgIds.addAll(
+              userOrgs
+                  .stream()
+                  .map(userOrg -> (String) userOrg.get(JsonKey.ORGANISATION_ID))
+                  .collect(Collectors.toSet()));
+        }
       }
-
-      List<Object> columnNames =
-          Arrays.asList(
-              JsonKey.LOGIN_ID,
-              JsonKey.NAME,
-              JsonKey.CREATED_DATE,
-              JsonKey.LANGUAGE,
-              JsonKey.SUBJECT,
-              JsonKey.GRADE,
-              JsonKey.PROGRESS);
-      finalList = new ArrayList<>();
-      finalList.add(columnNames);
+      Map<String, Map<String, Object>> orgDetails = fetchOrgDetailsById(uniqueOrgIds);
 
       for (Map<String, Object> map : userCoursesContent) {
         List<Object> list = new ArrayList<>();
         Map<String, Object> userMap = userInfoCache.get(map.get(JsonKey.USER_ID));
+
+        LocalDateTime date =
+            LocalDateTime.parse(
+                (String) map.get(JsonKey.COURSE_ENROLL_DATE), sunbirdDateTimeFormatter);
+        String processedDate = date.format(dmyDateTimeFormatter);
         if (isNotNull(userMap)) {
-          list.add(userMap.get(JsonKey.LOGIN_ID));
-          list.add(userMap.get(JsonKey.FIRST_NAME));
-          list.add(userMap.get(JsonKey.CREATED_DATE));
-          list.add(userMap.get(JsonKey.LANGUAGE));
-          list.add(userMap.get(JsonKey.SUBJECT));
-          list.add(userMap.get(JsonKey.GRADE));
+          list.add(getFullName(userMap));
+          list.add(
+              UserUtility.maskEmailOrPhone((String) userMap.get(JsonKey.ENC_PHONE), JsonKey.PHONE));
+          list.add(
+              UserUtility.maskEmailOrPhone((String) userMap.get(JsonKey.ENC_EMAIL), JsonKey.EMAIL));
+          list.add(getRootOrgName(userMap, orgDetails));
+          list.add(getCommaSepSubOrgName(userMap, orgDetails));
+          list.add(processedDate);
           list.add(map.get(JsonKey.PROGRESS));
         } else {
           list.add(null);
@@ -195,6 +210,10 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
         }
         finalList.add(list);
       }
+    } else {
+      ProjectLogger.log(
+          "CourseMetricsBackgroundActor:courseProgressMetricsData user course content is empty",
+          LoggerEnum.ERROR);
     }
 
     Map<String, Object> requestDbInfo = new HashMap<>();
@@ -212,10 +231,87 @@ public class CourseMetricsBackgroundActor extends BaseMetricsActor {
     cassandraOperation.updateRecord(
         reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(), requestDbInfo);
 
+    ProjectLogger.log("request map " + req, LoggerEnum.INFO);
     Request backGroundRequest = new Request();
     backGroundRequest.setOperation(ActorOperations.FILE_GENERATION_AND_UPLOAD.getValue());
     backGroundRequest.getRequest().put(JsonKey.DATA, finalList);
     backGroundRequest.getRequest().put(JsonKey.REQUEST_ID, requestId);
+    backGroundRequest.getRequest().put(JsonKey.COURSE_NAME, req.get(JsonKey.COURSE_NAME));
+    backGroundRequest.getRequest().put(JsonKey.BATCH_NAME, req.get(JsonKey.BATCH_NAME));
+    backGroundRequest.getRequest().put(JsonKey.ROOT_ORG_ID, req.get(JsonKey.ROOT_ORG_ID));
     tellToAnother(backGroundRequest);
+  }
+
+  private Map<String, Map<String, Object>> fetchOrgDetailsById(Set<String> uniqueOrgIds) {
+    List<String> orgFields = new ArrayList<>();
+    orgFields.add(JsonKey.ID);
+    orgFields.add(JsonKey.ORG_NAME);
+
+    Map<String, Object> orgFilter = new HashMap<>();
+    orgFilter.put(JsonKey.ID, uniqueOrgIds.stream().collect(Collectors.toList()));
+    Map<String, Map<String, Object>> orgDetails = new HashMap<>();
+    Map<String, Object> result =
+        ElasticSearchUtil.complexSearch(
+            createESRequest(orgFilter, null, orgFields),
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            EsType.organisation.getTypeName());
+    List<Map<String, Object>> orgContent = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+
+    if (!(orgContent.isEmpty())) {
+      orgContent.forEach(org -> orgDetails.put((String) org.get(JsonKey.ID), org));
+    }
+    return orgDetails;
+  }
+
+  private String getFullName(Map<String, Object> userMap) {
+    String fullName =
+        userMap.containsKey(JsonKey.FIRST_NAME)
+                && StringUtils.isNotEmpty((String) userMap.get(JsonKey.FIRST_NAME))
+            ? (String) userMap.get(JsonKey.FIRST_NAME)
+            : StringUtils.EMPTY;
+    fullName +=
+        userMap.containsKey(JsonKey.LAST_NAME)
+                && StringUtils.isNotEmpty((String) userMap.get(JsonKey.LAST_NAME))
+            ? (" " + (String) userMap.get(JsonKey.LAST_NAME))
+            : StringUtils.EMPTY;
+    return fullName;
+  }
+
+  private String getRootOrgName(
+      Map<String, Object> userMap, Map<String, Map<String, Object>> orgDetails) {
+    String rootOrgId = (String) userMap.get(JsonKey.ROOT_ORG_ID);
+    if (orgDetails.containsKey(rootOrgId) && !MapUtils.isEmpty(orgDetails.get(rootOrgId))) {
+      Map<String, Object> orgDetail = orgDetails.get(rootOrgId);
+      return (String) orgDetail.get(JsonKey.ORG_NAME);
+    }
+    return StringUtils.EMPTY;
+  }
+
+  private String getCommaSepSubOrgName(
+      Map<String, Object> userMap, Map<String, Map<String, Object>> orgDetails) {
+    String rootOrgId = (String) userMap.get(JsonKey.ROOT_ORG_ID);
+    List<Map<String, Object>> userOrgs =
+        (List<Map<String, Object>>) userMap.get(JsonKey.ORGANISATIONS);
+    if (!CollectionUtils.isEmpty(userOrgs)) {
+      List<String> orgNames =
+          userOrgs
+              .stream()
+              .filter(userOrg -> !rootOrgId.equals((String) userOrg.get(JsonKey.ORGANISATION_ID)))
+              .map(
+                  userOrg -> {
+                    Map<String, Object> orgDetail =
+                        orgDetails.get((String) userOrg.get(JsonKey.ORGANISATION_ID));
+                    if (!MapUtils.isEmpty(orgDetail)) {
+                      return (String) orgDetail.get(JsonKey.ORG_NAME);
+                    }
+                    return null;
+                  })
+              .filter(orgName -> orgName != null)
+              .collect(Collectors.toList());
+      if (!CollectionUtils.isEmpty(orgNames)) {
+        return String.join(",", orgNames);
+      }
+    }
+    return StringUtils.EMPTY;
   }
 }

@@ -68,7 +68,8 @@ public class UserBackgroundJobActor extends BaseActor {
     Map<String, Object> userOrgMap = new HashMap<>();
     userOrgMap.put(JsonKey.ID, userDetails.get(JsonKey.ID));
     userOrgMap.put(
-        JsonKey.ORGANISATIONS, UserUtil.getUserOrgDetails((String) userDetails.get(JsonKey.ID)));
+        JsonKey.ORGANISATIONS,
+        UserUtil.getActiveUserOrgDetails((String) userDetails.get(JsonKey.ID)));
     ProjectLogger.log("Updating saveUserOrgDetailsToES");
     upsertDataToElastic(
         ProjectUtil.EsIndex.sunbird.getIndexName(),

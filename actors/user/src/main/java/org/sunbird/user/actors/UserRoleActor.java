@@ -1,13 +1,16 @@
 package org.sunbird.user.actors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.org.OrganisationClient;
 import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
+import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -19,6 +22,7 @@ import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.role.service.RoleService;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
@@ -31,6 +35,8 @@ import org.sunbird.user.dao.impl.UserOrgDaoImpl;
   asyncTasks = {}
 )
 public class UserRoleActor extends UserBaseActor {
+
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -72,7 +78,19 @@ public class UserRoleActor extends UserBaseActor {
     String hashTagId = (String) requestMap.get(JsonKey.HASHTAGID);
     String organisationId = (String) requestMap.get(JsonKey.ORGANISATION_ID);
     // update userOrg role with requested roles.
-    Map<String, Object> userOrgDBMap = getUserService().esGetUserOrg(userId, organisationId);
+    Map<String, Object> userOrgDBMap = new HashMap<>();
+
+    Map<String, Object> searchMap = new HashMap<>();
+    searchMap.put(JsonKey.USER_ID, userId);
+    searchMap.put(JsonKey.ORGANISATION_ID, organisationId);
+    searchMap.put(JsonKey.IS_DELETED, false);
+    Response res =
+        cassandraOperation.getRecordsByProperties(JsonKey.SUNBIRD, JsonKey.USER_ORG, searchMap);
+    List<Map<String, Object>> responseList = (List<Map<String, Object>>) res.get(JsonKey.RESPONSE);
+    if (CollectionUtils.isNotEmpty(responseList)) {
+      userOrgDBMap.put(JsonKey.ORGANISATION, responseList.get(0));
+    }
+
     if (MapUtils.isEmpty(userOrgDBMap)) {
       ProjectCommonException.throwClientErrorException(ResponseCode.invalidUsrOrgData, null);
     }
@@ -145,20 +163,8 @@ public class UserRoleActor extends UserBaseActor {
   private UserOrg prepareUserOrg(
       Map<String, Object> requestMap, String hashTagId, Map<String, Object> userOrgDBMap) {
     ObjectMapper mapper = new ObjectMapper();
-    List<Map<String, Object>> userOrgs =
-        (List<Map<String, Object>>) userOrgDBMap.get(JsonKey.ORGANISATIONS);
-    final String organisationId = (String) requestMap.get(JsonKey.ORGANISATION_ID);
-    Map<String, Object> userOrgMap =
-        userOrgs
-            .stream()
-            .filter(
-                aUserOrg -> {
-                  return organisationId.equals(aUserOrg.get(JsonKey.ORGANISATION_ID));
-                })
-            .findFirst()
-            .get();
+    Map<String, Object> userOrgMap = (Map<String, Object>) userOrgDBMap.get(JsonKey.ORGANISATION);
     UserOrg userOrg = mapper.convertValue(userOrgMap, UserOrg.class);
-
     List<String> roles = (List<String>) requestMap.get(JsonKey.ROLES);
     if (!roles.contains(ProjectUtil.UserRole.PUBLIC.name())) {
       roles.add(ProjectUtil.UserRole.PUBLIC.name());
@@ -168,10 +174,8 @@ public class UserRoleActor extends UserBaseActor {
     if (StringUtils.isNotBlank(hashTagId)) {
       userOrg.setHashTagId(hashTagId);
     }
-
     userOrg.setUpdatedDate(ProjectUtil.getFormattedDate());
     userOrg.setUpdatedBy((String) requestMap.get(JsonKey.REQUESTED_BY));
-
     return userOrg;
   }
 

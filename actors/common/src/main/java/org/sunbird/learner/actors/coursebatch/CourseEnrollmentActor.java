@@ -4,11 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -113,6 +109,23 @@ public class CourseEnrollmentActor extends BaseActor {
     }
     updateCourseBatch(courseBatch);
     generateAndProcessTelemetryEvent(courseMap, "user.batch.course");
+    if (userCourseResult == null) {
+      UserCoursesService.syncUserCourses(
+          (String) courseMap.get(JsonKey.COURSE_ID),
+          (String) courseMap.get(JsonKey.BATCH_ID),
+          (String) courseMap.get(JsonKey.COURSE_ENROLL_DATE),
+          0,
+          null,
+          (String) actorMessage.getRequest().get(JsonKey.USER_ID));
+    } else {
+      UserCoursesService.syncUserCourses(
+          (String) courseMap.get(JsonKey.COURSE_ID),
+          (String) courseMap.get(JsonKey.BATCH_ID),
+          userCourseResult.getEnrolledDate(),
+          userCourseResult.getProgress(),
+          userCourseResult.getTimestamp(),
+          (String) actorMessage.getRequest().get(JsonKey.USER_ID));
+    }
   }
 
   private boolean courseNotificationActive() {
@@ -181,6 +194,9 @@ public class CourseEnrollmentActor extends BaseActor {
     if (courseNotificationActive()) {
       batchOperationNotifier(request, courseBatch, JsonKey.REMOVE);
     }
+    UserCoursesService.syncRemoveUserCourses(
+        (String) request.get(JsonKey.BATCH_ID),
+        (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY));
   }
 
   private void batchOperationNotifier(

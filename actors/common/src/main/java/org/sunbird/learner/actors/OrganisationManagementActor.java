@@ -257,7 +257,7 @@ public class OrganisationManagementActor extends BaseActor {
   /** Method to create an Organisation . */
   @SuppressWarnings("unchecked")
   private void createOrg(Request actorMessage) {
-    ProjectLogger.log("Create org method call start");
+    ProjectLogger.log("OrgManagementActor: Create org method call start", LoggerEnum.INFO);
     // object of telemetry event...
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
@@ -265,10 +265,7 @@ public class OrganisationManagementActor extends BaseActor {
     try {
       actorMessage.toLower();
       Map<String, Object> request = actorMessage.getRequest();
-      if (request.containsKey(JsonKey.LOCATION_CODE)
-          && !CollectionUtils.isEmpty((List<String>) request.get(JsonKey.LOCATION_CODE))) {
-        validateCodeAndAddLocationIds(request);
-      }
+      validateLocationCodeAndIds(request);
       if (request.containsKey(JsonKey.ORG_TYPE)
           && !StringUtils.isBlank((String) request.get(JsonKey.ORG_TYPE))) {
         request.put(JsonKey.ORG_TYPE_ID, validateOrgType((String) request.get(JsonKey.ORG_TYPE)));
@@ -315,14 +312,12 @@ public class OrganisationManagementActor extends BaseActor {
       }
       // removing default from request, not allowing user to create default org.
       request.remove(JsonKey.IS_DEFAULT);
-      // allow lower case values for source and externalId to the database
-      if (request.get(JsonKey.PROVIDER) != null) {
-        request.put(JsonKey.PROVIDER, ((String) request.get(JsonKey.PROVIDER)).toLowerCase());
-      }
+
       String passedExternalId = (String) request.get(JsonKey.EXTERNAL_ID);
       if (StringUtils.isNotBlank(passedExternalId)) {
+        passedExternalId = passedExternalId.toLowerCase();
         String channel = (String) request.get(JsonKey.CHANNEL);
-        if (!validateChannelExternalIdUniqueness(channel, passedExternalId.toLowerCase(), null)) {
+        if (!validateChannelExternalIdUniqueness(channel, passedExternalId, null)) {
           ProjectCommonException.throwClientErrorException(
               ResponseCode.errorDuplicateEntry,
               MessageFormat.format(
@@ -331,8 +326,10 @@ public class OrganisationManagementActor extends BaseActor {
                   JsonKey.EXTERNAL_ID));
         }
         request.put(JsonKey.EXTERNAL_ID, passedExternalId);
+        request.put(JsonKey.PROVIDER, StringUtils.lowerCase(channel));
       } else {
         request.remove(JsonKey.EXTERNAL_ID);
+        request.remove(JsonKey.PROVIDER);
       }
       // update address if present in request
       if (null != addressReq && addressReq.size() > 0) {
@@ -432,7 +429,8 @@ public class OrganisationManagementActor extends BaseActor {
         String channel = (String) request.get(JsonKey.CHANNEL);
         createOrgExternalIdRecord(channel, passedExternalId, uniqueId);
       }
-      ProjectLogger.log("Org data saved into cassandra.");
+      ProjectLogger.log(
+          "OrgManagementActor : CreateOrg : Org data saved into cassandra.", LoggerEnum.INFO);
       // create org_map if parentOrgId is present in request
       if (isValidParent) {
         upsertOrgMap(
@@ -443,7 +441,8 @@ public class OrganisationManagementActor extends BaseActor {
             relation);
       }
 
-      ProjectLogger.log("Created org id is ----." + uniqueId);
+      ProjectLogger.log(
+          "OrgManagementActor : createOrg : Created org id is ----." + uniqueId, LoggerEnum.INFO);
       result.getResult().put(JsonKey.ORGANISATION_ID, uniqueId);
       sender().tell(result, self());
 
@@ -467,10 +466,14 @@ public class OrganisationManagementActor extends BaseActor {
       Request orgReq = new Request();
       orgReq.getRequest().put(JsonKey.ORGANISATION, request);
       orgReq.setOperation(ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
-      ProjectLogger.log("Calling background job to save org data into ES" + uniqueId);
+      ProjectLogger.log(
+          "OrgManagementActor : createOrg : Calling background job to save org data into ES"
+              + uniqueId,
+          LoggerEnum.INFO);
       tellToAnother(orgReq);
     } catch (ProjectCommonException e) {
-      ProjectLogger.log("Some error occurs" + e.getMessage());
+      ProjectLogger.log(
+          "OrgManagementActor : createOrg : Some error occurs" + e.getMessage(), LoggerEnum.INFO);
       sender().tell(e, self());
       return;
     }
@@ -478,8 +481,8 @@ public class OrganisationManagementActor extends BaseActor {
 
   private void createOrgExternalIdRecord(String channel, String externalId, String orgId) {
     Map<String, Object> orgExtIdRequest = new HashMap<String, Object>();
-    orgExtIdRequest.put(JsonKey.PROVIDER, channel);
-    orgExtIdRequest.put(JsonKey.EXTERNAL_ID, externalId);
+    orgExtIdRequest.put(JsonKey.PROVIDER, StringUtils.lowerCase(channel));
+    orgExtIdRequest.put(JsonKey.EXTERNAL_ID, StringUtils.lowerCase(externalId));
     orgExtIdRequest.put(JsonKey.ORG_ID, orgId);
 
     cassandraOperation.insertRecord(JsonKey.SUNBIRD, JsonKey.ORG_EXT_ID_DB, orgExtIdRequest);
@@ -487,19 +490,10 @@ public class OrganisationManagementActor extends BaseActor {
 
   private void deleteOrgExternalIdRecord(String channel, String externalId) {
     Map<String, String> orgExtIdRequest = new HashMap<String, String>();
-    orgExtIdRequest.put(JsonKey.PROVIDER, channel);
-    orgExtIdRequest.put(JsonKey.EXTERNAL_ID, externalId);
+    orgExtIdRequest.put(JsonKey.PROVIDER, StringUtils.lowerCase(channel));
+    orgExtIdRequest.put(JsonKey.EXTERNAL_ID, StringUtils.lowerCase(externalId));
 
     cassandraOperation.deleteRecord(JsonKey.SUNBIRD, JsonKey.ORG_EXT_ID_DB, orgExtIdRequest);
-  }
-
-  private void validateCodeAndAddLocationIds(Map<String, Object> req) {
-    List<String> locationIdList =
-        validator.getValidatedLocationIds(
-            getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()),
-            (List<String>) req.get(JsonKey.LOCATION_CODE));
-    req.put(JsonKey.LOCATION_IDS, locationIdList);
-    req.remove(JsonKey.LOCATION_CODE);
   }
 
   private String validateHashTagId(String hashTagId, String opType, String orgId) {
@@ -706,16 +700,7 @@ public class OrganisationManagementActor extends BaseActor {
         }
         request.put(JsonKey.CHANNEL, channelFromDB);
       }
-
-      if (request.containsKey(JsonKey.LOCATION_IDS)) {
-        validateLocationIdsForUpdate(
-            (List<String>) orgDao.get(JsonKey.LOCATION_IDS),
-            (List<String>) request.get(JsonKey.LOCATION_IDS));
-      }
-      if (request.containsKey(JsonKey.LOCATION_CODE)
-          && !CollectionUtils.isEmpty((List<String>) request.get(JsonKey.LOCATION_CODE))) {
-        validateCodeAndAddLocationIds(request);
-      }
+      validateLocationCodeAndIds(request);
       if (request.containsKey(JsonKey.ORG_TYPE)
           && !StringUtils.isBlank((String) request.get(JsonKey.ORG_TYPE))) {
         request.put(JsonKey.ORG_TYPE_ID, validateOrgType((String) request.get(JsonKey.ORG_TYPE)));
@@ -792,11 +777,10 @@ public class OrganisationManagementActor extends BaseActor {
       }
       String passedExternalId = (String) request.get(JsonKey.EXTERNAL_ID);
       if (StringUtils.isNotBlank(passedExternalId)) {
+        passedExternalId = passedExternalId.toLowerCase();
         String channel = (String) request.get(JsonKey.CHANNEL);
         if (!validateChannelExternalIdUniqueness(
-            channel,
-            passedExternalId.toLowerCase(),
-            (String) request.get(JsonKey.ORGANISATION_ID))) {
+            channel, passedExternalId, (String) request.get(JsonKey.ORGANISATION_ID))) {
           ProjectCommonException.throwClientErrorException(
               ResponseCode.errorDuplicateEntry,
               MessageFormat.format(
@@ -981,23 +965,6 @@ public class OrganisationManagementActor extends BaseActor {
     }
   }
 
-  private void validateLocationIdsForUpdate(
-      List<String> dbLocationIds, List<String> updateLocationIds) {
-    if (dbLocationIds == null && updateLocationIds != null)
-      ProjectCommonException.throwClientErrorException(
-          ResponseCode.unupdatableField,
-          MessageFormat.format(
-              ResponseCode.unupdatableField.getErrorMessage(), JsonKey.LOCATION_IDS));
-    if (dbLocationIds != null && updateLocationIds != null) {
-      if (!CollectionUtils.isEqualCollection(dbLocationIds, updateLocationIds)) {
-        ProjectCommonException.throwClientErrorException(
-            ResponseCode.unupdatableField,
-            MessageFormat.format(
-                ResponseCode.unupdatableField.getErrorMessage(), JsonKey.LOCATION_IDS));
-      }
-    }
-  }
-
   private void telemetryGenerationForOrgAddress(
       Map<String, Object> addressReq, Map<String, Object> orgDao, boolean isAddressUpdated) {
 
@@ -1040,6 +1007,9 @@ public class OrganisationManagementActor extends BaseActor {
     usrOrgData.remove(JsonKey.PROVIDER);
     usrOrgData.remove(JsonKey.USERNAME);
     usrOrgData.remove(JsonKey.USER_NAME);
+    usrOrgData.remove(JsonKey.USER_EXTERNAL_ID);
+    usrOrgData.remove(JsonKey.USER_PROVIDER);
+    usrOrgData.remove(JsonKey.USER_ID_TYPE);
     usrOrgData.put(JsonKey.IS_DELETED, false);
 
     String updatedBy = null;
@@ -1521,22 +1491,26 @@ public class OrganisationManagementActor extends BaseActor {
     }
     // fetch orgid from database on basis of source and external id and put orgid
     // into request .
-    Util.DbInfo orgDBInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 
     Map<String, Object> requestDbMap = new HashMap<>();
     if (!StringUtils.isBlank((String) req.get(JsonKey.ORGANISATION_ID))) {
       requestDbMap.put(JsonKey.ID, req.get(JsonKey.ORGANISATION_ID));
     } else {
-      requestDbMap.put(JsonKey.PROVIDER, req.get(JsonKey.PROVIDER));
-      requestDbMap.put(JsonKey.EXTERNAL_ID, req.get(JsonKey.EXTERNAL_ID));
+      requestDbMap.put(JsonKey.PROVIDER, StringUtils.lowerCase((String) req.get(JsonKey.PROVIDER)));
+      requestDbMap.put(
+          JsonKey.EXTERNAL_ID, StringUtils.lowerCase((String) req.get(JsonKey.EXTERNAL_ID)));
     }
+    SearchDTO searchDTO = new SearchDTO();
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, requestDbMap);
+    Map<String, Object> esResponse =
+        ElasticSearchUtil.complexSearch(
+            searchDTO,
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.organisation.getTypeName());
 
-    Response result =
-        cassandraOperation.getRecordsByProperties(
-            orgDBInfo.getKeySpace(), orgDBInfo.getTableName(), requestDbMap);
-    List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+    List<Map<String, Object>> list = (List<Map<String, Object>>) esResponse.get(JsonKey.CONTENT);
+    if (null == list || list.isEmpty()) {
 
-    if (list.isEmpty()) {
       ProjectCommonException exception =
           new ProjectCommonException(
               ResponseCode.invalidOrgData.getErrorCode(),
@@ -1569,7 +1543,9 @@ public class OrganisationManagementActor extends BaseActor {
     }
     Map<String, Object> data = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     data.putAll(req);
-    if (isNull(data.get(JsonKey.USER_ID)) && isNull(data.get(JsonKey.USERNAME))) {
+    if (isNull(data.get(JsonKey.USER_ID))
+        && isNull(data.get(JsonKey.USER_EXTERNAL_ID))
+        && isNull(data.get(JsonKey.USERNAME))) {
       ProjectCommonException exception =
           new ProjectCommonException(
               ResponseCode.usrValidationError.getErrorCode(),
@@ -1579,6 +1555,7 @@ public class OrganisationManagementActor extends BaseActor {
       return false;
     }
     Response result = null;
+    boolean fromExtId = false;
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Map<String, Object> requestDbMap = new HashMap<>();
     if (!StringUtils.isBlank((String) data.get(JsonKey.USER_ID))) {
@@ -1589,7 +1566,20 @@ public class OrganisationManagementActor extends BaseActor {
               usrDbInfo.getTableName(),
               JsonKey.ID,
               data.get(JsonKey.USER_ID));
+    } else if (StringUtils.isNotBlank((String) data.get(JsonKey.USER_EXTERNAL_ID))
+        && StringUtils.isNotBlank((String) data.get(JsonKey.USER_PROVIDER))
+        && StringUtils.isNotBlank((String) data.get(JsonKey.USER_ID_TYPE))) {
+      requestDbMap.put(JsonKey.PROVIDER, data.get(JsonKey.USER_PROVIDER));
+      requestDbMap.put(JsonKey.ID_TYPE, data.get(JsonKey.USER_ID_TYPE));
+      requestDbMap.put(
+          JsonKey.EXTERNAL_ID, Util.encryptData((String) data.get(JsonKey.USER_EXTERNAL_ID)));
+
+      result =
+          cassandraOperation.getRecordsByCompositeKey(
+              JsonKey.SUNBIRD, JsonKey.USR_EXT_IDNT_TABLE, requestDbMap);
+      fromExtId = true;
     } else {
+      usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
       requestDbMap.put(JsonKey.PROVIDER, data.get(JsonKey.PROVIDER));
       requestDbMap.put(JsonKey.USERNAME, data.get(JsonKey.USERNAME));
       if (data.containsKey(JsonKey.PROVIDER)
@@ -1626,8 +1616,11 @@ public class OrganisationManagementActor extends BaseActor {
       sender().tell(exception, self());
       return false;
     }
-    req.put(JsonKey.USER_ID, list.get(0).get(JsonKey.ID));
-
+    String userId =
+        (fromExtId)
+            ? (String) list.get(0).get(JsonKey.USER_ID)
+            : (String) list.get(0).get(JsonKey.ID);
+    req.put(JsonKey.USER_ID, userId);
     return true;
   }
 
@@ -1744,8 +1737,8 @@ public class OrganisationManagementActor extends BaseActor {
   private boolean validateChannelExternalIdUniqueness(
       String channel, String externalId, String orgId) {
     Map<String, Object> compositeKeyMap = new HashMap<String, Object>();
-    compositeKeyMap.put(JsonKey.PROVIDER, channel);
-    compositeKeyMap.put(JsonKey.EXTERNAL_ID, externalId);
+    compositeKeyMap.put(JsonKey.PROVIDER, StringUtils.lowerCase(channel));
+    compositeKeyMap.put(JsonKey.EXTERNAL_ID, StringUtils.lowerCase(externalId));
     return handleChannelExternalIdUniqueness(compositeKeyMap, orgId);
   }
 
@@ -1830,6 +1823,30 @@ public class OrganisationManagementActor extends BaseActor {
           ResponseCode.channelUniquenessInvalid.getErrorCode(),
           ResponseCode.channelUniquenessInvalid.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+  }
+
+  /*
+   * This method will validate the locationId and locationCode.
+   */
+  @SuppressWarnings("unchecked")
+  private void validateLocationCodeAndIds(Map<String, Object> request) {
+    List<String> locationIdsList = new ArrayList<>();
+    if (CollectionUtils.isNotEmpty((List<String>) request.get(JsonKey.LOCATION_IDS))) {
+      locationIdsList =
+          validator.getHierarchyLocationIds(
+              getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()),
+              (List<String>) request.get(JsonKey.LOCATION_IDS));
+      request.put(JsonKey.LOCATION_IDS, locationIdsList);
+    } else {
+      if (CollectionUtils.isNotEmpty((List<String>) request.get(JsonKey.LOCATION_CODE))) {
+        locationIdsList =
+            validator.getValidatedLocationIds(
+                getActorRef(LocationActorOperation.SEARCH_LOCATION.getValue()),
+                (List<String>) request.get(JsonKey.LOCATION_CODE));
+        request.put(JsonKey.LOCATION_IDS, locationIdsList);
+        request.remove(JsonKey.LOCATION_CODE);
+      }
     }
   }
 }

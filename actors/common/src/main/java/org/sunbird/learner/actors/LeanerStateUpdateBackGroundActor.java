@@ -3,10 +3,7 @@ package org.sunbird.learner.actors;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -54,6 +51,7 @@ public class LeanerStateUpdateBackGroundActor extends BaseActor {
     if (message instanceof Request) {
       Request req = (Request) message;
       // get the list of content objects
+
       List<Map<String, Object>> contentList =
           (List<Map<String, Object>>) req.getRequest().get(JsonKey.CONTENTS);
       // get the content state info
@@ -64,6 +62,7 @@ public class LeanerStateUpdateBackGroundActor extends BaseActor {
         String contentid = (String) map.get(JsonKey.ID);
         if (map.get(JsonKey.COURSE_ID) != null) {
           // generate course table primary key as hash of userid##courseid##batchId
+
           String primary = generateUserCoursesPrimaryKey(map);
           if (temp.containsKey(primary)) {
             Map<String, Object> innerMap = (Map<String, Object>) temp.get(primary);
@@ -147,9 +146,8 @@ public class LeanerStateUpdateBackGroundActor extends BaseActor {
             (contentStateInfo.get(((Map<String, Object>) value.get("content")).get(JsonKey.ID))));
         try {
           cassandraOperation.upsertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), updateDb);
-          // TODO: for some reason, ES indexing is failing with Timestamp value. need to
-          // check and
-          // correct it.
+          updateDb.put(JsonKey.BATCH_ID, course.get(JsonKey.BATCH_ID));
+          updateDb.put(JsonKey.USER_ID, course.get(JsonKey.USER_ID));
           updateDb.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(ts));
           updateUserCoursesToES(updateDb);
         } catch (Exception ex) {

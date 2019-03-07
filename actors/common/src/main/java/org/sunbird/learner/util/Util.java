@@ -258,6 +258,10 @@ public final class Util {
     dbInfoMap.put(
         BadgingJsonKey.USER_BADGE_ASSERTION_DB,
         getDbInfoObject(KEY_SPACE_NAME, "user_badge_assertion"));
+
+    dbInfoMap.put(
+        BadgingJsonKey.CONTENT_BADGE_ASSOCIATION_DB,
+        getDbInfoObject(KEY_SPACE_NAME, "content_badge_association"));
   }
 
   /**
@@ -729,6 +733,10 @@ public final class Util {
    * @return Id of Root organization.
    */
   public static String getRootOrgIdFromChannel(String channel) {
+    return getRootOrgIdOrNameFromChannel(channel, false);
+  }
+
+  public static String getRootOrgIdOrNameFromChannel(String channel, boolean isName) {
     Map<String, Object> filters = new HashMap<>();
     filters.put(JsonKey.IS_ROOT_ORG, true);
     if (StringUtils.isNotBlank(channel)) {
@@ -753,7 +761,8 @@ public final class Util {
         && CollectionUtils.isNotEmpty((List) esResult.get(JsonKey.CONTENT))) {
       Map<String, Object> esContent =
           ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT)).get(0);
-      return (String) esContent.get(JsonKey.ID);
+      if (!isName) return (String) esContent.get(JsonKey.ID);
+      else return (String) esContent.get(JsonKey.ORG_NAME);
     } else {
       if (StringUtils.isNotBlank(channel)) {
         throw new ProjectCommonException(
@@ -1456,6 +1465,13 @@ public final class Util {
       userDetails.put(JsonKey.ORGANISATIONS, getUserOrgDetails(userId));
       userDetails.put(JsonKey.BADGE_ASSERTIONS, getUserBadge(userId));
       userDetails.put(JsonKey.SKILLS, getUserSkills(userId));
+      userDetails.put(JsonKey.BATCHES, getUserCourseBatch(userId));
+      Map<String, Object> orgMap = getOrgDetails((String) userDetails.get(JsonKey.ROOT_ORG_ID));
+      if (!MapUtils.isEmpty(orgMap)) {
+        userDetails.put(JsonKey.ROOT_ORG_NAME, orgMap.get(JsonKey.ORG_NAME));
+      } else {
+        userDetails.put(JsonKey.ROOT_ORG_NAME, "");
+      }
       // save masked email and phone number
       addMaskEmailAndPhone(userDetails);
       checkProfileCompleteness(userDetails);
@@ -1585,9 +1601,39 @@ public final class Util {
     return badges;
   }
 
+  public static List<Map<String, Object>> getUserCourseBatch(String userId) {
+    ProjectLogger.log("Util: getUserCourseBatch called", LoggerEnum.INFO);
+    DbInfo userCourseDb = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
+    List<Map<String, Object>> userCourses = new ArrayList<>();
+    try {
+      Response result =
+          cassandraOperation.getRecordsByIndexedProperty(
+              userCourseDb.getKeySpace(), userCourseDb.getTableName(), JsonKey.USER_ID, userId);
+      List<Map<String, Object>> courseBatch =
+          (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+      if (!CollectionUtils.isEmpty(courseBatch)) {
+        for (Map<String, Object> userCourseBatch : courseBatch) {
+          ProjectLogger.log("Util: getUserCourseBatch has course", LoggerEnum.INFO);
+          Map<String, Object> tempMap = new HashMap<>();
+          tempMap.put(JsonKey.ENROLLED_ON, userCourseBatch.get(JsonKey.COURSE_ENROLL_DATE));
+          tempMap.put(JsonKey.COURSE_ID, userCourseBatch.get(JsonKey.COURSE_ID));
+          tempMap.put(JsonKey.BATCH_ID, userCourseBatch.get(JsonKey.BATCH_ID));
+          tempMap.put(JsonKey.PROGRESS, userCourseBatch.get(JsonKey.PROGRESS));
+          tempMap.put(JsonKey.LAST_ACCESSED_ON, userCourseBatch.get(JsonKey.DATE_TIME));
+          userCourses.add(tempMap);
+        }
+      }
+
+    } catch (Exception e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
+    ProjectLogger.log("Util: getUserCourseBatch completed", LoggerEnum.INFO);
+    return userCourses;
+  }
+
   public static List<Map<String, Object>> getUserOrgDetails(String userId) {
     List<Map<String, Object>> userOrgList = null;
-    List<Map<String, Object>> organisations = new ArrayList<>();
+    List<Map<String, Object>> userOrganisations = new ArrayList<>();
     try {
       Map<String, Object> reqMap = new WeakHashMap<>();
       reqMap.put(JsonKey.USER_ID, userId);
@@ -1598,14 +1644,28 @@ public final class Util {
               orgUsrDbInfo.getKeySpace(), orgUsrDbInfo.getTableName(), reqMap);
       userOrgList = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
       if (CollectionUtils.isNotEmpty(userOrgList)) {
-        for (Map<String, Object> tempMap : userOrgList) {
-          organisations.add(tempMap);
+        List<String> organisationIds =
+            userOrgList
+                .stream()
+                .map(m -> (String) m.get(JsonKey.ORGANISATION_ID))
+                .distinct()
+                .collect(Collectors.toList());
+        List<String> fields = Arrays.asList(JsonKey.ORG_NAME, JsonKey.PARENT_ORG_ID, JsonKey.ID);
+
+        Map<String, Map<String, Object>> orgInfoMap =
+            ElasticSearchUtil.getEsResultByListOfIds(organisationIds, fields, EsType.organisation);
+
+        for (Map<String, Object> userOrg : userOrgList) {
+          Map<String, Object> esOrgMap = orgInfoMap.get(userOrg.get(JsonKey.ORGANISATION_ID));
+          esOrgMap.remove(JsonKey.ID);
+          userOrg.putAll(esOrgMap);
+          userOrganisations.add(userOrg);
         }
       }
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }
-    return organisations;
+    return userOrganisations;
   }
 
   public static List<Map<String, Object>> getJobProfileDetails(String userId) {

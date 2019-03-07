@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
@@ -200,7 +201,8 @@ public class CourseBatchManagementActor extends BaseActor {
     validateUserPermission(courseBatch, requestedBy);
     validateContentOrg(courseBatch.getCreatedFor());
     validateMentors(courseBatch);
-    if (participants != null) {
+    if (participants != null
+        && JsonKey.INVITE_ONLY.equalsIgnoreCase(courseBatch.getEnrollmentType())) {
       validateParticipants(participants, courseBatch);
       participantsMap = getParticipantsMap(participants, courseBatch);
 
@@ -642,8 +644,12 @@ public class CourseBatchManagementActor extends BaseActor {
   }
 
   private void validateUserPermission(CourseBatch courseBatch, String requestedBy) {
-    if (!(requestedBy.equalsIgnoreCase(courseBatch.getCreatedBy())
-        || (courseBatch.getParticipant()).containsKey(requestedBy))) {
+    List<String> canUpdateList = new ArrayList<>();
+    canUpdateList.add(courseBatch.getCreatedBy());
+    if (CollectionUtils.isNotEmpty(courseBatch.getMentors())) {
+      canUpdateList.addAll(courseBatch.getMentors());
+    }
+    if (!canUpdateList.contains(requestedBy)) {
       throw new ProjectCommonException(
           ResponseCode.unAuthorized.getErrorCode(),
           ResponseCode.unAuthorized.getErrorMessage(),
@@ -664,6 +670,10 @@ public class CourseBatchManagementActor extends BaseActor {
     fields.add(JsonKey.REGISTERED_ORG);
 
     SearchDTO searchDTO = new SearchDTO();
+    if (CollectionUtils.isNotEmpty(userIds)) {
+      searchDTO.setLimit(userIds.size());
+      searchDTO.setOffset(0);
+    }
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
     searchDTO.setFields(fields);
 

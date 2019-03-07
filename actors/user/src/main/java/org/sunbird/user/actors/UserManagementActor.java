@@ -6,9 +6,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Timestamp;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -16,6 +18,7 @@ import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.InterServiceCommunication;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
+import org.sunbird.actorutil.location.impl.LocationClientImpl;
 import org.sunbird.actorutil.org.OrganisationClient;
 import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
@@ -23,11 +26,7 @@ import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.StringFormatter;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.request.UserRequestValidator;
@@ -36,13 +35,19 @@ import org.sunbird.content.util.ContentStoreUtil;
 import org.sunbird.extension.user.UserExtension;
 import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.actors.role.service.RoleService;
+import org.sunbird.learner.organisation.external.identity.service.OrgExternalService;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
 import org.sunbird.models.user.User;
+import org.sunbird.models.user.UserType;
+import org.sunbird.models.user.org.UserOrg;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.telemetry.util.TelemetryUtil;
+import org.sunbird.user.dao.UserOrgDao;
+import org.sunbird.user.dao.impl.UserOrgDaoImpl;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.UserActorOperations;
@@ -62,6 +67,7 @@ public class UserManagementActor extends BaseActor {
   private UserService userService = UserServiceImpl.getInstance();
   private SystemSettingClient systemSettingClient = SystemSettingClientImpl.getInstance();
   private OrganisationClient organisationClient = new OrganisationClientImpl();
+  private OrgExternalService orgExternalService = new OrgExternalService();
   private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
   private static InterServiceCommunication interServiceCommunication =
       InterServiceCommunicationFactory.getInstance();
@@ -107,15 +113,23 @@ public class UserManagementActor extends BaseActor {
     actorMessage.toLower();
     Util.getUserProfileConfig(systemSettingActorRef);
     String callerId = (String) actorMessage.getContext().get(JsonKey.CALLER_ID);
-    if (StringUtils.isNotBlank(callerId)) {
-      userService.validateUploader(actorMessage);
-    } else {
-      userService.validateUserId(actorMessage);
+    boolean isPrivate = false;
+    if (actorMessage.getContext().containsKey(JsonKey.PRIVATE)) {
+      isPrivate = (boolean) actorMessage.getContext().get(JsonKey.PRIVATE);
+    }
+    if (!isPrivate) {
+      if (StringUtils.isNotBlank(callerId)) {
+        userService.validateUploader(actorMessage);
+      } else {
+        userService.validateUserId(actorMessage);
+      }
     }
     Map<String, Object> userMap = actorMessage.getRequest();
     userRequestValidator.validateUpdateUserRequest(actorMessage);
+    validateUserOrganisations(actorMessage, isPrivate);
     Map<String, Object> userDbRecord = UserUtil.validateExternalIdsAndReturnActiveUser(userMap);
     validateUserFrameworkData(userMap, userDbRecord);
+    validateUserTypeForUpdate(userMap);
     User user = mapper.convertValue(userMap, User.class);
     UserUtil.validateExternalIds(user, JsonKey.UPDATE);
     userMap.put(JsonKey.EXTERNAL_IDS, user.getExternalIds());
@@ -124,7 +138,7 @@ public class UserManagementActor extends BaseActor {
     removeFieldsFrmReq(userMap);
     // if we are updating email then need to update isEmailVerified flag inside keycloak
     UserUtil.checkEmailSameOrDiff(userMap, userDbRecord);
-
+    convertValidatedLocationCodesToIDs(userMap);
     if (IS_REGISTRY_ENABLED) {
       UserUtil.updateUserToRegistry(userMap, (String) userDbRecord.get(JsonKey.REGISTRY_ID));
     }
@@ -142,11 +156,15 @@ public class UserManagementActor extends BaseActor {
     Response response =
         cassandraOperation.updateRecord(
             usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
+
     if (StringUtils.isNotBlank(callerId)) {
       userMap.put(JsonKey.ROOT_ORG_ID, actorMessage.getContext().get(JsonKey.ROOT_ORG_ID));
     }
     Response resp = null;
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+      if (isPrivate) {
+        updateUserOrganisations(actorMessage);
+      }
       Map<String, Object> userRequest = new HashMap<>(userMap);
       userRequest.put(JsonKey.OPERATION_TYPE, JsonKey.UPDATE);
       resp = saveUserAttributes(userRequest);
@@ -166,6 +184,150 @@ public class UserManagementActor extends BaseActor {
         TelemetryUtil.generateTargetObject(
             (String) userMap.get(JsonKey.USER_ID), JsonKey.USER, JsonKey.UPDATE, null);
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
+  }
+
+  private void validateUserOrganisations(Request actorMessage, boolean isPrivate) {
+    if (isPrivate && null != actorMessage.getRequest().get(JsonKey.ORGANISATIONS)) {
+      List<Map<String, Object>> userOrgList =
+          (List<Map<String, Object>>) actorMessage.getRequest().get(JsonKey.ORGANISATIONS);
+      if (CollectionUtils.isNotEmpty(userOrgList)) {
+        List<String> orgIdList = new ArrayList<>();
+        userOrgList.forEach(org -> orgIdList.add((String) org.get(JsonKey.ORGANISATION_ID)));
+        List<String> fields = new ArrayList<>();
+        fields.add(JsonKey.HASHTAGID);
+        fields.add(JsonKey.ID);
+        List<Organisation> orgList = organisationClient.esSearchOrgByIds(orgIdList, fields);
+        Map<String, Object> orgMap = new HashMap<>();
+        orgList.forEach(org -> orgMap.put(org.getId(), org));
+        List<String> missingOrgIds = new ArrayList<>();
+        for (Map<String, Object> userOrg : userOrgList) {
+          String orgId = (String) userOrg.get(JsonKey.ORGANISATION_ID);
+          Organisation organisation = (Organisation) orgMap.get(orgId);
+          if (null == organisation) {
+            missingOrgIds.add(orgId);
+          } else {
+            userOrg.put(JsonKey.HASH_TAG_ID, organisation.getHashTagId());
+            if (userOrg.get(JsonKey.ROLES) != null) {
+              List<String> rolesList = (List<String>) userOrg.get(JsonKey.ROLES);
+              RoleService.validateRoles(rolesList);
+              if (!rolesList.contains(ProjectUtil.UserRole.PUBLIC.getValue())) {
+                rolesList.add(ProjectUtil.UserRole.PUBLIC.getValue());
+              }
+            } else {
+              userOrg.put(JsonKey.ROLES, Arrays.asList(ProjectUtil.UserRole.PUBLIC.getValue()));
+            }
+          }
+        }
+        if (!missingOrgIds.isEmpty()) {
+          ProjectCommonException.throwClientErrorException(
+              ResponseCode.invalidParameterValue,
+              MessageFormat.format(
+                  ResponseCode.invalidParameterValue.getErrorMessage(),
+                  JsonKey.ORGANISATION_ID,
+                  missingOrgIds));
+        }
+      }
+    }
+  }
+
+  private void updateUserOrganisations(Request actorMessage) {
+    if (null != actorMessage.getRequest().get(JsonKey.ORGANISATIONS)) {
+      ProjectLogger.log("UserManagementActor: updateUserOrganisation called", LoggerEnum.INFO);
+      List<Map<String, Object>> orgList =
+          (List<Map<String, Object>>) actorMessage.getRequest().get(JsonKey.ORGANISATIONS);
+      String userId = (String) actorMessage.getRequest().get(JsonKey.USER_ID);
+      String rootOrgId = getUserRootOrgId(userId);
+      List<Map<String, Object>> orgListDb = UserUtil.getAllUserOrgDetails(userId);
+      Map<String, Object> orgDbMap = new HashMap<>();
+      if (CollectionUtils.isNotEmpty(orgListDb)) {
+        orgListDb.forEach(org -> orgDbMap.put((String) org.get(JsonKey.ORGANISATION_ID), org));
+      }
+      if (!orgList.isEmpty()) {
+        for (Map<String, Object> org : orgList) {
+          createOrUpdateOrganisations(org, orgDbMap, actorMessage);
+        }
+      }
+      String requestedBy = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
+      removeOrganisations(orgDbMap, rootOrgId, requestedBy);
+      ProjectLogger.log(
+          "UserManagementActor:updateUserOrganisations : " + "updateUserOrganisation Completed",
+          LoggerEnum.INFO);
+    }
+  }
+
+  private String getUserRootOrgId(String userId) {
+    User user = userService.getUserById(userId);
+    return user.getRootOrgId();
+  }
+
+  private void createOrUpdateOrganisations(
+      Map<String, Object> org, Map<String, Object> orgDbMap, Request actorMessage) {
+    UserOrgDao userOrgDao = UserOrgDaoImpl.getInstance();
+    String userId = (String) actorMessage.getRequest().get(JsonKey.USER_ID);
+    if (MapUtils.isNotEmpty(org)) {
+      UserOrg userOrg = mapper.convertValue(org, UserOrg.class);
+      String orgId = (String) org.get(JsonKey.ORGANISATION_ID);
+      userOrg.setUserId(userId);
+      userOrg.setDeleted(false);
+      if (null != orgId && orgDbMap.containsKey(orgId)) {
+        userOrg.setUpdatedDate(ProjectUtil.getFormattedDate());
+        userOrg.setUpdatedBy((String) (actorMessage.getContext().get(JsonKey.REQUESTED_BY)));
+        userOrg.setId((String) ((Map<String, Object>) orgDbMap.get(orgId)).get(JsonKey.ID));
+        userOrgDao.updateUserOrg(userOrg);
+        orgDbMap.remove(orgId);
+      } else {
+        userOrg.setHashTagId((String) (org.get(JsonKey.HASH_TAG_ID)));
+        userOrg.setOrgJoinDate(ProjectUtil.getFormattedDate());
+        userOrg.setAddedBy((String) actorMessage.getContext().get(JsonKey.REQUESTED_BY));
+        userOrg.setId(ProjectUtil.getUniqueIdFromTimestamp(actorMessage.getEnv()));
+        userOrgDao.createUserOrg(userOrg);
+      }
+    }
+  }
+
+  private void removeOrganisations(
+      Map<String, Object> orgDbMap, String rootOrgId, String requestedBy) {
+    Set<String> ids = orgDbMap.keySet();
+    UserOrgDao userOrgDao = UserOrgDaoImpl.getInstance();
+    ids.remove(rootOrgId);
+    for (String id : ids) {
+      UserOrg userOrg = mapper.convertValue(orgDbMap.get(id), UserOrg.class);
+      userOrg.setDeleted(true);
+      userOrg.setId((String) ((Map<String, Object>) orgDbMap.get(id)).get(JsonKey.ID));
+      userOrg.setUpdatedDate(ProjectUtil.getFormattedDate());
+      userOrg.setUpdatedBy(requestedBy);
+      userOrg.setOrgLeftDate(ProjectUtil.getFormattedDate());
+      userOrgDao.updateUserOrg(userOrg);
+    }
+  }
+
+  private void validateUserTypeForUpdate(Map<String, Object> userMap) {
+    if (userMap.containsKey(JsonKey.USER_TYPE)) {
+      String userType = (String) userMap.get(JsonKey.USER_TYPE);
+      if (UserType.TEACHER.getTypeName().equalsIgnoreCase(userType)) {
+        String custodianChannel = null;
+        String custodianRootOrgId = null;
+        User user = userService.getUserById((String) userMap.get(JsonKey.USER_ID));
+        try {
+          custodianChannel =
+              userService.getCustodianChannel(new HashMap<>(), systemSettingActorRef);
+          custodianRootOrgId = userService.getRootOrgIdFromChannel(custodianChannel);
+        } catch (Exception ex) {
+          ProjectLogger.log(
+              "UserManagementActor: validateUserTypeForUpdate :"
+                  + " Exception Occured while fetching Custodian Org ",
+              LoggerEnum.INFO);
+        }
+        if (StringUtils.isNotBlank(custodianRootOrgId)
+            && user.getRootOrgId().equalsIgnoreCase(custodianRootOrgId)) {
+          ProjectCommonException.throwClientErrorException(
+              ResponseCode.errorTeacherCannotBelongToCustodianOrg,
+              ResponseCode.errorTeacherCannotBelongToCustodianOrg.getErrorMessage());
+        }
+      } else {
+        userMap.put(JsonKey.USER_TYPE, UserType.OTHER.getTypeName());
+      }
+    }
   }
 
   @SuppressWarnings("unchecked")
@@ -237,11 +399,13 @@ public class UserManagementActor extends BaseActor {
       userRequestValidator.validateCreateUserV1Request(actorMessage);
     }
     validateChannelAndOrganisationId(userMap);
+
     // remove these fields from req
     userMap.remove(JsonKey.ENC_EMAIL);
     userMap.remove(JsonKey.ENC_PHONE);
     actorMessage.getRequest().putAll(userMap);
     Util.getUserProfileConfig(systemSettingActorRef);
+    boolean isCustodianOrg = false;
     if (StringUtils.isBlank(callerId)) {
       userMap.put(JsonKey.CREATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
       try {
@@ -251,13 +415,83 @@ public class UserManagementActor extends BaseActor {
           String rootOrgId = userService.getRootOrgIdFromChannel(channel);
           userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
           userMap.put(JsonKey.CHANNEL, channel);
+          isCustodianOrg = true;
         }
       } catch (Exception ex) {
         sender().tell(ex, self());
         return;
       }
     }
+    validateUserType(userMap, isCustodianOrg);
+    if (userMap.containsKey(JsonKey.ORG_EXTERNAL_ID)) {
+      String orgExternalId = (String) userMap.get(JsonKey.ORG_EXTERNAL_ID);
+      String channel = (String) userMap.get(JsonKey.CHANNEL);
+      String orgId =
+          orgExternalService.getOrgIdFromOrgExternalIdAndProvider(orgExternalId, channel);
+      if (StringUtils.isBlank(orgId)) {
+        ProjectLogger.log(
+            "UserManagementActor:createUser: No organisation with orgExternalId = "
+                + orgExternalId
+                + " and channel = "
+                + channel,
+            LoggerEnum.ERROR.name());
+        ProjectCommonException.throwClientErrorException(
+            ResponseCode.invalidParameterValue,
+            MessageFormat.format(
+                ResponseCode.invalidParameterValue.getErrorMessage(),
+                orgExternalId,
+                JsonKey.ORG_EXTERNAL_ID));
+      }
+      if (userMap.containsKey(JsonKey.ORGANISATION_ID)
+          && !orgId.equals((String) userMap.get(JsonKey.ORGANISATION_ID))) {
+        ProjectLogger.log(
+            "UserManagementActor:createUser Mismatch of organisation from orgExternalId="
+                + orgExternalId
+                + " and channel="
+                + channel
+                + " as organisationId="
+                + orgId
+                + " and request organisationId="
+                + userMap.get(JsonKey.ORGANISATION_ID),
+            LoggerEnum.ERROR.name());
+        throwParameterMismatchException(JsonKey.ORG_EXTERNAL_ID, JsonKey.ORGANISATION_ID);
+      }
+      userMap.remove(JsonKey.ORG_EXTERNAL_ID);
+      userMap.put(JsonKey.ORGANISATION_ID, orgId);
+    }
     processUserRequest(userMap, callerId);
+  }
+
+  private void validateUserType(Map<String, Object> userMap, boolean isCustodianOrg) {
+    String userType = (String) userMap.get(JsonKey.USER_TYPE);
+    if (StringUtils.isNotBlank(userType)) {
+      if (userType.equalsIgnoreCase(UserType.TEACHER.getTypeName()) && isCustodianOrg) {
+        ProjectCommonException.throwClientErrorException(
+            ResponseCode.errorTeacherCannotBelongToCustodianOrg,
+            ResponseCode.errorTeacherCannotBelongToCustodianOrg.getErrorMessage());
+      } else if (UserType.TEACHER.getTypeName().equalsIgnoreCase(userType)) {
+        String custodianChannel = null;
+        String custodianRootOrgId = null;
+        try {
+          custodianChannel =
+              userService.getCustodianChannel(new HashMap<>(), systemSettingActorRef);
+          custodianRootOrgId = userService.getRootOrgIdFromChannel(custodianChannel);
+        } catch (Exception ex) {
+          ProjectLogger.log(
+              "UserManagementActor: validateUserType :"
+                  + " Exception Occured while fetching Custodian Org ",
+              LoggerEnum.INFO);
+        }
+        if (StringUtils.isNotBlank(custodianRootOrgId)
+            && ((String) userMap.get(JsonKey.ROOT_ORG_ID)).equalsIgnoreCase(custodianRootOrgId)) {
+          ProjectCommonException.throwClientErrorException(
+              ResponseCode.errorTeacherCannotBelongToCustodianOrg,
+              ResponseCode.errorTeacherCannotBelongToCustodianOrg.getErrorMessage());
+        }
+      }
+    } else {
+      userMap.put(JsonKey.USER_TYPE, UserType.OTHER.getTypeName());
+    }
   }
 
   private void validateChannelAndOrganisationId(Map<String, Object> userMap) {
@@ -315,6 +549,7 @@ public class UserManagementActor extends BaseActor {
     UserUtil.validateExternalIds(user, JsonKey.CREATE);
     userMap.put(JsonKey.EXTERNAL_IDS, user.getExternalIds());
     UserUtil.validateUserPhoneEmailAndWebPages(user, JsonKey.CREATE);
+    convertValidatedLocationCodesToIDs(userMap);
     if (IS_REGISTRY_ENABLED) {
       UserExtension userExtension = new UserProviderRegistryImpl();
       userExtension.create(userMap);
@@ -371,6 +606,28 @@ public class UserManagementActor extends BaseActor {
         TelemetryUtil.generateTargetObject(
             (String) userMap.get(JsonKey.ID), JsonKey.USER, JsonKey.CREATE, null);
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
+  }
+
+  private void convertValidatedLocationCodesToIDs(Map<String, Object> userMap) {
+    if (userMap.containsKey(JsonKey.LOCATION_CODES)
+        && !CollectionUtils.isEmpty((List<String>) userMap.get(JsonKey.LOCATION_CODES))) {
+      LocationClientImpl locationClient = new LocationClientImpl();
+      List<String> locationIdList =
+          locationClient.getRelatedLocationIds(
+              getActorRef(LocationActorOperation.GET_RELATED_LOCATION_IDS.getValue()),
+              (List<String>) userMap.get(JsonKey.LOCATION_CODES));
+      if (locationIdList != null && !locationIdList.isEmpty()) {
+        userMap.put(JsonKey.LOCATION_IDS, locationIdList);
+        userMap.remove(JsonKey.LOCATION_CODES);
+      } else {
+        ProjectCommonException.throwClientErrorException(
+            ResponseCode.invalidParameterValue,
+            MessageFormat.format(
+                ResponseCode.invalidParameterValue.getErrorMessage(),
+                JsonKey.LOCATION_CODES,
+                (List<String>) userMap.get(JsonKey.LOCATION_CODES)));
+      }
+    }
   }
 
   private void sendEmailAndSms(Map<String, Object> userMap) {

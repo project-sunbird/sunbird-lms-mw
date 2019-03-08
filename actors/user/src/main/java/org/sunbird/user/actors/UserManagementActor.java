@@ -25,6 +25,9 @@ import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.message.broker.factory.MessageBrokerFactory;
+import org.sunbird.common.message.broker.inf.MessageBroker;
+import org.sunbird.common.message.broker.model.EventMessage;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
@@ -38,6 +41,7 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.role.service.RoleService;
 import org.sunbird.learner.organisation.external.identity.service.OrgExternalService;
 import org.sunbird.learner.util.DataCacheHandler;
+import org.sunbird.learner.util.GeneratorAndSendEventUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
 import org.sunbird.models.user.User;
@@ -72,6 +76,7 @@ public class UserManagementActor extends BaseActor {
   private static InterServiceCommunication interServiceCommunication =
       InterServiceCommunicationFactory.getInstance();
   private ActorRef systemSettingActorRef = null;
+  private MessageBroker messageBroker = MessageBrokerFactory.getInstance();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -593,7 +598,21 @@ public class UserManagementActor extends BaseActor {
         ((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE)).get(JsonKey.ERRORS));
     sender().tell(response, self());
     if (null != resp) {
-      saveUserDetailsToEs(esResponse);
+      //  saveUserDetailsToEs(esResponse);
+
+      GeneratorAndSendEventUtil.userUpdateEvent(
+          (String) esResponse.get(JsonKey.ID),
+          getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
+
+      ProjectLogger.log(
+          "****************Message inserted****************************", LoggerEnum.INFO);
+
+      EventMessage msg = messageBroker.recieve(JsonKey.USER);
+      if (msg != null) {
+        ProjectLogger.log(
+            "****************Message recieved****************************", LoggerEnum.INFO);
+        ProjectLogger.log("$$$$$ : " + msg.getOperationOn(), LoggerEnum.INFO);
+      }
     }
     requestMap.put(JsonKey.PASSWORD, userMap.get(JsonKey.PASSWORD));
     if (StringUtils.isNotBlank(callerId)) {

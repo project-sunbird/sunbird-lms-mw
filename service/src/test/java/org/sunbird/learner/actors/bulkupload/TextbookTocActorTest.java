@@ -195,8 +195,8 @@ public class TextbookTocActorTest {
 
   private void mockRequiredMethods(boolean error) {
     when(TextBookTocUtil.getRelatedFrameworkById(Mockito.anyString())).thenReturn(new Response());
-    when(TextBookTocUtil.readHierarchy(Mockito.anyString())).thenReturn(getReadHierarchy(error));
-    when(TextBookTocUtil.readContent(Mockito.anyString())).thenReturn(getReadContentTextbookData());
+    when(TextBookTocUtil.readContent(Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(getReadContentTextbookData());
   }
 
   private Response getReadHierarchy(boolean error) {

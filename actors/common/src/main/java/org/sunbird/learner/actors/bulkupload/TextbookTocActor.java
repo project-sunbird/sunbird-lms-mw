@@ -12,6 +12,7 @@ import static org.sunbird.common.models.util.JsonKey.DOWNLOAD;
 import static org.sunbird.common.models.util.JsonKey.HIERARCHY;
 import static org.sunbird.common.models.util.JsonKey.MIME_TYPE;
 import static org.sunbird.common.models.util.JsonKey.NAME;
+import static org.sunbird.common.models.util.JsonKey.SUNBIRD_CONTENT_GET_HIERARCHY_API;
 import static org.sunbird.common.models.util.JsonKey.TEXTBOOK;
 import static org.sunbird.common.models.util.JsonKey.TEXTBOOK_ID;
 import static org.sunbird.common.models.util.JsonKey.TEXTBOOK_TOC_ALLOWED_CONTNET_TYPES;
@@ -33,7 +34,6 @@ import static org.sunbird.content.textbook.FileExtension.Extension.CSV;
 import static org.sunbird.content.textbook.TextBookTocUploader.TEXTBOOK_TOC_FOLDER;
 import static org.sunbird.content.util.ContentCloudStore.getUri;
 import static org.sunbird.content.util.TextBookTocUtil.readContent;
-import static org.sunbird.content.util.TextBookTocUtil.readHierarchy;
 import static org.sunbird.content.util.TextBookTocUtil.serialize;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -989,7 +989,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     Response response = null;
     Map<String, Object> textbook;
     try {
-      response = readContent(tbId);
+      response = readContent(tbId, JsonKey.SUNBIRD_CONTENT_READ_API);
       textbook = (Map<String, Object>) response.get(CONTENT);
       if (null == textbook) {
         log("Empty Content fetched | TextBook Id: " + tbId);
@@ -1008,7 +1008,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     Response response = null;
     Map<String, Object> hierarchy;
     try {
-      response = readHierarchy(tbId);
+      response = readContent(tbId, SUNBIRD_CONTENT_GET_HIERARCHY_API);
       hierarchy = (Map<String, Object>) response.get(CONTENT);
       if (null == hierarchy) {
         log("Empty Hierarchy fetched | TextBook Id: " + tbId);

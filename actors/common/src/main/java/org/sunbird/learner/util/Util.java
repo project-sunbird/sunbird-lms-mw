@@ -33,7 +33,11 @@ import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.consumer.impl.ESConsumer;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.message.broker.factory.MessageBrokerFactory;
+import org.sunbird.common.message.broker.inf.MessageBroker;
+import org.sunbird.common.message.consumer.Consumer;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.BadgingJsonKey;
@@ -115,9 +119,17 @@ public final class Util {
               }
             })
         .start();
+    intializeConsumer();
   }
 
   private Util() {}
+
+  private static void intializeConsumer() {
+    ProjectLogger.log("ESConsumer:performJob: ESConsumer  thread.", LoggerEnum.INFO);
+    MessageBroker messageBroker = MessageBrokerFactory.getInstance();
+    Consumer consumer = new ESConsumer();
+    messageBroker.subscribe(JsonKey.DATABASE_OPERATION, consumer);
+  }
 
   /**
    * This method will a map of organization state transaction. which will help us to move the

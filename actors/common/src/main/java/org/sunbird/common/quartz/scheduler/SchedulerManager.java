@@ -14,6 +14,10 @@ import org.quartz.SimpleScheduleBuilder;
 import org.quartz.Trigger;
 import org.quartz.TriggerBuilder;
 import org.quartz.impl.StdSchedulerFactory;
+import org.sunbird.common.consumer.impl.ESConsumer;
+import org.sunbird.common.message.broker.factory.MessageBrokerFactory;
+import org.sunbird.common.message.broker.inf.MessageBroker;
+import org.sunbird.common.message.consumer.Consumer;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -42,6 +46,11 @@ public final class SchedulerManager {
         LoggerEnum.INFO.name());
 
     try {
+      ProjectLogger.log("ESConsumer:performJob: ESConsumer  thread.", LoggerEnum.INFO);
+      MessageBroker messageBroker = MessageBrokerFactory.getInstance();
+      Consumer consumer = new ESConsumer();
+      messageBroker.subscribe(JsonKey.DATABASE_OPERATION, consumer);
+
       Thread.sleep(240000);
       boolean isEmbedded = false;
       Properties configProp = null;

@@ -164,7 +164,7 @@ public class HealthActor extends BaseActor {
     try {
       boolean response = ElasticSearchUtil.healthCheck();
       responseList.add(ProjectUtil.createCheckResponse(JsonKey.ES_SERVICE, !response, null));
-      if (!response) isallHealthy = response;
+      isallHealthy = isallHealthy && response;
     } catch (Exception e) {
       responseList.add(ProjectUtil.createCheckResponse(JsonKey.ES_SERVICE, true, e));
       isallHealthy = false;

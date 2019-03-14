@@ -95,9 +95,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
     SearchDTO searchDTO = new SearchDTO();
     if (!StringUtils.isEmpty(userName)) {
-      Map<String, Object> internalMap = new HashMap<>();
-      internalMap.put(ElasticSearchUtil.STARTS_WITH, userName);
-      filter.put(JsonKey.FIRST_NAME, internalMap);
+      searchDTO.setQuery(userName);
+      searchDTO.setQueryFields(Arrays.asList(JsonKey.FIRST_NAME));
     }
     searchDTO.setLimit(limit);
     searchDTO.setOffset(offset);

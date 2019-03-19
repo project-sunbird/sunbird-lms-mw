@@ -142,7 +142,6 @@ public class UserManagementActor extends BaseActor {
     if (IS_REGISTRY_ENABLED) {
       UserUtil.updateUserToRegistry(userMap, (String) userDbRecord.get(JsonKey.REGISTRY_ID));
     }
-    UserUtil.upsertUserInKeycloak(userMap, JsonKey.UPDATE);
     userMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
     if (StringUtils.isBlank(callerId)) {
       userMap.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
@@ -555,19 +554,19 @@ public class UserManagementActor extends BaseActor {
       userExtension.create(userMap);
     }
     UserUtil.toLower(userMap);
-    UserUtil.upsertUserInKeycloak(userMap, JsonKey.CREATE);
+    userMap.put(JsonKey.ID, ProjectUtil.generateUniqueId());
     requestMap = UserUtil.encryptUserData(userMap);
     removeUnwanted(requestMap);
     requestMap.put(JsonKey.IS_DELETED, false);
+    
     Response response = null;
     try {
       response =
           cassandraOperation.insertRecord(
               usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
+      UserUtil.updatePassword(userMap);
+
     } finally {
-      if (null == response) {
-        ssoManager.removeUser(userMap);
-      }
       if (null == response && IS_REGISTRY_ENABLED) {
         UserExtension userExtension = new UserProviderRegistryImpl();
         userExtension.delete(userMap);

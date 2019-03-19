@@ -359,24 +359,8 @@ public class UserUtil {
     }
   }
 
-  public static void upsertUserInKeycloak(Map<String, Object> userMap, String operationType) {
-    if (JsonKey.CREATE.equalsIgnoreCase(operationType)) {
-      String userId = "";
-      Map<String, String> responseMap = ssoManager.createUser(userMap);
-      userId = responseMap.get(JsonKey.USER_ID);
-      if (!StringUtils.isBlank(userId)) {
-        userMap.put(JsonKey.USER_ID, userId);
-        userMap.put(JsonKey.ID, userId);
-      } else {
-        ProjectCommonException.throwServerErrorException(ResponseCode.userRegUnSuccessfull, null);
-      }
-    } else {
-      String response = ssoManager.updateUser(userMap);
-      if (!(!StringUtils.isBlank(response) && response.equalsIgnoreCase(JsonKey.SUCCESS))) {
-        ProjectCommonException.throwServerErrorException(
-            ResponseCode.userUpdationUnSuccessfull, null);
-      }
-    }
+  public static void updatePassword(Map<String, Object> userMap) {
+	  ssoManager.updatePassword((String)userMap.get(JsonKey.USER_ID), (String)userMap.get(JsonKey.PASSWORD));
   }
 
   public static void addMaskEmailAndPhone(Map<String, Object> userMap) {

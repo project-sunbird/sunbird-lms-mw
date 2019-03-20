@@ -198,6 +198,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         getConfigValue(JsonKey.SUNBIRD_CS_BASE_URL)
             + getConfigValue(JsonKey.SUNBIRD_CONTENT_SEARCH_URL);
     HttpResponse<String> updateResponse = null;
+    ProjectLogger.log(
+        "TextbookTocActor:callSearchApiForContentIdsValidation : requestUrl=" + requestUrl,
+        LoggerEnum.INFO.name());
     try {
       updateResponse =
           Unirest.post(requestUrl)

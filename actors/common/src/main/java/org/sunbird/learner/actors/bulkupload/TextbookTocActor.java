@@ -176,6 +176,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   private void callSearchApiForContentIdsValidation(Map<String, List<Integer>> contentIdVsRowNumMap)
       throws Exception {
     if (MapUtils.isEmpty(contentIdVsRowNumMap)) {
+      ProjectLogger.log(
+          "TextbookTocActor:callSearchApiForContentIdsValidation : Content id map is Empty.",
+          LoggerEnum.INFO.name());
       return;
     }
     List<String> contentIds = new ArrayList<>();
@@ -213,6 +216,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           if (MapUtils.isNotEmpty(result)) {
             int count = (int) result.get(JsonKey.COUNT);
             if (0 == count) {
+              ProjectLogger.log(
+                  "TextbookTocActor:callSearchApiForContentIdsValidation : Content id count in response is zero.",
+                  LoggerEnum.INFO.name());
               String errorMsg = prepareErrorMsg(contentIdVsRowNumMap, searchedContentIds);
               ProjectCommonException.throwClientErrorException(
                   ResponseCode.errorInvalidLinkedContentUrl, errorMsg);

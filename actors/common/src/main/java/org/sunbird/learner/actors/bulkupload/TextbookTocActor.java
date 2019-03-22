@@ -51,6 +51,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -590,7 +591,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       List<CSVRecord> csvRecords = csvFileParser.getRecords();
       validateCSV(csvRecords);
       Set<String> dialCodes = new HashSet<>();
-      Set<String> duplicateDialCodes = new HashSet<>();
+      Set<String> duplicateDialCodes = new LinkedHashSet<>();
       Map<String, List<String>> dialCodeIdentifierMap = new HashMap<>();
       Set<String> topics = new HashSet<>();
       StringBuilder exceptionMsgs = new StringBuilder();

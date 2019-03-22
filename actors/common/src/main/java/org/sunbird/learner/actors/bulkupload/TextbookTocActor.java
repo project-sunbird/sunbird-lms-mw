@@ -580,6 +580,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       List<CSVRecord> csvRecords = csvFileParser.getRecords();
       validateCSV(csvRecords);
       Set<String> dialCodes = new HashSet<>();
+      Set<String> duplicateDialCodes = new HashSet<>();
       Map<String, List<String>> dialCodeIdentifierMap = new HashMap<>();
       Set<String> topics = new HashSet<>();
       StringBuilder exceptionMsgs = new StringBuilder();
@@ -604,10 +605,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             dialCodeList = new ArrayList<String>(Arrays.asList(dialCode.split(",")));
             for (String dCode : dialCodeList) {
               if (!dialCodes.add(dCode.trim())) {
-                throwClientErrorException(
-                    ResponseCode.errorDduplicateDialCodeEntry,
-                    MessageFormat.format(
-                        ResponseCode.errorDduplicateDialCodeEntry.getErrorMessage(), dialCode));
+                duplicateDialCodes.add(dCode.trim());
               }
             }
           }
@@ -643,6 +641,13 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           map.put(JsonKey.CHILDREN, contentIds);
           rows.add(map);
         }
+      }
+      if (CollectionUtils.isNotEmpty(duplicateDialCodes)) {
+        throwClientErrorException(
+            ResponseCode.errorDduplicateDialCodeEntry,
+            MessageFormat.format(
+                ResponseCode.errorDduplicateDialCodeEntry.getErrorMessage(),
+                StringUtils.join(duplicateDialCodes, ",")));
       }
       if (StringUtils.isNotBlank(exceptionMsgs.toString())) {
         ProjectCommonException.throwClientErrorException(

@@ -360,7 +360,10 @@ public class UserUtil {
   }
 
   public static void updatePassword(Map<String, Object> userMap) {
-	  ssoManager.updatePassword((String)userMap.get(JsonKey.USER_ID), (String)userMap.get(JsonKey.PASSWORD));
+    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD))) {
+      ssoManager.updatePassword(
+          (String) userMap.get(JsonKey.ID), (String) userMap.get(JsonKey.PASSWORD));
+    }
   }
 
   public static void addMaskEmailAndPhone(Map<String, Object> userMap) {

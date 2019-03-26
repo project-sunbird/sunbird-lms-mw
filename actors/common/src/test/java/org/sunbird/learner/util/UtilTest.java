@@ -14,7 +14,8 @@ public class UtilTest {
 
     Map<String, Object> requestObj = new HashMap<>();
     requestObj.put(JsonKey.LIMIT, 20000);
-    Assert.assertTrue(250 == Util.createSearchDto(requestObj).getLimit());
+    Assert.assertTrue(
+        Util.DEFAULT_ELASTIC_DATA_LIMIT == Util.createSearchDto(requestObj).getLimit());
   }
 
   @Test
@@ -23,6 +24,7 @@ public class UtilTest {
     Map<String, Object> requestObj = new HashMap<>();
     requestObj.put(JsonKey.LIMIT, 9989);
     requestObj.put(JsonKey.OFFSET, 20);
-    Assert.assertTrue(250 == Util.createSearchDto(requestObj).getLimit());
+    Assert.assertTrue(
+        Util.DEFAULT_ELASTIC_DATA_LIMIT - 9989 == Util.createSearchDto(requestObj).getOffset());
   }
 }

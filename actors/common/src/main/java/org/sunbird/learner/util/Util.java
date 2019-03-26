@@ -605,7 +605,7 @@ public final class Util {
       search.setLimit(DEFAULT_ELASTIC_DATA_LIMIT);
     }
     if (search.getLimit() + search.getOffset() > DEFAULT_ELASTIC_DATA_LIMIT) {
-      search.setOffset(DEFAULT_ELASTIC_DATA_LIMIT - search.getLimit());
+      search.setLimit(DEFAULT_ELASTIC_DATA_LIMIT - search.getOffset());
     }
     if (searchQueryMap.containsKey(JsonKey.GROUP_QUERY)) {
       search

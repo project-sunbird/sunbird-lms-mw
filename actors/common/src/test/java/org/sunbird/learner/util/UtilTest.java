@@ -22,9 +22,9 @@ public class UtilTest {
   public void testValidateLimitAndOffsetMoreThan10000K() {
 
     Map<String, Object> requestObj = new HashMap<>();
-    requestObj.put(JsonKey.LIMIT, 9989);
-    requestObj.put(JsonKey.OFFSET, 20);
+    requestObj.put(JsonKey.LIMIT, 20);
+    requestObj.put(JsonKey.OFFSET, 9990);
     Assert.assertTrue(
-        Util.DEFAULT_ELASTIC_DATA_LIMIT - 9989 == Util.createSearchDto(requestObj).getOffset());
+        Util.DEFAULT_ELASTIC_DATA_LIMIT - 9990 == Util.createSearchDto(requestObj).getLimit());
   }
 }

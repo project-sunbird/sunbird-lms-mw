@@ -1480,6 +1480,7 @@ public final class Util {
       checkProfileCompleteness(userDetails);
       checkUserProfileVisibility(userDetails, actorRef);
       userDetails.remove(JsonKey.PASSWORD);
+      addEmailAndPhone(userDetails);
       userDetails = getUserDetailsFromRegistry(userDetails);
     } else {
       ProjectLogger.log(
@@ -1487,6 +1488,15 @@ public final class Util {
           LoggerEnum.INFO.name());
     }
     return userDetails;
+  }
+
+  public static void addEmailAndPhone(Map<String, Object> userDetails) {
+    if (!StringUtils.isBlank((String) userDetails.get(JsonKey.ENC_PHONE))) {
+      userDetails.put(JsonKey.PHONE, userDetails.remove(JsonKey.ENC_PHONE));
+    }
+    if (!StringUtils.isBlank((String) userDetails.get(JsonKey.ENC_EMAIL))) {
+      userDetails.put(JsonKey.EMAIL, userDetails.remove(JsonKey.ENC_EMAIL));
+    }
   }
 
   public static void checkProfileCompleteness(Map<String, Object> userMap) {

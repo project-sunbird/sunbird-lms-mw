@@ -695,8 +695,8 @@ public class UserProfileReadActor extends BaseActor {
     objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     Map<String, Object> result = objectMapper.convertValue(foundUser, Map.class);
     if (result != null) {
-      result.remove(JsonKey.EMAIL);
-      result.remove(JsonKey.PHONE);
+      result.put(JsonKey.EMAIL, result.get(JsonKey.MASK_EMAIL));
+      result.put(JsonKey.PHONE, result.get(JsonKey.MASK_EMAIL));
     }
     String username = ssoManager.getUsernameById(foundUser.getId());
     result.put(JsonKey.USERNAME, username);

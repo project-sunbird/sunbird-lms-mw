@@ -15,6 +15,8 @@ import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
+import org.mockito.Mockito;
+import org.powermock.api.mockito.PowerMockito;
 import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
@@ -115,6 +117,45 @@ public class OrganisationManagementActorTest {
     userMap1.put(JsonKey.USER_ID, USER_ID + "01");
     ElasticSearchUtil.createData(
         EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), USER_ID, userMap1);
+  }
+
+  @Test
+  public void checkTelemetryKeyFailure() throws Exception {
+
+    try {
+      Thread.sleep(4000);
+    } catch (InterruptedException e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    String telemetryEnvKey = "organisation";
+    PowerMockito.mockStatic(Util.class);
+    PowerMockito.doNothing()
+        .when(
+            Util.class,
+            "initializeContext",
+            Mockito.any(Request.class),
+            Mockito.eq(telemetryEnvKey));
+
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.CREATE_ORG.getValue());
+    HashMap<String, Object> innerMap = new HashMap<>();
+    Map<String, Object> orgMap = new HashMap<String, Object>();
+    orgMap.put(JsonKey.ORGANISATION_NAME, "CBSE");
+    orgMap.put(JsonKey.DESCRIPTION, "Central Board of Secondary Education");
+    orgMap.put("orgCode", "CBSE");
+    orgMap.put(JsonKey.PROVIDER, PROVIDER);
+    orgMap.put(JsonKey.EXTERNAL_ID, EXTERNAL_ID);
+    // orgMap.put("channel", "test1");
+    innerMap.put(JsonKey.ORGANISATION, orgMap);
+
+    reqObj.setRequest(innerMap);
+    subject.tell(reqObj, probe.getRef());
+    probe.expectMsgClass(Response.class);
+    Assert.assertTrue(!(telemetryEnvKey.charAt(0) >= 65 && telemetryEnvKey.charAt(0) <= 90));
   }
 
   // @Test

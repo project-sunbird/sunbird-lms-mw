@@ -939,6 +939,7 @@ public final class Util {
       requestContext.put(JsonKey.ENV, env);
       requestContext.put(JsonKey.REQUEST_ID, actorMessage.getRequestId());
       requestContext.put(JsonKey.REQUEST_TYPE, JsonKey.API_CALL);
+      requestContext.put(JsonKey.DEVICE_ID, actorMessage.getContext().get(JsonKey.DEVICE_ID));
       if (JsonKey.USER.equalsIgnoreCase(
           (String) actorMessage.getContext().get(JsonKey.ACTOR_TYPE))) {
         // assign rollup of user ...

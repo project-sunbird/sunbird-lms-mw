@@ -691,7 +691,7 @@ public class UserProfileReadActor extends BaseActor {
     Map<String, Object> result = objectMapper.convertValue(foundUser, Map.class);
     if (result != null) {
       result.put(JsonKey.EMAIL, result.get(JsonKey.MASK_EMAIL));
-      result.put(JsonKey.PHONE, result.get(JsonKey.MASK_EMAIL));
+      result.put(JsonKey.PHONE, result.get(JsonKey.MASK_PHONE));
     }
     String username = ssoManager.getUsernameById(foundUser.getId());
     result.put(JsonKey.USERNAME, username);

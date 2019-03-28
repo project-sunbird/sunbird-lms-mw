@@ -1348,8 +1348,17 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           "TextbookTocActor:linkDialCodeApiCall : Request for link dial code api : "
               + mapper.writeValueAsString(updateRequest),
           LoggerEnum.INFO.name());
+
+      ProjectLogger.log(
+          "Sized: TextbookTocActor:linkDialCodeApiCall : size of request : "
+              + mapper.writeValueAsString(updateRequest).getBytes().length,
+          LoggerEnum.INFO);
       if (null != updateResponse) {
         Response response = mapper.readValue(updateResponse.getBody(), Response.class);
+        ProjectLogger.log(
+            "Sized: TextbookTocActor:linkDialCodeApiCall : size of response : "
+                + updateResponse.getBody().getBytes().length,
+            LoggerEnum.INFO);
         if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
           return response;
         } else {

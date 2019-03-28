@@ -114,6 +114,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   @SuppressWarnings("unchecked")
   private void upload(Request request) throws Exception {
     byte[] byteArray = (byte[]) request.getRequest().get(JsonKey.DATA);
+    ProjectLogger.log("Sized:TextbookTocActor:upload size of request " + byteArray.length, INFO);
     InputStream inputStream = new ByteArrayInputStream(byteArray);
     Map<String, Object> resultMap = readAndValidateCSV(inputStream);
     ProjectLogger.log(
@@ -221,6 +222,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     List<String> fields = new ArrayList<>();
     fields.add(JsonKey.IDENTIFIER);
     request.put(JsonKey.FIELDS, fields);
+    ProjectLogger.log(
+        "Sized:callSearchApiForContentIdsValidation:upload size of callSearchApiForContentIdsValidation request "
+            + mapper.writeValueAsString(requestMap).getBytes().length,
+        INFO);
     if (CollectionUtils.isNotEmpty(contentIds)) {
       String requestUrl =
           getConfigValue(JsonKey.SUNBIRD_CS_BASE_URL)
@@ -234,6 +239,11 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                 .asString();
         if (null != updateResponse) {
           Response response = mapper.readValue(updateResponse.getBody(), Response.class);
+          ProjectLogger.log(
+              "Sized: callSearchApiForContentIdsValidation:upload size of callSearchApiForContentIdsValidation response "
+                  + updateResponse.getBody().getBytes().length,
+              INFO);
+
           ProjectLogger.log(
               "TextbookTocActor:callSearchApiForContentIdsValidation : response.getResponseCode().getResponseCode() : "
                   + response.getResponseCode().getResponseCode(),
@@ -499,8 +509,17 @@ public class TextbookTocActor extends BaseBulkUploadActor {
               getConfigValue(JsonKey.SUNBIRD_SSO_USERNAME),
               getConfigValue(JsonKey.SUNBIRD_SSO_PASSWORD)));
       String reqBody = mapper.writeValueAsString(requestMap);
+      ProjectLogger.log(
+          "Sized :TextBookTocUtil:callDialcodeSearchApi: size of request "
+              + reqBody.getBytes().length,
+          INFO);
+
       updateResponse = Unirest.post(requestUrl).headers(headers).body(reqBody).asString();
       if (null != updateResponse) {
+        ProjectLogger.log(
+            "Sized :TextBookTocUtil:callDialcodeSearchApi: size of response "
+                + updateResponse.getBody().getBytes().length,
+            INFO);
         Response response = mapper.readValue(updateResponse.getBody(), Response.class);
         ProjectLogger.log(
             "TextbookTocActor:callDialcodeSearchApi : response.getResponseCode().getResponseCode() : "
@@ -963,6 +982,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       dataMap.put(JsonKey.HIERARCHY, hierarchy);
       requestMap.put(JsonKey.DATA, dataMap);
       updateRequest.put(JsonKey.REQUEST, requestMap);
+
       ProjectLogger.log(
           "Timed:TextbookTocActor:createTextbook duration for processing create textbook: "
               + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
@@ -1374,6 +1394,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     Map<String, String> headers = getDefaultHeaders();
     HttpResponse<String> updateResponse = null;
     try {
+      ProjectLogger.log(
+          "Sized:updateHierarchy:upload size of request "
+              + mapper.writeValueAsString(updateRequest).getBytes().length,
+          INFO);
       updateResponse =
           Unirest.patch(requestUrl)
               .headers(headers)
@@ -1396,6 +1420,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                 + updateResponse.getStatus()
                 + "status message "
                 + updateResponse.getStatusText(),
+            INFO);
+        ProjectLogger.log(
+            "Sized:updateHierarchy:upload size of response "
+                + updateResponse.getBody().getBytes().length,
             INFO);
         Response response = mapper.readValue(updateResponse.getBody(), Response.class);
         if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {

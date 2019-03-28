@@ -929,23 +929,47 @@ public final class Util {
       requestContext = new HashMap<>();
       // request level info ...
       Map<String, Object> req = actorMessage.getRequest();
-      String requestedby = (String) req.get(JsonKey.REQUESTED_BY);
-      // getting context from request context set y controller read from header...
-      String channel = (String) actorMessage.getContext().get(JsonKey.CHANNEL);
+      String requestedBy = (String) req.get(JsonKey.REQUESTED_BY);
+      String actorId =
+          actorMessage.getContext() != null
+                  && actorMessage.getContext().containsKey(JsonKey.ACTOR_ID)
+              ? (String) actorMessage.getContext().get(JsonKey.ACTOR_ID)
+              : "N/A";
+      String actorType =
+          actorMessage.getContext() != null
+                  && actorMessage.getContext().containsKey(JsonKey.ACTOR_TYPE)
+              ? (String) actorMessage.getContext().get(JsonKey.ACTOR_TYPE)
+              : "N/A";
+      String appId =
+          actorMessage.getContext() != null && actorMessage.getContext().containsKey(JsonKey.APP_ID)
+              ? (String) actorMessage.getContext().get(JsonKey.APP_ID)
+              : "N/A";
+      env = StringUtils.isNotBlank(env) ? env : "N/A";
+      String deviceId =
+          actorMessage.getContext() != null
+                  && actorMessage.getContext().containsKey(JsonKey.DEVICE_ID)
+              ? (String) actorMessage.getContext().get(JsonKey.DEVICE_ID)
+              : "N/A";
+      String channel =
+          actorMessage.getContext() != null
+                  && actorMessage.getContext().containsKey(JsonKey.CHANNEL)
+              ? (String) actorMessage.getContext().get(JsonKey.CHANNEL)
+              : "N/A";
       requestContext.put(JsonKey.CHANNEL, channel);
-      requestContext.put(JsonKey.ACTOR_ID, actorMessage.getContext().get(JsonKey.ACTOR_ID));
-      requestContext.put(JsonKey.ACTOR_TYPE, actorMessage.getContext().get(JsonKey.ACTOR_TYPE));
-      requestContext.put(JsonKey.APP_ID, actorMessage.getContext().get(JsonKey.APP_ID));
+      requestContext.put(JsonKey.ACTOR_ID, actorId);
+      requestContext.put(JsonKey.ACTOR_TYPE, actorType);
+      requestContext.put(JsonKey.APP_ID, appId);
       requestContext.put(JsonKey.ENV, env);
-      requestContext.put(JsonKey.REQUEST_ID, actorMessage.getRequestId());
       requestContext.put(JsonKey.REQUEST_TYPE, JsonKey.API_CALL);
-      requestContext.put(JsonKey.DEVICE_ID, actorMessage.getContext().get(JsonKey.DEVICE_ID));
+      requestContext.put(JsonKey.REQUEST_ID, actorMessage.getRequestId());
+      requestContext.put(JsonKey.DEVICE_ID, deviceId);
+
       if (JsonKey.USER.equalsIgnoreCase(
           (String) actorMessage.getContext().get(JsonKey.ACTOR_TYPE))) {
         // assign rollup of user ...
         Map<String, Object> result =
             ElasticSearchUtil.getDataByIdentifier(
-                ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), requestedby);
+                ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), requestedBy);
         if (result != null) {
           String rootOrgId = (String) result.get(JsonKey.ROOT_ORG_ID);
 
@@ -1018,6 +1042,7 @@ public final class Util {
           ResponseCode.SERVER_ERROR.getResponseCode());
     }
   }
+
   /**
    * This method will check for user in our application with userName@channel i.e loginId value.
    *

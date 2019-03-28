@@ -12,11 +12,7 @@ import org.sunbird.badge.BadgeOperations;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.BadgingJsonKey;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
@@ -35,7 +31,7 @@ public class UserBadgeAssertion extends BaseActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
-    Util.initializeContext(request, JsonKey.USER);
+    Util.initializeContext(request, TelemetryEnvKey.USER);
     ExecutionContext.setRequestId(request.getRequestId());
     String operation = request.getOperation();
     if (BadgeOperations.assignBadgeToUser.name().equalsIgnoreCase(operation)) {

@@ -81,6 +81,7 @@ public final class Util {
   public static final Map<String, DbInfo> dbInfoMap = new HashMap<>();
   public static final int RECOMENDED_LIST_SIZE = 10;
   private static PropertiesCache propertiesCache = PropertiesCache.getInstance();
+  public static final int DEFAULT_ELASTIC_DATA_LIMIT = 10000;
   public static final String KEY_SPACE_NAME = "sunbird";
   private static Properties prop = new Properties();
   private static Map<String, String> headers = new HashMap<>();
@@ -599,6 +600,12 @@ public final class Util {
       } else {
         search.setLimit(((BigInteger) searchQueryMap.get(JsonKey.LIMIT)).intValue());
       }
+    }
+    if (search.getLimit() > DEFAULT_ELASTIC_DATA_LIMIT) {
+      search.setLimit(DEFAULT_ELASTIC_DATA_LIMIT);
+    }
+    if (search.getLimit() + search.getOffset() > DEFAULT_ELASTIC_DATA_LIMIT) {
+      search.setLimit(DEFAULT_ELASTIC_DATA_LIMIT - search.getOffset());
     }
     if (searchQueryMap.containsKey(JsonKey.GROUP_QUERY)) {
       search

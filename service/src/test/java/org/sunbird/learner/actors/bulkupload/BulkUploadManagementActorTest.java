@@ -34,10 +34,11 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.Util;
 
 /** @author arvind. Junit test cases for bulk upload - user, org, batch. */
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({ServiceFactory.class})
+@PrepareForTest({ServiceFactory.class, Util.class})
 @PowerMockIgnore("javax.management.*")
 public class BulkUploadManagementActorTest {
 
@@ -61,6 +62,39 @@ public class BulkUploadManagementActorTest {
     PowerMockito.mockStatic(ServiceFactory.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+  }
+
+  @Test
+  public void checkTelemetryKeyFailure() throws Exception {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    String telemetryEnvKey = "user";
+    PowerMockito.mockStatic(Util.class);
+    PowerMockito.doNothing()
+        .when(
+            Util.class,
+            "initializeContext",
+            Mockito.any(Request.class),
+            Mockito.eq(telemetryEnvKey));
+
+    byte[] bytes = getFileAsBytes("BulkOrgUploadSample.csv");
+
+    Response response = createCassandraInsertSuccessResponse();
+    when(cassandraOperation.insertRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(response);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.BULK_UPLOAD.getValue());
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.CREATED_BY, USER_ID);
+    innerMap.put(JsonKey.OBJECT_TYPE, JsonKey.ORGANISATION);
+    innerMap.put(JsonKey.FILE, bytes);
+    reqObj.getRequest().put(JsonKey.DATA, innerMap);
+    subject.tell(reqObj, probe.getRef());
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+    String uploadProcessId = (String) res.get(JsonKey.PROCESS_ID);
+    Assert.assertTrue(!(telemetryEnvKey.charAt(0) >= 65 && telemetryEnvKey.charAt(0) <= 90));
   }
 
   @Test

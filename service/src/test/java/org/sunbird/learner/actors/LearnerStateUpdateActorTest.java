@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Map;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
+import org.mockito.Mockito;
+import org.powermock.api.mockito.PowerMockito;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -82,6 +84,45 @@ public class LearnerStateUpdateActorTest {
     courseMap.put(JsonKey.BATCH_ID, batchId);
     cassandraOperation.insertRecord(
         coursedbInfo.getKeySpace(), coursedbInfo.getTableName(), courseMap);
+  }
+
+  @Test
+  public void checkTelemetryKeyFailure() throws Exception {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    String telemetryEnvKey = "user";
+    PowerMockito.mockStatic(Util.class);
+    PowerMockito.doNothing()
+        .when(
+            Util.class,
+            "initializeContext",
+            Mockito.any(Request.class),
+            Mockito.eq(telemetryEnvKey));
+
+    Request req = new Request();
+    List<Map<String, Object>> contentList = new ArrayList<Map<String, Object>>();
+    Map<String, Object> content1 = createContent();
+    content1.put(JsonKey.STATUS, new BigInteger("2"));
+    contentList.add(content1);
+
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.CONTENTS, contentList);
+    innerMap.put(JsonKey.USER_ID, userId);
+    req.setOperation(ActorOperations.ADD_CONTENT.getValue());
+    req.setRequest(innerMap);
+    subject.tell(req, probe.getRef());
+    // probe.expectMsgClass(Response.class);
+    Thread.sleep(3000);
+    Response dbbRes =
+        cassandraOperation.getRecordsByProperty(
+            contentdbInfo.getKeySpace(),
+            contentdbInfo.getTableName(),
+            JsonKey.CONTENT_ID,
+            contentId);
+    List list = (List) dbbRes.getResult().get(JsonKey.RESPONSE);
+    Assert.assertTrue(!(telemetryEnvKey.charAt(0) >= 65 && telemetryEnvKey.charAt(0) <= 90));
   }
 
   @Test

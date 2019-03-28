@@ -78,7 +78,7 @@ public class UserManagementActor extends BaseActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
-    Util.initializeContext(request, JsonKey.USER);
+    Util.initializeContext(request, TelemetryEnvKey.USER);
     ExecutionContext.setRequestId(request.getRequestId());
     cacheFrameworkFieldsConfig();
     if (systemSettingActorRef == null) {

@@ -148,6 +148,7 @@ public class UserManagementActor extends BaseActor {
       userMap.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
     }
     Map<String, Object> requestMap = UserUtil.encryptUserData(userMap);
+    UserUtil.addMaskEmailAndMaskPhone(userMap);
     removeUnwanted(requestMap);
     if (requestMap.containsKey(JsonKey.TNC_ACCEPTED_ON)) {
       requestMap.put(
@@ -557,6 +558,7 @@ public class UserManagementActor extends BaseActor {
     UserUtil.toLower(userMap);
     UserUtil.upsertUserInKeycloak(userMap, JsonKey.CREATE);
     requestMap = UserUtil.encryptUserData(userMap);
+    UserUtil.addMaskEmailAndMaskPhone(requestMap);
     removeUnwanted(requestMap);
     requestMap.put(JsonKey.IS_DELETED, false);
     Response response = null;

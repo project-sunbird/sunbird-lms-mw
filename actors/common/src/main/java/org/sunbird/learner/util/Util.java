@@ -930,31 +930,12 @@ public final class Util {
       // request level info ...
       Map<String, Object> req = actorMessage.getRequest();
       String requestedBy = (String) req.get(JsonKey.REQUESTED_BY);
-      String actorId =
-          actorMessage.getContext() != null
-                  && actorMessage.getContext().containsKey(JsonKey.ACTOR_ID)
-              ? (String) actorMessage.getContext().get(JsonKey.ACTOR_ID)
-              : "N/A";
-      String actorType =
-          actorMessage.getContext() != null
-                  && actorMessage.getContext().containsKey(JsonKey.ACTOR_TYPE)
-              ? (String) actorMessage.getContext().get(JsonKey.ACTOR_TYPE)
-              : "N/A";
-      String appId =
-          actorMessage.getContext() != null && actorMessage.getContext().containsKey(JsonKey.APP_ID)
-              ? (String) actorMessage.getContext().get(JsonKey.APP_ID)
-              : "N/A";
+      String actorId = getKeyFromContext (JsonKey.ACTOR_ID);
+      String actorType = getKeyFromContext (JsonKey.ACTOR_TYPE);
+      String appId = getKeyFromContext (JsonKey.APP_ID);
       env = StringUtils.isNotBlank(env) ? env : "N/A";
-      String deviceId =
-          actorMessage.getContext() != null
-                  && actorMessage.getContext().containsKey(JsonKey.DEVICE_ID)
-              ? (String) actorMessage.getContext().get(JsonKey.DEVICE_ID)
-              : "N/A";
-      String channel =
-          actorMessage.getContext() != null
-                  && actorMessage.getContext().containsKey(JsonKey.CHANNEL)
-              ? (String) actorMessage.getContext().get(JsonKey.CHANNEL)
-              : "N/A";
+      String deviceId = getKeyFromContext (JsonKey.DEVICE_ID);
+      String channel = getKeyFromContext (JsonKey.CHANNEL);
       requestContext.put(JsonKey.CHANNEL, channel);
       requestContext.put(JsonKey.ACTOR_ID, actorId);
       requestContext.put(JsonKey.ACTOR_TYPE, actorType);
@@ -987,6 +968,16 @@ public final class Util {
     }
   }
 
+  public static String getKeyFromContext (String key ,Request actorMessage) {
+     return actorMessage.getContext() != null
+                  && actorMessage.getContext().containsKey(JsonKey.key)
+              ? (String) actorMessage.getContext().get(JsonKey.key)
+              : "N/A";
+
+ }
+  
+  
+  
   public static void initializeContextForSchedulerJob(
       String actorType, String actorId, String environment) {
 

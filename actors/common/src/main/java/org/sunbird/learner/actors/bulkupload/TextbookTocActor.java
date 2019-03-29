@@ -222,6 +222,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     List<String> fields = new ArrayList<>();
     fields.add(JsonKey.IDENTIFIER);
     request.put(JsonKey.FIELDS, fields);
+    request.put(JsonKey.LIMIT, contentIds.size());
     ProjectLogger.log(
         "Sized:callSearchApiForContentIdsValidation:upload size of callSearchApiForContentIdsValidation request "
             + mapper.writeValueAsString(requestMap).getBytes().length,

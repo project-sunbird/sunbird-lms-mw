@@ -929,22 +929,28 @@ public final class Util {
       requestContext = new HashMap<>();
       // request level info ...
       Map<String, Object> req = actorMessage.getRequest();
-      String requestedby = (String) req.get(JsonKey.REQUESTED_BY);
-      // getting context from request context set y controller read from header...
-      String channel = (String) actorMessage.getContext().get(JsonKey.CHANNEL);
+      String requestedBy = (String) req.get(JsonKey.REQUESTED_BY);
+      String actorId = getKeyFromContext(JsonKey.ACTOR_ID, actorMessage);
+      String actorType = getKeyFromContext(JsonKey.ACTOR_TYPE, actorMessage);
+      String appId = getKeyFromContext(JsonKey.APP_ID, actorMessage);
+      env = StringUtils.isNotBlank(env) ? env : "N/A";
+      String deviceId = getKeyFromContext(JsonKey.DEVICE_ID, actorMessage);
+      String channel = getKeyFromContext(JsonKey.CHANNEL, actorMessage);
       requestContext.put(JsonKey.CHANNEL, channel);
-      requestContext.put(JsonKey.ACTOR_ID, actorMessage.getContext().get(JsonKey.ACTOR_ID));
-      requestContext.put(JsonKey.ACTOR_TYPE, actorMessage.getContext().get(JsonKey.ACTOR_TYPE));
-      requestContext.put(JsonKey.APP_ID, actorMessage.getContext().get(JsonKey.APP_ID));
+      requestContext.put(JsonKey.ACTOR_ID, actorId);
+      requestContext.put(JsonKey.ACTOR_TYPE, actorType);
+      requestContext.put(JsonKey.APP_ID, appId);
       requestContext.put(JsonKey.ENV, env);
-      requestContext.put(JsonKey.REQUEST_ID, actorMessage.getRequestId());
       requestContext.put(JsonKey.REQUEST_TYPE, JsonKey.API_CALL);
+      requestContext.put(JsonKey.REQUEST_ID, actorMessage.getRequestId());
+      requestContext.put(JsonKey.DEVICE_ID, deviceId);
+
       if (JsonKey.USER.equalsIgnoreCase(
           (String) actorMessage.getContext().get(JsonKey.ACTOR_TYPE))) {
         // assign rollup of user ...
         Map<String, Object> result =
             ElasticSearchUtil.getDataByIdentifier(
-                ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), requestedby);
+                ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), requestedBy);
         if (result != null) {
           String rootOrgId = (String) result.get(JsonKey.ROOT_ORG_ID);
 
@@ -960,6 +966,12 @@ public final class Util {
       // and global context will be set at the time of creation of thread local
       // automatically ...
     }
+  }
+
+  public static String getKeyFromContext(String key, Request actorMessage) {
+    return actorMessage.getContext() != null && actorMessage.getContext().containsKey(key)
+        ? (String) actorMessage.getContext().get(key)
+        : "N/A";
   }
 
   public static void initializeContextForSchedulerJob(
@@ -1017,6 +1029,7 @@ public final class Util {
           ResponseCode.SERVER_ERROR.getResponseCode());
     }
   }
+
   /**
    * This method will check for user in our application with userName@channel i.e loginId value.
    *
@@ -1487,6 +1500,7 @@ public final class Util {
       checkProfileCompleteness(userDetails);
       checkUserProfileVisibility(userDetails, actorRef);
       userDetails.remove(JsonKey.PASSWORD);
+      addEmailAndPhone(userDetails);
       userDetails = getUserDetailsFromRegistry(userDetails);
     } else {
       ProjectLogger.log(
@@ -1494,6 +1508,15 @@ public final class Util {
           LoggerEnum.INFO.name());
     }
     return userDetails;
+  }
+
+  public static void addEmailAndPhone(Map<String, Object> userDetails) {
+    if (!StringUtils.isBlank((String) userDetails.get(JsonKey.ENC_PHONE))) {
+      userDetails.put(JsonKey.PHONE, userDetails.remove(JsonKey.ENC_PHONE));
+    }
+    if (!StringUtils.isBlank((String) userDetails.get(JsonKey.ENC_EMAIL))) {
+      userDetails.put(JsonKey.EMAIL, userDetails.remove(JsonKey.ENC_EMAIL));
+    }
   }
 
   public static void checkProfileCompleteness(Map<String, Object> userMap) {

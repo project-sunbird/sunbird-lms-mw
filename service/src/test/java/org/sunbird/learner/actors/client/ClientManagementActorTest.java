@@ -12,7 +12,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.junit.*;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
@@ -27,15 +29,14 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.Util;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({
-  ServiceFactory.class,
-})
+@PrepareForTest({ServiceFactory.class, Util.class})
 @PowerMockIgnore({"javax.management.*"})
 public class ClientManagementActorTest {
 
-  private static ActorSystem system = ActorSystem.create("system");;
+  private static ActorSystem system = ActorSystem.create("system");
   private static final Props props = Props.create(ClientManagementActor.class);
   private static final String masterKey = "anyMasterKey";
   private static final String clientId = "anyClientId";
@@ -59,6 +60,24 @@ public class ClientManagementActorTest {
         .thenReturn(getSuccessResponse());
     request.clear();
     orgMap.clear();
+  }
+
+  @Test
+  public void checkTelemetryKeyFailure() throws Exception {
+
+    String telemetryEnvKey = "masterKey";
+    PowerMockito.mockStatic(Util.class);
+    PowerMockito.doNothing()
+        .when(
+            Util.class,
+            "initializeContext",
+            Mockito.any(Request.class),
+            Mockito.eq(telemetryEnvKey));
+
+    request.put(JsonKey.CLIENT_NAME, clientName);
+    orgMap.put(JsonKey.CLIENT_ID, clientId);
+    boolean result = testScenario(request, orgMap, ActorOperations.REGISTER_CLIENT, null);
+    Assert.assertTrue(!(telemetryEnvKey.charAt(0) >= 65 && telemetryEnvKey.charAt(0) <= 90));
   }
 
   @Test

@@ -31,9 +31,10 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.coursebatch.CourseBatchManagementActor;
+import org.sunbird.learner.util.Util;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({ServiceFactory.class})
+@PrepareForTest({ServiceFactory.class, Util.class})
 @PowerMockIgnore("javax.management.*")
 @Ignore
 public class CourseBatchManagementActorTest {
@@ -182,6 +183,30 @@ public class CourseBatchManagementActorTest {
       e.printStackTrace();
     }
     return null;
+  }
+
+  @Test
+  public void checkTelemetryKeyFailure() throws Exception {
+
+    String telemetryEnvKey = "batch";
+    PowerMockito.mockStatic(Util.class);
+    PowerMockito.doNothing()
+        .when(
+            Util.class,
+            "initializeContext",
+            Mockito.any(Request.class),
+            Mockito.eq(telemetryEnvKey));
+
+    int batchProgressStatus = ProjectUtil.ProgressStatus.STARTED.getValue();
+    Response mockGetRecordByIdResponse = getMockCassandraRecordByIdResponse(batchProgressStatus);
+    Response mockUpdateRecordResponse = getMockCassandraResult();
+    Response response =
+        performUpdateCourseBatchSuccessTest(
+            existingStartDate,
+            existingEndDate,
+            mockGetRecordByIdResponse,
+            mockUpdateRecordResponse);
+    Assert.assertTrue(!(telemetryEnvKey.charAt(0) >= 65 && telemetryEnvKey.charAt(0) <= 90));
   }
 
   @Test

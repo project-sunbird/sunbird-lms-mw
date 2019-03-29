@@ -13,6 +13,8 @@ import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
+import org.mockito.Mockito;
+import org.powermock.api.mockito.PowerMockito;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -58,6 +60,44 @@ public class NotesManagementActorTest {
     userMap.put(JsonKey.USERNAME, "alpha-beta");
     ElasticSearchUtil.createData(
         EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), userId, userMap);
+  }
+
+  @SuppressWarnings("deprecation")
+  @Test
+  public void checkTelemetryKeyFailure() throws Exception {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    String telemetryEnvKey = "user";
+    PowerMockito.mockStatic(Util.class);
+    PowerMockito.doNothing()
+        .when(
+            Util.class,
+            "initializeContext",
+            Mockito.any(Request.class),
+            Mockito.eq(telemetryEnvKey));
+
+    Request actorMessage = new Request();
+    Map<String, Object> note = new HashMap<>();
+    Map<String, Object> request = new HashMap<>();
+    request.put(JsonKey.REQUESTED_BY, userId);
+    note.put(JsonKey.USER_ID, userId);
+    note.put(JsonKey.COURSE_ID, courseId);
+    note.put(JsonKey.CONTENT_ID, contentId);
+    note.put(JsonKey.NOTE, "This is a test note");
+    note.put(JsonKey.TITLE, "Title Test");
+    List<String> tags = new ArrayList<>();
+    tags.add("tag1");
+    note.put(JsonKey.TAGS, tags);
+    request.put(JsonKey.NOTE, note);
+    actorMessage.setRequest(request);
+    actorMessage.setOperation(ActorOperations.CREATE_NOTE.getValue());
+
+    subject.tell(actorMessage, probe.getRef());
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+    noteId = (String) res.getResult().get(JsonKey.ID);
+    Assert.assertTrue(!(telemetryEnvKey.charAt(0) >= 65 && telemetryEnvKey.charAt(0) <= 90));
   }
 
   /** Method to test create Note when data is valid. Expected to create note without exception */

@@ -158,15 +158,7 @@ public final class UserUtility {
     // Encrypt user basic info
     for (String key : userKeyToEncrypt) {
       if (filterMap.containsKey(key)) {
-        if (key.equalsIgnoreCase(JsonKey.EMAIL)) {
-          filterMap.put(JsonKey.ENC_EMAIL, service.encryptData((String) filterMap.get(key)));
-          filterMap.remove(JsonKey.EMAIL);
-        } else if (key.equalsIgnoreCase(JsonKey.PHONE)) {
-          filterMap.put(JsonKey.ENC_PHONE, service.encryptData((String) filterMap.get(key)));
-          filterMap.remove(JsonKey.PHONE);
-        } else {
-          filterMap.put(key, service.encryptData((String) filterMap.get(key)));
-        }
+        filterMap.put(key, service.encryptData((String) filterMap.get(key)));
       }
     }
     // Encrypt user address Info
@@ -177,7 +169,6 @@ public final class UserUtility {
             service.encryptData((String) filterMap.get(JsonKey.ADDRESS + "." + key)));
       }
     }
-
     return filterMap;
   }
 

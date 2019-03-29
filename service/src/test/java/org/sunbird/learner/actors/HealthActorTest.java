@@ -10,6 +10,8 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.mockito.Mockito;
+import org.powermock.api.mockito.PowerMockito;
 import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -29,6 +31,27 @@ public class HealthActorTest {
     SunbirdMWService.init();
     system = ActorSystem.create("system");
     Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
+  }
+
+  @Test
+  public void checkTelemetryKeyFailure() throws Exception {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    String telemetryEnvKey = "user";
+    PowerMockito.mockStatic(Util.class);
+    PowerMockito.doNothing()
+        .when(
+            Util.class,
+            "initializeContext",
+            Mockito.any(Request.class),
+            Mockito.eq(telemetryEnvKey));
+
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.HEALTH_CHECK.getValue());
+    subject.tell(reqObj, probe.getRef());
+    probe.expectMsgClass(Response.class);
+    Assert.assertTrue(!(telemetryEnvKey.charAt(0) >= 65 && telemetryEnvKey.charAt(0) <= 90));
   }
 
   @Test

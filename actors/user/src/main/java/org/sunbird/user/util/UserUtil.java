@@ -383,10 +383,10 @@ public class UserUtil {
     String phone = (String) userMap.get(JsonKey.PHONE);
     String email = (String) userMap.get(JsonKey.EMAIL);
     if (!StringUtils.isBlank(phone)) {
-      userMap.put(JsonKey.MASK_PHONE, maskingService.maskPhone(decService.decryptData(phone)));
+      userMap.put(JsonKey.MASKED_PHONE, maskingService.maskPhone(decService.decryptData(phone)));
     }
     if (!StringUtils.isBlank(email)) {
-      userMap.put(JsonKey.MASK_EMAIL, maskingService.maskEmail(decService.decryptData(email)));
+      userMap.put(JsonKey.MASKED_EMAIL, maskingService.maskEmail(decService.decryptData(email)));
     }
   }
 

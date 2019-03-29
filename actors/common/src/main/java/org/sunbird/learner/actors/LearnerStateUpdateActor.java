@@ -127,15 +127,12 @@ public class LearnerStateUpdateActor extends BaseActor {
                 (String) map.get(JsonKey.COURSE_ID), JsonKey.COURSE, null, correlatedObject);
             TelemetryUtil.generateCorrelatedObject(
                 (String) map.get(JsonKey.BATCH_ID), JsonKey.BATCH, null, correlatedObject);
-
             Map<String, String> rollUp = new HashMap<>();
             rollUp.put("l1", (String) map.get(JsonKey.COURSE_ID));
             rollUp.put("l2", (String) map.get(JsonKey.CONTENT_ID));
             TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
-
             TelemetryUtil.telemetryProcessingCall(
                 request.getRequest(), targetObject, correlatedObject);
-
           } catch (Exception ex) {
             response.getResult().put((String) map.get(JsonKey.CONTENT_ID), JsonKey.FAILED);
             contentList.remove(map);

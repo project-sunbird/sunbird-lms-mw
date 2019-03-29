@@ -1396,9 +1396,9 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
       userMap.put(JsonKey.BULK_USER_UPLOAD, true);
       Util.checkEmailUniqueness(userMap, JsonKey.CREATE);
       Util.checkPhoneUniqueness(userMap, JsonKey.CREATE);
-      Map<String, String> userKeyClaokResp = ssoManager.createUser(userMap);
+      ssoManager.updatePassword(userId, (String) userMap.get(JsonKey.PASSWORD));
       userMap.remove(JsonKey.BULK_USER_UPLOAD);
-      userId = userKeyClaokResp.get(JsonKey.USER_ID);
+
       if (!StringUtils.isBlank(userId)) {
         userMap.put(JsonKey.USER_ID, userId);
         userMap.put(JsonKey.ID, userId);

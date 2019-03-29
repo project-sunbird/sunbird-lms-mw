@@ -43,8 +43,6 @@ import org.sunbird.models.organisation.Organisation;
 import org.sunbird.models.user.User;
 import org.sunbird.models.user.UserType;
 import org.sunbird.models.user.org.UserOrg;
-import org.sunbird.services.sso.SSOManager;
-import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.dao.UserOrgDao;
 import org.sunbird.user.dao.impl.UserOrgDaoImpl;
@@ -60,7 +58,6 @@ import org.sunbird.user.util.UserUtil;
 public class UserManagementActor extends BaseActor {
   private ObjectMapper mapper = new ObjectMapper();
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private SSOManager ssoManager = SSOServiceFactory.getInstance();
   private static final boolean IS_REGISTRY_ENABLED =
       Boolean.parseBoolean(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE));
   private UserRequestValidator userRequestValidator = new UserRequestValidator();
@@ -142,7 +139,6 @@ public class UserManagementActor extends BaseActor {
     if (IS_REGISTRY_ENABLED) {
       UserUtil.updateUserToRegistry(userMap, (String) userDbRecord.get(JsonKey.REGISTRY_ID));
     }
-    UserUtil.upsertUserInKeycloak(userMap, JsonKey.UPDATE);
     userMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
     if (StringUtils.isBlank(callerId)) {
       userMap.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
@@ -187,6 +183,7 @@ public class UserManagementActor extends BaseActor {
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
   }
 
+  @SuppressWarnings("unchecked")
   private void validateUserOrganisations(Request actorMessage, boolean isPrivate) {
     if (isPrivate && null != actorMessage.getRequest().get(JsonKey.ORGANISATIONS)) {
       List<Map<String, Object>> userOrgList =
@@ -231,6 +228,7 @@ public class UserManagementActor extends BaseActor {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void updateUserOrganisations(Request actorMessage) {
     if (null != actorMessage.getRequest().get(JsonKey.ORGANISATIONS)) {
       ProjectLogger.log("UserManagementActor: updateUserOrganisation called", LoggerEnum.INFO);
@@ -261,6 +259,7 @@ public class UserManagementActor extends BaseActor {
     return user.getRootOrgId();
   }
 
+  @SuppressWarnings("unchecked")
   private void createOrUpdateOrganisations(
       Map<String, Object> org, Map<String, Object> orgDbMap, Request actorMessage) {
     UserOrgDao userOrgDao = UserOrgDaoImpl.getInstance();
@@ -286,6 +285,7 @@ public class UserManagementActor extends BaseActor {
     }
   }
 
+  @SuppressWarnings("unchecked")
   private void removeOrganisations(
       Map<String, Object> orgDbMap, String rootOrgId, String requestedBy) {
     Set<String> ids = orgDbMap.keySet();
@@ -444,7 +444,7 @@ public class UserManagementActor extends BaseActor {
                 JsonKey.ORG_EXTERNAL_ID));
       }
       if (userMap.containsKey(JsonKey.ORGANISATION_ID)
-          && !orgId.equals((String) userMap.get(JsonKey.ORGANISATION_ID))) {
+          && !orgId.equals(userMap.get(JsonKey.ORGANISATION_ID))) {
         ProjectLogger.log(
             "UserManagementActor:createUser Mismatch of organisation from orgExternalId="
                 + orgExternalId
@@ -556,20 +556,20 @@ public class UserManagementActor extends BaseActor {
       userExtension.create(userMap);
     }
     UserUtil.toLower(userMap);
-    UserUtil.upsertUserInKeycloak(userMap, JsonKey.CREATE);
+    userMap.put(JsonKey.ID, ProjectUtil.generateUniqueId());
     requestMap = UserUtil.encryptUserData(userMap);
     UserUtil.addMaskEmailAndMaskPhone(requestMap);
     removeUnwanted(requestMap);
     requestMap.put(JsonKey.IS_DELETED, false);
+
     Response response = null;
     try {
       response =
           cassandraOperation.insertRecord(
               usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
+      UserUtil.updatePassword(userMap);
+
     } finally {
-      if (null == response) {
-        ssoManager.removeUser(userMap);
-      }
       if (null == response && IS_REGISTRY_ENABLED) {
         UserExtension userExtension = new UserProviderRegistryImpl();
         userExtension.delete(userMap);
@@ -610,6 +610,7 @@ public class UserManagementActor extends BaseActor {
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
   }
 
+  @SuppressWarnings("unchecked")
   private void convertValidatedLocationCodesToIDs(Map<String, Object> userMap) {
     if (userMap.containsKey(JsonKey.LOCATION_CODES)
         && !CollectionUtils.isEmpty((List<String>) userMap.get(JsonKey.LOCATION_CODES))) {
@@ -627,7 +628,7 @@ public class UserManagementActor extends BaseActor {
             MessageFormat.format(
                 ResponseCode.invalidParameterValue.getErrorMessage(),
                 JsonKey.LOCATION_CODES,
-                (List<String>) userMap.get(JsonKey.LOCATION_CODES)));
+                userMap.get(JsonKey.LOCATION_CODES)));
       }
     }
   }
@@ -683,7 +684,6 @@ public class UserManagementActor extends BaseActor {
     reqMap.remove(JsonKey.ORGANISATION_ID);
   }
 
-  @SuppressWarnings("unchecked")
   public static void verifyFrameworkId(String hashtagId, List<String> frameworkIdList) {
     List<String> frameworks = DataCacheHandler.getHashtagIdFrameworkIdMap().get(hashtagId);
     String frameworkId = frameworkIdList.get(0);

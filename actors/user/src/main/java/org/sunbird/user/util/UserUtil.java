@@ -194,7 +194,7 @@ public class UserUtil {
           ProjectLogger.log("Exception occurred while encrypting Email ", e);
         }
         Map<String, Object> filters = new HashMap<>();
-        filters.put(JsonKey.ENC_EMAIL, email);
+        filters.put(JsonKey.EMAIL, email);
         Map<String, Object> map = new HashMap<>();
         map.put(JsonKey.FILTERS, filters);
         SearchDTO searchDto = Util.createSearchDto(map);
@@ -383,10 +383,10 @@ public class UserUtil {
     String phone = (String) userMap.get(JsonKey.PHONE);
     String email = (String) userMap.get(JsonKey.EMAIL);
     if (!StringUtils.isBlank(phone)) {
-      userMap.put(JsonKey.MASK_PHONE, maskingService.maskPhone(decService.decryptData(phone)));
+      userMap.put(JsonKey.MASKED_PHONE, maskingService.maskPhone(decService.decryptData(phone)));
     }
     if (!StringUtils.isBlank(email)) {
-      userMap.put(JsonKey.MASK_EMAIL, maskingService.maskEmail(decService.decryptData(email)));
+      userMap.put(JsonKey.MASKED_EMAIL, maskingService.maskEmail(decService.decryptData(email)));
     }
   }
 

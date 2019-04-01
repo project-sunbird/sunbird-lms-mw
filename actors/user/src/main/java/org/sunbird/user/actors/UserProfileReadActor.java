@@ -27,8 +27,14 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
+import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.request.ExecutionContext;
@@ -105,7 +111,7 @@ public class UserProfileReadActor extends BaseActor {
   private Response getUserProfileData(Request actorMessage) {
     Map<String, Object> userMap = actorMessage.getRequest();
     String id = (String) userMap.get(JsonKey.USER_ID);
-    String userId;
+    String userId = "";
     String provider = (String) actorMessage.getContext().get(JsonKey.PROVIDER);
     String idType = (String) actorMessage.getContext().get(JsonKey.ID_TYPE);
     boolean showMaskedData = false;
@@ -128,7 +134,12 @@ public class UserProfileReadActor extends BaseActor {
       }
 
     } else {
-      userId = id;
+      if (StringUtils.isNotBlank(id) && id.startsWith("f:")) {
+        int pos = id.lastIndexOf(":");
+        userId = id.substring(pos + 1);
+      } else {
+        userId = id;
+      }
       showMaskedData = false;
     }
     boolean isPrivate = (boolean) actorMessage.getContext().get(JsonKey.PRIVATE);
@@ -171,8 +182,7 @@ public class UserProfileReadActor extends BaseActor {
     // user data id is not same.
     String requestedById =
         (String) actorMessage.getContext().getOrDefault(JsonKey.REQUESTED_BY, "");
-    ProjectLogger.log(
-        "requested By and requested user id == " + requestedById + "  " + (String) userId);
+    ProjectLogger.log("requested By and requested user id == " + requestedById + "  " + userId);
     try {
       if (!(userId).equalsIgnoreCase(requestedById) && !showMaskedData) {
         result = removeUserPrivateField(result);

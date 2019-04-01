@@ -74,6 +74,10 @@ public class LearnerStateActor extends BaseActor {
 
   public void getCourse(Request request) {
     String userId = (String) request.getRequest().get(JsonKey.USER_ID);
+    if (StringUtils.isNotBlank(userId) && userId.startsWith("f:")) {
+      int pos = userId.lastIndexOf(":");
+      userId = userId.substring(pos + 1);
+    }
     Map<String, Object> result = userCoursesService.getActiveUserCourses(userId);
     if (MapUtils.isNotEmpty(result)) {
       addCourseDetails(request, result);
@@ -103,7 +107,7 @@ public class LearnerStateActor extends BaseActor {
     ProjectLogger.log(
         MessageFormatter.format(
                 "LearnerStateActor:addCourseDetails: request body = {0}, query string = {1}",
-                requestBody, (String) request.getContext().get(JsonKey.URL_QUERY_STRING))
+                requestBody, request.getContext().get(JsonKey.URL_QUERY_STRING))
             .getMessage(),
         LoggerEnum.INFO.name());
 
@@ -146,11 +150,10 @@ public class LearnerStateActor extends BaseActor {
   private Map<String, Object> getCourseBatch(
       List<Map<String, Object>> batches, List<String> requestedFields) {
     List<String> courseBatchIds =
-        (List<String>)
-            batches
-                .stream()
-                .map(batch -> (String) batch.get(JsonKey.BATCH_ID))
-                .collect(Collectors.toList());
+        batches
+            .stream()
+            .map(batch -> (String) batch.get(JsonKey.BATCH_ID))
+            .collect(Collectors.toList());
     ProjectLogger.log(
         "LearnerStateActor:getCourseBatch: coursesBatchIds = " + courseBatchIds,
         LoggerEnum.INFO.name());
@@ -208,8 +211,8 @@ public class LearnerStateActor extends BaseActor {
               .stream()
               .map(
                   batch -> {
-                    if (contentsById.containsKey((String) batch.get(idType))) {
-                      batch.put(valueType, contentsById.get((String) batch.get(idType)));
+                    if (contentsById.containsKey(batch.get(idType))) {
+                      batch.put(valueType, contentsById.get(batch.get(idType)));
                     }
 
                     return batch;
@@ -331,7 +334,7 @@ public class LearnerStateActor extends BaseActor {
       for (Map<String, Object> content : contentList) {
         for (int i = 0; i < contentIds.size(); i++) {
           String contentId = contentIds.get(i);
-          if (contentId.equals((String) content.get(JsonKey.CONTENT_ID))) {
+          if (contentId.equals(content.get(JsonKey.CONTENT_ID))) {
             matchedContentList.add(content);
             break;
           }

@@ -556,7 +556,9 @@ public class UserManagementActor extends BaseActor {
       userExtension.create(userMap);
     }
     UserUtil.toLower(userMap);
-    userMap.put(JsonKey.ID, ProjectUtil.generateUniqueId());
+    String userId = ProjectUtil.generateUniqueId();
+    userMap.put(JsonKey.ID, userId);
+    userMap.put(JsonKey.USER_ID, userId);
     requestMap = UserUtil.encryptUserData(userMap);
     UserUtil.addMaskEmailAndMaskPhone(requestMap);
     removeUnwanted(requestMap);

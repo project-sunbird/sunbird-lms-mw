@@ -108,7 +108,7 @@ public class NotesManagementActor extends BaseActor {
       TelemetryUtil.generateCorrelatedObject(updatedBy, JsonKey.USER, null, correlatedObject);
 
       Map<String, String> rollup =
-          prepareRollForObject(
+          prepareRollUpForObjectType(
               (String) req.get(JsonKey.CONTENT_ID), (String) req.get(JsonKey.COURSE_ID));
       TelemetryUtil.addTargetObjectRollUp(rollup, targetObject);
 
@@ -421,7 +421,8 @@ public class NotesManagementActor extends BaseActor {
     return result;
   }
 
-  public static HashMap<String, String> prepareRollForObject(String contentId, String courseId) {
+  public static HashMap<String, String> prepareRollUpForObjectType(
+      String contentId, String courseId) {
 
     Map<String, String> rollupMap = new HashMap<>();
     try {

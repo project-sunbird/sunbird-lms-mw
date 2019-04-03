@@ -1479,9 +1479,10 @@ public final class Util {
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }
-
+    String username = "";
     if (!(userList.isEmpty())) {
       userDetails = userList.get(0);
+      username = (String) userDetails.get(JsonKey.USERNAME);
       ProjectLogger.log(
           "Util:getUserDetails: for userId " + userId + " is " + userDetails,
           LoggerEnum.INFO.name());
@@ -1513,6 +1514,7 @@ public final class Util {
           "Util:getUserProfile: User data not available to save in ES for userId : " + userId,
           LoggerEnum.INFO.name());
     }
+    userDetails.put(JsonKey.USERNAME, username);
     return userDetails;
   }
 
@@ -1543,7 +1545,14 @@ public final class Util {
         (Map<String, String>) userMap.get(JsonKey.PROFILE_VISIBILITY);
     Map<String, String> completeProfileVisibilityMap =
         getCompleteProfileVisibilityMap(userProfileVisibilityMap, actorRef);
-
+    ProjectLogger.log(
+        "Util:checkUserProfileVisibility: completeProfileVisibilityMap is "
+            + completeProfileVisibilityMap,
+        LoggerEnum.INFO.name());
+    ProjectLogger.log(
+        "Util:checkUserProfileVisibility: userMap contains username and the encrypted value before removing"
+            + userMap.get(JsonKey.USER_NAME),
+        LoggerEnum.INFO.name());
     if (MapUtils.isNotEmpty(completeProfileVisibilityMap)) {
       Map<String, Object> privateFieldsMap = new HashMap<>();
       for (String field : completeProfileVisibilityMap.keySet()) {
@@ -1552,10 +1561,11 @@ public final class Util {
         }
       }
       ProjectLogger.log(
-          "Util:checkUserProfileVisibility: UserMap before removing private fields for userId "
-              + userMap.get(JsonKey.USER_ID)
-              + " is "
-              + userMap,
+          "Util:checkUserProfileVisibility: private fields key are " + privateFieldsMap.keySet(),
+          LoggerEnum.INFO.name());
+      ProjectLogger.log(
+          "Util:checkUserProfileVisibility: userMap contains username and the encrypted value after removing"
+              + userMap.get(JsonKey.USER_NAME),
           LoggerEnum.INFO.name());
       ElasticSearchUtil.upsertData(
           ProjectUtil.EsIndex.sunbird.getIndexName(),

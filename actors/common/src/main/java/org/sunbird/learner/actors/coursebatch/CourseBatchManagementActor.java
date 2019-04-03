@@ -228,7 +228,7 @@ public class CourseBatchManagementActor extends BaseActor {
             (String) request.get(JsonKey.ID), JsonKey.BATCH, JsonKey.UPDATE, null);
 
     Map<String, String> rollUp = new HashMap<>();
-    rollUp.put("l1", courseBatch.getCourseId());
+    rollUp.put(TelemetryEnvKey.LEVEL_1, courseBatch.getCourseId());
     TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
     TelemetryUtil.telemetryProcessingCall(courseBatchMap, targetObject, correlatedObject);
 

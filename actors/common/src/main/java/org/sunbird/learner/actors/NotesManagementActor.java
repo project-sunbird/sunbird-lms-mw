@@ -179,10 +179,9 @@ public class NotesManagementActor extends BaseActor {
       targetObject = TelemetryUtil.generateTargetObject(noteId, JsonKey.NOTE, JsonKey.UPDATE, null);
       TelemetryUtil.generateCorrelatedObject(noteId, JsonKey.NOTE, null, correlatedObject);
       TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
-
+      String contentId = (String) (actorMessage.getRequest()).get(JsonKey.CONTENT_ID);
+      String courseId = (String) (actorMessage.getRequest()).get(JsonKey.COURSE_ID);
       Map<String, String> rollup = new HashMap<>();
-      rollup.put("l1", (String) (actorMessage.getRequest()).get(JsonKey.COURSE_ID));
-      rollup.put("l2", (String) (actorMessage.getRequest()).get(JsonKey.CONTENT_ID));
       TelemetryUtil.addTargetObjectRollUp(rollup, targetObject);
 
       TelemetryUtil.telemetryProcessingCall(
@@ -425,13 +424,13 @@ public class NotesManagementActor extends BaseActor {
   public static Map<String, String> prepareRollUpForObjectType(String contentId, String courseId) {
 
     Map<String, String> rollupMap = new HashMap<>();
+
     if (StringUtils.isBlank(courseId)) { // if courseId is blank the level1 should be contentId
-      rollupMap.put(TelemetryEnvKey.LEVEL_1, contentId);
+      rollupMap.put("l1", contentId);
     } else {
-      rollupMap.put(
-          TelemetryEnvKey.LEVEL_1, courseId); // if courseId is not blank level1 should be courseId
+      rollupMap.put("l1", courseId); // if courseId is not blank level1 should be courseId
       if (StringUtils.isNotBlank(contentId)) {
-        rollupMap.put(TelemetryEnvKey.LEVEL_2, contentId);
+        rollupMap.put("l2", contentId);
       }
     }
     return rollupMap;

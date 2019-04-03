@@ -418,15 +418,17 @@ public class NotesManagementActor extends BaseActor {
     return result;
   }
 
-  /** This method will handel the values for contentId and courseId */
+  /** This method will handle rollup values (for contentId and courseId) in object */
   public static Map<String, String> prepareRollUpForObjectType(String contentId, String courseId) {
 
     Map<String, String> rollupMap = new HashMap<>();
 
-    if (StringUtils.isBlank(courseId)) { // if courseId is blank the level1 should be contentId
-      rollupMap.put("l1", contentId);
+    if (StringUtils.isBlank(courseId)) { // if courseId is blank the level 1 should be contentId
+      if (StringUtils.isNotBlank(contentId)) {
+        rollupMap.put("l1", contentId);
+      }
     } else {
-      rollupMap.put("l1", courseId); // if courseId is not blank level1 should be courseId
+      rollupMap.put("l1", courseId); // if courseId is not blank level 1 should be courseId
       if (StringUtils.isNotBlank(contentId)) {
         rollupMap.put("l2", contentId);
       }

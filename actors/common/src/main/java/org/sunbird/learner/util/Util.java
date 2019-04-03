@@ -1479,9 +1479,10 @@ public final class Util {
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }
-
+    String username = "";
     if (!(userList.isEmpty())) {
       userDetails = userList.get(0);
+      username = (String) userDetails.get(JsonKey.USERNAME);
       ProjectLogger.log(
           "Util:getUserDetails: for userId " + userId + " is " + userDetails,
           LoggerEnum.INFO.name());
@@ -1513,6 +1514,7 @@ public final class Util {
           "Util:getUserProfile: User data not available to save in ES for userId : " + userId,
           LoggerEnum.INFO.name());
     }
+    userDetails.put(JsonKey.USERNAME, username);
     return userDetails;
   }
 

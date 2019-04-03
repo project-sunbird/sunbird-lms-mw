@@ -107,9 +107,9 @@ public class NotesManagementActor extends BaseActor {
       TelemetryUtil.generateCorrelatedObject(uniqueId, JsonKey.NOTE, null, correlatedObject);
       TelemetryUtil.generateCorrelatedObject(updatedBy, JsonKey.USER, null, correlatedObject);
 
-      Map<String, String> rollup = new HashMap<>();
-      rollup.put("l1", (String) req.get(JsonKey.COURSE_ID));
-      rollup.put("l2", (String) req.get(JsonKey.CONTENT_ID));
+      Map<String, String> rollup =
+          prepareRollForObject(
+              (String) req.get(JsonKey.CONTENT_ID), (String) req.get(JsonKey.COURSE_ID));
       TelemetryUtil.addTargetObjectRollUp(rollup, targetObject);
 
       TelemetryUtil.telemetryProcessingCall(
@@ -419,5 +419,25 @@ public class NotesManagementActor extends BaseActor {
           ResponseCode.FORBIDDEN.getResponseCode());
     }
     return result;
+  }
+
+  public static HashMap<String, String> prepareRollForObject(String contentId, String courseId) {
+
+    Map<String, String> rollupMap = new HashMap<>();
+    try {
+      if (StringUtils.isNotBlank(contentId) && StringUtils.isNotBlank(courseId)) {
+        rollupMap.put("l1", courseId);
+        rollupMap.put("l2", contentId);
+      } else {
+        if (StringUtils.isNotBlank(courseId) && StringUtils.isBlank(contentId)) {
+          rollupMap.put("l1", courseId);
+        } else if (StringUtils.isNotBlank(contentId) && StringUtils.isBlank(courseId)) {
+          rollupMap.put("l1", contentId);
+        }
+      }
+      return (HashMap<String, String>) rollupMap;
+    } catch (Exception e) {
+      return (HashMap<String, String>) rollupMap;
+    }
   }
 }

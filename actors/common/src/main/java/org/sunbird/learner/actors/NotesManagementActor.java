@@ -179,8 +179,6 @@ public class NotesManagementActor extends BaseActor {
       targetObject = TelemetryUtil.generateTargetObject(noteId, JsonKey.NOTE, JsonKey.UPDATE, null);
       TelemetryUtil.generateCorrelatedObject(noteId, JsonKey.NOTE, null, correlatedObject);
       TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
-      String contentId = (String) (actorMessage.getRequest()).get(JsonKey.CONTENT_ID);
-      String courseId = (String) (actorMessage.getRequest()).get(JsonKey.COURSE_ID);
       Map<String, String> rollup = new HashMap<>();
       TelemetryUtil.addTargetObjectRollUp(rollup, targetObject);
 

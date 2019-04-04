@@ -13,10 +13,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -39,7 +36,7 @@ public class NotesManagementActor extends BaseActor {
   /** Receives the actor message and perform the operation for user note */
   @Override
   public void onReceive(Request request) throws Throwable {
-    Util.initializeContext(request, JsonKey.USER);
+    Util.initializeContext(request, TelemetryEnvKey.USER);
     // set request id fto thread loacl...
     ExecutionContext.setRequestId(request.getRequestId());
     switch (request.getOperation()) {
@@ -110,9 +107,9 @@ public class NotesManagementActor extends BaseActor {
       TelemetryUtil.generateCorrelatedObject(uniqueId, JsonKey.NOTE, null, correlatedObject);
       TelemetryUtil.generateCorrelatedObject(updatedBy, JsonKey.USER, null, correlatedObject);
 
-      Map<String, String> rollup = new HashMap<>();
-      rollup.put("l1", (String) req.get(JsonKey.COURSE_ID));
-      rollup.put("l2", (String) req.get(JsonKey.CONTENT_ID));
+      Map<String, String> rollup =
+          prepareRollUpForObjectType(
+              (String) req.get(JsonKey.CONTENT_ID), (String) req.get(JsonKey.COURSE_ID));
       TelemetryUtil.addTargetObjectRollUp(rollup, targetObject);
 
       TelemetryUtil.telemetryProcessingCall(
@@ -182,10 +179,7 @@ public class NotesManagementActor extends BaseActor {
       targetObject = TelemetryUtil.generateTargetObject(noteId, JsonKey.NOTE, JsonKey.UPDATE, null);
       TelemetryUtil.generateCorrelatedObject(noteId, JsonKey.NOTE, null, correlatedObject);
       TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
-
       Map<String, String> rollup = new HashMap<>();
-      rollup.put("l1", (String) (actorMessage.getRequest()).get(JsonKey.COURSE_ID));
-      rollup.put("l2", (String) (actorMessage.getRequest()).get(JsonKey.CONTENT_ID));
       TelemetryUtil.addTargetObjectRollUp(rollup, targetObject);
 
       TelemetryUtil.telemetryProcessingCall(
@@ -422,5 +416,23 @@ public class NotesManagementActor extends BaseActor {
           ResponseCode.FORBIDDEN.getResponseCode());
     }
     return result;
+  }
+
+  /** This method will handle rollup values (for contentId and courseId) in object */
+  public static Map<String, String> prepareRollUpForObjectType(String contentId, String courseId) {
+
+    Map<String, String> rollupMap = new HashMap<>();
+
+    if (StringUtils.isBlank(courseId)) { // if courseId is blank the level 1 should be contentId
+      if (StringUtils.isNotBlank(contentId)) {
+        rollupMap.put("l1", contentId);
+      }
+    } else {
+      rollupMap.put("l1", courseId); // if courseId is not blank level 1 should be courseId
+      if (StringUtils.isNotBlank(contentId)) {
+        rollupMap.put("l2", contentId);
+      }
+    }
+    return rollupMap;
   }
 }

@@ -194,7 +194,7 @@ public class UserUtil {
           ProjectLogger.log("Exception occurred while encrypting Email ", e);
         }
         Map<String, Object> filters = new HashMap<>();
-        filters.put(JsonKey.ENC_EMAIL, email);
+        filters.put(JsonKey.EMAIL, email);
         Map<String, Object> map = new HashMap<>();
         map.put(JsonKey.FILTERS, filters);
         SearchDTO searchDto = Util.createSearchDto(map);
@@ -359,23 +359,10 @@ public class UserUtil {
     }
   }
 
-  public static void upsertUserInKeycloak(Map<String, Object> userMap, String operationType) {
-    if (JsonKey.CREATE.equalsIgnoreCase(operationType)) {
-      String userId = "";
-      Map<String, String> responseMap = ssoManager.createUser(userMap);
-      userId = responseMap.get(JsonKey.USER_ID);
-      if (!StringUtils.isBlank(userId)) {
-        userMap.put(JsonKey.USER_ID, userId);
-        userMap.put(JsonKey.ID, userId);
-      } else {
-        ProjectCommonException.throwServerErrorException(ResponseCode.userRegUnSuccessfull, null);
-      }
-    } else {
-      String response = ssoManager.updateUser(userMap);
-      if (!(!StringUtils.isBlank(response) && response.equalsIgnoreCase(JsonKey.SUCCESS))) {
-        ProjectCommonException.throwServerErrorException(
-            ResponseCode.userUpdationUnSuccessfull, null);
-      }
+  public static void updatePassword(Map<String, Object> userMap) {
+    if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD))) {
+      ssoManager.updatePassword(
+          (String) userMap.get(JsonKey.ID), (String) userMap.get(JsonKey.PASSWORD));
     }
   }
 
@@ -389,6 +376,17 @@ public class UserUtil {
     if (!StringUtils.isBlank(email)) {
       userMap.put(JsonKey.ENC_EMAIL, email);
       userMap.put(JsonKey.EMAIL, maskingService.maskEmail(decService.decryptData(email)));
+    }
+  }
+
+  public static void addMaskEmailAndMaskPhone(Map<String, Object> userMap) {
+    String phone = (String) userMap.get(JsonKey.PHONE);
+    String email = (String) userMap.get(JsonKey.EMAIL);
+    if (!StringUtils.isBlank(phone)) {
+      userMap.put(JsonKey.MASKED_PHONE, maskingService.maskPhone(decService.decryptData(phone)));
+    }
+    if (!StringUtils.isBlank(email)) {
+      userMap.put(JsonKey.MASKED_EMAIL, maskingService.maskEmail(decService.decryptData(email)));
     }
   }
 

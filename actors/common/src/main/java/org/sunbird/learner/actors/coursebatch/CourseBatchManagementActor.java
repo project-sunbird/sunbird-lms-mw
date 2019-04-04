@@ -130,11 +130,11 @@ public class CourseBatchManagementActor extends BaseActor {
             (String) request.get(JsonKey.ID), JsonKey.BATCH, JsonKey.CREATE, null);
     TelemetryUtil.generateCorrelatedObject(
         (String) request.get(JsonKey.COURSE_ID), JsonKey.COURSE, null, correlatedObject);
-    TelemetryUtil.telemetryProcessingCall(request, targetObject, correlatedObject);
 
     Map<String, String> rollUp = new HashMap<>();
     rollUp.put("l1", (String) request.get(JsonKey.COURSE_ID));
     TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
+    TelemetryUtil.telemetryProcessingCall(request, targetObject, correlatedObject);
 
     if (courseNotificationActive()) {
       batchOperationNotifier(courseBatch, null);
@@ -227,11 +227,10 @@ public class CourseBatchManagementActor extends BaseActor {
         TelemetryUtil.generateTargetObject(
             (String) request.get(JsonKey.ID), JsonKey.BATCH, JsonKey.UPDATE, null);
 
-    TelemetryUtil.telemetryProcessingCall(courseBatchMap, targetObject, correlatedObject);
-
     Map<String, String> rollUp = new HashMap<>();
     rollUp.put("l1", courseBatch.getCourseId());
     TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
+    TelemetryUtil.telemetryProcessingCall(courseBatchMap, targetObject, correlatedObject);
 
     if (courseNotificationActive()) {
       batchOperationNotifier(courseBatch, participantsMap);

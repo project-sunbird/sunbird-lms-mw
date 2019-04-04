@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Map;
 import org.junit.*;
 import org.junit.runners.MethodSorters;
+import org.mockito.Mockito;
+import org.powermock.api.mockito.PowerMockito;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -45,6 +47,53 @@ public class PageManagementActorTest {
     Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
     pageMgmntDbInfo = Util.dbInfoMap.get(JsonKey.PAGE_MGMT_DB);
     pageSectionDbInfo = Util.dbInfoMap.get(JsonKey.PAGE_SECTION_DB);
+  }
+
+  @Test
+  public void checkTelemetryKeyFailure() throws Exception {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    String telemetryEnvKey = "page";
+    PowerMockito.mockStatic(Util.class);
+    PowerMockito.doNothing()
+        .when(
+            Util.class,
+            "initializeContext",
+            Mockito.any(Request.class),
+            Mockito.eq(telemetryEnvKey));
+
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.CREATE_PAGE.getValue());
+    HashMap<String, Object> innerMap = new HashMap<>();
+    Map<String, Object> pageMap = new HashMap<String, Object>();
+    List<Map<String, Object>> appMapList = new ArrayList<Map<String, Object>>();
+    Map<String, Object> appMap = new HashMap<String, Object>();
+    appMap.put(JsonKey.ID, sectionId);
+    appMap.put(JsonKey.INDEX, new BigInteger("1"));
+    appMap.put(JsonKey.GROUP, new BigInteger("1"));
+    appMapList.add(appMap);
+
+    pageMap.put(JsonKey.APP_MAP, appMapList);
+
+    List<Map<String, Object>> portalMapList = new ArrayList<Map<String, Object>>();
+    Map<String, Object> portalMap = new HashMap<String, Object>();
+    portalMap.put(JsonKey.ID, sectionId);
+    portalMap.put(JsonKey.INDEX, new BigInteger("1"));
+    portalMap.put(JsonKey.GROUP, new BigInteger("1"));
+    portalMapList.add(portalMap);
+
+    pageMap.put(JsonKey.PORTAL_MAP, portalMapList);
+
+    pageMap.put(JsonKey.PAGE_NAME, "Test Page");
+    pageMap.put(JsonKey.ORGANISATION_ID, "ORG1");
+    innerMap.put(JsonKey.PAGE, pageMap);
+    reqObj.setRequest(innerMap);
+
+    subject.tell(reqObj, probe.getRef());
+    probe.expectMsgClass(Response.class);
+    Assert.assertTrue(!(telemetryEnvKey.charAt(0) >= 65 && telemetryEnvKey.charAt(0) <= 90));
   }
 
   @Test

@@ -46,6 +46,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -92,9 +93,11 @@ import org.sunbird.services.sso.SSOServiceFactory;
 public class TextbookTocActor extends BaseBulkUploadActor {
 
   private SSOManager ssoManager = SSOServiceFactory.getInstance();
+  private Instant startTime = null;
 
   @Override
   public void onReceive(Request request) throws Throwable {
+    startTime = Instant.now();
     if (request
         .getOperation()
         .equalsIgnoreCase(TextbookActorOperation.TEXTBOOK_TOC_UPLOAD.getValue())) {
@@ -111,8 +114,13 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   @SuppressWarnings("unchecked")
   private void upload(Request request) throws Exception {
     byte[] byteArray = (byte[]) request.getRequest().get(JsonKey.DATA);
+    ProjectLogger.log("Sized:TextbookTocActor:upload size of request " + byteArray.length, INFO);
     InputStream inputStream = new ByteArrayInputStream(byteArray);
     Map<String, Object> resultMap = readAndValidateCSV(inputStream);
+    ProjectLogger.log(
+        "Timed:TextbookTocActor:upload duration for read and validate csv: "
+            + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+        INFO);
     Set<String> dialCodes = (Set<String>) resultMap.get(JsonKey.DIAL_CODES);
     resultMap.remove(JsonKey.DIAL_CODES);
     Map<String, List<String>> reqDialCodeIdentifierMap =
@@ -124,6 +132,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         (Map<Integer, List<String>>) resultMap.get(JsonKey.LINKED_CONTENT);
     resultMap.remove(JsonKey.LINKED_CONTENT);
     validateLinkedContents(rowNumVsContentIdsMap);
+    ProjectLogger.log(
+        "Timed:TextbookTocActor:upload duration for validate linked content: "
+            + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+        INFO);
     resultMap.put(JsonKey.LINKED_CONTENT, false);
     for (Entry<Integer, List<String>> entry : rowNumVsContentIdsMap.entrySet()) {
       if (CollectionUtils.isNotEmpty(entry.getValue())) {
@@ -133,13 +145,29 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     }
     String tbId = (String) request.get(TEXTBOOK_ID);
     Map<String, Object> textbookData = getTextbook(tbId);
+    ProjectLogger.log(
+        "Timed:TextbookTocActor:upload duration for get textbook data: "
+            + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+        INFO);
     Map<String, Object> hierarchy = getHierarchy(tbId);
+    ProjectLogger.log(
+        "Timed:TextbookTocActor:upload duration for get hirearchy data: "
+            + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+        INFO);
     validateTopics(topics, (String) textbookData.get(JsonKey.FRAMEWORK));
     validateDialCodesWithReservedDialCodes(dialCodes, textbookData);
     checkDialCodeUniquenessInTextBookHierarchy(reqDialCodeIdentifierMap, hierarchy);
     request.getRequest().put(JsonKey.DATA, resultMap);
     String mode = ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.MODE).toString();
+    ProjectLogger.log(
+        "Timed:TextbookTocActor:upload duration for validate topic and dial codes: "
+            + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+        INFO);
     validateRequest(request, mode, textbookData);
+    ProjectLogger.log(
+        "Timed:TextbookTocActor:upload duration for validate request: "
+            + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+        INFO);
     Response response = new Response();
     if (StringUtils.equalsIgnoreCase(mode, JsonKey.CREATE)) {
       response = createTextbook(request, textbookData);
@@ -148,6 +176,12 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     } else {
       unSupportedMessage();
     }
+    ProjectLogger.log(
+        "Timed:TextbookTocActor:upload duration for textbook "
+            + mode
+            + " :"
+            + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+        INFO);
     sender().tell(response, sender());
   }
 
@@ -476,8 +510,17 @@ public class TextbookTocActor extends BaseBulkUploadActor {
               getConfigValue(JsonKey.SUNBIRD_SSO_USERNAME),
               getConfigValue(JsonKey.SUNBIRD_SSO_PASSWORD)));
       String reqBody = mapper.writeValueAsString(requestMap);
+      ProjectLogger.log(
+          "Sized :TextBookTocUtil:callDialcodeSearchApi: size of request "
+              + reqBody.getBytes().length,
+          INFO);
+
       updateResponse = Unirest.post(requestUrl).headers(headers).body(reqBody).asString();
       if (null != updateResponse) {
+        ProjectLogger.log(
+            "Sized :TextBookTocUtil:callDialcodeSearchApi: size of response "
+                + updateResponse.getBody().getBytes().length,
+            INFO);
         Response response = mapper.readValue(updateResponse.getBody(), Response.class);
         ProjectLogger.log(
             "TextbookTocActor:callDialcodeSearchApi : response.getResponseCode().getResponseCode() : "
@@ -777,6 +820,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     }
     log("Reading Content for TextBook | Id: " + textbookId, INFO.name());
     Map<String, Object> content = getTextbook(textbookId);
+    ProjectLogger.log(
+        "Timed:TextbookTocActor:getTocUrl duration for get textbook: "
+            + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+        INFO);
     validateTextBook(content, DOWNLOAD);
     FileExtension fileExtension = CSV.getFileExtension();
     String contentVersionKey = (String) content.get(VERSION_KEY);
@@ -787,13 +834,25 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     log("Fetching TextBook Toc URL from Cloud", INFO.name());
 
     String cloudPath = getUri(prefix, false);
+    ProjectLogger.log(
+        "Timed:TextbookTocActor:getTocUrl duration for get cloud path url: "
+            + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+        INFO);
     if (isBlank(cloudPath)) {
       log("Reading Hierarchy for TextBook | Id: " + textbookId, INFO.name());
       Map<String, Object> contentHierarchy = getHierarchy(textbookId);
+      ProjectLogger.log(
+          "Timed:TextbookTocActor:getTocUrl duration for get hirearchy: "
+              + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+          INFO);
       String hierarchyVersionKey = (String) contentHierarchy.get(VERSION_KEY);
       cloudPath =
           new TextBookTocUploader(textBookTocFileName, fileExtension)
               .execute(contentHierarchy, textbookId, hierarchyVersionKey);
+      ProjectLogger.log(
+          "Timed:TextbookTocActor:getTocUrl duration for processing preparing and uploading: "
+              + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+          INFO);
     }
 
     log("Sending Response for Toc Download API for TextBook | Id: " + textbookId, INFO.name());
@@ -925,6 +984,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       requestMap.put(JsonKey.DATA, dataMap);
       updateRequest.put(JsonKey.REQUEST, requestMap);
 
+      ProjectLogger.log(
+          "Timed:TextbookTocActor:createTextbook duration for processing create textbook: "
+              + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+          INFO);
       log(
           "Create Textbook - UpdateHierarchy Request : " + mapper.writeValueAsString(updateRequest),
           INFO.name());
@@ -941,8 +1004,16 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       throws Exception {
     Response response = new Response();
     updateHierarchy(tbId, updateRequest);
+    ProjectLogger.log(
+        "Timed:TextbookTocActor:callUpdateHierarchyAndLinkDialCodeApi duration for update hirearchy data: "
+            + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+        INFO);
     try {
       linkDialCode(nodesModified, channel);
+      ProjectLogger.log(
+          "Timed:TextbookTocActor:callUpdateHierarchyAndLinkDialCodeApi duration for link dial code: "
+              + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+          INFO);
     } catch (Exception ex) {
       ProjectLogger.log(
           "TextbookTocActor:callUpdateHierarchyAndLinkDialCodeApi : Exception occurred while linking dial code : ",
@@ -1148,6 +1219,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       dataMap.put(JsonKey.HIERARCHY, hierarchyData);
       requestMap.put(JsonKey.DATA, dataMap);
       updateRequest.put(JsonKey.REQUEST, requestMap);
+      ProjectLogger.log(
+          "Timed:TextbookTocActor:updateTextbook duration for processing update: "
+              + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+          INFO);
       log(
           "Update Textbook - UpdateHierarchy Request : " + mapper.writeValueAsString(updateRequest),
           INFO.name());
@@ -1274,8 +1349,17 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           "TextbookTocActor:linkDialCodeApiCall : Request for link dial code api : "
               + mapper.writeValueAsString(updateRequest),
           LoggerEnum.INFO.name());
+
+      ProjectLogger.log(
+          "Sized: TextbookTocActor:linkDialCodeApiCall : size of request : "
+              + mapper.writeValueAsString(updateRequest).getBytes().length,
+          LoggerEnum.INFO);
       if (null != updateResponse) {
         Response response = mapper.readValue(updateResponse.getBody(), Response.class);
+        ProjectLogger.log(
+            "Sized: TextbookTocActor:linkDialCodeApiCall : size of response : "
+                + updateResponse.getBody().getBytes().length,
+            LoggerEnum.INFO);
         if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
           return response;
         } else {
@@ -1320,6 +1404,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     Map<String, String> headers = getDefaultHeaders();
     HttpResponse<String> updateResponse = null;
     try {
+      ProjectLogger.log(
+          "Sized:updateHierarchy:upload size of request "
+              + mapper.writeValueAsString(updateRequest).getBytes().length,
+          INFO);
       updateResponse =
           Unirest.patch(requestUrl)
               .headers(headers)
@@ -1342,6 +1430,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                 + updateResponse.getStatus()
                 + "status message "
                 + updateResponse.getStatusText(),
+            INFO);
+        ProjectLogger.log(
+            "Sized:updateHierarchy:upload size of response "
+                + updateResponse.getBody().getBytes().length,
             INFO);
         Response response = mapper.readValue(updateResponse.getBody(), Response.class);
         if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {

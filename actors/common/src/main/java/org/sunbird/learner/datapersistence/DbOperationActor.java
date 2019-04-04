@@ -13,11 +13,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -67,7 +63,7 @@ public class DbOperationActor extends BaseActor {
   @Override
   public void onReceive(Request actorMessage) throws Throwable {
 
-    Util.initializeContext(actorMessage, JsonKey.OBJECT_STORE);
+    Util.initializeContext(actorMessage, TelemetryEnvKey.OBJECT_STORE);
     // set request id to thread local...
     ExecutionContext.setRequestId(actorMessage.getRequestId());
     if (null == tableList) {

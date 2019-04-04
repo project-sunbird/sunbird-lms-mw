@@ -210,6 +210,12 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   @SuppressWarnings("unchecked")
   private void callSearchApiForContentIdsValidation(Map<String, List<Integer>> contentIdVsRowNumMap)
       throws Exception {
+    if (MapUtils.isEmpty(contentIdVsRowNumMap)) {
+      ProjectLogger.log(
+          "TextbookTocActor:callSearchApiForContentIdsValidation : Content id map is Empty.",
+          LoggerEnum.INFO.name());
+      return;
+    }
     List<String> contentIds = new ArrayList<>();
     contentIds.addAll(contentIdVsRowNumMap.keySet());
     Map<String, Object> requestMap = new HashMap<>();
@@ -223,83 +229,77 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     fields.add(JsonKey.IDENTIFIER);
     request.put(JsonKey.FIELDS, fields);
     request.put(JsonKey.LIMIT, contentIds.size());
+    String requestUrl =
+        getConfigValue(JsonKey.SUNBIRD_CS_BASE_URL)
+            + getConfigValue(JsonKey.SUNBIRD_CONTENT_SEARCH_URL);
+    HttpResponse<String> updateResponse = null;
     ProjectLogger.log(
-        "Sized:callSearchApiForContentIdsValidation:upload size of callSearchApiForContentIdsValidation request "
-            + mapper.writeValueAsString(requestMap).getBytes().length,
-        INFO);
-    if (CollectionUtils.isNotEmpty(contentIds)) {
-      String requestUrl =
-          getConfigValue(JsonKey.SUNBIRD_CS_BASE_URL)
-              + getConfigValue(JsonKey.SUNBIRD_CONTENT_SEARCH_URL);
-      HttpResponse<String> updateResponse = null;
-      try {
-        updateResponse =
-            Unirest.post(requestUrl)
-                .headers(getDefaultHeaders())
-                .body(mapper.writeValueAsString(requestMap))
-                .asString();
-        if (null != updateResponse) {
-          Response response = mapper.readValue(updateResponse.getBody(), Response.class);
-          ProjectLogger.log(
-              "Sized: callSearchApiForContentIdsValidation:upload size of callSearchApiForContentIdsValidation response "
-                  + updateResponse.getBody().getBytes().length,
-              INFO);
-
-          ProjectLogger.log(
-              "TextbookTocActor:callSearchApiForContentIdsValidation : response.getResponseCode().getResponseCode() : "
-                  + response.getResponseCode().getResponseCode(),
-              LoggerEnum.INFO.name());
-          if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
-            Map<String, Object> result = response.getResult();
-            Set<String> searchedContentIds = new HashSet<>();
-            if (MapUtils.isNotEmpty(result)) {
-              int count = (int) result.get(JsonKey.COUNT);
-              if (0 == count) {
+        "TextbookTocActor:callSearchApiForContentIdsValidation : requestUrl=" + requestUrl,
+        LoggerEnum.INFO.name());
+    try {
+      updateResponse =
+          Unirest.post(requestUrl)
+              .headers(getDefaultHeaders())
+              .body(mapper.writeValueAsString(requestMap))
+              .asString();
+      if (null != updateResponse) {
+        Response response = mapper.readValue(updateResponse.getBody(), Response.class);
+        ProjectLogger.log(
+            "TextbookTocActor:callSearchApiForContentIdsValidation : response.getResponseCode().getResponseCode() : "
+                + response.getResponseCode().getResponseCode(),
+            LoggerEnum.INFO.name());
+        if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
+          Map<String, Object> result = response.getResult();
+          Set<String> searchedContentIds = new HashSet<>();
+          if (MapUtils.isNotEmpty(result)) {
+            int count = (int) result.get(JsonKey.COUNT);
+            if (0 == count) {
+              ProjectLogger.log(
+                  "TextbookTocActor:callSearchApiForContentIdsValidation : Content id count in response is zero.",
+                  LoggerEnum.INFO.name());
+              String errorMsg = prepareErrorMsg(contentIdVsRowNumMap, searchedContentIds);
+              ProjectCommonException.throwClientErrorException(
+                  ResponseCode.errorInvalidLinkedContentUrl, errorMsg);
+            }
+            List<Map<String, Object>> content =
+                (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+            if (CollectionUtils.isNotEmpty(content)) {
+              content.forEach(
+                  contentMap -> {
+                    searchedContentIds.add((String) contentMap.get(JsonKey.IDENTIFIER));
+                  });
+              if (searchedContentIds.size() != contentIds.size()) {
                 String errorMsg = prepareErrorMsg(contentIdVsRowNumMap, searchedContentIds);
                 ProjectCommonException.throwClientErrorException(
                     ResponseCode.errorInvalidLinkedContentUrl, errorMsg);
               }
-              List<Map<String, Object>> content =
-                  (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-              if (CollectionUtils.isNotEmpty(content)) {
-                content.forEach(
-                    contentMap -> {
-                      searchedContentIds.add((String) contentMap.get(JsonKey.IDENTIFIER));
-                    });
-                if (searchedContentIds.size() != contentIds.size()) {
-                  String errorMsg = prepareErrorMsg(contentIdVsRowNumMap, searchedContentIds);
-                  ProjectCommonException.throwClientErrorException(
-                      ResponseCode.errorInvalidLinkedContentUrl, errorMsg);
-                }
-              } else {
-                ProjectLogger.log(
-                    "TextbookTocActor:callSearchApiForContentIdsValidation : Content is Empty.",
-                    LoggerEnum.INFO.name());
-                throwCompositeSearchFailureError();
-              }
+            } else {
+              ProjectLogger.log(
+                  "TextbookTocActor:callSearchApiForContentIdsValidation : Content is Empty.",
+                  LoggerEnum.INFO.name());
+              throwCompositeSearchFailureError();
             }
-          } else {
-            ProjectLogger.log(
-                "TextbookTocActor:callSearchApiForContentIdsValidation : response.getResponseCode().getResponseCode() is not 200",
-                LoggerEnum.INFO.name());
-            throwCompositeSearchFailureError();
           }
         } else {
           ProjectLogger.log(
-              "TextbookTocActor:callSearchApiForContentIdsValidation : update response is null.",
+              "TextbookTocActor:callSearchApiForContentIdsValidation : response.getResponseCode().getResponseCode() is not 200",
               LoggerEnum.INFO.name());
           throwCompositeSearchFailureError();
         }
-      } catch (Exception e) {
-        if (e instanceof ProjectCommonException) {
-          throw e;
-        }
+      } else {
         ProjectLogger.log(
-            "TextbookTocActor:validateLinkedContents : Error occurred with message "
-                + e.getMessage(),
-            e);
+            "TextbookTocActor:callSearchApiForContentIdsValidation : update response is null.",
+            LoggerEnum.INFO.name());
         throwCompositeSearchFailureError();
       }
+    } catch (Exception e) {
+      ProjectLogger.log(
+          "TextbookTocActor:validateLinkedContents : Error occurred with message " + e.getMessage(),
+          e);
+      if (e instanceof ProjectCommonException) {
+        throw e;
+      }
+      throwCompositeSearchFailureError();
     }
   }
 

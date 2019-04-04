@@ -49,7 +49,6 @@ import org.sunbird.content.util.TextBookTocUtil;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({TextBookTocUtil.class, ProjectUtil.class, Unirest.class})
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*"})
-@Ignore
 public class TextbookTocActorTest {
 
   private static ActorSystem system;
@@ -73,7 +72,6 @@ public class TextbookTocActorTest {
     PowerMockito.mockStatic(ProjectUtil.class);
     PowerMockito.mockStatic(Unirest.class);
     system = ActorSystem.create("system");
-    when(ProjectUtil.getConfigValue(Mockito.anyString())).thenReturn(TEXTBOOK_TOC_INPUT_MAPPING);
     when(ProjectUtil.getConfigValue(JsonKey.TEXTBOOK_TOC_MAX_CSV_ROWS)).thenReturn("5");
     when(ProjectUtil.getConfigValue(JsonKey.TEXTBOOK_TOC_MANDATORY_FIELDS))
         .thenReturn(MANDATORY_VALUES);
@@ -81,25 +79,34 @@ public class TextbookTocActorTest {
         .thenReturn(CONTENT_TYPE);
     when(ProjectUtil.getConfigValue(JsonKey.EKSTEP_BASE_URL)).thenReturn("http://www.abc.com/");
     when(ProjectUtil.getConfigValue(JsonKey.UPDATE_HIERARCHY_API)).thenReturn("");
+    when(ProjectUtil.getConfigValue(JsonKey.CASSANDRA_WRITE_BATCH_SIZE)).thenReturn("10");
+    when(ProjectUtil.getConfigValue(JsonKey.TEXTBOOK_TOC_INPUT_MAPPING))
+        .thenReturn(TEXTBOOK_TOC_INPUT_MAPPING);
+    when(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_TOC_MAX_FIRST_LEVEL_UNITS)).thenReturn("30");
+    when(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_TOC_LINKED_CONTENT_COLUMN_NAME))
+        .thenReturn("Linked Content {0}");
   }
 
+  @Ignore
   @Test
-  public void testUpdateFailureWithIncorrectTocData() throws IOException {
+  public void testUpdateFailureWithIncorrectTocData() throws IOException, UnirestException {
     mockRequiredMethods(false);
     StringBuffer tocData = new StringBuffer(VALID_HEADER);
     tocData = addTocDataRow(tocData, JsonKey.YES, "2019", "", "", false);
     tocData = addTocDataRow(tocData, JsonKey.YES, "2096", "", "", true);
+    mockResponseFromDialCodeSearch();
     ProjectCommonException res = (ProjectCommonException) doRequest(true, tocData.toString());
-    Assert.assertEquals(res.getCode(), ResponseCode.errorInvalidDialCode.getErrorCode());
+    Assert.assertEquals(ResponseCode.errorInvalidDialCode.getErrorCode(), res.getCode());
   }
 
+  @Ignore
   @Test
   public void testUpdateFailureWithDailcodeNotReq() throws IOException {
     mockRequiredMethods(false);
     StringBuffer tocData = new StringBuffer(VALID_HEADER);
     tocData = addTocDataRow(tocData, JsonKey.NO, "2019", "", "", true);
     ProjectCommonException res = (ProjectCommonException) doRequest(true, tocData.toString());
-    Assert.assertEquals(res.getCode(), ResponseCode.errorConflictingValues.getErrorCode());
+    Assert.assertEquals(ResponseCode.errorConflictingValues.getErrorCode(), res.getCode());
   }
 
   @Test
@@ -109,43 +116,47 @@ public class TextbookTocActorTest {
     tocData = addTocDataRow(tocData, JsonKey.YES, "2019", "", "", false);
     tocData = addTocDataRow(tocData, JsonKey.YES, "2019", "", "", true);
     ProjectCommonException res = (ProjectCommonException) doRequest(true, tocData.toString());
-    Assert.assertEquals(res.getCode(), ResponseCode.errorDuplicateEntries.getErrorCode());
+    Assert.assertEquals(ResponseCode.errorDduplicateDialCodeEntry.getErrorCode(), res.getCode());
   }
 
   @Test
   public void testUpdateFailureWithBlankCsv() throws IOException {
     mockRequiredMethods(false);
     ProjectCommonException res = (ProjectCommonException) doRequest(true, VALID_HEADER);
-    Assert.assertEquals(res.getCode(), ResponseCode.blankCsvData.getErrorCode());
+    Assert.assertEquals(ResponseCode.blankCsvData.getErrorCode(), res.getCode());
   }
 
+  @Ignore
   @Test
   public void testUpdateFailureWithInvalidTopic() throws IOException {
     mockRequiredMethods(false);
     StringBuffer tocData = new StringBuffer(VALID_HEADER);
     tocData = addTocDataRow(tocData, JsonKey.YES, "2019", "topi", "abc", true);
     ProjectCommonException res = (ProjectCommonException) doRequest(true, tocData.toString());
-    Assert.assertEquals(res.getCode(), ResponseCode.errorInvalidTopic.getErrorCode());
+    Assert.assertEquals(ResponseCode.errorInvalidTopic.getErrorCode(), res.getCode());
   }
 
+  @Ignore
   @Test
   public void testUpdateFailureWithInvalidDailcode() throws IOException {
     mockRequiredMethods(false);
     StringBuffer tocData = new StringBuffer(VALID_HEADER);
     tocData = addTocDataRow(tocData, JsonKey.YES, "2089", "", "", true);
     ProjectCommonException res = (ProjectCommonException) doRequest(true, tocData.toString());
-    Assert.assertEquals(res.getCode(), ResponseCode.errorInvalidDialCode.getErrorCode());
+    Assert.assertEquals(ResponseCode.errorInvalidDialCode.getErrorCode(), res.getCode());
   }
 
+  @Ignore
   @Test
   public void testUpdateFailureWithTocDataNotUnique() throws IOException {
     mockRequiredMethods(true);
     StringBuffer tocData = new StringBuffer(VALID_HEADER);
     tocData = addTocDataRow(tocData, JsonKey.YES, "2019", "", "", true);
     ProjectCommonException res = (ProjectCommonException) doRequest(true, tocData.toString());
-    Assert.assertEquals(res.getCode(), ResponseCode.errorDialCodeAlreadyAssociated.getErrorCode());
+    Assert.assertEquals(ResponseCode.errorDialCodeAlreadyAssociated.getErrorCode(), res.getCode());
   }
 
+  @Ignore
   @Test
   public void testUpdateSuccess() throws UnirestException, IOException {
     mockRequiredMethods(false);
@@ -161,6 +172,17 @@ public class TextbookTocActorTest {
     RequestBodyEntity entity = Mockito.mock(RequestBodyEntity.class);
     HttpResponse<String> response = Mockito.mock(HttpResponse.class);
     when(Unirest.patch(Mockito.anyString())).thenReturn(http);
+    when(http.headers(Mockito.anyMap())).thenReturn(http);
+    when(http.body(Mockito.anyString())).thenReturn(entity);
+    when(entity.asString()).thenReturn(response);
+    when(response.getBody()).thenReturn("{\"responseCode\" :\"OK\" }");
+  }
+
+  private void mockResponseFromDialCodeSearch() throws UnirestException {
+    HttpRequestWithBody http = Mockito.mock(HttpRequestWithBody.class);
+    RequestBodyEntity entity = Mockito.mock(RequestBodyEntity.class);
+    HttpResponse<String> response = Mockito.mock(HttpResponse.class);
+    when(Unirest.post(Mockito.anyString())).thenReturn(http);
     when(http.headers(Mockito.anyMap())).thenReturn(http);
     when(http.body(Mockito.anyString())).thenReturn(entity);
     when(entity.asString()).thenReturn(response);

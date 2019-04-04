@@ -950,7 +950,9 @@ public final class Util {
         // assign rollup of user ...
         Map<String, Object> result =
             ElasticSearchUtil.getDataByIdentifier(
-                ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), requestedBy);
+                ProjectUtil.EsIndex.sunbird.getIndexName(),
+                EsType.user.getTypeName(),
+                (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY));
         if (result != null) {
           String rootOrgId = (String) result.get(JsonKey.ROOT_ORG_ID);
 

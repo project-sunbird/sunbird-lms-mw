@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.*;
-import org.junit.runners.MethodSorters;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.sunbird.cassandra.CassandraOperation;
@@ -30,8 +29,6 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
 /** Test class to validate the note operations */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
-@Ignore
 public class NotesManagementActorTest {
 
   private static ActorSystem system;
@@ -63,6 +60,7 @@ public class NotesManagementActorTest {
   }
 
   @SuppressWarnings("deprecation")
+  @Ignore
   @Test
   public void checkTelemetryKeyFailure() throws Exception {
 
@@ -102,6 +100,7 @@ public class NotesManagementActorTest {
 
   /** Method to test create Note when data is valid. Expected to create note without exception */
   @SuppressWarnings("deprecation")
+  @Ignore
   @Test
   public void test1CreateNoteSuccess() {
 
@@ -130,8 +129,44 @@ public class NotesManagementActorTest {
     Assert.assertTrue(!StringUtils.isBlank(noteId));
   }
 
+  @Test
+  public void testPrepareRollUpForObjectTypeSuccessWithCourseIdAbsent() {
+
+    Map<String, String> rollupMap = new HashMap<>();
+    String contentId = "contentId";
+    String courseId = null;
+    rollupMap.put("l1", contentId);
+    Map<String, String> testMap =
+        NotesManagementActor.prepareRollUpForObjectType(contentId, courseId);
+    Assert.assertTrue(rollupMap.equals(testMap));
+  }
+
+  @Test
+  public void testPrepareRollUpForObjectTypeSuccessWithContentIdAbsent() {
+
+    Map<String, String> rollupMap = new HashMap<>();
+    String contentId = null;
+    String courseId = "courseId";
+    rollupMap.put("l1", courseId);
+    Map<String, String> testMap =
+        NotesManagementActor.prepareRollUpForObjectType(contentId, courseId);
+    Assert.assertTrue(rollupMap.equals(testMap));
+  }
+
+  @Test
+  public void testPrepareRollUpForObjectTypeSuccess() {
+
+    Map<String, String> rollupMap = new HashMap<>();
+    rollupMap.put("l1", courseId);
+    rollupMap.put("l2", contentId);
+    Map<String, String> testMap =
+        NotesManagementActor.prepareRollUpForObjectType(contentId, courseId);
+    Assert.assertTrue(rollupMap.equals(testMap));
+  }
+
   /** Method to test create Note when data is invalid. Expected to throw exception */
   @SuppressWarnings("deprecation")
+  @Ignore
   @Test
   public void test2CreateNoteException() {
     TestKit probe = new TestKit(system);
@@ -165,6 +200,7 @@ public class NotesManagementActorTest {
    * Method to test get Note when noteId is valid. Expected to get note details for the given noteId
    */
   @SuppressWarnings({"deprecation", "unchecked"})
+  @Ignore
   @Test
   public void test3GetNoteSuccess() {
     TestKit probe = new TestKit(system);
@@ -194,6 +230,7 @@ public class NotesManagementActorTest {
 
   /** Method to test get Note when noteId is invalid. Expected to get exception */
   @SuppressWarnings("deprecation")
+  @Ignore
   @Test
   public void test4GetNoteException() {
     TestKit probe = new TestKit(system);
@@ -216,6 +253,7 @@ public class NotesManagementActorTest {
 
   /** Method to test update Note when data is valid. Expected to update note with the given data */
   @SuppressWarnings("deprecation")
+  @Ignore
   @Test
   public void test5UpdateNoteSuccess() {
     TestKit probe = new TestKit(system);
@@ -267,6 +305,7 @@ public class NotesManagementActorTest {
    * request
    */
   @SuppressWarnings({"deprecation", "unchecked"})
+  @Ignore
   @Test
   public void test7SearchNoteSuccess() {
     TestKit probe = new TestKit(system);
@@ -299,6 +338,7 @@ public class NotesManagementActorTest {
    * success message
    */
   @SuppressWarnings("deprecation")
+  @Ignore
   @Test
   public void test8DeleteNoteSuccess() {
     TestKit probe = new TestKit(system);
@@ -319,6 +359,7 @@ public class NotesManagementActorTest {
 
   /** Method to test delete Note when data is invalid. Expected to throw exception */
   @SuppressWarnings("deprecation")
+  @Ignore
   @Test
   public void test9DeleteNoteException() {
     TestKit probe = new TestKit(system);
@@ -337,15 +378,5 @@ public class NotesManagementActorTest {
     if (null != res) {
       Assert.assertEquals("You are not authorized.", res.getMessage());
     }
-  }
-
-  @AfterClass
-  public static void destroy() {
-    // Delete note data from cassandra
-    operation.deleteRecord(usernotesDB.getKeySpace(), usernotesDB.getTableName(), noteId);
-    // Delete user and note data from ElasticSearch
-    ElasticSearchUtil.removeData(EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), userId);
-    ElasticSearchUtil.removeData(
-        EsIndex.sunbird.getIndexName(), EsType.usernotes.getTypeName(), noteId);
   }
 }

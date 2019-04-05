@@ -12,9 +12,7 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.telemetry.util.TelemetryLmaxWriter;
 import org.sunbird.telemetry.util.TelemetryUtil;
 
-/** @author anmol */
 public class SearchTelemetryUtil {
-
   private SearchTelemetryUtil() {}
 
   public static void generateSearchTelemetryEvent(

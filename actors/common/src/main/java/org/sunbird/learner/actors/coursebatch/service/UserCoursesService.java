@@ -140,13 +140,12 @@ public class UserCoursesService {
     try {
       userCourseDao.batchInsert(records);
     } catch (Exception ex) {
-      ProjectLogger.log("Cassandra batch insert failed , performing retry logic.", LoggerEnum.INFO);
+      ProjectLogger.log("UserCoursesService:performBatchInsert: Performing retry due to exception = " + ex.getMessage(), LoggerEnum.ERROR);
       for (Map<String, Object> task : records) {
         try {
           userCourseDao.insert(task);
         } catch (Exception exception) {
-          ProjectLogger.log(
-              "Cassandra Insert failed for user course insert-" + task.get(JsonKey.ID), exception);
+          ProjectLogger.log("UserCoursesService:performBatchInsert: Exception occurred with error message = " + ex.getMessage() + " for ID = " + task.get(JsonKey.ID), exception);
         }
       }
     }
@@ -183,7 +182,7 @@ public class UserCoursesService {
             id,
             courseMap);
     ProjectLogger.log(
-        "UserCoursesService:sync: sync user courses id and  response  " + id + "==" + response,
+        "UserCoursesService:sync: Sync user courses for ID = " + id + " response = " + response,
         LoggerEnum.INFO.name());
   }
 
@@ -222,10 +221,7 @@ public class UserCoursesService {
             userId,
             userMap);
     ProjectLogger.log(
-        "UserCoursesService:syncUserCourses: sync user courses batch and  response  "
-            + userId
-            + "=="
-            + response,
+        "UserCoursesService:sync: Sync user courses for ID = " + userId + " response = " + response,
         LoggerEnum.INFO.name());
   }
 
@@ -258,10 +254,7 @@ public class UserCoursesService {
             userId,
             userMap);
     ProjectLogger.log(
-        "UserCoursesService:syncRemoveUserCourses: sync user courses batch and  response  "
-            + userId
-            + "=="
-            + response,
+        "UserCoursesService:sync: Sync user courses for ID = " + userId + " response = " + response,
         LoggerEnum.INFO.name());
   }
 
@@ -275,7 +268,7 @@ public class UserCoursesService {
     try {
       batchSize = Integer.parseInt(ProjectUtil.getConfigValue(key));
     } catch (Exception ex) {
-      ProjectLogger.log("Failed to read cassandra batch size for:" + key, ex);
+      ProjectLogger.log("UserCoursesService:getBatchSize: Failed to read cassandra batch size for " + key, ex);
     }
     return batchSize;
   }

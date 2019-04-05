@@ -32,14 +32,14 @@ public interface UserCoursesDao {
   /**
    * Update user courses information
    *
-   * @param batchId Identifier for batch
+   * @param batchId Batch ID
    */
   List<String> getAllActiveUserOfBatch(String batchId);
 
   /**
    * Create an entry for user courses information
    *
-   * @param userCoursesDetails batch of user courses information
+   * @param userCoursesDetails Batch participant details
    */
   Response batchInsert(List<Map<String, Object>> userCoursesDetails);
 }

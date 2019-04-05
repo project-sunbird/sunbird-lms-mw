@@ -1,13 +1,9 @@
-package org.sunbird.location.actors;
+package org.sunbird.learner.util;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.commons.collections.MapUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.sunbird.actor.core.BaseActor;
-import org.sunbird.common.models.util.GeoLocationJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.PropertiesCache;
@@ -16,32 +12,12 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.telemetry.util.TelemetryLmaxWriter;
 import org.sunbird.telemetry.util.TelemetryUtil;
 
-/** @author Amit Kumar */
-public abstract class BaseLocationActor extends BaseActor {
+/** @author anmol */
+public class SearchTelemetryUtil {
 
-  public void generateTelemetryForLocation(
-      String targetObjId, Map<String, Object> data, String operation) {
-    // object of telemetry event...
-    try {
-      Map<String, Object> targetObject = null;
-      List<Map<String, Object>> correlatedObject = new ArrayList<>();
-      targetObject =
-          TelemetryUtil.generateTargetObject(targetObjId, JsonKey.LOCATION, operation, null);
-      if (!MapUtils.isEmpty(data)
-          && StringUtils.isNotEmpty((String) data.get(GeoLocationJsonKey.PARENT_ID))) {
-        TelemetryUtil.generateCorrelatedObject(
-            (String) data.get(GeoLocationJsonKey.PARENT_ID),
-            JsonKey.LOCATION,
-            null,
-            correlatedObject);
-      }
-      TelemetryUtil.telemetryProcessingCall(data, targetObject, correlatedObject);
-    } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(), e);
-    }
-  }
+  private SearchTelemetryUtil() {}
 
-  public void generateSearchTelemetryEvent(
+  public static void generateSearchTelemetryEvent(
       SearchDTO searchDto, String[] types, Map<String, Object> result) {
     try {
       Map<String, Object> telemetryContext = TelemetryUtil.getTelemetryContext();
@@ -61,9 +37,8 @@ public abstract class BaseLocationActor extends BaseActor {
     }
   }
 
-  private List<Map<String, Object>> generateTopNResult(Map<String, Object> result) {
-    List<Map<String, Object>> dataMapList =
-        (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+  private static List<Map<String, Object>> generateTopNResult(Map<String, Object> result) {
+    List<Map<String, Object>> dataMapList = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
     Integer topN =
         Integer.parseInt(PropertiesCache.getInstance().getProperty(JsonKey.SEARCH_TOP_N));
     int count = Math.min(topN, dataMapList.size());

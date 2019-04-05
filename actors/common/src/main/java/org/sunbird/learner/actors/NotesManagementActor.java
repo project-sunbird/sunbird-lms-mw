@@ -20,6 +20,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.SearchTelemetryUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.telemetry.util.TelemetryUtil;
 
@@ -293,9 +294,13 @@ public class NotesManagementActor extends BaseActor {
       result = new LinkedHashMap<>();
       result.put(JsonKey.COUNT, count);
       result.put(JsonKey.NOTE, note);
+      result.put(JsonKey.CONTENT, note);
     } else {
       result = new HashMap<>();
     }
+    String[] types = {EsType.usernotes.getTypeName()};
+    SearchTelemetryUtil.generateSearchTelemetryEvent(
+        searchDto, types, result); // generating search for telemetry
     return result;
   }
 

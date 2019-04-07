@@ -127,7 +127,7 @@ public class CourseBatchManagementActor extends BaseActor {
 
     targetObject =
         TelemetryUtil.generateTargetObject(
-            (String) request.get(JsonKey.ID), JsonKey.BATCH, JsonKey.CREATE, null);
+            courseBatchId, TelemetryEnvKey.BATCH, JsonKey.CREATE, null);
     TelemetryUtil.generateCorrelatedObject(
         (String) request.get(JsonKey.COURSE_ID), JsonKey.COURSE, null, correlatedObject);
 

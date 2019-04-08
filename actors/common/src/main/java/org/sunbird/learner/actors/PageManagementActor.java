@@ -164,7 +164,10 @@ public class PageManagementActor extends BaseActor {
     sender().tell(response, self());
     targetObject =
         TelemetryUtil.generateTargetObject(
-            (String) sectionMap.get(JsonKey.ID), JsonKey.PAGE_SECTION, JsonKey.CREATE, null);
+            (String) sectionMap.get(JsonKey.ID),
+            TelemetryEnvKey.PAGE_SECTION,
+            JsonKey.CREATE,
+            null);
     TelemetryUtil.telemetryProcessingCall(
         actorMessage.getRequest(), targetObject, correlatedObject);
     // update DataCacheHandler section map with updated page section data
@@ -207,7 +210,8 @@ public class PageManagementActor extends BaseActor {
     response.put(JsonKey.SECTION_ID, uniqueId);
     sender().tell(response, self());
     targetObject =
-        TelemetryUtil.generateTargetObject(uniqueId, JsonKey.PAGE_SECTION, JsonKey.CREATE, null);
+        TelemetryUtil.generateTargetObject(
+            uniqueId, TelemetryEnvKey.PAGE_SECTION, JsonKey.CREATE, null);
     TelemetryUtil.telemetryProcessingCall(
         actorMessage.getRequest(), targetObject, correlatedObject);
     // update DataCacheHandler section map with new page section data

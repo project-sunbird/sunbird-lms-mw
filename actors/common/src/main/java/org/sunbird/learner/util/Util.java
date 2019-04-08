@@ -35,7 +35,6 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
@@ -86,7 +85,6 @@ public final class Util {
   private static Properties prop = new Properties();
   private static Map<String, String> headers = new HashMap<>();
   private static Map<Integer, List<Integer>> orgStatusTransition = new HashMap<>();
-  public static final Map<String, Object> auditLogUrlMap = new HashMap<>();
   private static final String SUNBIRD_WEB_URL = "sunbird_web_url";
   private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static EncryptionService encryptionService =
@@ -104,7 +102,6 @@ public final class Util {
     loadPropertiesFile();
     initializeOrgStatusTransition();
     initializeDBProperty();
-    initializeAuditLogUrl();
     // EkStep HttpClient headers init
     headers.put("content-type", "application/json");
     headers.put("accept", "application/json");
@@ -150,58 +147,6 @@ public final class Util {
             OrgStatus.INACTIVE.getValue(),
             OrgStatus.BLOCKED.getValue(),
             OrgStatus.RETIRED.getValue()));
-  }
-
-  private static void initializeAuditLogUrl() {
-    // This map will hold ActorOperationType as key and AuditOperation Object as
-    // value which
-    // contains operation Type and Object Type info.
-    auditLogUrlMap.put(
-        ActorOperations.CREATE_USER.getValue(), new AuditOperation(JsonKey.USER, JsonKey.CREATE));
-    auditLogUrlMap.put(
-        ActorOperations.UPDATE_USER.getValue(), new AuditOperation(JsonKey.USER, JsonKey.UPDATE));
-    auditLogUrlMap.put(
-        ActorOperations.CREATE_ORG.getValue(),
-        new AuditOperation(JsonKey.ORGANISATION, JsonKey.CREATE));
-    auditLogUrlMap.put(
-        ActorOperations.UPDATE_ORG.getValue(),
-        new AuditOperation(JsonKey.ORGANISATION, JsonKey.UPDATE));
-    auditLogUrlMap.put(
-        ActorOperations.UPDATE_ORG_STATUS.getValue(),
-        new AuditOperation(JsonKey.ORGANISATION, JsonKey.UPDATE));
-    auditLogUrlMap.put(
-        ActorOperations.APPROVE_ORGANISATION.getValue(),
-        new AuditOperation(JsonKey.ORGANISATION, JsonKey.UPDATE));
-    auditLogUrlMap.put(
-        ActorOperations.ADD_MEMBER_ORGANISATION.getValue(),
-        new AuditOperation(JsonKey.ORGANISATION, JsonKey.UPDATE));
-    auditLogUrlMap.put(
-        ActorOperations.REMOVE_MEMBER_ORGANISATION.getValue(),
-        new AuditOperation(JsonKey.ORGANISATION, JsonKey.UPDATE));
-    auditLogUrlMap.put(
-        ActorOperations.BLOCK_USER.getValue(), new AuditOperation(JsonKey.USER, JsonKey.UPDATE));
-    auditLogUrlMap.put(
-        ActorOperations.UNBLOCK_USER.getValue(), new AuditOperation(JsonKey.USER, JsonKey.UPDATE));
-    auditLogUrlMap.put(
-        ActorOperations.ASSIGN_ROLES.getValue(), new AuditOperation(JsonKey.USER, JsonKey.UPDATE));
-    auditLogUrlMap.put(
-        ActorOperations.CREATE_BATCH.getValue(), new AuditOperation(JsonKey.BATCH, JsonKey.CREATE));
-    auditLogUrlMap.put(
-        ActorOperations.UPDATE_BATCH.getValue(), new AuditOperation(JsonKey.BATCH, JsonKey.UPDATE));
-    auditLogUrlMap.put(
-        ActorOperations.REMOVE_BATCH.getValue(), new AuditOperation(JsonKey.BATCH, JsonKey.UPDATE));
-    auditLogUrlMap.put(
-        ActorOperations.ADD_USER_TO_BATCH.getValue(),
-        new AuditOperation(JsonKey.BATCH, JsonKey.UPDATE));
-    auditLogUrlMap.put(
-        ActorOperations.REMOVE_USER_FROM_BATCH.getValue(),
-        new AuditOperation(JsonKey.BATCH, JsonKey.UPDATE));
-    auditLogUrlMap.put(
-        ActorOperations.CREATE_NOTE.getValue(), new AuditOperation(JsonKey.USER, JsonKey.CREATE));
-    auditLogUrlMap.put(
-        ActorOperations.UPDATE_NOTE.getValue(), new AuditOperation(JsonKey.USER, JsonKey.UPDATE));
-    auditLogUrlMap.put(
-        ActorOperations.DELETE_NOTE.getValue(), new AuditOperation(JsonKey.USER, JsonKey.UPDATE));
   }
 
   /** This method will initialize the cassandra data base property */

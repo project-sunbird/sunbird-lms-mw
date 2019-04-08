@@ -205,8 +205,6 @@ public class CourseBatchManagementActor extends BaseActor {
         && JsonKey.INVITE_ONLY.equalsIgnoreCase(courseBatch.getEnrollmentType())) {
       validateParticipants(participants, courseBatch);
       participantsMap = getParticipantsMap(participants, courseBatch);
-
-      //      courseBatch.setParticipant((List<String>) participantsMap.get(JsonKey.PARTICIPANTS));
     } else {
       participantsMap = new HashMap<>();
     }

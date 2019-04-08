@@ -1,6 +1,9 @@
 package org.sunbird.learner.actors;
 
 import static akka.testkit.JavaTestKit.duration;
+import static org.junit.Assert.assertTrue;
+import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
@@ -11,41 +14,98 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
-import org.junit.*;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
-import org.sunbird.cassandra.CassandraOperation;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
+import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.request.Request;
-import org.sunbird.common.responsecode.ResponseMessage;
+import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
-/** Test class to validate the note operations */
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({
+  ServiceFactory.class,
+  ElasticSearchUtil.class,
+  Util.class,
+  RequestRouter.class,
+  ElasticSearchUtil.class
+})
+@PowerMockIgnore({"javax.management.*", "javax.crypto.*", "javax.net.ssl.*", "javax.security.*"})
 public class NotesManagementActorTest {
 
-  private static ActorSystem system;
-  private static final Props props = Props.create(NotesManagementActor.class);
   private static Util.DbInfo usernotesDB = Util.dbInfoMap.get(JsonKey.USER_NOTES_DB);
-  private static String userId = "dnk298voopir80249";
+  private static String userId = "userId-example";
   private static String courseId = "mclr309f39";
   private static String contentId = "nnci3u9f97mxcfu";
   private static String noteId = "";
-  private static CassandraOperation operation = ServiceFactory.getInstance();
+
+  private ActorSystem system = ActorSystem.create("system");
+  private static final Props props = Props.create(NotesManagementActor.class);
+  private static CassandraOperationImpl cassandraOperation;
 
   @BeforeClass
   public static void setUp() {
-    system = ActorSystem.create("system");
-    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
-    insertUserDataToES();
+
+    ActorRef actorRef = mock(ActorRef.class);
+    PowerMockito.mockStatic(RequestRouter.class);
+    when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
+
+    PowerMockito.mockStatic(ServiceFactory.class);
+    cassandraOperation = mock(CassandraOperationImpl.class);
+
+    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+    PowerMockito.mockStatic(ElasticSearchUtil.class);
   }
+
+  @Test
+  public void testCreateNoteSuccess() {
+    Request req = new Request();
+    Map<String, Object> reqMap = new HashMap<>();
+    reqMap.put(JsonKey.USER_ID, userId);
+    req.setRequest(reqMap);
+    req.setOperation(ActorOperations.CREATE_NOTE.getValue());
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(reqMap);
+    when(cassandraOperation.insertRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(getSuccessResponse());
+    boolean result = testScenario(req, null);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testCreateNoteFailure() {
+    Request req = new Request();
+    Map<String, Object> reqMap = new HashMap<>();
+    req.setRequest(reqMap);
+    req.setOperation(ActorOperations.CREATE_NOTE.getValue());
+    boolean result = testScenario(req, ResponseCode.invalidUserId);
+    assertTrue(result);
+  }
+
+  /*
+   * private void mockCassandra() {
+   *
+   * when(cassandraOperation.insertRecord( Mockito.anyString(),
+   * Mockito.anyString(), Mockito.anyMap())) .thenReturn(); }
+   */
 
   /** Method to insert User data to ElasticSearch */
   private static void insertUserDataToES() {
@@ -129,217 +189,13 @@ public class NotesManagementActorTest {
     Assert.assertTrue(!StringUtils.isBlank(noteId));
   }
 
-  @Test
-  public void testPrepareRollUpForObjectTypeSuccessWithCourseIdAbsent() {
-
-    Map<String, String> rollupMap = new HashMap<>();
-    String contentId = "contentId";
-    String courseId = null;
-    rollupMap.put("l1", contentId);
-    Map<String, String> testMap =
-        NotesManagementActor.prepareRollUpForObjectType(contentId, courseId);
-    Assert.assertTrue(rollupMap.equals(testMap));
-  }
-
-  @Test
-  public void testPrepareRollUpForObjectTypeSuccessWithContentIdAbsent() {
-
-    Map<String, String> rollupMap = new HashMap<>();
-    String contentId = null;
-    String courseId = "courseId";
-    rollupMap.put("l1", courseId);
-    Map<String, String> testMap =
-        NotesManagementActor.prepareRollUpForObjectType(contentId, courseId);
-    Assert.assertTrue(rollupMap.equals(testMap));
-  }
-
-  @Test
-  public void testPrepareRollUpForObjectTypeSuccess() {
-
-    Map<String, String> rollupMap = new HashMap<>();
-    rollupMap.put("l1", courseId);
-    rollupMap.put("l2", contentId);
-    Map<String, String> testMap =
-        NotesManagementActor.prepareRollUpForObjectType(contentId, courseId);
-    Assert.assertTrue(rollupMap.equals(testMap));
-  }
-
-  /** Method to test create Note when data is invalid. Expected to throw exception */
-  @SuppressWarnings("deprecation")
-  @Ignore
-  @Test
-  public void test2CreateNoteException() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    Request actorMessage = new Request();
-    Map<String, Object> note = new HashMap<>();
-    Map<String, Object> request = new HashMap<>();
-    request.put(JsonKey.REQUESTED_BY, userId + "invalid");
-    note.put(JsonKey.USER_ID, userId + "invalid");
-    note.put(JsonKey.COURSE_ID, courseId);
-    note.put(JsonKey.CONTENT_ID, contentId);
-    note.put(JsonKey.NOTE, "This is a test note");
-    note.put(JsonKey.TITLE, "Title Test");
-    List<String> tags = new ArrayList<>();
-    tags.add("tag1");
-    note.put(JsonKey.TAGS, tags);
-    request.put(JsonKey.NOTE, note);
-    actorMessage.setRequest(request);
-    actorMessage.setOperation(ActorOperations.CREATE_NOTE.getValue());
-
-    subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException res =
-        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    if (null != res) {
-      Assert.assertEquals(ResponseMessage.Key.INVALID_USER_ID, res.getMessage());
-    }
-  }
-
-  /**
-   * Method to test get Note when noteId is valid. Expected to get note details for the given noteId
-   */
-  @SuppressWarnings({"deprecation", "unchecked"})
-  @Ignore
-  @Test
-  public void test3GetNoteSuccess() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    try {
-      Thread.sleep(3000);
-    } catch (InterruptedException e) {
-      ProjectLogger.log("Error", e);
-    }
-
-    Request actorMessage = new Request();
-    Map<String, Object> request = new HashMap<>();
-    request.put(JsonKey.REQUESTED_BY, userId);
-    request.put(JsonKey.NOTE_ID, noteId);
-    actorMessage.setRequest(request);
-    actorMessage.setOperation(ActorOperations.GET_NOTE.getValue());
-
-    subject.tell(actorMessage, probe.getRef());
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    if (null != res && null != res.getResult()) {
-      Map<String, Object> response = (Map<String, Object>) res.getResult().get(JsonKey.RESPONSE);
-      Long count = (Long) response.get(JsonKey.COUNT);
-      Assert.assertTrue(count > 0);
-    }
-  }
-
-  /** Method to test get Note when noteId is invalid. Expected to get exception */
-  @SuppressWarnings("deprecation")
-  @Ignore
-  @Test
-  public void test4GetNoteException() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    Request actorMessage = new Request();
-    Map<String, Object> request = new HashMap<>();
-    request.put(JsonKey.REQUESTED_BY, userId);
-    request.put(JsonKey.NOTE_ID, noteId + "invalid");
-    actorMessage.setRequest(request);
-    actorMessage.setOperation(ActorOperations.GET_NOTE.getValue());
-
-    subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException res =
-        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    if (null != res) {
-      Assert.assertEquals("You are not authorized.", res.getMessage());
-    }
-  }
-
-  /** Method to test update Note when data is valid. Expected to update note with the given data */
-  @SuppressWarnings("deprecation")
-  @Ignore
-  @Test
-  public void test5UpdateNoteSuccess() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    Request actorMessage = new Request();
-    Map<String, Object> request = new HashMap<>();
-    request.put(JsonKey.REQUESTED_BY, userId);
-    request.put(JsonKey.NOTE_ID, noteId);
-    Map<String, Object> note = new HashMap<>();
-    note.put(JsonKey.TITLE, "Title Test Update");
-    request.put(JsonKey.NOTE, note);
-    actorMessage.setRequest(request);
-    actorMessage.setOperation(ActorOperations.UPDATE_NOTE.getValue());
-
-    subject.tell(actorMessage, probe.getRef());
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    noteId = (String) res.getResult().get(JsonKey.ID);
-    Assert.assertTrue(!StringUtils.isBlank(noteId));
-  }
-
-  /** Method to test update Note when data is invalid. Expected to throw exception */
-  @SuppressWarnings("deprecation")
-  @Test
-  public void test6UpdateNoteException() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    Request actorMessage = new Request();
-    Map<String, Object> request = new HashMap<>();
-    request.put(JsonKey.REQUESTED_BY, userId);
-    request.put(JsonKey.NOTE_ID, noteId + "invalid");
-    Map<String, Object> note = new HashMap<>();
-    note.put(JsonKey.TITLE, "Title Test Update");
-    request.put(JsonKey.NOTE, note);
-    actorMessage.setRequest(request);
-    actorMessage.setOperation(ActorOperations.UPDATE_NOTE.getValue());
-
-    subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException res =
-        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    if (null != res) {
-      Assert.assertEquals("You are not authorized.", res.getMessage());
-    }
-  }
-
-  /**
-   * Method to test search Note when data is valid. Expected to return note data for the search
-   * request
-   */
-  @SuppressWarnings({"deprecation", "unchecked"})
-  @Ignore
-  @Test
-  public void test7SearchNoteSuccess() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    Request actorMessage = new Request();
-    Map<String, Object> request = new HashMap<>();
-    request.put(JsonKey.REQUESTED_BY, userId);
-
-    request.put(JsonKey.QUERY, "note");
-    Map<String, Object> filterMap = new HashMap<>();
-    filterMap.put(JsonKey.USER_ID, userId);
-    request.put(JsonKey.FILTERS, filterMap);
-    request.put(JsonKey.OFFSET, 0);
-    request.put(JsonKey.LIMIT, 2);
-    actorMessage.setRequest(request);
-    actorMessage.setOperation(ActorOperations.SEARCH_NOTE.getValue());
-
-    subject.tell(actorMessage, probe.getRef());
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    if (null != res && null != res.getResult()) {
-      Map<String, Object> response = (Map<String, Object>) res.getResult().get(JsonKey.RESPONSE);
-      Long count = (Long) response.get(JsonKey.COUNT);
-      Assert.assertTrue(count > 0);
-    }
-  }
-
   /**
    * Method to test delete Note when data is valid. Expected to mark note as deleted and send
    * success message
    */
   @SuppressWarnings("deprecation")
-  @Ignore
   @Test
+  @Ignore
   public void test8DeleteNoteSuccess() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -359,8 +215,8 @@ public class NotesManagementActorTest {
 
   /** Method to test delete Note when data is invalid. Expected to throw exception */
   @SuppressWarnings("deprecation")
-  @Ignore
   @Test
+  @Ignore
   public void test9DeleteNoteException() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -378,5 +234,28 @@ public class NotesManagementActorTest {
     if (null != res) {
       Assert.assertEquals("You are not authorized.", res.getMessage());
     }
+  }
+
+  private boolean testScenario(Request reqObj, ResponseCode errorCode) {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    subject.tell(reqObj, probe.getRef());
+
+    if (errorCode == null) {
+      Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+      return null != res && res.getResponseCode() == ResponseCode.OK;
+    } else {
+      ProjectCommonException res =
+          probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+      return res.getCode().equals(errorCode.getErrorCode())
+          || res.getResponseCode() == errorCode.getResponseCode();
+    }
+  }
+
+  private static Response getSuccessResponse() {
+    Response response = new Response();
+    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    return response;
   }
 }

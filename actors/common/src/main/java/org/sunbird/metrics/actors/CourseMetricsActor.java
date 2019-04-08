@@ -91,7 +91,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
       }
     }
     Map<String, Object> filter = new HashMap<>();
-    filter.put(JsonKey.BATCHES + "." + JsonKey.BATCH_ID, batchId);
+    filter.put(JsonKey.BATCH_ID, batchId);
 
     SearchDTO searchDTO = new SearchDTO();
     if (!StringUtils.isEmpty(userName)) {
@@ -102,34 +102,23 @@ public class CourseMetricsActor extends BaseMetricsActor {
     searchDTO.setOffset(offset);
     if (!StringUtils.isEmpty(sortBy)) {
       Map<String, Object> sortMap = new HashMap<>();
-      boolean isNestedSearch = false;
       if (JsonKey.USERNAME.equalsIgnoreCase(sortBy)) {
-        sortBy = JsonKey.FIRST_NAME;
+        sortBy = JsonKey.NAME;
       }
       if (JsonKey.PROGRESS.equalsIgnoreCase(sortBy)) {
-        sortBy = JsonKey.BATCHES + "." + JsonKey.PROGRESS;
-        isNestedSearch = true;
+        sortBy = JsonKey.PROGRESS;
       }
       if (JsonKey.ENROLLED_ON.equalsIgnoreCase(sortBy)) {
-        sortBy = JsonKey.BATCHES + "." + JsonKey.ENROLLED_ON;
-        isNestedSearch = true;
+        sortBy = JsonKey.ENROLLED_ON;
       }
       if (JsonKey.ORG_NAME.equalsIgnoreCase(sortBy)) {
         sortBy = JsonKey.ROOT_ORG_NAME;
       }
-      if (!isNestedSearch) {
-        if (StringUtils.isEmpty(sortOrder)) {
-          sortMap.put(sortBy, JsonKey.ASC);
-        } else {
-          sortMap.put(sortBy, sortOrder);
-        }
+
+      if (StringUtils.isEmpty(sortOrder)) {
+        sortMap.put(sortBy, JsonKey.ASC);
       } else {
-        Map<String, Object> map = new HashMap<>();
-        map.put(JsonKey.ORDER, StringUtils.isEmpty(sortOrder) ? JsonKey.ASC : sortOrder);
-        Map<String, Object> nestedMap = new HashMap<>();
-        nestedMap.put(JsonKey.BATCHES + "." + JsonKey.BATCH_ID, batchId);
-        map.put(JsonKey.TERM, nestedMap);
-        sortMap.put(sortBy, map);
+        sortMap.put(sortBy, sortOrder);
       }
       searchDTO.setSortBy(sortMap);
     }
@@ -174,8 +163,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     courseProgressResult.put(JsonKey.START_DATE, courseBatchResult.get(JsonKey.START_DATE));
     courseProgressResult.put(JsonKey.END_DATE, courseBatchResult.get(JsonKey.END_DATE));
     courseProgressResult.put(
-        JsonKey.COMPLETED_COUNT,
-        getCompletedCount(batchId, leafNodeCount, (Long) result.get(JsonKey.COUNT)));
+        JsonKey.COMPLETED_COUNT, courseBatchResult.get(JsonKey.COMPLETED_COUNT));
     Response response = new Response();
     response.put("response", "SUCCESS");
     response.getResult().putAll(courseProgressResult);
@@ -475,8 +463,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
     if (CollectionUtils.isNotEmpty(esContent)) {
       List<String> userIds = new ArrayList<>();
-
-      calculateCourseProgressPercentage(esContent);
       for (Map<String, Object> entry : esContent) {
         String userId = (String) entry.get(JsonKey.USER_ID);
         userIds.add(userId);

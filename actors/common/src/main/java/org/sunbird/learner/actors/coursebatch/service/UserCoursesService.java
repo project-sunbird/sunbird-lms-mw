@@ -17,7 +17,7 @@ import org.sunbird.models.user.courses.UserCourses;
 
 public class UserCoursesService {
   private UserCoursesDao userCourseDao = UserCoursesDaoImpl.getInstance();
-  protected Integer DEFAULT_BATCH_SIZE = 10;
+
   protected Integer CASSANDRA_BATCH_SIZE = getBatchSize(JsonKey.CASSANDRA_WRITE_BATCH_SIZE);
 
   public static void validateUserUnenroll(UserCourses userCourseResult) {
@@ -252,7 +252,7 @@ public class UserCoursesService {
   }
 
   public Integer getBatchSize(String key) {
-    Integer batchSize = DEFAULT_BATCH_SIZE;
+    Integer batchSize = ProjectUtil.DEFAULT_BATCH_SIZE;
     try {
       batchSize = Integer.parseInt(ProjectUtil.getConfigValue(key));
     } catch (Exception ex) {

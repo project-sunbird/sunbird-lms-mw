@@ -127,7 +127,7 @@ public class CourseEnrollmentActor extends BaseActor {
 
   private boolean courseNotificationActive() {
     ProjectLogger.log(
-        "CourseEnrollMentorActor: courseNotificationActive: "
+        "CourseEnrollmentActor: courseNotificationActive: "
             + Boolean.parseBoolean(
                 PropertiesCache.getInstance()
                     .getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ENABLED)),

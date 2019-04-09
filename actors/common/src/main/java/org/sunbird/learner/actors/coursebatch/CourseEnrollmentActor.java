@@ -105,7 +105,6 @@ public class CourseEnrollmentActor extends BaseActor {
     if (courseNotificationActive()) {
       batchOperationNotifier(courseMap, courseBatch, JsonKey.ADD);
     }
-    //    updateCourseBatch(courseBatch);
     generateAndProcessTelemetryEvent(courseMap, "user.batch.course");
     if (userCourseResult == null) {
       UserCoursesService.syncUserCourses(

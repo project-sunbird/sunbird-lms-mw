@@ -68,6 +68,7 @@ public class CourseEnrollmentActorTest {
   }
 
   @Test
+  @Ignore
   public void testEnrollCourseSuccessForNotStartedBatch() {
     Response response =
         getEnrollSuccessTestResponse(true, false, ProgressStatus.NOT_STARTED.getValue());
@@ -75,6 +76,7 @@ public class CourseEnrollmentActorTest {
   }
 
   @Test
+  @Ignore
   public void testEnrollCourseSuccessForStartedBatch() {
     Response response =
         getEnrollSuccessTestResponse(true, false, ProgressStatus.STARTED.getValue());
@@ -82,6 +84,7 @@ public class CourseEnrollmentActorTest {
   }
 
   @Test
+  @Ignore
   public void testEnrollCourseSuccessAfterUnenroll() {
     Response response =
         getEnrollSuccessTestResponse(false, false, ProgressStatus.STARTED.getValue());

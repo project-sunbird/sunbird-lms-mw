@@ -98,31 +98,6 @@ public class CourseEnrollmentActorTest {
   }
 
   @Test
-  public void testEnrollCourseFailureForAlreadyEnrolledBatch() {
-    ProjectCommonException exception =
-        getEnrollFailureTestResponse(false, true, ProgressStatus.STARTED.getValue());
-    Assert.assertTrue(
-        null != exception
-            && exception.getResponseCode() == ResponseCode.CLIENT_ERROR.getResponseCode());
-  }
-
-  @Test
-  public void testUnenrollCourseSuccess() {
-    Response successResponse = new Response();
-    successResponse.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-    when(cassandraOperation.updateRecord(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(successResponse);
-    when(ElasticSearchUtil.upsertData(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(true);
-    Response response =
-        getUnenrollSuccessTestResponse(false, true, ProgressStatus.STARTED.getValue());
-
-    Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
-  }
-
-  @Test
   public void testUnenrollCourseFailureWithoutEnroll() {
     ProjectCommonException exception =
         getUnenrollFailureTestResponse(true, false, ProgressStatus.STARTED.getValue());

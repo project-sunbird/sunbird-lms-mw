@@ -1,4 +1,4 @@
-package org.sunbird.learner.actors;
+package org.sunbird.learner.actors.coursebatch;
 
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.when;
@@ -8,6 +8,7 @@ import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
@@ -22,6 +23,7 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
+import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -30,24 +32,23 @@ import org.sunbird.common.models.util.ProjectUtil.ProgressStatus;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.actors.coursebatch.CourseEnrollmentActor;
 import org.sunbird.learner.util.EkStepRequestUtil;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({EkStepRequestUtil.class, ServiceFactory.class})
+@PrepareForTest({EkStepRequestUtil.class, ServiceFactory.class, ElasticSearchUtil.class})
 @PowerMockIgnore("javax.management.*")
 public class CourseEnrollmentActorTest {
 
   private static ActorSystem system;
   private static final Props props = Props.create(CourseEnrollmentActor.class);
-  private static CassandraOperation cassandraOperation;
-  private static String userId = "someUserId";
-  private static String batchId = "someBatchId";
-  private static String courseId = "someCourseId";
-  private static String id = "someid";
-  private static String courseName = "someCourseName";
-  private static String courseDescription = "someCourseDescription";
-  private static String courseAppIcon = "somecourseAppIcon";
+  private CassandraOperation cassandraOperation;
+  private String userId = "someUserId";
+  private String batchId = "someBatchId";
+  private String courseId = "someCourseId";
+  private String id = "someid";
+  private String courseName = "someCourseName";
+  private String courseDescription = "someCourseDescription";
+  private String courseAppIcon = "somecourseAppIcon";
   private static SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
 
   @BeforeClass
@@ -60,25 +61,27 @@ public class CourseEnrollmentActorTest {
   public void beforeEachTest() {
     PowerMockito.mockStatic(ServiceFactory.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
-    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     Mockito.reset(cassandraOperation);
+    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+
+    PowerMockito.mockStatic(ElasticSearchUtil.class);
   }
 
-  @Ignore
+  @Test
   public void testEnrollCourseSuccessForNotStartedBatch() {
     Response response =
         getEnrollSuccessTestResponse(true, false, ProgressStatus.NOT_STARTED.getValue());
     Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
   }
 
-  @Ignore
+  @Test
   public void testEnrollCourseSuccessForStartedBatch() {
     Response response =
         getEnrollSuccessTestResponse(true, false, ProgressStatus.STARTED.getValue());
     Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
   }
 
-  @Ignore
+  @Test
   public void testEnrollCourseSuccessAfterUnenroll() {
     Response response =
         getEnrollSuccessTestResponse(false, false, ProgressStatus.STARTED.getValue());
@@ -92,22 +95,6 @@ public class CourseEnrollmentActorTest {
     Assert.assertTrue(
         null != exception
             && exception.getResponseCode() == ResponseCode.CLIENT_ERROR.getResponseCode());
-  }
-
-  @Ignore
-  public void testEnrollCourseFailureForAlreadyEnrolledBatch() {
-    ProjectCommonException exception =
-        getEnrollFailureTestResponse(false, true, ProgressStatus.STARTED.getValue());
-    Assert.assertTrue(
-        null != exception
-            && exception.getResponseCode() == ResponseCode.CLIENT_ERROR.getResponseCode());
-  }
-
-  @Ignore
-  public void testUnenrollCourseSuccess() {
-    Response response =
-        getUnenrollSuccessTestResponse(false, true, ProgressStatus.STARTED.getValue());
-    Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
   }
 
   @Test
@@ -152,7 +139,7 @@ public class CourseEnrollmentActorTest {
     subject.tell(
         createRequest(userId, batchId, courseId, ActorOperations.ENROLL_COURSE.getValue()),
         probe.getRef());
-    Response response = probe.expectMsgClass(Response.class);
+    Response response = probe.expectMsgClass(Duration.ofSeconds(10), Response.class);
     return response;
   }
 
@@ -165,7 +152,8 @@ public class CourseEnrollmentActorTest {
     subject.tell(
         createRequest(userId, batchId, courseId, ActorOperations.ENROLL_COURSE.getValue()),
         probe.getRef());
-    ProjectCommonException exception = probe.expectMsgClass(ProjectCommonException.class);
+    ProjectCommonException exception =
+        probe.expectMsgClass(Duration.ofSeconds(10), ProjectCommonException.class);
     return exception;
   }
 
@@ -178,7 +166,7 @@ public class CourseEnrollmentActorTest {
     subject.tell(
         createRequest(userId, batchId, courseId, ActorOperations.UNENROLL_COURSE.getValue()),
         probe.getRef());
-    Response response = probe.expectMsgClass(Response.class);
+    Response response = probe.expectMsgClass(Duration.ofSeconds(10), Response.class);
     return response;
   }
 

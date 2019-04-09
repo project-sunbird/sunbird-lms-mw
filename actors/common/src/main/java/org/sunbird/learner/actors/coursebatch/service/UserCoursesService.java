@@ -108,25 +108,6 @@ public class UserCoursesService {
         count = 0;
       }
     }
-    //    try {
-    //
-    //
-    ////      syncUserCourses(
-    ////          courseId,
-    ////          batchId,
-    ////          (String) userCourses.get(JsonKey.COURSE_ENROLL_DATE),
-    ////          (Integer) userCourses.get(JsonKey.COURSE_PROGRESS),
-    ////          null,
-    ////          userId);
-    //      flag = true;
-    //    } catch (Exception ex) {
-    //      ProjectLogger.log(
-    //          "UserCoursesService:enroll: Exception occurred with error message = " +
-    // ex.getMessage(),
-    //          ex);
-    //      flag = false;
-    //    }
-    //    return flag;
   }
 
   private void syncUsersToES(List<Map<String, Object>> records) {
@@ -265,12 +246,12 @@ public class UserCoursesService {
         LoggerEnum.INFO.name());
   }
 
-  public List<String> getEnrolledUserFromBatch(String batchId) {
+  public List<String> getEnrolledUserFromBatch(String id) {
 
-    return userCourseDao.getAllActiveUserOfBatch(batchId);
+    return userCourseDao.getAllActiveUserOfBatch(id);
   }
 
-  protected Integer getBatchSize(String key) {
+  public Integer getBatchSize(String key) {
     Integer batchSize = DEFAULT_BATCH_SIZE;
     try {
       batchSize = Integer.parseInt(ProjectUtil.getConfigValue(key));

@@ -88,14 +88,14 @@ public class CourseBatchDaoTest {
   @Test
   public void readCourseBatchFailure() {
     Response response = new Response();
-    response.put(JsonKey.RESPONSE, Arrays.asList(new HashMap<>()));
+    response.put(JsonKey.RESPONSE, Arrays.asList());
     when(cassandraOperation.getRecordById(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(response);
     try {
-      CourseBatch courseBatch = courseBatchDao.readById(JsonKey.BATCH_ID);
+      courseBatchDao.readById(JsonKey.BATCH_ID);
     } catch (ProjectCommonException e) {
-      Assert.assertEquals(ResponseCode.invalidCourseBatchId, e.getResponseCode());
+      Assert.assertEquals(ResponseCode.invalidCourseBatchId.getErrorCode(), e.getCode());
     }
   }
 

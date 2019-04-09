@@ -1,6 +1,6 @@
 package org.sunbird.learner.actors.coursebatch;
 
-import static org.junit.Assert.assertTrue;
+import static akka.testkit.JavaTestKit.duration;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.when;
 
@@ -8,699 +8,366 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.Duration;
 import java.util.*;
-import org.junit.*;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
-import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.EkStepRequestUtil;
-import org.sunbird.learner.util.Util;
 
-/** @author Amit Kumar. */
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({
-  EkStepRequestUtil.class,
-  ElasticSearchUtil.class,
-  CourseEnrollmentActor.class,
-  ServiceFactory.class
-})
+@PrepareForTest({ServiceFactory.class})
 @PowerMockIgnore("javax.management.*")
+@Ignore
 public class CourseBatchManagementActorTest {
-  private static ActorSystem system;
-  private static final Props props = Props.create(CourseBatchManagementActor.class);
-  private CassandraOperation cassandraOperation;
-  private static Util.DbInfo batchDbInfo = null;
-  private static Util.DbInfo userOrgdbInfo = null;
-  private String courseId = "do_212282810555342848180";
-  private SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-  private static String batchId = "";
-  private static String batchId2 = "";
-  private static String hashTagId = "";
-  private static String hashTagId2 = "";
-  private static Util.DbInfo userOrgDB = null;
-  private static String usrOrgId = "";
-  private static String userId = "";
 
-  @BeforeClass
-  public static void setUp() {
-    system = ActorSystem.create("system");
+  private TestKit probe;
+  private ActorRef subject;
 
-    PowerMockito.mockStatic(ServiceFactory.class);
+  private static CassandraOperationImpl mockCassandraOperation;
+  private static final String BATCH_ID = "123";
+  private static final String BATCH_NAME = "Some Batch Name";
+  SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
 
-    PowerMockito.mockStatic(ElasticSearchUtil.class);
-  }
+  private String existingStartDate = "";
+  private String existingEndDate = "";
 
   @Before
-  public void beforeEachTest() {
-    cassandraOperation = mock(CassandraOperationImpl.class);
-    Mockito.reset(cassandraOperation);
-    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+  public void setUp() {
+    mockCassandraOperation = mock(CassandraOperationImpl.class);
+
+    ActorSystem system = ActorSystem.create("system");
+    probe = new TestKit(system);
+
+    Props props = Props.create(CourseBatchManagementActor.class, mockCassandraOperation);
+    subject = system.actorOf(props);
+
+    PowerMockito.mockStatic(ServiceFactory.class);
+    when(ServiceFactory.getInstance()).thenReturn(mockCassandraOperation);
   }
 
-  @Test
-  public void testInvalidOperation() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
+  private String calculateDate(int dayOffset) {
 
-    Request reqObj = new Request();
-    reqObj.setOperation("INVALID_OPERATION");
-
-    subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(Duration.ofSeconds(10), ProjectCommonException.class);
+    Calendar calender = Calendar.getInstance();
+    calender.add(Calendar.DAY_OF_MONTH, dayOffset);
+    return format.format(calender.getTime());
   }
 
-  @Test
-  public void testCreateBatchFailureWithInvalidOrg() {
-    PowerMockito.mockStatic(EkStepRequestUtil.class);
-    mockEkStep();
-    when(ElasticSearchUtil.getDataByIdentifier(
+  private ProjectCommonException performUpdateCourseBatchFailureTest(
+      String startDate, String endDate, Response mockGetRecordByIdResponse) {
+    when(mockCassandraOperation.getRecordById(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(null);
+        .thenReturn(mockGetRecordByIdResponse);
 
-    boolean result =
-        testScenario(
-            createCourseBatchRequest(ActorOperations.CREATE_BATCH.getValue(), "invite-only"),
-            ResponseCode.invalidOrgId);
-    assertTrue(result);
-  }
-  //  public void testCreateBatchFailureWithInvalidOrg() {
-  //    PowerMockito.mockStatic(EkStepRequestUtil.class);
-  //    mockEkStep();
-  //    Map<String,Object> orgMap = new HashMap<>();
-  //    orgMap.put(JsonKey.ID,JsonKey.ID);
-  //
-  // when(ElasticSearchUtil.getDataByIdentifier(Mockito.anyString(),Mockito.anyString(),Mockito.anyString())).thenReturn(orgMap);
-  //
-  //    boolean result =
-  //            testScenario(
-  //
-  // createCourseBatchRequest(ActorOperations.CREATE_BATCH.getValue(),"invite-only"),
-  //                    ResponseCode.invalidOrgId);
-  //    assertTrue(result);
-  //  }
-
-  private void mockEkStep() {
-    Map<String, Object> ekStepResponse = new HashMap<>();
-    ekStepResponse.put(JsonKey.COUNT, 10);
-    Map<String, Object> ekstepMockResult = new HashMap<>();
-    ekstepMockResult.put(JsonKey.CONTENTS, Arrays.asList(ekStepResponse));
-    when(EkStepRequestUtil.searchContent(Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(ekstepMockResult);
-  }
-
-  Request createCourseBatchRequest(String operation, String batchType) {
     Request reqObj = new Request();
-    reqObj.setOperation(operation);
-    reqObj.setRequest(getCourseBatchObject(batchType));
-    reqObj.getContext().put(JsonKey.REQUESTED_BY, userId);
-    reqObj.getContext().put(JsonKey.HEADER, new HashMap<>());
-    return reqObj;
-  }
-
-  private Map<String, Object> getCourseBatchObject(String enrollmentType) {
+    reqObj.setOperation(ActorOperations.UPDATE_BATCH.getValue());
     HashMap<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.COURSE_ID, courseId);
-    innerMap.put(JsonKey.NAME, "DUMMY_COURSE_NAME1");
-    innerMap.put(JsonKey.ENROLLMENT_TYPE, enrollmentType);
-    innerMap.put(JsonKey.START_DATE, format.format(new Date()));
-    innerMap.put(JsonKey.HASHTAGID, hashTagId);
-    Calendar now = Calendar.getInstance();
-    now.add(Calendar.DAY_OF_MONTH, 5);
-    Date after5Days = now.getTime();
-    innerMap.put(JsonKey.END_DATE, format.format(after5Days));
-    List<String> createdFr = new ArrayList<>();
-    createdFr.add("ORG_001");
-    innerMap.put(JsonKey.COURSE_CREATED_FOR, createdFr);
-    List<String> mentors = new ArrayList<>();
-    mentors.add(userId);
-    innerMap.put(JsonKey.MENTORS, mentors);
-    return innerMap;
-  }
+    innerMap.put(JsonKey.ID, BATCH_ID);
+    innerMap.put(JsonKey.NAME, BATCH_NAME);
+    innerMap.put(JsonKey.START_DATE, startDate);
+    innerMap.put(JsonKey.END_DATE, endDate);
+    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
 
-  private boolean testScenario(Request reqObj, ResponseCode errorCode) {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
     subject.tell(reqObj, probe.getRef());
 
-    if (errorCode == null) {
-      Response res = probe.expectMsgClass(Duration.ofSeconds(10), Response.class);
-      return null != res && res.getResponseCode() == ResponseCode.OK;
-    } else {
-      ProjectCommonException res =
-          probe.expectMsgClass(Duration.ofSeconds(10), ProjectCommonException.class);
-      return res.getCode().equals(errorCode.getErrorCode())
-          || res.getResponseCode() == errorCode.getResponseCode();
-    }
+    ProjectCommonException exception =
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    return exception;
   }
-  //  private static ActorSystem system;
-  //
-  //  private static final Props props = Props.create(CourseBatchManagementActor.class);
 
-  //  @BeforeClass
-  //  public static void setUp() {
-  //    SunbirdMWService.init();
-  //    hashTagId = String.valueOf(System.currentTimeMillis());
-  //    hashTagId2 = String.valueOf(System.currentTimeMillis()) + 45;
-  //    system = ActorSystem.create("system");
-  //    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
-  //    batchDbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
-  //    userOrgdbInfo = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
-  //    userOrgDB = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
-  //    userId = String.valueOf(System.currentTimeMillis());
-  //    usrOrgId = String.valueOf(System.currentTimeMillis());
-  //  }
-  //
-  //  @Test
-  //  public void runAllTestCases() {
-  //    createUser();
-  //    test1InvalidOperation();
-  //    test2InvalidMessageType();
-  //    testA1CreateBatch();
-  //    testA2CreateBatch();
-  //    testA1CreateBatchWithInvalidCorsId();
-  //    try {
-  //      Thread.sleep(2000);
-  //    } catch (InterruptedException e) {
-  //      ProjectLogger.log(e.getMessage(), e);
-  //    }
-  //    testB2CreateBatchWithInvalidHashTagId();
-  //    testC3getBatchDetails();
-  //    testA1CreateBatchwithInvalidMentors();
-  //    testA1CreateBatchWithInvalidCourseId();
-  //    testA1CreateBatchWithInvalidOrgId();
-  //    testC3getBatchDetailsWithInvalidId();
-  //    testC4getCourseBatchDetails();
-  //    testC4getCourseBatchDetailsWithInvalidId();
-  //    testD1addUserToBatch();
-  //    testD2addUserToBatchWithInvalidBatchId();
-  //    testE1UpdateBatch();
-  //    testE2UpdateBatchWithExistingHashTagId();
-  //    testE2UpdateBatchAsStartDateBeforeTodayDate();
-  //    testE3UpdateBatchAsStartDateAfterEndDate();
-  //    testE4addUserToBatch();
-  //    testE5addUserToBatch();
-  //    Assert.assertTrue(testE6CreateBatch() instanceof ProjectCommonException);
-  //  }
-  //
-  //  public void createUser() {
-  //    Map<String, Object> userMap = new HashMap<>();
-  //    userMap.put(JsonKey.USER_ID, userId);
-  //    userMap.put(JsonKey.ORGANISATION_ID, "ORG_001");
-  //    userMap.put(JsonKey.ID, usrOrgId);
-  //    ServiceFactory.getInstance()
-  //        .insertRecord(userOrgdbInfo.getKeySpace(), userOrgdbInfo.getTableName(), userMap);
-  //    ElasticSearchUtil.createData(
-  //        ProjectUtil.EsIndex.sunbird.getIndexName(),
-  //        ProjectUtil.EsType.user.getTypeName(),
-  //        userId,
-  //        userMap);
-  //  }
+  private Response performUpdateCourseBatchSuccessTest(
+      String startDate,
+      String endDate,
+      Response mockGetRecordByIdResponse,
+      Response mockUpdateRecordResponse) {
 
-  //  // @Test
-  //  public void test2InvalidMessageType() {
-  //    TestKit probe = new TestKit(system);
-  //    ActorRef subject = system.actorOf(props);
-  //
-  //    subject.tell("Invalid Type", probe.getRef());
-  //    probe.expectMsgClass(ProjectCommonException.class);
-  //  }
-  //
+    when(mockCassandraOperation.getRecordById(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(mockGetRecordByIdResponse);
 
-  //  public void testA2CreateBatch() {
-  //    PowerMockito.mockStatic(EkStepRequestUtil.class);
-  //    Map<String, Object> ekstepResponse = new HashMap<String, Object>();
-  //    ekstepResponse.put("count", 10);
-  //    Object[] arr = {ekstepResponse};
-  //    Map<String, Object> ekstepMockResult = new HashMap<>();
-  //    ekstepMockResult.put(JsonKey.CONTENTS, arr);
-  //    when(EkStepRequestUtil.searchContent(Mockito.anyString(), Mockito.anyMap()))
-  //        .thenReturn(ekstepMockResult);
-  //
-  //    TestKit probe = new TestKit(system);
-  //    ActorRef subject = system.actorOf(props);
-  //    Request reqObj = new Request();
-  //    reqObj.setOperation(ActorOperations.CREATE_BATCH.getValue());
-  //    HashMap<String, Object> innerMap = new HashMap<>();
-  //    innerMap.put(JsonKey.COURSE_ID, courseId);
-  //    innerMap.put(JsonKey.NAME, "DUMMY_COURSE_NAME2");
-  //    innerMap.put(JsonKey.ENROLLMENT_TYPE, "invite-only");
-  //    innerMap.put(JsonKey.START_DATE, (String) format.format(new Date()));
-  //    innerMap.put(JsonKey.HASHTAGID, hashTagId2);
-  //    Calendar now = Calendar.getInstance();
-  //    now.add(Calendar.DAY_OF_MONTH, 5);
-  //    Date after5Days = now.getTime();
-  //    innerMap.put(JsonKey.END_DATE, (String) format.format(after5Days));
-  //    List<String> createdFr = new ArrayList<>();
-  //    createdFr.add("ORG_001");
-  //    innerMap.put(JsonKey.COURSE_CREATED_FOR, createdFr);
-  //    List<String> mentors = new ArrayList<>();
-  //    mentors.add(userId);
-  //    innerMap.put(JsonKey.MENTORS, mentors);
-  //    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
-  //    subject.tell(reqObj, probe.getRef());
-  //    Response response = probe.expectMsgClass(duration("1000 second"), Response.class);
-  //    batchId2 = (String) response.getResult().get(JsonKey.BATCH_ID);
-  //  }
-  //
-  //  public void testA1CreateBatchWithInvalidCorsId() {
-  //    PowerMockito.mockStatic(EkStepRequestUtil.class);
-  //    Map<String, Object> ekstepResponse = new HashMap<String, Object>();
-  //    ekstepResponse.put("count", 10);
-  //    Object[] arr = {ekstepResponse};
-  //    Map<String, Object> ekstepMockResult = new HashMap<>();
-  //    ekstepMockResult.put(JsonKey.CONTENTS, arr);
-  //    when(EkStepRequestUtil.searchContent(Mockito.anyString(), Mockito.anyMap()))
-  //        .thenReturn(ekstepMockResult);
-  //
-  //    PowerMockito.mockStatic(CourseEnrollmentActor.class);
-  //    Map<String, Object> actorResponse = new HashMap<String, Object>();
-  //    when(CourseEnrollmentActor.getCourseObjectFromEkStep(Mockito.anyString(), Mockito.anyMap()))
-  //        .thenReturn(actorResponse);
-  //
-  //    TestKit probe = new TestKit(system);
-  //    ActorRef subject = system.actorOf(props);
-  //    Request reqObj = new Request();
-  //    reqObj.setOperation(ActorOperations.CREATE_BATCH.getValue());
-  //    HashMap<String, Object> innerMap = new HashMap<>();
-  //    innerMap.put(JsonKey.COURSE_ID, courseId + "789");
-  //    innerMap.put(JsonKey.NAME, "DUMMY_COURSE_NAME1");
-  //    innerMap.put(JsonKey.ENROLLMENT_TYPE, "invite-only");
-  //    innerMap.put(JsonKey.START_DATE, (String) format.format(new Date()));
-  //    innerMap.put(JsonKey.HASHTAGID, hashTagId);
-  //    Calendar now = Calendar.getInstance();
-  //    now.add(Calendar.DAY_OF_MONTH, 5);
-  //    Date after5Days = now.getTime();
-  //    innerMap.put(JsonKey.END_DATE, (String) format.format(after5Days));
-  //    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
-  //    subject.tell(reqObj, probe.getRef());
-  //    probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
-  //  }
-  //
-  //  public void testA1CreateBatchWithInvalidCourseId() {
-  //    TestKit probe = new TestKit(system);
-  //    ActorRef subject = system.actorOf(props);
-  //    Request reqObj = new Request();
-  //    reqObj.setOperation(ActorOperations.CREATE_BATCH.getValue());
-  //    HashMap<String, Object> innerMap = new HashMap<>();
-  //    innerMap.put(JsonKey.COURSE_ID, "12345");
-  //    innerMap.put(JsonKey.NAME, "DUMMY_COURSE_NAME1");
-  //    innerMap.put(JsonKey.ENROLLMENT_TYPE, "invite-only");
-  //    innerMap.put(JsonKey.START_DATE, (String) format.format(new Date()));
-  //    innerMap.put(JsonKey.HASHTAGID, hashTagId);
-  //    Calendar now = Calendar.getInstance();
-  //    now.add(Calendar.DAY_OF_MONTH, 5);
-  //    Date after5Days = now.getTime();
-  //    innerMap.put(JsonKey.END_DATE, (String) format.format(after5Days));
-  //    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
-  //    subject.tell(reqObj, probe.getRef());
-  //    probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
-  //  }
-  //
-  //  public void testA1CreateBatchWithInvalidOrgId() {
-  //
-  //    TestKit probe = new TestKit(system);
-  //    ActorRef subject = system.actorOf(props);
-  //    Request reqObj = new Request();
-  //    reqObj.setOperation(ActorOperations.CREATE_BATCH.getValue());
-  //    HashMap<String, Object> innerMap = new HashMap<>();
-  //    innerMap.put(JsonKey.COURSE_ID, courseId);
-  //    innerMap.put(JsonKey.NAME, "DUMMY_COURSE_NAME1");
-  //    innerMap.put(JsonKey.ENROLLMENT_TYPE, "invite-only");
-  //    innerMap.put(JsonKey.START_DATE, (String) format.format(new Date()));
-  //    innerMap.put(JsonKey.HASHTAGID, hashTagId);
-  //    Calendar now = Calendar.getInstance();
-  //    now.add(Calendar.DAY_OF_MONTH, 5);
-  //    Date after5Days = now.getTime();
-  //    innerMap.put(JsonKey.END_DATE, (String) format.format(after5Days));
-  //    List<String> orgList = new ArrayList<>();
-  //    orgList.add("12589");
-  //    innerMap.put(JsonKey.COURSE_CREATED_FOR, orgList);
-  //    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
-  //    subject.tell(reqObj, probe.getRef());
-  //    probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
-  //  }
-  //
-  //  // @Test
-  //  public void testA1CreateBatchwithInvalidMentors() {
-  //    PowerMockito.mockStatic(EkStepRequestUtil.class);
-  //    Map<String, Object> ekstepResponse = new HashMap<String, Object>();
-  //    ekstepResponse.put("count", 10);
-  //    Object[] arr = {ekstepResponse};
-  //    Map<String, Object> ekstepMockResult = new HashMap<>();
-  //    ekstepMockResult.put(JsonKey.CONTENTS, arr);
-  //    when(EkStepRequestUtil.searchContent(Mockito.anyString(), Mockito.anyMap()))
-  //        .thenReturn(ekstepMockResult);
-  //
-  //    TestKit probe = new TestKit(system);
-  //    ActorRef subject = system.actorOf(props);
-  //    Request reqObj = new Request();
-  //    reqObj.setOperation(ActorOperations.CREATE_BATCH.getValue());
-  //    HashMap<String, Object> innerMap = new HashMap<>();
-  //    innerMap.put(JsonKey.COURSE_ID, courseId);
-  //    innerMap.put(JsonKey.NAME, "DUMMY_COURSE_NAME1");
-  //    innerMap.put(JsonKey.ENROLLMENT_TYPE, "invite-only");
-  //    innerMap.put(JsonKey.START_DATE, (String) format.format(new Date()));
-  //    innerMap.put(JsonKey.HASHTAGID, hashTagId);
-  //    Calendar now = Calendar.getInstance();
-  //    now.add(Calendar.DAY_OF_MONTH, 5);
-  //    Date after5Days = now.getTime();
-  //    innerMap.put(JsonKey.END_DATE, (String) format.format(after5Days));
-  //    List<String> mentors = new ArrayList<>();
-  //    mentors.add("12589");
-  //    innerMap.put(JsonKey.MENTORS, mentors);
-  //    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
-  //    subject.tell(reqObj, probe.getRef());
-  //    probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
-  //  }
-  //
-  //  // @Test
-  //  public void testB2CreateBatchWithInvalidHashTagId() {
-  //    PowerMockito.mockStatic(EkStepRequestUtil.class);
-  //    Map<String, Object> ekstepResponse = new HashMap<String, Object>();
-  //    ekstepResponse.put("count", 10);
-  //    Object[] arr = {ekstepResponse};
-  //    Map<String, Object> ekstepMockResult = new HashMap<>();
-  //    ekstepMockResult.put(JsonKey.CONTENTS, arr);
-  //    when(EkStepRequestUtil.searchContent(Mockito.anyString(), Mockito.anyMap()))
-  //        .thenReturn(ekstepMockResult);
-  //
-  //    TestKit probe = new TestKit(system);
-  //    ActorRef subject = system.actorOf(props);
-  //    Request reqObj = new Request();
-  //    reqObj.setOperation(ActorOperations.CREATE_BATCH.getValue());
-  //    HashMap<String, Object> innerMap = new HashMap<>();
-  //    innerMap.put(JsonKey.COURSE_ID, courseId);
-  //    innerMap.put(JsonKey.NAME, "DUMMY_COURSE_NAME1");
-  //    innerMap.put(JsonKey.ENROLLMENT_TYPE, "invite-only");
-  //    innerMap.put(JsonKey.START_DATE, (String) format.format(new Date()));
-  //    innerMap.put(JsonKey.HASHTAGID, hashTagId);
-  //    Calendar now = Calendar.getInstance();
-  //    now.add(Calendar.DAY_OF_MONTH, 5);
-  //    Date after5Days = now.getTime();
-  //    innerMap.put(JsonKey.END_DATE, (String) format.format(after5Days));
-  //    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
-  //    subject.tell(reqObj, probe.getRef());
-  //    probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
-  //  }
-  //
-  //  // @Test
-  //  public void testC3getBatchDetails() {
-  //
-  //    TestKit probe = new TestKit(system);
-  //    ActorRef subject = system.actorOf(props);
-  //    Request reqObj = new Request();
-  //    reqObj.setOperation(ActorOperations.GET_BATCH.getValue());
-  //    HashMap<String, Object> innerMap = new HashMap<>();
-  //    innerMap.put(JsonKey.BATCH_ID, batchId);
-  //    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
-  //    subject.tell(reqObj, probe.getRef());
-  //    Response response = probe.expectMsgClass(duration("1000 second"), Response.class);
-  //    String hashtagId =
-  //        (String)
-  //            ((Map<String, Object>) response.getResult().get(JsonKey.RESPONSE))
-  //                .get(JsonKey.HASHTAGID);
-  //    assertEquals(true, hashtagId.equalsIgnoreCase(hashTagId));
-  //  }
-  //
-  //  public void testC3getBatchDetailsWithInvalidId() {
-  //
-  //    TestKit probe = new TestKit(system);
-  //    ActorRef subject = system.actorOf(props);
-  //    Request reqObj = new Request();
-  //    reqObj.setOperation(ActorOperations.GET_BATCH.getValue());
-  //    HashMap<String, Object> innerMap = new HashMap<>();
-  //    innerMap.put(JsonKey.BATCH_ID, batchId + "1234");
-  //    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
-  //    subject.tell(reqObj, probe.getRef());
-  //    Response res = probe.expectMsgClass(duration("1000 second"), Response.class);
-  //    assertEquals(true, ((Map<String, Object>) res.getResult().get(JsonKey.RESPONSE)).isEmpty());
-  //  }
-  //
-  //  public void testC4getCourseBatchDetails() {
-  //
-  //    TestKit probe = new TestKit(system);
-  //    ActorRef subject = system.actorOf(props);
-  //    Request reqObj = new Request();
-  //    reqObj.setOperation(ActorOperations.GET_COURSE_BATCH_DETAIL.getValue());
-  //    HashMap<String, Object> innerMap = new HashMap<>();
-  //    innerMap.put(JsonKey.BATCH_ID, batchId);
-  //    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
-  //    subject.tell(reqObj, probe.getRef());
-  //    Response response = probe.expectMsgClass(duration("1000 second"), Response.class);
-  //    String hashtagId =
-  //        (String)
-  //            (((List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE)).get(0))
-  //                .get(JsonKey.HASHTAGID);
-  //    assertEquals(true, hashtagId.equalsIgnoreCase(hashTagId));
-  //  }
-  //
-  //  public void testC4getCourseBatchDetailsWithInvalidId() {
-  //
-  //    TestKit probe = new TestKit(system);
-  //    ActorRef subject = system.actorOf(props);
-  //    Request reqObj = new Request();
-  //    reqObj.setOperation(ActorOperations.GET_COURSE_BATCH_DETAIL.getValue());
-  //    HashMap<String, Object> innerMap = new HashMap<>();
-  //    innerMap.put(JsonKey.BATCH_ID, batchId + "13456");
-  //    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
-  //    subject.tell(reqObj, probe.getRef());
-  //    probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
-  //  }
-  //
-  //  public void testD1addUserToBatch() {
-  //    TestKit probe = new TestKit(system);
-  //    ActorRef subject = system.actorOf(props);
-  //    Request reqObj = new Request();
-  //    reqObj.setOperation(ActorOperations.ADD_USER_TO_BATCH.getValue());
-  //    HashMap<String, Object> innerMap = new HashMap<>();
-  //    innerMap.put(JsonKey.BATCH_ID, batchId);
-  //    List<String> userids = new ArrayList<>();
-  //    userids.add(userId);
-  //    innerMap.put(JsonKey.USERIDS, userids);
-  //    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
-  //    subject.tell(reqObj, probe.getRef());
-  //    probe.expectMsgClass(duration("1000 second"), Response.class);
-  //  }
-  //
-  //  public void testD2addUserToBatchWithInvalidBatchId() {
-  //
-  //    TestKit probe = new TestKit(system);
-  //    ActorRef subject = system.actorOf(props);
-  //    Request reqObj = new Request();
-  //    reqObj.setOperation(ActorOperations.ADD_USER_TO_BATCH.getValue());
-  //    HashMap<String, Object> innerMap = new HashMap<>();
-  //    innerMap.put(JsonKey.BATCH_ID, batchId + "1235");
-  //    List<String> userids = new ArrayList<>();
-  //    userids.add(userId);
-  //    innerMap.put(JsonKey.USERIDS, userids);
-  //    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
-  //    subject.tell(reqObj, probe.getRef());
-  //    probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
-  //  }
-  //
-  //  public void testE1UpdateBatch() {
-  //    TestKit probe = new TestKit(system);
-  //    ActorRef subject = system.actorOf(props);
-  //    Request reqObj = new Request();
-  //    reqObj.setOperation(ActorOperations.UPDATE_BATCH.getValue());
-  //    HashMap<String, Object> innerMap = new HashMap<>();
-  //    innerMap.put(JsonKey.ID, batchId);
-  //    innerMap.put(JsonKey.ENROLLMENT_TYPE, "invite-only");
-  //    innerMap.put(JsonKey.HASHTAGID, "" + System.currentTimeMillis());
-  //    List<String> createdFr = new ArrayList<>();
-  //    createdFr.add("ORG_001");
-  //    innerMap.put(JsonKey.COURSE_CREATED_FOR, createdFr);
-  //    List<String> mentors = new ArrayList<>();
-  //    mentors.add(userId);
-  //    innerMap.put(JsonKey.MENTORS, mentors);
-  //    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
-  //    subject.tell(reqObj, probe.getRef());
-  //    probe.expectMsgClass(duration("1000 second"), Response.class);
-  //  }
-  //
-  //  public void testE2UpdateBatchWithExistingHashTagId() {
-  //    TestKit probe = new TestKit(system);
-  //    ActorRef subject = system.actorOf(props);
-  //    Request reqObj = new Request();
-  //    reqObj.setOperation(ActorOperations.UPDATE_BATCH.getValue());
-  //    HashMap<String, Object> innerMap = new HashMap<>();
-  //    innerMap.put(JsonKey.ID, batchId);
-  //    innerMap.put(JsonKey.ENROLLMENT_TYPE, "invite-only");
-  //    innerMap.put(JsonKey.HASHTAGID, hashTagId2);
-  //    List<String> createdFr = new ArrayList<>();
-  //    createdFr.add("ORG_001");
-  //    innerMap.put(JsonKey.COURSE_CREATED_FOR, createdFr);
-  //    List<String> mentors = new ArrayList<>();
-  //    mentors.add(userId);
-  //    innerMap.put(JsonKey.MENTORS, mentors);
-  //    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
-  //    subject.tell(reqObj, probe.getRef());
-  //    probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
-  //  }
-  //
-  //  public void testE2UpdateClosedBatch() {
-  //    TestKit probe = new TestKit(system);
-  //    ActorRef subject = system.actorOf(props);
-  //    Request reqObj = new Request();
-  //    reqObj.setOperation(ActorOperations.UPDATE_BATCH.getValue());
-  //    HashMap<String, Object> innerMap = new HashMap<>();
-  //    innerMap.put(JsonKey.ID, batchId);
-  //    innerMap.put(JsonKey.ENROLLMENT_TYPE, "invite-only");
-  //    innerMap.put(JsonKey.HASHTAGID, hashTagId2);
-  //    List<String> createdFr = new ArrayList<>();
-  //    createdFr.add("ORG_001");
-  //    innerMap.put(JsonKey.COURSE_CREATED_FOR, createdFr);
-  //    List<String> mentors = new ArrayList<>();
-  //    mentors.add(userId);
-  //    innerMap.put(JsonKey.MENTORS, mentors);
-  //    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
-  //    subject.tell(reqObj, probe.getRef());
-  //    probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
-  //  }
-  //
-  //  public void testE2UpdateBatchAsStartDateBeforeTodayDate() {
-  //    TestKit probe = new TestKit(system);
-  //    ActorRef subject = system.actorOf(props);
-  //    Request reqObj = new Request();
-  //    reqObj.setOperation(ActorOperations.UPDATE_BATCH.getValue());
-  //    HashMap<String, Object> innerMap = new HashMap<>();
-  //    innerMap.put(JsonKey.ID, batchId);
-  //    Calendar now = Calendar.getInstance();
-  //    now.add(Calendar.DAY_OF_MONTH, -5);
-  //    Date after5Days = now.getTime();
-  //    innerMap.put(JsonKey.START_DATE, (String) format.format(after5Days));
-  //    innerMap.put(JsonKey.END_DATE, (String) format.format(new Date()));
-  //    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
-  //    subject.tell(reqObj, probe.getRef());
-  //    probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
-  //  }
-  //
-  //  public void testE3UpdateBatchAsStartDateAfterEndDate() {
-  //    TestKit probe = new TestKit(system);
-  //    ActorRef subject = system.actorOf(props);
-  //    Request reqObj = new Request();
-  //    reqObj.setOperation(ActorOperations.UPDATE_BATCH.getValue());
-  //    HashMap<String, Object> innerMap = new HashMap<>();
-  //    innerMap.put(JsonKey.ID, batchId);
-  //    Calendar now = Calendar.getInstance();
-  //    now.add(Calendar.DAY_OF_MONTH, 15);
-  //    Date after5Days = now.getTime();
-  //    innerMap.put(JsonKey.START_DATE, (String) format.format(after5Days));
-  //    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
-  //    subject.tell(reqObj, probe.getRef());
-  //    probe.expectMsgClass(duration("1000 second"), ProjectCommonException.class);
-  //  }
-  //
-  //  public void testE4addUserToBatch() {
-  //    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  //    Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
-  //    Map<String, Object> request = new HashMap<>();
-  //    request.put(JsonKey.ID, batchId);
-  //    request.put(JsonKey.COURSE_CREATED_FOR, null);
-  //    // request.put(JsonKey.ENROLLMENT_TYPE, null);
-  //    cassandraOperation.updateRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), request);
-  //    TestKit probe = new TestKit(system);
-  //    ActorRef subject = system.actorOf(props);
-  //    Request reqObj = new Request();
-  //    reqObj.setOperation(ActorOperations.ADD_USER_TO_BATCH.getValue());
-  //    HashMap<String, Object> innerMap = new HashMap<>();
-  //    innerMap.put(JsonKey.BATCH_ID, batchId);
-  //    List<String> userids = new ArrayList<>();
-  //    userids.add(userId);
-  //    innerMap.put(JsonKey.USERIDS, userids);
-  //    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
-  //    subject.tell(reqObj, probe.getRef());
-  //    probe.expectMsgClass(ProjectCommonException.class);
-  //  }
-  //
-  //  public void testE5addUserToBatch() {
-  //    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  //    Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
-  //    Map<String, Object> request = new HashMap<>();
-  //    request.put(JsonKey.ID, batchId);
-  //    // request.put(JsonKey.COURSE_CREATED_FOR, null);
-  //    request.put(JsonKey.ENROLLMENT_TYPE, null);
-  //    cassandraOperation.updateRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), request);
-  //    TestKit probe = new TestKit(system);
-  //    ActorRef subject = system.actorOf(props);
-  //    Request reqObj = new Request();
-  //    reqObj.setOperation(ActorOperations.ADD_USER_TO_BATCH.getValue());
-  //    HashMap<String, Object> innerMap = new HashMap<>();
-  //    innerMap.put(JsonKey.BATCH_ID, batchId);
-  //    List<String> userids = new ArrayList<>();
-  //    userids.add(userId);
-  //    innerMap.put(JsonKey.USERIDS, userids);
-  //    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
-  //    subject.tell(reqObj, probe.getRef());
-  //    probe.expectMsgClass(ProjectCommonException.class);
-  //  }
-  //
-  //  public ProjectCommonException testE6CreateBatch() {
-  //    PowerMockito.mockStatic(EkStepRequestUtil.class);
-  //    Map<String, Object> ekstepResponse = new HashMap<String, Object>();
-  //    ekstepResponse.put("count", 10);
-  //    Object[] arr = {ekstepResponse};
-  //    Map<String, Object> ekstepMockResult = new HashMap<>();
-  //    ekstepMockResult.put(JsonKey.CONTENTS, arr);
-  //    when(EkStepRequestUtil.searchContent(Mockito.anyString(), Mockito.anyMap()))
-  //        .thenReturn(ekstepMockResult);
-  //
-  //    TestKit probe = new TestKit(system);
-  //    ActorRef subject = system.actorOf(props);
-  //    Request reqObj = new Request();
-  //    reqObj.setOperation(ActorOperations.CREATE_BATCH.getValue());
-  //    HashMap<String, Object> innerMap = new HashMap<>();
-  //    innerMap.put(JsonKey.COURSE_ID, courseId);
-  //    innerMap.put(JsonKey.NAME, "DUMMY_COURSE_NAME1");
-  //    innerMap.put(JsonKey.ENROLLMENT_TYPE, "invite-only");
-  //    innerMap.put(JsonKey.START_DATE, (String) format.format(new Date()));
-  //    innerMap.put(JsonKey.HASHTAGID, hashTagId);
-  //    Calendar now = Calendar.getInstance();
-  //    now.add(Calendar.DAY_OF_MONTH, 5);
-  //    Date after5Days = now.getTime();
-  //    innerMap.put(JsonKey.END_DATE, (String) format.format(after5Days));
-  //    List<String> createdFr = new ArrayList<>();
-  //    createdFr.add("ORG_00123456");
-  //    innerMap.put(JsonKey.COURSE_CREATED_FOR, createdFr);
-  //    List<String> mentors = new ArrayList<>();
-  //    mentors.add(userId);
-  //    innerMap.put(JsonKey.MENTORS, mentors);
-  //    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
-  //    subject.tell(reqObj, probe.getRef());
-  //    return probe.expectMsgClass(ProjectCommonException.class);
-  //  }
-  //
-  //  @AfterClass
-  //  public static void deleteUser() {
-  //    operation.deleteRecord(batchDbInfo.getKeySpace(), batchDbInfo.getTableName(), batchId);
-  //    ElasticSearchUtil.removeData(
-  //        ProjectUtil.EsIndex.sunbird.getIndexName(),
-  //        ProjectUtil.EsType.course.getTypeName(),
-  //        batchId);
-  //    operation.deleteRecord(batchDbInfo.getKeySpace(), batchDbInfo.getTableName(), batchId2);
-  //    ElasticSearchUtil.removeData(
-  //        ProjectUtil.EsIndex.sunbird.getIndexName(),
-  //        ProjectUtil.EsType.course.getTypeName(),
-  //        batchId2);
-  //    ElasticSearchUtil.removeData(
-  //        ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName(),
-  // userId);
-  //    operation.deleteRecord(userOrgDB.getKeySpace(), userOrgDB.getTableName(), usrOrgId);
-  //  }
+    when(mockCassandraOperation.updateRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(mockUpdateRecordResponse);
+
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.UPDATE_BATCH.getValue());
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.ID, BATCH_ID);
+    innerMap.put(JsonKey.NAME, BATCH_NAME);
+
+    if (startDate != null) {
+      innerMap.put(JsonKey.START_DATE, startDate);
+    }
+    if (endDate != null) {
+      innerMap.put(JsonKey.END_DATE, endDate);
+    }
+    reqObj.getRequest().put(JsonKey.BATCH, innerMap);
+
+    subject.tell(reqObj, probe.getRef());
+
+    Response response = probe.expectMsgClass(duration("10 second"), Response.class);
+    return response;
+  }
+
+  private Response getMockCassandraResult() {
+
+    Response response = new Response();
+    response.put("response", "SUCCESS");
+    return response;
+  }
+
+  private Response getMockCassandraRecordByIdResponse(int batchProgressStatus) {
+
+    Response response = new Response();
+    List<Map<String, Object>> list = new ArrayList<>();
+    Map<String, Object> courseResponseMap = new HashMap<>();
+
+    courseResponseMap.put(JsonKey.ID, BATCH_ID);
+    courseResponseMap.put(JsonKey.VER, "v1");
+    courseResponseMap.put(JsonKey.NAME, BATCH_NAME);
+    courseResponseMap.put(JsonKey.COUNTER_INCREMENT_STATUS, Boolean.FALSE);
+    courseResponseMap.put(JsonKey.ENROLMENTTYPE, JsonKey.INVITE_ONLY);
+    courseResponseMap.put(JsonKey.COURSE_ID, "someCourseId");
+    courseResponseMap.put(JsonKey.COURSE_CREATED_FOR, new ArrayList<Object>());
+    courseResponseMap.put(JsonKey.STATUS, batchProgressStatus);
+
+    if (batchProgressStatus == ProjectUtil.ProgressStatus.STARTED.getValue()) {
+
+      existingStartDate = calculateDate(-4);
+      existingEndDate = calculateDate(2);
+    } else if (batchProgressStatus == ProjectUtil.ProgressStatus.NOT_STARTED.getValue()) {
+
+      existingStartDate = calculateDate(2);
+      existingEndDate = calculateDate(4);
+    } else {
+
+      existingStartDate = calculateDate(-4);
+      existingEndDate = calculateDate(-2);
+    }
+
+    courseResponseMap.put(JsonKey.START_DATE, existingStartDate);
+    courseResponseMap.put(JsonKey.END_DATE, existingEndDate);
+
+    list.add(courseResponseMap);
+    response.put(JsonKey.RESPONSE, list);
+
+    return response;
+  }
+
+  private String getOffsetDate(String date, int offSet) {
+
+    try {
+      Calendar calender = Calendar.getInstance();
+      calender.setTime(format.parse(date));
+      calender.add(Calendar.DATE, offSet);
+      return format.format(calender.getTime());
+    } catch (ParseException e) {
+      e.printStackTrace();
+    }
+    return null;
+  }
+
+  @Test
+  public void testUpdateStartedCourseBatchFailureWithStartDate() {
+
+    int batchProgressStatus = ProjectUtil.ProgressStatus.STARTED.getValue();
+    Response mockGetRecordByIdResponse = getMockCassandraRecordByIdResponse(batchProgressStatus);
+    ProjectCommonException exception =
+        performUpdateCourseBatchFailureTest(
+            getOffsetDate(existingStartDate, 1), null, mockGetRecordByIdResponse);
+    Assert.assertTrue(
+        ((ProjectCommonException) exception)
+            .getCode()
+            .equals(ResponseCode.invalidBatchStartDateError.getErrorCode()));
+  }
+
+  @Test
+  public void testUpdateStartedCourseBatchFailureWithEndDate() {
+
+    int batchProgressStatus = ProjectUtil.ProgressStatus.STARTED.getValue();
+    Response mockGetRecordByIdResponse = getMockCassandraRecordByIdResponse(batchProgressStatus);
+    ProjectCommonException exception =
+        performUpdateCourseBatchFailureTest(
+            null, getOffsetDate(existingEndDate, 4), mockGetRecordByIdResponse);
+    Assert.assertTrue(
+        ((ProjectCommonException) exception)
+            .getCode()
+            .equals(ResponseCode.courseBatchStartDateRequired.getErrorCode()));
+  }
+
+  @Test
+  public void testUpdateStartedCourseBatchFailureWithDifferentStartDateAndEndDate() {
+
+    int batchProgressStatus = ProjectUtil.ProgressStatus.STARTED.getValue();
+    Response mockGetRecordByIdResponse = getMockCassandraRecordByIdResponse(batchProgressStatus);
+    ProjectCommonException exception =
+        performUpdateCourseBatchFailureTest(
+            getOffsetDate(existingStartDate, 2),
+            getOffsetDate(existingEndDate, 4),
+            mockGetRecordByIdResponse);
+    Assert.assertTrue(
+        ((ProjectCommonException) exception)
+            .getCode()
+            .equals(ResponseCode.invalidBatchStartDateError.getErrorCode()));
+  }
+
+  @Test
+  public void testUpdateStartedCourseBatchSuccessWithSameStartDateAndEndDate() {
+
+    int batchProgressStatus = ProjectUtil.ProgressStatus.STARTED.getValue();
+    Response mockGetRecordByIdResponse = getMockCassandraRecordByIdResponse(batchProgressStatus);
+    Response mockUpdateRecordResponse = getMockCassandraResult();
+    Response response =
+        performUpdateCourseBatchSuccessTest(
+            existingStartDate,
+            existingEndDate,
+            mockGetRecordByIdResponse,
+            mockUpdateRecordResponse);
+    Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
+  }
+
+  @Test
+  public void testUpdateNotStartedCourseBatchSuccessWithFutureStartDate() {
+
+    int batchProgressStatus = ProjectUtil.ProgressStatus.NOT_STARTED.getValue();
+    Response mockGetRecordByIdResponse = getMockCassandraRecordByIdResponse(batchProgressStatus);
+    Response mockUpdateRecordResponse = getMockCassandraResult();
+    Response response =
+        performUpdateCourseBatchSuccessTest(
+            getOffsetDate(existingStartDate, 2),
+            null,
+            mockGetRecordByIdResponse,
+            mockUpdateRecordResponse);
+    Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
+  }
+
+  @Test
+  public void testUpdateNotStartedCourseBatchFailureWithFutureEndDate() {
+
+    int batchProgressStatus = ProjectUtil.ProgressStatus.NOT_STARTED.getValue();
+    Response mockGetRecordByIdResponse = getMockCassandraRecordByIdResponse(batchProgressStatus);
+    ProjectCommonException exception =
+        performUpdateCourseBatchFailureTest(null, calculateDate(4), mockGetRecordByIdResponse);
+    Assert.assertTrue(
+        ((ProjectCommonException) exception)
+            .getCode()
+            .equals(ResponseCode.courseBatchStartDateRequired.getErrorCode()));
+  }
+
+  public void testUpdateNotStartedCourseBatchSuccessWithFutureStartDateAndEndDate() {
+
+    int batchProgressStatus = ProjectUtil.ProgressStatus.NOT_STARTED.getValue();
+    Response mockGetRecordByIdResponse = getMockCassandraRecordByIdResponse(batchProgressStatus);
+    Response mockUpdateRecordResponse = getMockCassandraResult();
+    Response response =
+        performUpdateCourseBatchSuccessTest(
+            getOffsetDate(existingStartDate, 2),
+            getOffsetDate(existingEndDate, 4),
+            mockGetRecordByIdResponse,
+            mockUpdateRecordResponse);
+    Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
+  }
+
+  @Test
+  public void testUpdateNotStartedCourseBatchFailureWithPastStartDate() {
+
+    int batchProgressStatus = ProjectUtil.ProgressStatus.NOT_STARTED.getValue();
+    Response mockGetRecordByIdResponse = getMockCassandraRecordByIdResponse(batchProgressStatus);
+
+    ProjectCommonException exception =
+        performUpdateCourseBatchFailureTest(calculateDate(-4), null, mockGetRecordByIdResponse);
+    Assert.assertTrue(
+        ((ProjectCommonException) exception)
+            .getCode()
+            .equals(ResponseCode.invalidBatchStartDateError.getErrorCode()));
+  }
+
+  @Test
+  public void testUpdateNotStartedCourseBatchFailureWithPastEndDate() {
+
+    int batchProgressStatus = ProjectUtil.ProgressStatus.NOT_STARTED.getValue();
+    Response mockGetRecordByIdResponse = getMockCassandraRecordByIdResponse(batchProgressStatus);
+    ProjectCommonException exception =
+        performUpdateCourseBatchFailureTest(null, calculateDate(-2), mockGetRecordByIdResponse);
+    Assert.assertTrue(
+        ((ProjectCommonException) exception)
+            .getCode()
+            .equals(ResponseCode.courseBatchStartDateRequired.getErrorCode()));
+  }
+
+  @Test
+  public void testUpdateNotStartedCourseBatchFailureWithEndDateBeforeFutureStartDate() {
+
+    int batchProgressStatus = ProjectUtil.ProgressStatus.NOT_STARTED.getValue();
+    Response mockGetRecordByIdResponse = getMockCassandraRecordByIdResponse(batchProgressStatus);
+    ProjectCommonException exception =
+        performUpdateCourseBatchFailureTest(
+            getOffsetDate(existingStartDate, 6),
+            getOffsetDate(existingEndDate, 2),
+            mockGetRecordByIdResponse);
+    Assert.assertTrue(
+        ((ProjectCommonException) exception)
+            .getCode()
+            .equals(ResponseCode.invalidBatchStartDateError.getErrorCode()));
+  }
+
+  @Test
+  public void testUpdateCompletedCourseBatchFailureWithStartDate() {
+
+    int batchProgressStatus = ProjectUtil.ProgressStatus.COMPLETED.getValue();
+    Response mockGetRecordByIdResponse = getMockCassandraRecordByIdResponse(batchProgressStatus);
+    ProjectCommonException exception =
+        performUpdateCourseBatchFailureTest(
+            getOffsetDate(existingStartDate, 2), null, mockGetRecordByIdResponse);
+    Assert.assertTrue(
+        ((ProjectCommonException) exception)
+            .getCode()
+            .equals(ResponseCode.invalidBatchStartDateError.getErrorCode()));
+  }
+
+  @Test
+  public void testUpdateCompletedCourseBatchFailureWithEndDate() {
+
+    int batchProgressStatus = ProjectUtil.ProgressStatus.COMPLETED.getValue();
+    Response mockGetRecordByIdResponse = getMockCassandraRecordByIdResponse(batchProgressStatus);
+    ProjectCommonException exception =
+        performUpdateCourseBatchFailureTest(
+            null, getOffsetDate(existingEndDate, 4), mockGetRecordByIdResponse);
+    Assert.assertTrue(
+        ((ProjectCommonException) exception)
+            .getCode()
+            .equals(ResponseCode.courseBatchStartDateRequired.getErrorCode()));
+  }
+
+  @Test
+  public void testUpdateCompletedCourseBatchFailureWithStartDateAndEndDate() {
+
+    int batchProgressStatus = ProjectUtil.ProgressStatus.COMPLETED.getValue();
+    Response mockGetRecordByIdResponse = getMockCassandraRecordByIdResponse(batchProgressStatus);
+    ProjectCommonException exception =
+        performUpdateCourseBatchFailureTest(
+            getOffsetDate(existingStartDate, 2),
+            getOffsetDate(existingEndDate, 4),
+            mockGetRecordByIdResponse);
+    Assert.assertTrue(
+        ((ProjectCommonException) exception)
+            .getCode()
+            .equals(ResponseCode.invalidBatchStartDateError.getErrorCode()));
+  }
 }

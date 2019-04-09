@@ -1,9 +1,7 @@
 package org.sunbird.learner.actors.coursebatch.dao.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import org.apache.commons.collections.CollectionUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
@@ -54,26 +52,27 @@ public class UserCoursesDaoImpl implements UserCoursesDao {
 
   @Override
   public List<String> getAllActiveUserOfBatch(String batchId) {
+    Map<String, Object> queryMap = new HashMap<>();
+    queryMap.put(JsonKey.BATCH_ID, batchId);
     Response response =
-        cassandraOperation.getRecordsByIndexedProperty(
-            KEYSPACE_NAME, TABLE_NAME, JsonKey.BATCH_ID, batchId);
+        cassandraOperation.getRecordsByProperties(
+            KEYSPACE_NAME,
+            TABLE_NAME,
+            queryMap,
+            Arrays.asList(JsonKey.USER_ID, JsonKey.ACTIVE, JsonKey.ID));
     List<Map<String, Object>> userCoursesList =
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     if (CollectionUtils.isEmpty(userCoursesList)) {
       return null;
     }
     List<String> users = new ArrayList<>();
-    try {
-      userCoursesList.forEach(
-          userCourses -> {
-            if ((boolean) userCourses.get(JsonKey.ACTIVE))
-              users.add((String) userCourses.get(JsonKey.USER_ID));
-          });
-      return users;
-    } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(), e);
-    }
-    return null;
+
+    userCoursesList.forEach(
+        userCourses -> {
+          if ((boolean) userCourses.get(JsonKey.ACTIVE))
+            users.add((String) userCourses.get(JsonKey.USER_ID));
+        });
+    return users;
   }
 
   @Override

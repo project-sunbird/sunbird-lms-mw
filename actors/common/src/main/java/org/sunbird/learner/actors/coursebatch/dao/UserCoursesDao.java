@@ -30,16 +30,16 @@ public interface UserCoursesDao {
   Response update(Map<String, Object> updateAttributes);
 
   /**
-   * Update user courses information
+   * Get all active participant IDs in given batch
    *
    * @param batchId Batch ID
    */
   List<String> getAllActiveUserOfBatch(String batchId);
 
   /**
-   * Create an entry for user courses information
+   * Add specified list of participants in given batch.
    *
-   * @param userCoursesDetails Batch participant details
+   * @param userCoursesDetails List of participant details
    */
   Response batchInsert(List<Map<String, Object>> userCoursesDetails);
 }

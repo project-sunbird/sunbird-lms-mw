@@ -27,7 +27,7 @@ import org.sunbird.learner.util.Util;
 
 /** @author Amit Kumar. */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-@Ignore
+// @Ignore
 public class PageManagementActorTest {
 
   private static ActorSystem system;

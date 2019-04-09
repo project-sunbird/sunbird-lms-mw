@@ -60,7 +60,6 @@ import scala.concurrent.duration.Duration;
   DecryptionService.class
 })
 @PowerMockIgnore({"javax.management.*"})
-// @Ignore
 public class UserRoleActorTest {
 
   private ActorSystem system = ActorSystem.create("system");
@@ -72,14 +71,9 @@ public class UserRoleActorTest {
 
   @BeforeClass
   public static void beforeClass() {
+
     PowerMockito.mockStatic(ServiceFactory.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
-    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
-    when(cassandraOperation.getAllRecords(Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getCassandraResponse());
-    when(cassandraOperation.getRecordsByProperties(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(getRecordByPropertyResponse());
   }
 
   private static Response getRecordByPropertyResponse() {
@@ -120,6 +114,13 @@ public class UserRoleActorTest {
     when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
     SearchDTO searchDTO = Mockito.mock(SearchDTO.class);
     when(Util.createSearchDto(Mockito.anyMap())).thenReturn(searchDTO);
+
+    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+    when(cassandraOperation.getAllRecords(Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(getCassandraResponse());
+    when(cassandraOperation.getRecordsByProperties(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(getRecordByPropertyResponse());
   }
 
   @Test
@@ -139,7 +140,7 @@ public class UserRoleActorTest {
 
   @Test
   public void testAssignRolesFailure() {
-    assertTrue(testScenario(true, ResponseCode.CLIENT_ERROR));
+    assertTrue(testScenario(false, ResponseCode.CLIENT_ERROR));
   }
 
   @Test

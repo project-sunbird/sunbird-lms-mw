@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -30,6 +31,7 @@ import org.sunbird.learner.util.Util;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({Util.class})
 @PowerMockIgnore("javax.management.*")
+@Ignore
 public class BadgeNotifierTest {
 
   private static ActorSystem system;

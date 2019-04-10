@@ -255,7 +255,7 @@ public class NotesManagementActorTest {
   }
 
   @Test
-  public void testDeleteoteFailurewithEmptyNote() {
+  public void testDeleteNoteFailurewithEmptyNote() {
     Request req = new Request();
     req.getContext().put(JsonKey.REQUESTED_BY, userId);
     req.getContext().put(JsonKey.NOTE_ID, noteId);
@@ -285,7 +285,6 @@ public class NotesManagementActorTest {
   }
 
   private boolean testScenario(Request reqObj, ResponseCode errorCode) {
-
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     subject.tell(reqObj, probe.getRef());

@@ -364,7 +364,7 @@ public class UserUtil {
       return ssoManager.updatePassword(
           (String) userMap.get(JsonKey.ID), (String) userMap.get(JsonKey.PASSWORD));
     }
-    return false;
+    return true;
   }
 
   public static void addMaskEmailAndPhone(Map<String, Object> userMap) {

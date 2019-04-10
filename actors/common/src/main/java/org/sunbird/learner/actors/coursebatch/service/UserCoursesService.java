@@ -18,6 +18,8 @@ import org.sunbird.models.user.courses.UserCourses;
 public class UserCoursesService {
   private UserCoursesDao userCourseDao = UserCoursesDaoImpl.getInstance();
 
+  protected Integer CASSANDRA_BATCH_SIZE = getBatchSize(JsonKey.CASSANDRA_WRITE_BATCH_SIZE);
+
   public static void validateUserUnenroll(UserCourses userCourseResult) {
     if (userCourseResult == null) {
       ProjectLogger.log(
@@ -63,46 +65,71 @@ public class UserCoursesService {
             + batchId);
   }
 
-  public Boolean enroll(
-      String batchId, String courseId, String userId, Map<String, String> additionalCourseInfo) {
-    Boolean flag = false;
-    Map<String, Object> userCourses = new HashMap<>();
-    userCourses.put(JsonKey.USER_ID, userId);
-    userCourses.put(JsonKey.BATCH_ID, batchId);
-    userCourses.put(JsonKey.COURSE_ID, courseId);
-    userCourses.put(JsonKey.ID, getPrimaryKey(userId, courseId, batchId));
-    userCourses.put(JsonKey.CONTENT_ID, courseId);
-    userCourses.put(JsonKey.COURSE_ENROLL_DATE, ProjectUtil.getFormattedDate());
-    userCourses.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
-    userCourses.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
-    userCourses.put(JsonKey.COURSE_PROGRESS, 0);
-    userCourses.put(JsonKey.COURSE_LOGO_URL, additionalCourseInfo.get(JsonKey.COURSE_LOGO_URL));
-    userCourses.put(JsonKey.COURSE_NAME, additionalCourseInfo.get(JsonKey.COURSE_NAME));
-    userCourses.put(JsonKey.DESCRIPTION, additionalCourseInfo.get(JsonKey.DESCRIPTION));
-    if (!StringUtils.isBlank(additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT))) {
-      userCourses.put(
-          JsonKey.LEAF_NODE_COUNT,
-          Integer.parseInt("" + additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT)));
+  public void enroll(
+      String batchId,
+      String courseId,
+      List<String> userIds,
+      Map<String, String> additionalCourseInfo) {
+    Integer count = 0;
+
+    List<Map<String, Object>> records = new ArrayList<>();
+    for (String userId : userIds) {
+      Map<String, Object> userCourses = new HashMap<>();
+      userCourses.put(JsonKey.USER_ID, userId);
+      userCourses.put(JsonKey.BATCH_ID, batchId);
+      userCourses.put(JsonKey.COURSE_ID, courseId);
+      userCourses.put(JsonKey.ID, getPrimaryKey(userId, courseId, batchId));
+      userCourses.put(JsonKey.CONTENT_ID, courseId);
+      userCourses.put(JsonKey.COURSE_ENROLL_DATE, ProjectUtil.getFormattedDate());
+      userCourses.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
+      userCourses.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.NOT_STARTED.getValue());
+      userCourses.put(JsonKey.COURSE_PROGRESS, 0);
+      userCourses.put(JsonKey.COURSE_LOGO_URL, additionalCourseInfo.get(JsonKey.COURSE_LOGO_URL));
+      userCourses.put(JsonKey.COURSE_NAME, additionalCourseInfo.get(JsonKey.COURSE_NAME));
+      userCourses.put(JsonKey.DESCRIPTION, additionalCourseInfo.get(JsonKey.DESCRIPTION));
+      if (!StringUtils.isBlank(additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT))) {
+        userCourses.put(
+            JsonKey.LEAF_NODE_COUNT,
+            Integer.parseInt("" + additionalCourseInfo.get(JsonKey.LEAF_NODE_COUNT)));
+      }
+      userCourses.put(JsonKey.TOC_URL, additionalCourseInfo.get(JsonKey.TOC_URL));
+
+      count++;
+      if (count > CASSANDRA_BATCH_SIZE) {
+        performBatchInsert(records);
+        syncUsersToES(records);
+        records.clear();
+        count = 0;
+      }
+      if (count != 0) {
+        performBatchInsert(records);
+        syncUsersToES(records);
+        records.clear();
+        count = 0;
+      }
     }
-    userCourses.put(JsonKey.TOC_URL, additionalCourseInfo.get(JsonKey.TOC_URL));
-    try {
-      userCourseDao.insert(userCourses);
+  }
+
+  private void syncUsersToES(List<Map<String, Object>> records) {
+
+    for (Map<String, Object> userCourses : records) {
       sync(userCourses, (String) userCourses.get(JsonKey.ID));
-      syncUserCourses(
-          courseId,
-          batchId,
-          (String) userCourses.get(JsonKey.COURSE_ENROLL_DATE),
-          (Integer) userCourses.get(JsonKey.COURSE_PROGRESS),
-          null,
-          userId);
-      flag = true;
-    } catch (Exception ex) {
-      ProjectLogger.log(
-          "UserCoursesService:enroll: Exception occurred with error message = " + ex.getMessage(),
-          ex);
-      flag = false;
     }
-    return flag;
+  }
+
+  protected void performBatchInsert(List<Map<String, Object>> records) {
+    try {
+      userCourseDao.batchInsert(records);
+    } catch (Exception ex) {
+      ProjectLogger.log("UserCoursesService:performBatchInsert: Performing retry due to exception = " + ex.getMessage(), LoggerEnum.ERROR);
+      for (Map<String, Object> task : records) {
+        try {
+          userCourseDao.insert(task);
+        } catch (Exception exception) {
+          ProjectLogger.log("UserCoursesService:performBatchInsert: Exception occurred with error message = " + ex.getMessage() + " for ID = " + task.get(JsonKey.ID), exception);
+        }
+      }
+    }
   }
 
   public void unenroll(String userId, String courseId, String batchId) {
@@ -136,7 +163,7 @@ public class UserCoursesService {
             id,
             courseMap);
     ProjectLogger.log(
-        "UserCoursesService:sync: sync user courses id and  response  " + id + "==" + response,
+        "UserCoursesService:sync: Sync user courses for ID = " + id + " response = " + response,
         LoggerEnum.INFO.name());
   }
 
@@ -175,10 +202,7 @@ public class UserCoursesService {
             userId,
             userMap);
     ProjectLogger.log(
-        "UserCoursesService:syncUserCourses: sync user courses batch and  response  "
-            + userId
-            + "=="
-            + response,
+        "UserCoursesService:sync: Sync user courses for ID = " + userId + " response = " + response,
         LoggerEnum.INFO.name());
   }
 
@@ -211,10 +235,22 @@ public class UserCoursesService {
             userId,
             userMap);
     ProjectLogger.log(
-        "UserCoursesService:syncRemoveUserCourses: sync user courses batch and  response  "
-            + userId
-            + "=="
-            + response,
+        "UserCoursesService:sync: Sync user courses for ID = " + userId + " response = " + response,
         LoggerEnum.INFO.name());
+  }
+
+  public List<String> getEnrolledUserFromBatch(String id) {
+
+    return userCourseDao.getAllActiveUserOfBatch(id);
+  }
+
+  public Integer getBatchSize(String key) {
+    Integer batchSize = ProjectUtil.DEFAULT_BATCH_SIZE;
+    try {
+      batchSize = Integer.parseInt(ProjectUtil.getConfigValue(key));
+    } catch (Exception ex) {
+      ProjectLogger.log("UserCoursesService:getBatchSize: Failed to read cassandra batch size for " + key, ex);
+    }
+    return batchSize;
   }
 }

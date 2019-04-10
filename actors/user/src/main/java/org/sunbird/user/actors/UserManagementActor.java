@@ -573,12 +573,12 @@ public class UserManagementActor extends BaseActor {
     requestMap.put(JsonKey.IS_DELETED, false);
 
     Response response = null;
-    boolean passwordUpdated = false;
+    boolean isPasswordUpdated = false;
     try {
       response =
           cassandraOperation.insertRecord(
               usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
-      passwordUpdated = UserUtil.updatePassword(userMap);
+      isPasswordUpdated = UserUtil.updatePassword(userMap);
 
     } finally {
       if (null == response && IS_REGISTRY_ENABLED) {
@@ -586,8 +586,8 @@ public class UserManagementActor extends BaseActor {
         userExtension.delete(userMap);
       }
       response.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
-      if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD)) && !passwordUpdated) {
-        response.put(JsonKey.ERROR_MSG, ResponseMessage.Message.USER_PASSWORD_UPDATE_FAIL);
+      if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD)) && !isPasswordUpdated) {
+        response.put(JsonKey.ERROR_MSG, ResponseMessage.Message.ERROR_USER_UPDATE_PASSWORD);
       }
     }
     Response resp = null;

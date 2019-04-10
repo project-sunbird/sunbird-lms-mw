@@ -26,6 +26,7 @@ import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.response.ResponseMessage;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LocationActorOperation;
@@ -586,7 +587,7 @@ public class UserManagementActor extends BaseActor {
       }
       response.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
       if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD)) && !passwordUpdated) {
-        response.put(JsonKey.ERROR_MSG, "User is created but password couldn't be updated.");
+        response.put(JsonKey.ERROR_MSG, ResponseMessage.Message.USER_PASSWORD_UPDATE_FAIL);
       }
     }
     Response resp = null;

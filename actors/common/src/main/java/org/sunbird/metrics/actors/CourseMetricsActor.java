@@ -106,7 +106,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
         sortBy = JsonKey.NAME;
       }
       if (JsonKey.PROGRESS.equalsIgnoreCase(sortBy)) {
-        sortBy = JsonKey.PROGRESS;
+        sortBy = JsonKey.COMPLETED_PERCENT;
       }
       if (JsonKey.ENROLLED_ON.equalsIgnoreCase(sortBy)) {
         sortBy = JsonKey.ENROLLED_ON;
@@ -127,7 +127,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
     Map<String, Object> result =
         ElasticSearchUtil.complexSearch(
-            searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
+            searchDTO, ProjectUtil.EsIndex.courseBatchStats.getIndexName(), EsType.doc.getTypeName());
     if (isNull(result) || result.size() == 0) {
       ProjectLogger.log(
           "CourseMetricsActor:courseProgressMetricsV2: No search results found.",
@@ -140,25 +140,15 @@ public class CourseMetricsActor extends BaseMetricsActor {
     List<Map<String, Object>> userData = new ArrayList<>();
     for (Map<String, Object> esContent : esContents) {
       Map<String, Object> map = new HashMap<>();
-      map.put(JsonKey.USER_NAME, (String) esContent.get(JsonKey.FIRST_NAME));
-      String phone = null;
-      if (esContent.containsKey(JsonKey.ENC_PHONE)) {
-        phone = decryptAndMaskPhone((String) esContent.get(JsonKey.ENC_PHONE));
-      }
-      map.put(JsonKey.PHONE, phone);
+      map.put(JsonKey.USER_NAME, esContent.get(JsonKey.NAME));
+      map.put(JsonKey.PHONE, esContent.get(JsonKey.MASKED_PHONE));
       map.put(JsonKey.ORG_NAME, esContent.get(JsonKey.ROOT_ORG_NAME));
-      for (Map<String, Object> batchMap :
-          (List<Map<String, Object>>) esContent.get(JsonKey.BATCHES)) {
-        if (batchId.equalsIgnoreCase((String) batchMap.get(JsonKey.BATCH_ID))) {
-          calculateCourseProgressPercentage(batchMap, leafNodeCount);
-          formatEnrolledOn(batchMap);
-          map.putAll(batchMap);
-        }
-      }
+      map.put(JsonKey.PROGRESS,esContent.get(JsonKey.COMPLETED_PERCENT));
+      map.put(JsonKey.ENROLLED_ON,esContent.get(JsonKey.ENROLLED_ON));
       userData.add(map);
     }
 
-    courseProgressResult.put(JsonKey.COUNT, result.get(JsonKey.COUNT));
+    courseProgressResult.put(JsonKey.COUNT, courseBatchResult.get(JsonKey.PARTICIPANT_COUNT));
     courseProgressResult.put(JsonKey.DATA, userData);
     courseProgressResult.put(JsonKey.START_DATE, courseBatchResult.get(JsonKey.START_DATE));
     courseProgressResult.put(JsonKey.END_DATE, courseBatchResult.get(JsonKey.END_DATE));
@@ -182,53 +172,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
       batchMap.put(JsonKey.LAST_ACCESSED_ON, ProjectUtil.formatDate(parsedDate));
     } catch (Exception e) {
       ProjectLogger.log("formatEnrolledOn : " + e.getMessage(), LoggerEnum.INFO);
-    }
-  }
-
-  private int getCompletedCount(String batchId, int leafNodeCount, Long limit) {
-    SearchDTO searchDTO = new SearchDTO();
-    Map<String, Object> filter = new HashMap<>();
-    filter.put(JsonKey.BATCHES + "." + JsonKey.BATCH_ID, batchId);
-    filter.put(JsonKey.BATCHES + "." + JsonKey.PROGRESS, leafNodeCount);
-    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filter);
-
-    if (limit != null) {
-      searchDTO.setLimit(limit.intValue());
-      searchDTO.setOffset(0);
-    }
-    Map<String, Object> result =
-        ElasticSearchUtil.complexSearch(
-            searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
-
-    if (isNull(result) || result.size() == 0) {
-      ProjectLogger.log(
-          "CourseMetricsActor:getCompletedCount: No search results found.", LoggerEnum.INFO.name());
-      return 0;
-    } else {
-      List<Map<String, Object>> esBatchResult =
-          (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-      int count = 0;
-      if (!CollectionUtils.isEmpty(esBatchResult)) {
-        for (Map<String, Object> esContent : esBatchResult) {
-          List<Map<String, Object>> batches =
-              (List<Map<String, Object>>) esContent.get(JsonKey.BATCHES);
-          if (!CollectionUtils.isEmpty(batches)) {
-            for (Map<String, Object> batchMap : batches) {
-              if (batchId.equalsIgnoreCase((String) batchMap.get(JsonKey.BATCH_ID))
-                  && leafNodeCount == (Integer) batchMap.get(JsonKey.PROGRESS)) {
-                count++;
-              }
-            }
-          }
-        }
-      }
-      ProjectLogger.log(
-          "CourseMetricsActor:getCompletedCount: search results found."
-              + result.get(JsonKey.COUNT)
-              + " LeafNodeCount = "
-              + leafNodeCount,
-          LoggerEnum.INFO.name());
-      return count;
     }
   }
 

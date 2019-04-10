@@ -69,7 +69,7 @@ public class UserFrameworkTest extends UserManagementActorTestBase {
   @SuppressWarnings("unchecked")
   public void mockForUpdateTest() {
     mockUtilsForOrgDetails();
-    mockDatacacheHandler();
+    mockDataCacheHandler();
     mockContentStoreUtil();
   }
 
@@ -86,7 +86,7 @@ public class UserFrameworkTest extends UserManagementActorTestBase {
     when(ContentStoreUtil.readFramework("invalidFrameworkId")).thenReturn(contentMap);
   }
 
-  private void mockDatacacheHandler() {
+  private void mockDataCacheHandler() {
     Map<String, List<String>> frameworkFieldsConfigMap = new HashMap<>();
     List<String> frameworkFieldConfig =
         Arrays.asList("id", "medium", "gradeLevel", "board", "subject");

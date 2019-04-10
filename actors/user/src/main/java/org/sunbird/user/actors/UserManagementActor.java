@@ -26,7 +26,14 @@ import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LocationActorOperation;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.StringFormatter;
+import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.request.UserRequestValidator;
@@ -565,11 +572,12 @@ public class UserManagementActor extends BaseActor {
     requestMap.put(JsonKey.IS_DELETED, false);
 
     Response response = null;
+    boolean passwordUpdated = false;
     try {
       response =
           cassandraOperation.insertRecord(
               usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
-      UserUtil.updatePassword(userMap);
+      passwordUpdated = UserUtil.updatePassword(userMap);
 
     } finally {
       if (null == response && IS_REGISTRY_ENABLED) {
@@ -577,6 +585,9 @@ public class UserManagementActor extends BaseActor {
         userExtension.delete(userMap);
       }
       response.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
+      if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD)) && !passwordUpdated) {
+        response.put(JsonKey.ERROR_MSG, "User is created but password couldn't be updated.");
+      }
     }
     Response resp = null;
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {

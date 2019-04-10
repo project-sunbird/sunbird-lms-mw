@@ -359,11 +359,12 @@ public class UserUtil {
     }
   }
 
-  public static void updatePassword(Map<String, Object> userMap) {
+  public static boolean updatePassword(Map<String, Object> userMap) {
     if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PASSWORD))) {
-      ssoManager.updatePassword(
+      return ssoManager.updatePassword(
           (String) userMap.get(JsonKey.ID), (String) userMap.get(JsonKey.PASSWORD));
     }
+    return false;
   }
 
   public static void addMaskEmailAndPhone(Map<String, Object> userMap) {

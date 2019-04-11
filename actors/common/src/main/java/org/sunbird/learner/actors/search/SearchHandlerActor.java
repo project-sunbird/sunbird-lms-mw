@@ -95,6 +95,7 @@ public class SearchHandlerActor extends BaseActor {
           List<Map<String, Object>> courseBatchList =
               (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
           for (Map<String, Object> cousrseBatch : courseBatchList) {
+            cousrseBatch.remove(JsonKey.PARTICIPANT);
             cousrseBatch.put(
                 JsonKey.PARTICIPANTS, getParticipantList((String) cousrseBatch.get(JsonKey.ID)));
           }

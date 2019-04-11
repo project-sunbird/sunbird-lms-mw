@@ -95,6 +95,7 @@ public class UserCoursesService {
       userCourses.put(JsonKey.TOC_URL, additionalCourseInfo.get(JsonKey.TOC_URL));
 
       count++;
+      records.add(userCourses);
       if (count > CASSANDRA_BATCH_SIZE) {
         performBatchInsert(records);
         syncUsersToES(records);
@@ -121,12 +122,20 @@ public class UserCoursesService {
     try {
       userCourseDao.batchInsert(records);
     } catch (Exception ex) {
-      ProjectLogger.log("UserCoursesService:performBatchInsert: Performing retry due to exception = " + ex.getMessage(), LoggerEnum.ERROR);
+      ProjectLogger.log(
+          "UserCoursesService:performBatchInsert: Performing retry due to exception = "
+              + ex.getMessage(),
+          LoggerEnum.ERROR);
       for (Map<String, Object> task : records) {
         try {
           userCourseDao.insert(task);
         } catch (Exception exception) {
-          ProjectLogger.log("UserCoursesService:performBatchInsert: Exception occurred with error message = " + ex.getMessage() + " for ID = " + task.get(JsonKey.ID), exception);
+          ProjectLogger.log(
+              "UserCoursesService:performBatchInsert: Exception occurred with error message = "
+                  + ex.getMessage()
+                  + " for ID = "
+                  + task.get(JsonKey.ID),
+              exception);
         }
       }
     }
@@ -249,7 +258,8 @@ public class UserCoursesService {
     try {
       batchSize = Integer.parseInt(ProjectUtil.getConfigValue(key));
     } catch (Exception ex) {
-      ProjectLogger.log("UserCoursesService:getBatchSize: Failed to read cassandra batch size for " + key, ex);
+      ProjectLogger.log(
+          "UserCoursesService:getBatchSize: Failed to read cassandra batch size for " + key, ex);
     }
     return batchSize;
   }

@@ -4,12 +4,15 @@ import static akka.testkit.JavaTestKit.duration;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.when;
 
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
+import akka.testkit.javadsl.TestKit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -39,22 +42,27 @@ import org.sunbird.user.actors.UserManagementActor;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.UserUtil;
 
-import akka.actor.ActorRef;
-import akka.actor.ActorSystem;
-import akka.actor.Props;
-import akka.testkit.javadsl.TestKit;
-
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({ ServiceFactory.class, ElasticSearchUtil.class, Util.class, RequestRouter.class,
-    SystemSettingClientImpl.class, UserServiceImpl.class, UserUtil.class, InterServiceCommunicationFactory.class,
-    LocationClientImpl.class, DataCacheHandler.class })
-@PowerMockIgnore({ "javax.management.*" })
+@PrepareForTest({
+  ServiceFactory.class,
+  ElasticSearchUtil.class,
+  Util.class,
+  RequestRouter.class,
+  SystemSettingClientImpl.class,
+  UserServiceImpl.class,
+  UserUtil.class,
+  InterServiceCommunicationFactory.class,
+  LocationClientImpl.class,
+  DataCacheHandler.class
+})
+@PowerMockIgnore({"javax.management.*"})
 public abstract class UserManagementActorTestBase {
 
   public ActorSystem system = ActorSystem.create("system");
   public static final Props props = Props.create(UserManagementActor.class);
   public static Map<String, Object> reqMap;
-  static InterServiceCommunication interServiceCommunication = mock(InterServiceCommunicationImpl.class);;
+  static InterServiceCommunication interServiceCommunication =
+      mock(InterServiceCommunicationImpl.class);;
   public static UserServiceImpl userService;
   public static CassandraOperationImpl cassandraOperation;
 
@@ -68,31 +76,40 @@ public abstract class UserManagementActorTestBase {
     PowerMockito.mockStatic(ServiceFactory.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
-    when(cassandraOperation.insertRecord(Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+    when(cassandraOperation.insertRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(getSuccessResponse());
-    when(cassandraOperation.updateRecord(Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+    when(cassandraOperation.updateRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(getSuccessResponse());
 
     PowerMockito.mockStatic(InterServiceCommunicationFactory.class);
     when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
-    when(interServiceCommunication.getResponse(Mockito.any(ActorRef.class), Mockito.any(Request.class)))
+    when(interServiceCommunication.getResponse(
+            Mockito.any(ActorRef.class), Mockito.any(Request.class)))
         .thenReturn(getEsResponse());
 
     PowerMockito.mockStatic(SystemSettingClientImpl.class);
     SystemSettingClientImpl systemSettingClient = mock(SystemSettingClientImpl.class);
     when(SystemSettingClientImpl.getInstance()).thenReturn(systemSettingClient);
-    when(systemSettingClient.getSystemSettingByFieldAndKey(Mockito.any(ActorRef.class), Mockito.anyString(),
-        Mockito.anyString(), Mockito.anyObject())).thenReturn(new HashMap<>());
+    when(systemSettingClient.getSystemSettingByFieldAndKey(
+            Mockito.any(ActorRef.class),
+            Mockito.anyString(),
+            Mockito.anyString(),
+            Mockito.anyObject()))
+        .thenReturn(new HashMap<>());
 
     PowerMockito.mockStatic(UserServiceImpl.class);
     userService = mock(UserServiceImpl.class);
     when(UserServiceImpl.getInstance()).thenReturn(userService);
     when(userService.getRootOrgIdFromChannel(Mockito.anyString())).thenReturn("anyId");
-    when(userService.getCustodianChannel(Mockito.anyMap(), Mockito.any(ActorRef.class))).thenReturn("anyChannel");
+    when(userService.getCustodianChannel(Mockito.anyMap(), Mockito.any(ActorRef.class)))
+        .thenReturn("anyChannel");
     when(userService.getRootOrgIdFromChannel(Mockito.anyString())).thenReturn("rootOrgId");
 
     PowerMockito.mockStatic(ElasticSearchUtil.class);
-    when(ElasticSearchUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(getEsResponseMap());
 
     PowerMockito.mockStatic(Util.class);
@@ -114,7 +131,9 @@ public abstract class UserManagementActorTestBase {
     when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(getListOrgResponse());
     when(userService.getUserById(Mockito.anyString())).thenReturn(getUser(false));
-    when(cassandraOperation.insertRecord(Mockito.anyString(), Mockito.anyString(), Mockito.anyMap())).thenReturn(null);
+    when(cassandraOperation.insertRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(null);
   }
 
   public Map<String, Object> getListOrgResponse() {
@@ -177,8 +196,10 @@ public abstract class UserManagementActorTestBase {
       Response res = probe.expectMsgClass(duration("10 second"), Response.class);
       return null != res && res.getResponseCode() == ResponseCode.OK;
     } else {
-      ProjectCommonException res = probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-      return res.getCode().equals(errorCode.getErrorCode()) || res.getResponseCode() == errorCode.getResponseCode();
+      ProjectCommonException res =
+          probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+      return res.getCode().equals(errorCode.getErrorCode())
+          || res.getResponseCode() == errorCode.getResponseCode();
     }
   }
 
@@ -205,17 +226,18 @@ public abstract class UserManagementActorTestBase {
     return reqMap;
   }
 
-  public Request getRequest(boolean isCallerIdReq, boolean isRootOrgIdReq, boolean isVersionReq,
-      Map<String, Object> reqMap, ActorOperations actorOperation) {
+  public Request getRequest(
+      boolean isCallerIdReq,
+      boolean isRootOrgIdReq,
+      boolean isVersionReq,
+      Map<String, Object> reqMap,
+      ActorOperations actorOperation) {
 
     Request reqObj = new Request();
     HashMap<String, Object> innerMap = new HashMap<>();
-    if (isCallerIdReq)
-      innerMap.put(JsonKey.CALLER_ID, "anyCallerId");
-    if (isVersionReq)
-      innerMap.put(JsonKey.VERSION, "v2");
-    if (isRootOrgIdReq)
-      innerMap.put(JsonKey.ROOT_ORG_ID, "MY_ROOT_ORG_ID");
+    if (isCallerIdReq) innerMap.put(JsonKey.CALLER_ID, "anyCallerId");
+    if (isVersionReq) innerMap.put(JsonKey.VERSION, "v2");
+    if (isRootOrgIdReq) innerMap.put(JsonKey.ROOT_ORG_ID, "MY_ROOT_ORG_ID");
     innerMap.put(JsonKey.REQUESTED_BY, "requestedBy");
     reqObj.setRequest(reqMap);
     reqObj.setContext(innerMap);
@@ -267,5 +289,4 @@ public abstract class UserManagementActorTestBase {
     }
     return user;
   }
-
 }

@@ -734,66 +734,48 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   }
 
   private void validateBGMSProperty(
-      int i,
+      int recordNum,
       Map<String, String> bgms,
       HashMap<String, Object> recordMap,
       Map<String, String> metadata) {
-    if (i == 0) {
-      if (recordMap.containsKey(JsonKey.BOARD)) {
-        bgms.put(JsonKey.BOARD, (String) recordMap.get(JsonKey.BOARD));
-      }
-      if (recordMap.containsKey(JsonKey.GRADE)) {
-        bgms.put(JsonKey.GRADE, (String) recordMap.get(JsonKey.GRADE));
-      }
-      if (recordMap.containsKey(JsonKey.MEDIUM)) {
-        bgms.put(JsonKey.MEDIUM, (String) recordMap.get(JsonKey.MEDIUM));
-      }
-      if (recordMap.containsKey(JsonKey.SUBJECT)) {
-        bgms.put(JsonKey.SUBJECT, (String) recordMap.get(JsonKey.SUBJECT));
-      }
+    if (recordNum == 0) {
+      getBgmsData(recordMap, bgms);
     } else {
-      if (recordMap.containsKey(JsonKey.BOARD)
-          && !bgms.get(JsonKey.BOARD).equalsIgnoreCase((String) recordMap.get(JsonKey.BOARD))) {
-        throwClientErrorException(
-            ResponseCode.errorBGMSMismatch,
-            MessageFormat.format(
-                ResponseCode.errorBGMSMismatch.getErrorMessage(),
-                metadata.get(JsonKey.BOARD),
-                i + 1));
-      }
-      if (recordMap.containsKey(JsonKey.GRADE)
-          && !bgms.get(JsonKey.GRADE).equalsIgnoreCase((String) recordMap.get(JsonKey.GRADE))) {
-        throwClientErrorException(
-            ResponseCode.errorBGMSMismatch,
-            MessageFormat.format(
-                ResponseCode.errorBGMSMismatch.getErrorMessage(),
-                metadata.get(JsonKey.GRADE),
-                i + 1));
-      }
-      if (recordMap.containsKey(JsonKey.MEDIUM)
-          && !bgms.get(JsonKey.MEDIUM).equalsIgnoreCase((String) recordMap.get(JsonKey.MEDIUM))) {
-        throwClientErrorException(
-            ResponseCode.errorBGMSMismatch,
-            MessageFormat.format(
-                ResponseCode.errorBGMSMismatch.getErrorMessage(),
-                metadata.get(JsonKey.MEDIUM),
-                i + 1));
-      }
-      if (recordMap.containsKey(JsonKey.SUBJECT)
-          && !bgms.get(JsonKey.SUBJECT).equalsIgnoreCase((String) recordMap.get(JsonKey.SUBJECT))) {
-        throwClientErrorException(
-            ResponseCode.errorBGMSMismatch,
-            MessageFormat.format(
-                ResponseCode.errorBGMSMismatch.getErrorMessage(),
-                metadata.get(JsonKey.SUBJECT),
-                i + 1));
-      }
+      validateBGMSMismatch(recordNum, metadata, bgms, recordMap);
     }
     // removing fields from updating further
     recordMap.remove(JsonKey.BOARD);
     recordMap.remove(JsonKey.MEDIUM);
     recordMap.remove(JsonKey.GRADE);
     recordMap.remove(JsonKey.SUBJECT);
+  }
+
+  private void getBgmsData(HashMap<String, Object> recordMap, Map<String, String> bgms) {
+    String[] bgmsKeys = {JsonKey.BOARD, JsonKey.MEDIUM, JsonKey.GRADE, JsonKey.SUBJECT};
+    for (String key : bgmsKeys) {
+      if (recordMap.containsKey(key)) {
+        bgms.put(key, (String) recordMap.get(key));
+      }
+    }
+  }
+
+  private void validateBGMSMismatch(
+      int recordNum,
+      Map<String, String> metadata,
+      Map<String, String> bgms,
+      HashMap<String, Object> recordMap) {
+    String[] bgmsKeys = {JsonKey.BOARD, JsonKey.MEDIUM, JsonKey.GRADE, JsonKey.SUBJECT};
+    for (String key : bgmsKeys) {
+      if (recordMap.containsKey(key)
+          && !bgms.get(key).equalsIgnoreCase((String) recordMap.get(key))) {
+        throwClientErrorException(
+            ResponseCode.errorBGMSMismatch,
+            MessageFormat.format(
+                ResponseCode.errorBGMSMismatch.getErrorMessage(),
+                metadata.get(key),
+                recordNum + 1));
+      }
+    }
   }
 
   private List<String> validateLinkedContentUrlAndGetContentIds(

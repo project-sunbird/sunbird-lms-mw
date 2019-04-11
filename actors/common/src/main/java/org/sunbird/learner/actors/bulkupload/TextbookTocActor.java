@@ -637,6 +637,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       Set<String> duplicateDialCodes = new LinkedHashSet<>();
       Map<String, List<String>> dialCodeIdentifierMap = new HashMap<>();
       Set<String> topics = new HashSet<>();
+      Map<String, String> bgms = new HashMap<>();
       StringBuilder exceptionMsgs = new StringBuilder();
       for (int i = 0; i < csvRecords.size(); i++) {
         CSVRecord record = csvRecords.get(i);
@@ -650,6 +651,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           if (StringUtils.isNotBlank(record.get(entry.getValue())))
             hierarchyMap.put(entry.getKey(), record.get(entry.getValue()));
         }
+        validateBGMSProperty(i, bgms, recordMap, metadata);
 
         if (!(MapUtils.isEmpty(recordMap) && MapUtils.isEmpty(hierarchyMap))) {
           validateQrCodeRequiredAndQrCode(recordMap);
@@ -729,6 +731,69 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       }
     }
     return result;
+  }
+
+  private void validateBGMSProperty(
+      int i,
+      Map<String, String> bgms,
+      HashMap<String, Object> recordMap,
+      Map<String, String> metadata) {
+    if (i == 0) {
+      if (recordMap.containsKey(JsonKey.BOARD)) {
+        bgms.put(JsonKey.BOARD, (String) recordMap.get(JsonKey.BOARD));
+      }
+      if (recordMap.containsKey(JsonKey.GRADE)) {
+        bgms.put(JsonKey.GRADE, (String) recordMap.get(JsonKey.GRADE));
+      }
+      if (recordMap.containsKey(JsonKey.MEDIUM)) {
+        bgms.put(JsonKey.MEDIUM, (String) recordMap.get(JsonKey.MEDIUM));
+      }
+      if (recordMap.containsKey(JsonKey.SUBJECT)) {
+        bgms.put(JsonKey.SUBJECT, (String) recordMap.get(JsonKey.SUBJECT));
+      }
+    } else {
+      if (recordMap.containsKey(JsonKey.BOARD)
+          && !bgms.get(JsonKey.BOARD).equalsIgnoreCase((String) recordMap.get(JsonKey.BOARD))) {
+        throwClientErrorException(
+            ResponseCode.errorBGMSMismatch,
+            MessageFormat.format(
+                ResponseCode.errorBGMSMismatch.getErrorMessage(),
+                metadata.get(JsonKey.BOARD),
+                i + 1));
+      }
+      if (recordMap.containsKey(JsonKey.GRADE)
+          && !bgms.get(JsonKey.GRADE).equalsIgnoreCase((String) recordMap.get(JsonKey.GRADE))) {
+        throwClientErrorException(
+            ResponseCode.errorBGMSMismatch,
+            MessageFormat.format(
+                ResponseCode.errorBGMSMismatch.getErrorMessage(),
+                metadata.get(JsonKey.GRADE),
+                i + 1));
+      }
+      if (recordMap.containsKey(JsonKey.MEDIUM)
+          && !bgms.get(JsonKey.MEDIUM).equalsIgnoreCase((String) recordMap.get(JsonKey.MEDIUM))) {
+        throwClientErrorException(
+            ResponseCode.errorBGMSMismatch,
+            MessageFormat.format(
+                ResponseCode.errorBGMSMismatch.getErrorMessage(),
+                metadata.get(JsonKey.MEDIUM),
+                i + 1));
+      }
+      if (recordMap.containsKey(JsonKey.SUBJECT)
+          && !bgms.get(JsonKey.SUBJECT).equalsIgnoreCase((String) recordMap.get(JsonKey.SUBJECT))) {
+        throwClientErrorException(
+            ResponseCode.errorBGMSMismatch,
+            MessageFormat.format(
+                ResponseCode.errorBGMSMismatch.getErrorMessage(),
+                metadata.get(JsonKey.SUBJECT),
+                i + 1));
+      }
+    }
+    // removing fields from updating further
+    recordMap.remove(JsonKey.BOARD);
+    recordMap.remove(JsonKey.MEDIUM);
+    recordMap.remove(JsonKey.GRADE);
+    recordMap.remove(JsonKey.SUBJECT);
   }
 
   private List<String> validateLinkedContentUrlAndGetContentIds(

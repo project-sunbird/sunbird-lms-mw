@@ -651,7 +651,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           if (StringUtils.isNotBlank(record.get(entry.getValue())))
             hierarchyMap.put(entry.getKey(), record.get(entry.getValue()));
         }
-        validateBGMSProperty(i, bgms, recordMap, metadata);
+        validateBGMS(i, bgms, recordMap, metadata);
 
         if (!(MapUtils.isEmpty(recordMap) && MapUtils.isEmpty(hierarchyMap))) {
           validateQrCodeRequiredAndQrCode(recordMap);
@@ -733,7 +733,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     return result;
   }
 
-  private void validateBGMSProperty(
+  private void validateBGMS(
       int recordNum,
       Map<String, String> bgms,
       HashMap<String, Object> recordMap,
@@ -741,9 +741,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     if (recordNum == 0) {
       getBgmsData(recordMap, bgms);
     } else {
-      validateBGMSMismatch(recordNum, metadata, bgms, recordMap);
+      handleBGMSMismatchValidation(recordNum, metadata, bgms, recordMap);
     }
-    // removing fields from updating further
+    // Removing fields from updating further
     recordMap.remove(JsonKey.BOARD);
     recordMap.remove(JsonKey.MEDIUM);
     recordMap.remove(JsonKey.GRADE);
@@ -759,7 +759,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     }
   }
 
-  private void validateBGMSMismatch(
+  private void handleBGMSMismatchValidation(
       int recordNum,
       Map<String, String> metadata,
       Map<String, String> bgms,

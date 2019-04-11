@@ -9,14 +9,9 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import org.apache.commons.lang3.StringUtils;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -31,8 +26,6 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectUtil.EsIndex;
-import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
@@ -49,26 +42,19 @@ import org.sunbird.learner.util.Util;
 @PowerMockIgnore({"javax.management.*", "javax.crypto.*", "javax.net.ssl.*", "javax.security.*"})
 public class NotesManagementActorTest {
 
-  private static Util.DbInfo usernotesDB = Util.dbInfoMap.get(JsonKey.USER_NOTES_DB);
   private static String userId = "userId-example";
-  private static String courseId = "mclr309f39";
-  private static String contentId = "nnci3u9f97mxcfu";
   private static String noteId = "";
-
   private ActorSystem system = ActorSystem.create("system");
   private static final Props props = Props.create(NotesManagementActor.class);
   private static CassandraOperationImpl cassandraOperation;
 
-  @BeforeClass
-  public static void setUp() {
-
+  @Before
+  public void beforeEachTest() {
     ActorRef actorRef = mock(ActorRef.class);
     PowerMockito.mockStatic(RequestRouter.class);
     when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
-
     PowerMockito.mockStatic(ServiceFactory.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
-
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     PowerMockito.mockStatic(ElasticSearchUtil.class);
   }
@@ -100,144 +86,222 @@ public class NotesManagementActorTest {
     assertTrue(result);
   }
 
-  /*
-   * private void mockCassandra() {
-   *
-   * when(cassandraOperation.insertRecord( Mockito.anyString(),
-   * Mockito.anyString(), Mockito.anyMap())) .thenReturn(); }
-   */
-
-  /** Method to insert User data to ElasticSearch */
-  private static void insertUserDataToES() {
-    Map<String, Object> userMap = new HashMap<>();
-    userMap.put(JsonKey.USER_ID, userId);
-    userMap.put(JsonKey.FIRST_NAME, "alpha");
-    userMap.put(JsonKey.ID, userId);
-    userMap.put(JsonKey.ROOT_ORG_ID, "ORG_001");
-    userMap.put(JsonKey.USERNAME, "alpha-beta");
-    ElasticSearchUtil.createData(
-        EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), userId, userMap);
+  @Test
+  public void testCreateNoteFailureWithInvalidUserId() {
+    Request req = new Request();
+    Map<String, Object> reqMap = new HashMap<>();
+    req.setRequest(reqMap);
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(Mockito.anyMap());
+    req.setOperation(ActorOperations.CREATE_NOTE.getValue());
+    boolean result = testScenario(req, ResponseCode.invalidUserId);
+    assertTrue(result);
   }
 
-  @SuppressWarnings("deprecation")
-  @Ignore
   @Test
-  public void checkTelemetryKeyFailure() throws Exception {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    String telemetryEnvKey = "user";
-    PowerMockito.mockStatic(Util.class);
-    PowerMockito.doNothing()
-        .when(
-            Util.class,
-            "initializeContext",
-            Mockito.any(Request.class),
-            Mockito.eq(telemetryEnvKey));
-
-    Request actorMessage = new Request();
-    Map<String, Object> note = new HashMap<>();
-    Map<String, Object> request = new HashMap<>();
-    request.put(JsonKey.REQUESTED_BY, userId);
-    note.put(JsonKey.USER_ID, userId);
-    note.put(JsonKey.COURSE_ID, courseId);
-    note.put(JsonKey.CONTENT_ID, contentId);
-    note.put(JsonKey.NOTE, "This is a test note");
-    note.put(JsonKey.TITLE, "Title Test");
-    List<String> tags = new ArrayList<>();
-    tags.add("tag1");
-    note.put(JsonKey.TAGS, tags);
-    request.put(JsonKey.NOTE, note);
-    actorMessage.setRequest(request);
-    actorMessage.setOperation(ActorOperations.CREATE_NOTE.getValue());
-
-    subject.tell(actorMessage, probe.getRef());
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    noteId = (String) res.getResult().get(JsonKey.ID);
-    Assert.assertTrue(!(telemetryEnvKey.charAt(0) >= 65 && telemetryEnvKey.charAt(0) <= 90));
+  public void testUpdateNoteFailure() {
+    Request req = new Request();
+    req.getContext().put(JsonKey.USER_ID, userId);
+    req.getContext().put(JsonKey.NOTE_ID, noteId);
+    Map<String, Object> reqMap = new HashMap<>();
+    req.setRequest(reqMap);
+    req.setOperation(ActorOperations.UPDATE_NOTE.getValue());
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(Mockito.anyMap());
+    boolean result = testScenario(req, ResponseCode.unAuthorized);
+    assertTrue(result);
   }
 
-  /** Method to test create Note when data is valid. Expected to create note without exception */
-  @SuppressWarnings("deprecation")
-  @Ignore
   @Test
-  public void test1CreateNoteSuccess() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    Request actorMessage = new Request();
-    Map<String, Object> note = new HashMap<>();
-    Map<String, Object> request = new HashMap<>();
-    request.put(JsonKey.REQUESTED_BY, userId);
-    note.put(JsonKey.USER_ID, userId);
-    note.put(JsonKey.COURSE_ID, courseId);
-    note.put(JsonKey.CONTENT_ID, contentId);
-    note.put(JsonKey.NOTE, "This is a test note");
-    note.put(JsonKey.TITLE, "Title Test");
-    List<String> tags = new ArrayList<>();
-    tags.add("tag1");
-    note.put(JsonKey.TAGS, tags);
-    request.put(JsonKey.NOTE, note);
-    actorMessage.setRequest(request);
-    actorMessage.setOperation(ActorOperations.CREATE_NOTE.getValue());
-
-    subject.tell(actorMessage, probe.getRef());
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    noteId = (String) res.getResult().get(JsonKey.ID);
-    Assert.assertTrue(!StringUtils.isBlank(noteId));
+  public void testUpdateNoteFailurewithUserIdMismatch() {
+    Request req = new Request();
+    req.getContext().put(JsonKey.REQUESTED_BY, userId);
+    req.getContext().put(JsonKey.NOTE_ID, noteId);
+    Map<String, Object> reqMap = new HashMap<>();
+    reqMap.put(JsonKey.USER_ID, "misMatch");
+    req.setRequest(reqMap);
+    req.setOperation(ActorOperations.UPDATE_NOTE.getValue());
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(reqMap);
+    boolean result = testScenario(req, ResponseCode.errorForbidden);
+    assertTrue(result);
   }
 
-  /**
-   * Method to test delete Note when data is valid. Expected to mark note as deleted and send
-   * success message
-   */
-  @SuppressWarnings("deprecation")
   @Test
-  @Ignore
-  public void test8DeleteNoteSuccess() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    Request actorMessage = new Request();
-    Map<String, Object> request = new HashMap<>();
-    request.put(JsonKey.REQUESTED_BY, userId);
-    request.put(JsonKey.NOTE_ID, noteId);
-    actorMessage.setRequest(request);
-    actorMessage.setOperation(ActorOperations.DELETE_NOTE.getValue());
-
-    subject.tell(actorMessage, probe.getRef());
-    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-
-    Assert.assertEquals(200, res.getResponseCode().getResponseCode());
+  public void testUpdateNoteFailurewithEmptyNote() {
+    Request req = new Request();
+    req.getContext().put(JsonKey.REQUESTED_BY, userId);
+    req.getContext().put(JsonKey.NOTE_ID, noteId);
+    Map<String, Object> reqMap = new HashMap<>();
+    reqMap.put(JsonKey.USER_ID, userId);
+    req.setRequest(reqMap);
+    req.setOperation(ActorOperations.UPDATE_NOTE.getValue());
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(reqMap)
+        .thenReturn(Mockito.anyMap());
+    boolean result = testScenario(req, ResponseCode.invalidNoteId);
+    assertTrue(result);
   }
 
-  /** Method to test delete Note when data is invalid. Expected to throw exception */
-  @SuppressWarnings("deprecation")
   @Test
-  @Ignore
-  public void test9DeleteNoteException() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
+  public void testUpdateNoteSuccess() {
+    Request req = new Request();
+    req.getContext().put(JsonKey.REQUESTED_BY, userId);
+    req.getContext().put(JsonKey.NOTE_ID, noteId);
+    Map<String, Object> reqMap = new HashMap<>();
+    reqMap.put(JsonKey.USER_ID, userId);
+    req.setRequest(reqMap);
+    req.setOperation(ActorOperations.UPDATE_NOTE.getValue());
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(reqMap)
+        .thenReturn(reqMap);
+    when(cassandraOperation.updateRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(getSuccessResponse());
+    boolean result = testScenario(req, null);
+    assertTrue(result);
+  }
 
-    Request actorMessage = new Request();
-    Map<String, Object> request = new HashMap<>();
-    request.put(JsonKey.REQUESTED_BY, userId);
-    request.put(JsonKey.NOTE_ID, noteId + "invalid");
-    actorMessage.setRequest(request);
-    actorMessage.setOperation(ActorOperations.DELETE_NOTE.getValue());
+  @Test
+  public void testSearchNoteSuccess() {
+    Request req = new Request();
+    req.getContext().put(JsonKey.REQUESTED_BY, userId);
+    req.getContext().put(JsonKey.NOTE_ID, noteId);
+    Map<String, Object> reqMap = new HashMap<>();
+    req.setRequest(reqMap);
+    req.setOperation(ActorOperations.SEARCH_NOTE.getValue());
+    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(reqMap);
+    boolean result = testScenario(req, null);
+    assertTrue(result);
+  }
 
-    subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException res =
-        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    if (null != res) {
-      Assert.assertEquals("You are not authorized.", res.getMessage());
-    }
+  @Test
+  public void testGetNoteFailurewithUserIdMismatch() {
+    Request req = new Request();
+    req.getContext().put(JsonKey.REQUESTED_BY, userId);
+    req.getContext().put(JsonKey.NOTE_ID, noteId);
+    Map<String, Object> reqMap = new HashMap<>();
+    reqMap.put(JsonKey.USER_ID, "misMatch");
+    req.setRequest(reqMap);
+    req.setOperation(ActorOperations.GET_NOTE.getValue());
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(reqMap);
+    boolean result = testScenario(req, ResponseCode.errorForbidden);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testGetNoteFailureWithInvalidUserId() {
+    Request req = new Request();
+    Map<String, Object> reqMap = new HashMap<>();
+    req.setRequest(reqMap);
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(Mockito.anyMap());
+    req.setOperation(ActorOperations.GET_NOTE.getValue());
+    boolean result = testScenario(req, ResponseCode.invalidParameterValue);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testGetNoteFailureWithInvalidNoteId() {
+    Request req = new Request();
+    Map<String, Object> reqMap = new HashMap<>();
+    req.getContext().put(JsonKey.REQUESTED_BY, userId);
+    req.getContext().put(JsonKey.NOTE_ID, noteId);
+    reqMap.put(JsonKey.USER_ID, userId);
+    reqMap.put(JsonKey.COUNT, 0L);
+    req.setRequest(reqMap);
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(reqMap);
+    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(reqMap);
+    req.setOperation(ActorOperations.GET_NOTE.getValue());
+    boolean result = testScenario(req, ResponseCode.invalidNoteId);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testGetNoteSuccess() {
+    Request req = new Request();
+    Map<String, Object> reqMap = new HashMap<>();
+    req.getContext().put(JsonKey.REQUESTED_BY, userId);
+    req.getContext().put(JsonKey.NOTE_ID, noteId);
+    reqMap.put(JsonKey.USER_ID, userId);
+    reqMap.put(JsonKey.COUNT, 1L);
+    req.setRequest(reqMap);
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(reqMap);
+    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(reqMap);
+    req.setOperation(ActorOperations.GET_NOTE.getValue());
+    boolean result = testScenario(req, null);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testDeleteNoteSuccess() {
+    Request req = new Request();
+    req.getContext().put(JsonKey.REQUESTED_BY, userId);
+    req.getContext().put(JsonKey.NOTE_ID, noteId);
+    Map<String, Object> reqMap = new HashMap<>();
+    reqMap.put(JsonKey.USER_ID, userId);
+    req.setRequest(reqMap);
+    req.setOperation(ActorOperations.DELETE_NOTE.getValue());
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(reqMap)
+        .thenReturn(reqMap);
+    when(cassandraOperation.updateRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(getSuccessResponse());
+    boolean result = testScenario(req, null);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testDeleteNoteFailurewithEmptyNote() {
+    Request req = new Request();
+    req.getContext().put(JsonKey.REQUESTED_BY, userId);
+    req.getContext().put(JsonKey.NOTE_ID, noteId);
+    Map<String, Object> reqMap = new HashMap<>();
+    reqMap.put(JsonKey.USER_ID, userId);
+    req.setRequest(reqMap);
+    req.setOperation(ActorOperations.DELETE_NOTE.getValue());
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(reqMap)
+        .thenReturn(Mockito.anyMap());
+    boolean result = testScenario(req, ResponseCode.invalidNoteId);
+    assertTrue(result);
+  }
+
+  @Test
+  public void testDeleteNoteFailurewithUserIdMismatch() {
+    Request req = new Request();
+    req.getContext().put(JsonKey.REQUESTED_BY, userId);
+    req.getContext().put(JsonKey.NOTE_ID, noteId);
+    Map<String, Object> reqMap = new HashMap<>();
+    reqMap.put(JsonKey.USER_ID, "misMatch");
+    req.setRequest(reqMap);
+    req.setOperation(ActorOperations.DELETE_NOTE.getValue());
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(reqMap);
+    boolean result = testScenario(req, ResponseCode.errorForbidden);
+    assertTrue(result);
   }
 
   private boolean testScenario(Request reqObj, ResponseCode errorCode) {
-
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     subject.tell(reqObj, probe.getRef());

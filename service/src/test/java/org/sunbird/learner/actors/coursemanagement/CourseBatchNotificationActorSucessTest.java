@@ -214,9 +214,9 @@ public class CourseBatchNotificationActorSucessTest {
   private CourseBatch createCourseBatchObject() {
     CourseBatch courseBatch = new CourseBatch();
     List<String> mentors = new ArrayList<>();
-    Map<String, Boolean> participants = new HashMap<>();
+    List<String> participants = new ArrayList<>();
     mentors.add(USER_ID);
-    participants.put(USER_ID, true);
+    participants.add(USER_ID);
     courseBatch.setMentors(mentors);
     courseBatch.setCountDecrementStatus(false);
     courseBatch.setCountIncrementStatus(false);
@@ -232,17 +232,17 @@ public class CourseBatchNotificationActorSucessTest {
   private CourseBatch createCourseBatchObject(boolean testType, String type) {
     CourseBatch courseBatch = new CourseBatch();
     List<String> mentors = new ArrayList<>();
-    Map<String, Boolean> participants = new HashMap<>();
+    List<String> participants = new ArrayList<>();
     if (testType) {
       mentors.add(USER_ID);
-      participants.put(USER_ID, true);
+      participants.add(USER_ID);
       if (type.equals(JsonKey.OLD)) {
         mentors.add(USER_ID_OLD);
-        participants.put(USER_ID_OLD, true);
+        participants.add(USER_ID_OLD);
       }
       if (type.equals(JsonKey.NEW)) {
         mentors.add(USER_ID_NEW);
-        participants.put(USER_ID_NEW, true);
+        participants.add(USER_ID_NEW);
       }
     }
     courseBatch.setStatus(0);

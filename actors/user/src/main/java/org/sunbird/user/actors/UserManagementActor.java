@@ -26,11 +26,19 @@ import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LocationActorOperation;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.StringFormatter;
+import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.request.UserRequestValidator;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.content.util.ContentStoreUtil;
 import org.sunbird.extension.user.UserExtension;
 import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
@@ -565,11 +573,12 @@ public class UserManagementActor extends BaseActor {
     requestMap.put(JsonKey.IS_DELETED, false);
 
     Response response = null;
+    boolean isPasswordUpdated = false;
     try {
       response =
           cassandraOperation.insertRecord(
               usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
-      UserUtil.updatePassword(userMap);
+      isPasswordUpdated = UserUtil.updatePassword(userMap);
 
     } finally {
       if (null == response && IS_REGISTRY_ENABLED) {
@@ -577,6 +586,9 @@ public class UserManagementActor extends BaseActor {
         userExtension.delete(userMap);
       }
       response.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
+      if (!isPasswordUpdated) {
+        response.put(JsonKey.ERROR_MSG, ResponseMessage.Message.ERROR_USER_UPDATE_PASSWORD);
+      }
     }
     Response resp = null;
     if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {

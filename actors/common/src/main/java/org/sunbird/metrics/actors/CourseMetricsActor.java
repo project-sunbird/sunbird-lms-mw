@@ -127,7 +127,9 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
     Map<String, Object> result =
         ElasticSearchUtil.complexSearch(
-            searchDTO, ProjectUtil.EsIndex.courseBatchStats.getIndexName(), EsType.doc.getTypeName());
+            searchDTO,
+            ProjectUtil.EsIndex.courseBatchStats.getIndexName(),
+            EsType.doc.getTypeName());
     if (isNull(result) || result.size() == 0) {
       ProjectLogger.log(
           "CourseMetricsActor:courseProgressMetricsV2: No search results found.",
@@ -141,10 +143,10 @@ public class CourseMetricsActor extends BaseMetricsActor {
     for (Map<String, Object> esContent : esContents) {
       Map<String, Object> map = new HashMap<>();
       map.put(JsonKey.USER_NAME, esContent.get(JsonKey.NAME));
-      map.put(JsonKey.PHONE, esContent.get(JsonKey.MASKED_PHONE));
+      map.put(JsonKey.MASKED_PHONE, esContent.get(JsonKey.MASKED_PHONE));
       map.put(JsonKey.ORG_NAME, esContent.get(JsonKey.ROOT_ORG_NAME));
-      map.put(JsonKey.PROGRESS,esContent.get(JsonKey.COMPLETED_PERCENT));
-      map.put(JsonKey.ENROLLED_ON,esContent.get(JsonKey.ENROLLED_ON));
+      map.put(JsonKey.PROGRESS, esContent.get(JsonKey.COMPLETED_PERCENT));
+      map.put(JsonKey.ENROLLED_ON, esContent.get(JsonKey.ENROLLED_ON));
       userData.add(map);
     }
 

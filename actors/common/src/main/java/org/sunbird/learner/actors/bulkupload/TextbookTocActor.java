@@ -33,6 +33,7 @@ import static org.sunbird.common.responsecode.ResponseCode.textbookChildrenExist
 import static org.sunbird.content.textbook.FileExtension.Extension.CSV;
 import static org.sunbird.content.textbook.TextBookTocUploader.TEXTBOOK_TOC_FOLDER;
 import static org.sunbird.content.util.ContentCloudStore.getUri;
+import static org.sunbird.content.util.TextBookTocUtil.getObjectFrom;
 import static org.sunbird.content.util.TextBookTocUtil.readContent;
 import static org.sunbird.content.util.TextBookTocUtil.serialize;
 
@@ -94,10 +95,14 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
   private SSOManager ssoManager = SSOServiceFactory.getInstance();
   private Instant startTime = null;
+  private Map<String, Object> frameCategories = null;
 
   @Override
   public void onReceive(Request request) throws Throwable {
     startTime = Instant.now();
+    Map<String, Object> outputMapping =
+        getObjectFrom(getConfigValue(JsonKey.TEXTBOOK_TOC_OUTPUT_MAPPING), Map.class);
+    frameCategories = (Map<String, Object>) outputMapping.get("frameworkCategories");
     if (request
         .getOperation()
         .equalsIgnoreCase(TextbookActorOperation.TEXTBOOK_TOC_UPLOAD.getValue())) {
@@ -637,7 +642,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       Set<String> duplicateDialCodes = new LinkedHashSet<>();
       Map<String, List<String>> dialCodeIdentifierMap = new HashMap<>();
       Set<String> topics = new HashSet<>();
-      Map<String, String> bgms = new HashMap<>();
+      Map<String, Object> bgms = new HashMap<>();
       StringBuilder exceptionMsgs = new StringBuilder();
       for (int i = 0; i < csvRecords.size(); i++) {
         CSVRecord record = csvRecords.get(i);
@@ -735,7 +740,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
   private void validateBGMS(
       int recordNum,
-      Map<String, String> bgms,
+      Map<String, Object> bgms,
       HashMap<String, Object> recordMap,
       Map<String, String> metadata) {
     if (recordNum == 0) {
@@ -746,28 +751,47 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     // Removing fields from updating further
     recordMap.remove(JsonKey.BOARD);
     recordMap.remove(JsonKey.MEDIUM);
-    recordMap.remove(JsonKey.GRADE);
+    recordMap.remove(JsonKey.GRADE_LEVEL);
     recordMap.remove(JsonKey.SUBJECT);
   }
 
-  private void getBgmsData(HashMap<String, Object> recordMap, Map<String, String> bgms) {
-    String[] bgmsKeys = {JsonKey.BOARD, JsonKey.MEDIUM, JsonKey.GRADE, JsonKey.SUBJECT};
-    for (String key : bgmsKeys) {
-      if (recordMap.containsKey(key)) {
-        bgms.put(key, (String) recordMap.get(key));
-      }
+  private void getBgmsData(HashMap<String, Object> recordMap, Map<String, Object> bgms) {
+    for (Entry<String, Object> entry : frameCategories.entrySet()) {
+      String key = entry.getKey();
+      bgms.put(key, recordMap.get(key));
     }
   }
 
   private void handleBGMSMismatchValidation(
       int recordNum,
       Map<String, String> metadata,
-      Map<String, String> bgms,
+      Map<String, Object> bgms,
       HashMap<String, Object> recordMap) {
-    String[] bgmsKeys = {JsonKey.BOARD, JsonKey.MEDIUM, JsonKey.GRADE, JsonKey.SUBJECT};
-    for (String key : bgmsKeys) {
-      if (recordMap.containsKey(key)
-          && !bgms.get(key).equalsIgnoreCase((String) recordMap.get(key))) {
+    for (Entry<String, Object> entry : frameCategories.entrySet()) {
+      String key = entry.getKey();
+      if (null != bgms.get(key) && null != recordMap.get(key)) {
+        String bgmsKey = ((String) bgms.get(key)).toLowerCase();
+        String recordMapKey = ((String) recordMap.get(key)).toLowerCase();
+        List<String> bgmsKeyList =
+            (Arrays.stream(bgmsKey.split(",")).map(s -> s.trim()).collect(Collectors.toList()));
+        List<String> recordMapKeyList =
+            (Arrays.stream(recordMapKey.split(","))
+                .map(s -> s.trim())
+                .collect(Collectors.toList()));
+        String[] bgmsArr = bgmsKeyList.toArray(new String[bgmsKeyList.size()]);
+        String[] recordMapArr = recordMapKeyList.toArray(new String[bgmsKeyList.size()]);
+        Arrays.sort(bgmsArr);
+        Arrays.sort(recordMapArr);
+        if (!Arrays.deepEquals(bgmsArr, recordMapArr)) {
+          throwClientErrorException(
+              ResponseCode.errorBGMSMismatch,
+              MessageFormat.format(
+                  ResponseCode.errorBGMSMismatch.getErrorMessage(),
+                  metadata.get(key),
+                  recordNum + 1));
+        }
+      } else if ((null != bgms.get(key) && null == recordMap.get(key))
+          || (null == bgms.get(key) && null != recordMap.get(key))) {
         throwClientErrorException(
             ResponseCode.errorBGMSMismatch,
             MessageFormat.format(

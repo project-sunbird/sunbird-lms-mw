@@ -33,6 +33,7 @@ import static org.sunbird.common.responsecode.ResponseCode.textbookChildrenExist
 import static org.sunbird.content.textbook.FileExtension.Extension.CSV;
 import static org.sunbird.content.textbook.TextBookTocUploader.TEXTBOOK_TOC_FOLDER;
 import static org.sunbird.content.util.ContentCloudStore.getUri;
+import static org.sunbird.content.util.TextBookTocUtil.getObjectFrom;
 import static org.sunbird.content.util.TextBookTocUtil.readContent;
 import static org.sunbird.content.util.TextBookTocUtil.serialize;
 
@@ -94,10 +95,14 @@ public class TextbookTocActor extends BaseBulkUploadActor {
 
   private SSOManager ssoManager = SSOServiceFactory.getInstance();
   private Instant startTime = null;
+  private Map<String, Object> frameCategories = null;
 
   @Override
   public void onReceive(Request request) throws Throwable {
     startTime = Instant.now();
+    Map<String, Object> outputMapping =
+        getObjectFrom(getConfigValue(JsonKey.TEXTBOOK_TOC_OUTPUT_MAPPING), Map.class);
+    frameCategories = (Map<String, Object>) outputMapping.get("frameworkCategories");
     if (request
         .getOperation()
         .equalsIgnoreCase(TextbookActorOperation.TEXTBOOK_TOC_UPLOAD.getValue())) {
@@ -637,6 +642,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       Set<String> duplicateDialCodes = new LinkedHashSet<>();
       Map<String, List<String>> dialCodeIdentifierMap = new HashMap<>();
       Set<String> topics = new HashSet<>();
+      Map<String, Object> bgms = new HashMap<>();
       StringBuilder exceptionMsgs = new StringBuilder();
       for (int i = 0; i < csvRecords.size(); i++) {
         CSVRecord record = csvRecords.get(i);
@@ -650,6 +656,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           if (StringUtils.isNotBlank(record.get(entry.getValue())))
             hierarchyMap.put(entry.getKey(), record.get(entry.getValue()));
         }
+        validateBGMS(i, bgms, recordMap, metadata);
 
         if (!(MapUtils.isEmpty(recordMap) && MapUtils.isEmpty(hierarchyMap))) {
           validateQrCodeRequiredAndQrCode(recordMap);
@@ -729,6 +736,67 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       }
     }
     return result;
+  }
+
+  private void validateBGMS(
+      int recordNum,
+      Map<String, Object> bgms,
+      HashMap<String, Object> recordMap,
+      Map<String, String> metadata) {
+    if (recordNum == 0) {
+      getBgmsData(recordMap, bgms);
+    } else {
+      handleBGMSMismatchValidation(recordNum, metadata, bgms, recordMap);
+    }
+    // Removing fields from updating further
+    recordMap.remove(JsonKey.BOARD);
+    recordMap.remove(JsonKey.MEDIUM);
+    recordMap.remove(JsonKey.GRADE_LEVEL);
+    recordMap.remove(JsonKey.SUBJECT);
+  }
+
+  private void getBgmsData(HashMap<String, Object> recordMap, Map<String, Object> bgms) {
+    for (Entry<String, Object> entry : frameCategories.entrySet()) {
+      String key = entry.getKey();
+      bgms.put(key, recordMap.get(key));
+    }
+  }
+
+  private void handleBGMSMismatchValidation(
+      int recordNum,
+      Map<String, String> metadata,
+      Map<String, Object> bgms,
+      HashMap<String, Object> recordMap) {
+    for (Entry<String, Object> entry : frameCategories.entrySet()) {
+      String key = entry.getKey();
+      if (null != bgms.get(key) && null != recordMap.get(key)) {
+        String bgmsKey = ((String) bgms.get(key)).toLowerCase();
+        String recordMapKey = ((String) recordMap.get(key)).toLowerCase();
+        List<String> bgmsKeyList =
+            (Arrays.stream(bgmsKey.split(",")).map(s -> s.trim()).collect(Collectors.toList()));
+
+        Arrays.stream(recordMapKey.split(","))
+            .forEach(
+                s -> {
+                  if (!bgmsKeyList.contains(s.trim())) {
+                    throwClientErrorException(
+                        ResponseCode.errorBGMSMismatch,
+                        MessageFormat.format(
+                            ResponseCode.errorBGMSMismatch.getErrorMessage(),
+                            metadata.get(key),
+                            recordNum + 1));
+                  }
+                });
+      } else if ((null != bgms.get(key) && null == recordMap.get(key))
+          || (null == bgms.get(key) && null != recordMap.get(key))) {
+        throwClientErrorException(
+            ResponseCode.errorBGMSMismatch,
+            MessageFormat.format(
+                ResponseCode.errorBGMSMismatch.getErrorMessage(),
+                metadata.get(key),
+                recordNum + 1));
+      }
+    }
   }
 
   private List<String> validateLinkedContentUrlAndGetContentIds(

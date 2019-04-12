@@ -112,6 +112,7 @@ public class TextbookTocActorTest {
     Assert.assertEquals(ResponseCode.errorConflictingValues.getErrorCode(), res.getCode());
   }
 
+  @Ignore
   @Test
   public void testUpdateFailureWithDuplicateEntry() throws IOException {
     mockRequiredMethods(false);
@@ -122,6 +123,7 @@ public class TextbookTocActorTest {
     Assert.assertEquals(ResponseCode.errorDduplicateDialCodeEntry.getErrorCode(), res.getCode());
   }
 
+  @Ignore
   @Test
   public void testUpdateFailureWithBlankCsv() throws IOException {
     mockRequiredMethods(false);

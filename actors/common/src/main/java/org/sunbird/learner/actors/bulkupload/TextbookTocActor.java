@@ -774,22 +774,19 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         String recordMapKey = ((String) recordMap.get(key)).toLowerCase();
         List<String> bgmsKeyList =
             (Arrays.stream(bgmsKey.split(",")).map(s -> s.trim()).collect(Collectors.toList()));
-        List<String> recordMapKeyList =
-            (Arrays.stream(recordMapKey.split(","))
-                .map(s -> s.trim())
-                .collect(Collectors.toList()));
-        String[] bgmsArr = bgmsKeyList.toArray(new String[bgmsKeyList.size()]);
-        String[] recordMapArr = recordMapKeyList.toArray(new String[bgmsKeyList.size()]);
-        Arrays.sort(bgmsArr);
-        Arrays.sort(recordMapArr);
-        if (!Arrays.deepEquals(bgmsArr, recordMapArr)) {
-          throwClientErrorException(
-              ResponseCode.errorBGMSMismatch,
-              MessageFormat.format(
-                  ResponseCode.errorBGMSMismatch.getErrorMessage(),
-                  metadata.get(key),
-                  recordNum + 1));
-        }
+
+        Arrays.stream(recordMapKey.split(","))
+            .forEach(
+                s -> {
+                  if (!bgmsKeyList.contains(s.trim())) {
+                    throwClientErrorException(
+                        ResponseCode.errorBGMSMismatch,
+                        MessageFormat.format(
+                            ResponseCode.errorBGMSMismatch.getErrorMessage(),
+                            metadata.get(key),
+                            recordNum + 1));
+                  }
+                });
       } else if ((null != bgms.get(key) && null == recordMap.get(key))
           || (null == bgms.get(key) && null != recordMap.get(key))) {
         throwClientErrorException(

@@ -1793,6 +1793,7 @@ public class OrganisationManagementActor extends BaseActor {
   private void validateChannel(Map<String, Object> req) {
     if (!req.containsKey(JsonKey.IS_ROOT_ORG) || !(Boolean) req.get(JsonKey.IS_ROOT_ORG)) {
       String channel = (String) req.get(JsonKey.CHANNEL);
+
       Map<String, Object> rootOrg = getRootOrgFromChannel(channel);
       if (MapUtils.isEmpty(rootOrg)) {
         ProjectLogger.log("Invalid channel id - " + channel);
@@ -1831,7 +1832,9 @@ public class OrganisationManagementActor extends BaseActor {
    * This method will fetch root org details from elastic search based on channel value.
    */
   private Map<String, Object> getRootOrgFromChannel(String channel) {
-    ProjectLogger.log("OrganisationManagementActor:getRootOrgFromChannel: channel = " + channel, LoggerEnum.INFO.name());
+    ProjectLogger.log(
+        "OrganisationManagementActor:getRootOrgFromChannel: channel = " + channel,
+        LoggerEnum.INFO.name());
     if (StringUtils.isNotBlank(channel)) {
       Map<String, Object> filterMap = new HashMap<>();
       filterMap.put(JsonKey.CHANNEL, channel);
@@ -1839,7 +1842,11 @@ public class OrganisationManagementActor extends BaseActor {
 
       SearchDTO searchDTO = new SearchDTO();
       searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filterMap);
-      Map<String, Object> esResponse = ElasticSearchUtil.complexSearch(searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.organisation.getTypeName());
+      Map<String, Object> esResponse =
+          ElasticSearchUtil.complexSearch(
+              searchDTO,
+              ProjectUtil.EsIndex.sunbird.getIndexName(),
+              ProjectUtil.EsType.organisation.getTypeName());
 
       List<Map<String, Object>> list = (List<Map<String, Object>>) esResponse.get(JsonKey.CONTENT);
       if (CollectionUtils.isNotEmpty(list)) {

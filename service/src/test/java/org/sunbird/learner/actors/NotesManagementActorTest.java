@@ -5,15 +5,13 @@ import static org.junit.Assert.assertTrue;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.when;
 
-import java.util.ArrayList;
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
+import akka.testkit.javadsl.TestKit;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-
-import org.apache.commons.lang3.StringUtils;
-import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -28,24 +26,20 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil.EsIndex;
-import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
-import akka.actor.ActorRef;
-import akka.actor.ActorSystem;
-import akka.actor.Props;
-import akka.testkit.javadsl.TestKit;
-
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({ ServiceFactory.class, ElasticSearchUtil.class, Util.class, RequestRouter.class,
-    ElasticSearchUtil.class })
-@PowerMockIgnore({ "javax.management.*", "javax.crypto.*", "javax.net.ssl.*", "javax.security.*" })
+@PrepareForTest({
+  ServiceFactory.class,
+  ElasticSearchUtil.class,
+  Util.class,
+  RequestRouter.class,
+  ElasticSearchUtil.class
+})
+@PowerMockIgnore({"javax.management.*", "javax.crypto.*", "javax.net.ssl.*", "javax.security.*"})
 public class NotesManagementActorTest {
 
   private static String userId = "userId-example";
@@ -72,9 +66,11 @@ public class NotesManagementActorTest {
     reqMap.put(JsonKey.USER_ID, userId);
     req.setRequest(reqMap);
     req.setOperation(ActorOperations.CREATE_NOTE.getValue());
-    when(ElasticSearchUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(reqMap);
-    when(cassandraOperation.insertRecord(Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+    when(cassandraOperation.insertRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(getSuccessResponse());
     boolean result = testScenario(req, null);
     assertTrue(result);
@@ -95,7 +91,8 @@ public class NotesManagementActorTest {
     Request req = new Request();
     Map<String, Object> reqMap = new HashMap<>();
     req.setRequest(reqMap);
-    when(ElasticSearchUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(Mockito.anyMap());
     req.setOperation(ActorOperations.CREATE_NOTE.getValue());
     boolean result = testScenario(req, ResponseCode.invalidUserId);
@@ -110,7 +107,8 @@ public class NotesManagementActorTest {
     Map<String, Object> reqMap = new HashMap<>();
     req.setRequest(reqMap);
     req.setOperation(ActorOperations.UPDATE_NOTE.getValue());
-    when(ElasticSearchUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(Mockito.anyMap());
     boolean result = testScenario(req, ResponseCode.unAuthorized);
     assertTrue(result);
@@ -125,7 +123,8 @@ public class NotesManagementActorTest {
     reqMap.put(JsonKey.USER_ID, "misMatch");
     req.setRequest(reqMap);
     req.setOperation(ActorOperations.UPDATE_NOTE.getValue());
-    when(ElasticSearchUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(reqMap);
     boolean result = testScenario(req, ResponseCode.errorForbidden);
     assertTrue(result);
@@ -140,8 +139,10 @@ public class NotesManagementActorTest {
     reqMap.put(JsonKey.USER_ID, userId);
     req.setRequest(reqMap);
     req.setOperation(ActorOperations.UPDATE_NOTE.getValue());
-    when(ElasticSearchUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(reqMap).thenReturn(Mockito.anyMap());
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(reqMap)
+        .thenReturn(Mockito.anyMap());
     boolean result = testScenario(req, ResponseCode.invalidNoteId);
     assertTrue(result);
   }
@@ -155,9 +156,12 @@ public class NotesManagementActorTest {
     reqMap.put(JsonKey.USER_ID, userId);
     req.setRequest(reqMap);
     req.setOperation(ActorOperations.UPDATE_NOTE.getValue());
-    when(ElasticSearchUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(reqMap).thenReturn(reqMap);
-    when(cassandraOperation.updateRecord(Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(reqMap)
+        .thenReturn(reqMap);
+    when(cassandraOperation.updateRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(getSuccessResponse());
     boolean result = testScenario(req, null);
     assertTrue(result);
@@ -171,7 +175,8 @@ public class NotesManagementActorTest {
     Map<String, Object> reqMap = new HashMap<>();
     req.setRequest(reqMap);
     req.setOperation(ActorOperations.SEARCH_NOTE.getValue());
-    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString())).thenReturn(reqMap);
+    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(reqMap);
     boolean result = testScenario(req, null);
     assertTrue(result);
   }
@@ -185,7 +190,8 @@ public class NotesManagementActorTest {
     reqMap.put(JsonKey.USER_ID, "misMatch");
     req.setRequest(reqMap);
     req.setOperation(ActorOperations.GET_NOTE.getValue());
-    when(ElasticSearchUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(reqMap);
     boolean result = testScenario(req, ResponseCode.errorForbidden);
     assertTrue(result);
@@ -196,7 +202,8 @@ public class NotesManagementActorTest {
     Request req = new Request();
     Map<String, Object> reqMap = new HashMap<>();
     req.setRequest(reqMap);
-    when(ElasticSearchUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(Mockito.anyMap());
     req.setOperation(ActorOperations.GET_NOTE.getValue());
     boolean result = testScenario(req, ResponseCode.invalidParameterValue);
@@ -212,9 +219,11 @@ public class NotesManagementActorTest {
     reqMap.put(JsonKey.USER_ID, userId);
     reqMap.put(JsonKey.COUNT, 0L);
     req.setRequest(reqMap);
-    when(ElasticSearchUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(reqMap);
-    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString())).thenReturn(reqMap);
+    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(reqMap);
     req.setOperation(ActorOperations.GET_NOTE.getValue());
     boolean result = testScenario(req, ResponseCode.invalidNoteId);
     assertTrue(result);
@@ -229,9 +238,11 @@ public class NotesManagementActorTest {
     reqMap.put(JsonKey.USER_ID, userId);
     reqMap.put(JsonKey.COUNT, 1L);
     req.setRequest(reqMap);
-    when(ElasticSearchUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(reqMap);
-    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString())).thenReturn(reqMap);
+    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(reqMap);
     req.setOperation(ActorOperations.GET_NOTE.getValue());
     boolean result = testScenario(req, null);
     assertTrue(result);
@@ -246,9 +257,12 @@ public class NotesManagementActorTest {
     reqMap.put(JsonKey.USER_ID, userId);
     req.setRequest(reqMap);
     req.setOperation(ActorOperations.DELETE_NOTE.getValue());
-    when(ElasticSearchUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(reqMap).thenReturn(reqMap);
-    when(cassandraOperation.updateRecord(Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(reqMap)
+        .thenReturn(reqMap);
+    when(cassandraOperation.updateRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(getSuccessResponse());
     boolean result = testScenario(req, null);
     assertTrue(result);
@@ -263,8 +277,10 @@ public class NotesManagementActorTest {
     reqMap.put(JsonKey.USER_ID, userId);
     req.setRequest(reqMap);
     req.setOperation(ActorOperations.DELETE_NOTE.getValue());
-    when(ElasticSearchUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(reqMap).thenReturn(Mockito.anyMap());
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(reqMap)
+        .thenReturn(Mockito.anyMap());
     boolean result = testScenario(req, ResponseCode.invalidNoteId);
     assertTrue(result);
   }
@@ -278,7 +294,8 @@ public class NotesManagementActorTest {
     reqMap.put(JsonKey.USER_ID, "misMatch");
     req.setRequest(reqMap);
     req.setOperation(ActorOperations.DELETE_NOTE.getValue());
-    when(ElasticSearchUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(reqMap);
     boolean result = testScenario(req, ResponseCode.errorForbidden);
     assertTrue(result);
@@ -293,8 +310,10 @@ public class NotesManagementActorTest {
       Response res = probe.expectMsgClass(duration("10 second"), Response.class);
       return null != res && res.getResponseCode() == ResponseCode.OK;
     } else {
-      ProjectCommonException res = probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-      return res.getCode().equals(errorCode.getErrorCode()) || res.getResponseCode() == errorCode.getResponseCode();
+      ProjectCommonException res =
+          probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+      return res.getCode().equals(errorCode.getErrorCode())
+          || res.getResponseCode() == errorCode.getResponseCode();
     }
   }
 

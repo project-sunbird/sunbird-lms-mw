@@ -127,9 +127,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
     Map<String, Object> result =
         ElasticSearchUtil.complexSearch(
-            searchDTO,
-            ProjectUtil.EsIndex.courseBatchStats.getIndexName(),
-            EsType.doc.getTypeName());
+            searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.doc.getTypeName());
     if (isNull(result) || result.size() == 0) {
       ProjectLogger.log(
           "CourseMetricsActor:courseProgressMetricsV2: No search results found.",

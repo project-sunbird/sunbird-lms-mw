@@ -1,7 +1,6 @@
 package org.sunbird.learner.actors;
 
 import static akka.testkit.JavaTestKit.duration;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.when;
@@ -15,7 +14,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.junit.*;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
@@ -30,13 +31,11 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.DataCacheHandler;
 
 // @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({
-  ServiceFactory.class,
-  ElasticSearchUtil.class,
-})
+@PrepareForTest({ServiceFactory.class, ElasticSearchUtil.class, DataCacheHandler.class})
 @PowerMockIgnore({"javax.management.*", "javax.crypto.*", "javax.net.ssl.*", "javax.security.*"})
 public class PageManagementActorTest {
 
@@ -75,10 +74,34 @@ public class PageManagementActorTest {
     when(cassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(getUpdateSuccess());
-    when(cassandraOperation.getRecordsByProperty(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(cassandraOperation.getAllRecords(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(cassandraGetRecordById());
   }
+
+  private Response cassandraGetRecordByProperty(String reqMap) {
+    Response response = new Response();
+    List list = new ArrayList();
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.NAME, "anyName");
+    map.put(JsonKey.ID, "anyID");
+    if (!reqMap.equals("")) {
+      map.put(reqMap, "anyQuery");
+    }
+    list.add(map);
+    response.put(JsonKey.RESPONSE, list);
+    return response;
+  }
+
+  /* private Response cassandraGetRecordByProperty() {
+    Response response = new Response();
+    List list = new ArrayList();
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.NAME, "anyName");
+    map.put(JsonKey.ID, "anyId");
+    list.add(map);
+    response.put(JsonKey.RESPONSE, list);
+    return response;
+  }*/
 
   @Test
   public void testInvalidRequest() {
@@ -214,60 +237,108 @@ public class PageManagementActorTest {
   }
 
   @Test
-  public void testCGetPageSetting() {
+  public void testGetPageSetting() {
 
     boolean pageName = false;
     TestKit probe = new TestKit(system);
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.GET_PAGE_SETTING.getValue());
     reqObj.getRequest().put(JsonKey.ID, "Test Page");
+
+    when(cassandraOperation.getRecordsByProperty(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(cassandraGetRecordByProperty(""));
+
     subject.tell(reqObj, probe.getRef());
-    Response response = probe.expectMsgClass(Response.class);
+    Response response = probe.expectMsgClass(duration("100 second"), Response.class);
     Map<String, Object> result = response.getResult();
     Map<String, Object> page = (Map<String, Object>) result.get(JsonKey.PAGE);
-    if (null != page.get(JsonKey.PAGE_NAME)
-        && ((String) page.get(JsonKey.PAGE_NAME)).equals("Test Page")) {
+    if (null != page.get(JsonKey.NAME) && ((String) page.get(JsonKey.NAME)).equals("anyName")) {
       pageName = true;
     }
     assertTrue(pageName);
   }
 
   @Test
-  public void testCGetAllPageSettings() {
+  public void testGetPageSettingWithAppMap() {
+
+    boolean pageName = false;
+    TestKit probe = new TestKit(system);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.GET_PAGE_SETTING.getValue());
+    reqObj.getRequest().put(JsonKey.ID, "Test Page");
+
+    when(cassandraOperation.getRecordsByProperty(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(cassandraGetRecordByProperty(JsonKey.APP_MAP));
+
+    subject.tell(reqObj, probe.getRef());
+    Response response = probe.expectMsgClass(duration("100 second"), Response.class);
+    Map<String, Object> result = response.getResult();
+    Map<String, Object> page = (Map<String, Object>) result.get(JsonKey.PAGE);
+    if (null != page.get(JsonKey.NAME) && ((String) page.get(JsonKey.NAME)).equals("anyName")) {
+      pageName = true;
+    }
+    assertTrue(pageName);
+  }
+
+  @Test
+  public void testGetPageSettingWithPortalMap() {
+
+    boolean pageName = false;
+    TestKit probe = new TestKit(system);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.GET_PAGE_SETTING.getValue());
+    reqObj.getRequest().put(JsonKey.ID, "Test Page");
+
+    when(cassandraOperation.getRecordsByProperty(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(cassandraGetRecordByProperty(JsonKey.PORTAL_MAP));
+
+    subject.tell(reqObj, probe.getRef());
+    Response response = probe.expectMsgClass(duration("100 second"), Response.class);
+    Map<String, Object> result = response.getResult();
+    Map<String, Object> page = (Map<String, Object>) result.get(JsonKey.PAGE);
+    if (null != page.get(JsonKey.NAME) && ((String) page.get(JsonKey.NAME)).equals("anyName")) {
+      pageName = true;
+    }
+    assertTrue(pageName);
+  }
+
+  @Test
+  public void testGetPageSettingsSuccess() {
 
     boolean pageName = false;
     TestKit probe = new TestKit(system);
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.GET_PAGE_SETTINGS.getValue());
     reqObj.getRequest().put(JsonKey.ID, "Test Page");
+
+    when(cassandraOperation.getRecordsByProperty(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(cassandraGetRecordByProperty(JsonKey.PORTAL_MAP));
+
     subject.tell(reqObj, probe.getRef());
-    Response response = probe.expectMsgClass(Response.class);
+    Response response = probe.expectMsgClass(duration("100 second"), Response.class);
     Map<String, Object> result = response.getResult();
-    List<Map<String, Object>> pageList = (List<Map<String, Object>>) result.get(JsonKey.PAGE);
-    for (Map<String, Object> page : pageList) {
-      if (null != page.get(JsonKey.PAGE_NAME)
-          && ((String) page.get(JsonKey.PAGE_NAME)).equals("Test Page")) {
-        pageName = true;
-      }
-    }
-    assertTrue(pageName);
+
+    assertTrue(result != null);
   }
 
   @Test
-  public void testCGetAllSections() {
+  public void testGetAllSectionsSuccess() {
 
     boolean section = false;
     TestKit probe = new TestKit(system);
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.GET_ALL_SECTION.getValue());
     subject.tell(reqObj, probe.getRef());
-    Response response = probe.expectMsgClass(Response.class);
+    Response response = probe.expectMsgClass(duration("100 second"), Response.class);
     Map<String, Object> result = response.getResult();
     List<Map<String, Object>> sectionList =
         (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
     for (Map<String, Object> sec : sectionList) {
-      if (null != sec.get(JsonKey.SECTION_NAME)
-          && ((String) sec.get(JsonKey.SECTION_NAME)).equals("Test Section")) {
+      if (null != sec.get(JsonKey.SECTIONS)) {
         section = true;
       }
     }
@@ -275,7 +346,7 @@ public class PageManagementActorTest {
   }
 
   @Test
-  public void testCGetSection() {
+  public void testGetSectionSuccess() {
 
     boolean section = false;
     TestKit probe = new TestKit(system);
@@ -287,9 +358,9 @@ public class PageManagementActorTest {
     Map<String, Object> result = response.getResult();
     List<Map<String, Object>> sectionList =
         (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+
     for (Map<String, Object> sec : sectionList) {
-      if (null != sec.get(JsonKey.SECTION_NAME)
-          && ((String) sec.get(JsonKey.SECTION_NAME)).equals("Test Section")) {
+      if (null != sec.get(JsonKey.SECTIONS)) {
         section = true;
       }
     }
@@ -297,7 +368,7 @@ public class PageManagementActorTest {
   }
 
   @Test
-  public void testCUpdatePageWithSameName() {
+  public void testUpdatePageSuccessWithPageName() {
 
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.UPDATE_PAGE.getValue());
@@ -309,13 +380,17 @@ public class PageManagementActorTest {
     innerMap.put(JsonKey.PAGE, pageMap);
     reqObj.setRequest(innerMap);
 
+    when(cassandraOperation.getRecordsByProperties(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(cassandraGetRecordByProperty(""));
+
     subject.tell(reqObj, probe.getRef());
     Response res = probe.expectMsgClass(duration("100 second"), Response.class);
     assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
-  public void testCUpdatePageWithOrgIdWithSameName() {
+  public void testUpdatePageFailureWithPageName() {
 
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.UPDATE_PAGE.getValue());
@@ -323,9 +398,13 @@ public class PageManagementActorTest {
     Map<String, Object> pageMap = new HashMap<String, Object>();
 
     pageMap.put(JsonKey.PAGE_NAME, "Test Page");
-    pageMap.put(JsonKey.ID, pageIdWithOrg2);
+    pageMap.put(JsonKey.ID, "anyId");
     innerMap.put(JsonKey.PAGE, pageMap);
     reqObj.setRequest(innerMap);
+
+    when(cassandraOperation.getRecordsByProperties(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(cassandraGetRecordByProperty(""));
 
     subject.tell(reqObj, probe.getRef());
     ProjectCommonException exc =
@@ -334,78 +413,53 @@ public class PageManagementActorTest {
   }
 
   @Test
-  public void testDUpdatePage() {
+  public void testDUpdatePageSuccessWithoutPageAndWithPortalMap() {
 
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.UPDATE_PAGE.getValue());
     HashMap<String, Object> innerMap = new HashMap<>();
     Map<String, Object> pageMap = new HashMap<String, Object>();
-    List<Map<String, Object>> appMapList = new ArrayList<Map<String, Object>>();
-    Map<String, Object> appMap1 = new HashMap<String, Object>();
-    appMap1.put(JsonKey.ID, sectionId);
-    appMap1.put(JsonKey.INDEX, new BigInteger("1"));
-    appMap1.put(JsonKey.GROUP, new BigInteger("1"));
-    appMapList.add(appMap1);
 
-    Map<String, Object> appMap2 = new HashMap<String, Object>();
-    appMap2.put(JsonKey.ID, sectionId2);
-    appMap2.put(JsonKey.INDEX, new BigInteger("1"));
-    appMap2.put(JsonKey.GROUP, new BigInteger("1"));
-    appMapList.add(appMap2);
-
-    pageMap.put(JsonKey.APP_MAP, appMapList);
-
-    List<Map<String, Object>> portalMapList = new ArrayList<Map<String, Object>>();
-    Map<String, Object> portalMap1 = new HashMap<String, Object>();
-    portalMap1.put(JsonKey.ID, sectionId);
-    portalMap1.put(JsonKey.INDEX, new BigInteger("1"));
-    portalMap1.put(JsonKey.GROUP, new BigInteger("1"));
-    portalMapList.add(portalMap1);
-
-    Map<String, Object> portalMap2 = new HashMap<String, Object>();
-    portalMap2.put(JsonKey.ID, sectionId2);
-    portalMap2.put(JsonKey.INDEX, new BigInteger("1"));
-    portalMap2.put(JsonKey.GROUP, new BigInteger("1"));
-    portalMapList.add(portalMap2);
-
-    pageMap.put(JsonKey.PORTAL_MAP, portalMapList);
-    pageMap.put(JsonKey.ID, "anyID");
-    pageMap.put(JsonKey.PAGE_NAME, "Test Page Name Updated");
+    //        pageMap.put(JsonKey.PAGE_NAME, "Test Page");
     pageMap.put(JsonKey.ID, pageId);
+    pageMap.put(JsonKey.PORTAL_MAP, "anyQuery");
     innerMap.put(JsonKey.PAGE, pageMap);
     reqObj.setRequest(innerMap);
 
-    //    when(DataCacheHandler.getPageMap()).thenReturn(new HashMap<>());
+    when(cassandraOperation.getRecordsByProperties(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(cassandraGetRecordByProperty(JsonKey.PORTAL_MAP));
+
     subject.tell(reqObj, probe.getRef());
     Response res = probe.expectMsgClass(duration("100 second"), Response.class);
-    assertEquals(res.get(JsonKey.RESPONSE), JsonKey.SUCCESS);
+    assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
-  public void testEUpdatedPage() {
+  public void testDUpdatePageSuccessWithoutPageAndWithAppMap() {
 
-    boolean pageName = false;
-    TestKit probe = new TestKit(system);
     Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.GET_PAGE_SETTING.getValue());
-    reqObj.getRequest().put(JsonKey.ID, "Test Page Name Updated");
+    reqObj.setOperation(ActorOperations.UPDATE_PAGE.getValue());
+    HashMap<String, Object> innerMap = new HashMap<>();
+    Map<String, Object> pageMap = new HashMap<String, Object>();
+
+    //        pageMap.put(JsonKey.PAGE_NAME, "Test Page");
+    pageMap.put(JsonKey.ID, pageId);
+    pageMap.put(JsonKey.APP_MAP, "anyQuery");
+    innerMap.put(JsonKey.PAGE, pageMap);
+    reqObj.setRequest(innerMap);
+
+    when(cassandraOperation.getRecordsByProperties(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(cassandraGetRecordByProperty(JsonKey.APP_MAP));
+
     subject.tell(reqObj, probe.getRef());
-    Response response = probe.expectMsgClass(Response.class);
-    Map<String, Object> result = response.getResult();
-    Map<String, Object> page = (Map<String, Object>) result.get(JsonKey.PAGE);
-    if (null != page.get(JsonKey.PAGE_NAME)
-        && ((String) page.get(JsonKey.PAGE_NAME)).equals("Test Page Name Updated")) {
-      List<Map<String, Object>> portalList =
-          (List<Map<String, Object>>) page.get(JsonKey.PORTAL_SECTIONS);
-      if (portalList.size() == 2) {
-        pageName = true;
-      }
-    }
-    assertTrue(pageName);
+    Response res = probe.expectMsgClass(duration("100 second"), Response.class);
+    assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
-  public void testFUpdatePageSection() {
+  public void testUpdatePageSection() {
 
     Map<String, Object> filterMap = new HashMap<>();
     Map<String, Object> reqMap = new HashMap<>();
@@ -432,28 +486,6 @@ public class PageManagementActorTest {
     subject.tell(reqObj, probe.getRef());
     Response res = probe.expectMsgClass(Response.class);
     assertTrue(null != res.get(JsonKey.RESPONSE));
-  }
-
-  @Test
-  public void testGUpdatedSection() {
-
-    boolean section = false;
-    TestKit probe = new TestKit(system);
-    Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.GET_SECTION.getValue());
-    reqObj.getRequest().put(JsonKey.ID, sectionId2);
-    subject.tell(reqObj, probe.getRef());
-    Response response = probe.expectMsgClass(Response.class);
-    Map<String, Object> result = response.getResult();
-    List<Map<String, Object>> sectionList =
-        (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-    for (Map<String, Object> sec : sectionList) {
-      if (null != sec.get(JsonKey.SECTION_NAME)
-          && ((String) sec.get(JsonKey.SECTION_NAME)).equals("Updated Test Section2")) {
-        section = true;
-      }
-    }
-    assertTrue(section);
   }
 
   @Test
@@ -554,6 +586,7 @@ public class PageManagementActorTest {
     Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.NAME, "anyName");
     map.put(JsonKey.ID, "anyId");
+    map.put(JsonKey.SECTIONS, "anySection");
     list.add(map);
     response.put(JsonKey.RESPONSE, list);
     return response;

@@ -3,12 +3,12 @@ package org.sunbird.learner.actors;
 import static org.junit.Assert.assertTrue;
 import static org.powermock.api.mockito.PowerMockito.when;
 
+import akka.actor.ActorRef;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
@@ -19,30 +19,34 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.DataCacheHandler;
 
-import akka.actor.ActorRef;
-
 public class UserManagementActorTest extends UserManagementActorTestBase {
 
   @Test
   public void testCreateUserSuccessWithUserCallerId() {
 
-    boolean result = testScenario(
-        getRequest(true, true, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER), null);
+    boolean result =
+        testScenario(
+            getRequest(true, true, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
+            null);
     assertTrue(result);
   }
 
   @Test
   public void testCreateUserSuccessWithoutUserCallerId() {
 
-    boolean result = testScenario(
-        getRequest(false, true, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER), null);
+    boolean result =
+        testScenario(
+            getRequest(
+                false, true, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
+            null);
     assertTrue(result);
   }
 
   @Test
   public void testCreateUserSuccessWithoutUserCallerIdChannelAndRootOrgId() {
 
-    boolean result = testScenario(getRequest(false, false, true, reqMap, ActorOperations.CREATE_USER), null);
+    boolean result =
+        testScenario(getRequest(false, false, true, reqMap, ActorOperations.CREATE_USER), null);
     assertTrue(result);
   }
 
@@ -51,38 +55,49 @@ public class UserManagementActorTest extends UserManagementActorTestBase {
 
     reqMap.put(JsonKey.CHANNEL, "anyReqChannel");
     reqMap.put(JsonKey.ORGANISATION_ID, "anyOrgId");
-    boolean result = testScenario(getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
-        ResponseCode.parameterMismatch);
+    boolean result =
+        testScenario(
+            getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
+            ResponseCode.parameterMismatch);
     assertTrue(result);
   }
 
   @Test
   public void testCreateUserFailureWithInvalidLocationCodes() {
-    when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication)
+    when(InterServiceCommunicationFactory.getInstance())
+        .thenReturn(interServiceCommunication)
         .thenReturn(interServiceCommunication);
-    when(interServiceCommunication.getResponse(Mockito.any(ActorRef.class), Mockito.any(Request.class)))
+    when(interServiceCommunication.getResponse(
+            Mockito.any(ActorRef.class), Mockito.any(Request.class)))
         .thenReturn(null);
     reqMap.put(JsonKey.LOCATION_CODES, Arrays.asList("invalidLocationCode"));
-    boolean result = testScenario(getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
-        ResponseCode.invalidParameterValue);
+    boolean result =
+        testScenario(
+            getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
+            ResponseCode.invalidParameterValue);
     assertTrue(result);
   }
 
   @Test
   public void testCreateUserSuccessWithoutVersion() {
 
-    boolean result = testScenario(getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER), null);
+    boolean result =
+        testScenario(getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER), null);
     assertTrue(result);
   }
 
   @Test
   public void testCreateUserSuccessWithLocationCodes() {
-    when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication)
+    when(InterServiceCommunicationFactory.getInstance())
+        .thenReturn(interServiceCommunication)
         .thenReturn(interServiceCommunication);
-    when(interServiceCommunication.getResponse(Mockito.any(ActorRef.class), Mockito.any(Request.class)))
-        .thenReturn(getEsResponseForLocation()).thenReturn(getEsResponse());
+    when(interServiceCommunication.getResponse(
+            Mockito.any(ActorRef.class), Mockito.any(Request.class)))
+        .thenReturn(getEsResponseForLocation())
+        .thenReturn(getEsResponse());
     reqMap.put(JsonKey.LOCATION_CODES, Arrays.asList("locationCode"));
-    boolean result = testScenario(getRequest(true, true, true, reqMap, ActorOperations.CREATE_USER), null);
+    boolean result =
+        testScenario(getRequest(true, true, true, reqMap, ActorOperations.CREATE_USER), null);
     assertTrue(result);
   }
 
@@ -90,8 +105,10 @@ public class UserManagementActorTest extends UserManagementActorTestBase {
   public void testCreateUserFailureWithInvalidExternalIds() {
 
     reqMap.put(JsonKey.EXTERNAL_IDS, "anyExternalId");
-    boolean result = testScenario(getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
-        ResponseCode.dataTypeError);
+    boolean result =
+        testScenario(
+            getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
+            ResponseCode.dataTypeError);
     assertTrue(result);
   }
 
@@ -99,8 +116,10 @@ public class UserManagementActorTest extends UserManagementActorTestBase {
   public void testCreateUserFailureWithInvalidRoles() {
 
     reqMap.put(JsonKey.ROLES, "anyRoles");
-    boolean result = testScenario(getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
-        ResponseCode.dataTypeError);
+    boolean result =
+        testScenario(
+            getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
+            ResponseCode.dataTypeError);
     assertTrue(result);
   }
 
@@ -108,54 +127,72 @@ public class UserManagementActorTest extends UserManagementActorTestBase {
   public void testCreateUserFailureWithInvalidCountryCode() {
 
     reqMap.put(JsonKey.COUNTRY_CODE, "anyCode");
-    boolean result = testScenario(getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
-        ResponseCode.invalidCountryCode);
+    boolean result =
+        testScenario(
+            getRequest(false, false, false, reqMap, ActorOperations.CREATE_USER),
+            ResponseCode.invalidCountryCode);
     assertTrue(result);
   }
 
   @Test
   public void testCreateUserFailureWithInvalidOrg() {
 
-    when(ElasticSearchUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(ElasticSearchUtil.getDataByIdentifier(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(null);
-    boolean result = testScenario(
-        getRequest(false, false, false, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
-        ResponseCode.invalidOrgData);
+    boolean result =
+        testScenario(
+            getRequest(
+                false, false, false, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
+            ResponseCode.invalidOrgData);
     assertTrue(result);
   }
 
   @Test
   public void testUpdateUserFailureWithLocationCodes() {
-    when(interServiceCommunication.getResponse(Mockito.any(ActorRef.class), Mockito.any(Request.class)))
+    when(interServiceCommunication.getResponse(
+            Mockito.any(ActorRef.class), Mockito.any(Request.class)))
         .thenReturn(null);
-    boolean result = testScenario(
-        getRequest(true, true, true, getUpdateRequestWithLocationCodes(), ActorOperations.UPDATE_USER),
-        ResponseCode.invalidParameterValue);
+    boolean result =
+        testScenario(
+            getRequest(
+                true, true, true, getUpdateRequestWithLocationCodes(), ActorOperations.UPDATE_USER),
+            ResponseCode.invalidParameterValue);
     assertTrue(result);
   }
 
   @Test
   public void testUpdateUserSuccess() {
 
-    boolean result = testScenario(getRequest(true, true, true, getExternalIdMap(), ActorOperations.UPDATE_USER), null);
+    boolean result =
+        testScenario(
+            getRequest(true, true, true, getExternalIdMap(), ActorOperations.UPDATE_USER), null);
     assertTrue(result);
   }
 
   @Test
   public void testUpdateUserSuccessWithLocationCodes() {
-    when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication)
+    when(InterServiceCommunicationFactory.getInstance())
+        .thenReturn(interServiceCommunication)
         .thenReturn(interServiceCommunication);
-    when(interServiceCommunication.getResponse(Mockito.any(ActorRef.class), Mockito.any(Request.class)))
-        .thenReturn(getEsResponseForLocation()).thenReturn(getEsResponse());
-    boolean result = testScenario(
-        getRequest(true, true, true, getUpdateRequestWithLocationCodes(), ActorOperations.UPDATE_USER), null);
+    when(interServiceCommunication.getResponse(
+            Mockito.any(ActorRef.class), Mockito.any(Request.class)))
+        .thenReturn(getEsResponseForLocation())
+        .thenReturn(getEsResponse());
+    boolean result =
+        testScenario(
+            getRequest(
+                true, true, true, getUpdateRequestWithLocationCodes(), ActorOperations.UPDATE_USER),
+            null);
     assertTrue(result);
   }
 
   @Test
   public void testUpdateUserSuccessWithoutUserCallerId() {
 
-    boolean result = testScenario(getRequest(false, true, true, getExternalIdMap(), ActorOperations.UPDATE_USER), null);
+    boolean result =
+        testScenario(
+            getRequest(false, true, true, getExternalIdMap(), ActorOperations.UPDATE_USER), null);
     assertTrue(result);
   }
 
@@ -163,10 +200,14 @@ public class UserManagementActorTest extends UserManagementActorTestBase {
   public void testCreateUserSuccessWithUserTypeAsTeacher() {
     reqMap.put(JsonKey.USER_TYPE, JsonKey.TEACHER);
 
-    when(userService.getRootOrgIdFromChannel(Mockito.anyString())).thenReturn("rootOrgId").thenReturn("");
+    when(userService.getRootOrgIdFromChannel(Mockito.anyString()))
+        .thenReturn("rootOrgId")
+        .thenReturn("");
 
-    boolean result = testScenario(
-        getRequest(true, true, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER), null);
+    boolean result =
+        testScenario(
+            getRequest(true, true, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
+            null);
     assertTrue(result);
   }
 
@@ -174,8 +215,10 @@ public class UserManagementActorTest extends UserManagementActorTestBase {
   public void testCreateUserSuccessWithUserTypeAsOther() {
     reqMap.put(JsonKey.USER_TYPE, JsonKey.OTHER);
 
-    boolean result = testScenario(
-        getRequest(true, true, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER), null);
+    boolean result =
+        testScenario(
+            getRequest(true, true, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
+            null);
     assertTrue(result);
   }
 
@@ -183,8 +226,10 @@ public class UserManagementActorTest extends UserManagementActorTestBase {
   public void testCreateUserFailureWithUserTypeAsTeacherAndCustodianOrg() {
     reqMap.put(JsonKey.USER_TYPE, JsonKey.TEACHER);
 
-    boolean result = testScenario(getRequest(false, false, true, reqMap, ActorOperations.CREATE_USER),
-        ResponseCode.errorTeacherCannotBelongToCustodianOrg);
+    boolean result =
+        testScenario(
+            getRequest(false, false, true, reqMap, ActorOperations.CREATE_USER),
+            ResponseCode.errorTeacherCannotBelongToCustodianOrg);
     assertTrue(result);
   }
 
@@ -194,7 +239,8 @@ public class UserManagementActorTest extends UserManagementActorTestBase {
     req.put(JsonKey.USER_TYPE, JsonKey.TEACHER);
     when(userService.getUserById(Mockito.anyString())).thenReturn(getUser(false));
     when(userService.getRootOrgIdFromChannel(Mockito.anyString())).thenReturn("rootOrgId1");
-    boolean result = testScenario(getRequest(false, true, true, req, ActorOperations.UPDATE_USER), null);
+    boolean result =
+        testScenario(getRequest(false, true, true, req, ActorOperations.UPDATE_USER), null);
     assertTrue(result);
   }
 
@@ -204,8 +250,10 @@ public class UserManagementActorTest extends UserManagementActorTestBase {
     req.put(JsonKey.USER_TYPE, JsonKey.TEACHER);
     when(userService.getUserById(Mockito.anyString())).thenReturn(getUser(false));
     when(userService.getRootOrgIdFromChannel(Mockito.anyString())).thenReturn("rootOrgId");
-    boolean result = testScenario(getRequest(false, true, true, req, ActorOperations.UPDATE_USER),
-        ResponseCode.errorTeacherCannotBelongToCustodianOrg);
+    boolean result =
+        testScenario(
+            getRequest(false, true, true, req, ActorOperations.UPDATE_USER),
+            ResponseCode.errorTeacherCannotBelongToCustodianOrg);
     assertTrue(result);
   }
 
@@ -306,5 +354,4 @@ public class UserManagementActorTest extends UserManagementActorTestBase {
     boolean result = testScenario(request, ResponseCode.invalidRole);
     assertTrue(result);
   }
-
 }

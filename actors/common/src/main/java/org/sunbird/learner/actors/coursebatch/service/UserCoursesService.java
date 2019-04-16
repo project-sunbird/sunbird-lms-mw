@@ -95,6 +95,7 @@ public class UserCoursesService {
       userCourses.put(JsonKey.TOC_URL, additionalCourseInfo.get(JsonKey.TOC_URL));
 
       count++;
+      records.add(userCourses);
       if (count > CASSANDRA_BATCH_SIZE) {
         performBatchInsert(records);
         syncUsersToES(records);

@@ -429,6 +429,12 @@ public class CourseBatchManagementActor extends BaseActor {
             (String) actorMessage.getContext().get(JsonKey.BATCH_ID));
     Response response = new Response();
     if (null != result) {
+      if (JsonKey.INVITE_ONLY.equalsIgnoreCase((String) result.get(JsonKey.ENROLLMENT_TYPE))) {
+        List<String> participants =
+            userCoursesService.getEnrolledUserFromBatch(
+                (String) actorMessage.getContext().get(JsonKey.BATCH_ID));
+        result.put(JsonKey.PARTICIPANTS, participants);
+      }
       response.put(JsonKey.RESPONSE, result);
     } else {
       result = new HashMap<>();

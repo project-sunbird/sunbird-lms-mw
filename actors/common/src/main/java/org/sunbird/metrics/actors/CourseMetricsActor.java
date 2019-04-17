@@ -284,7 +284,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
     // assign the back ground task to background job actor ...
     Request backGroundRequest = new Request();
     backGroundRequest.setOperation(ActorOperations.COURSE_POGRESS_MAIL_GENERATION.getValue());
-    backGroundRequest.getRequest().put(JsonKey.REQUEST, JsonKey.CourseProgress);
     backGroundRequest.getRequest().put(JsonKey.REQUEST_ID, requestId);
     backGroundRequest.getRequest().put(JsonKey.COURSE_NAME, courseName);
     backGroundRequest.getRequest().put(JsonKey.BATCH_NAME, batchName);

@@ -262,8 +262,6 @@ public class MetricsBackGroundJobActor extends BaseActor {
             + courseMetricsContainer
             + "/"
             + courseMetricsReportFolder
-            + "/batchid="
-            + batchId
             + "/report-"
             + batchId
             + ".csv";

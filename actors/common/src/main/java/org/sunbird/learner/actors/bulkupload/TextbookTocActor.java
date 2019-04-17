@@ -28,8 +28,6 @@ import static org.sunbird.common.models.util.ProjectUtil.getConfigValue;
 import static org.sunbird.common.models.util.Slug.makeSlug;
 import static org.sunbird.common.responsecode.ResponseCode.SERVER_ERROR;
 import static org.sunbird.common.responsecode.ResponseCode.invalidTextbook;
-import static org.sunbird.common.responsecode.ResponseCode.noChildrenExists;
-import static org.sunbird.common.responsecode.ResponseCode.textbookChildrenExist;
 import static org.sunbird.content.textbook.FileExtension.Extension.CSV;
 import static org.sunbird.content.textbook.TextBookTocUploader.TEXTBOOK_TOC_FOLDER;
 import static org.sunbird.content.util.ContentCloudStore.getUri;
@@ -941,15 +939,16 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         || !allowedContentTypes.contains(textbook.get(CONTENT_TYPE).toString())) {
       throwClientErrorException(invalidTextbook, invalidTextbook.getErrorMessage());
     }
-    List<Object> children = (List<Object>) textbook.get(CHILDREN);
-    if (JsonKey.CREATE.equalsIgnoreCase(mode)) {
-      if (null != children && !children.isEmpty()) {
-        throwClientErrorException(textbookChildrenExist, textbookChildrenExist.getErrorMessage());
-      }
-    } else if (DOWNLOAD.equalsIgnoreCase(mode)) {
-      if (null == children || children.isEmpty())
-        throwClientErrorException(noChildrenExists, noChildrenExists.getErrorMessage());
-    }
+    //    List<Object> children = (List<Object>) textbook.get(CHILDREN);
+    //    if (JsonKey.CREATE.equalsIgnoreCase(mode)) {
+    //      if (null != children && !children.isEmpty()) {
+    //        throwClientErrorException(textbookChildrenExist,
+    // textbookChildrenExist.getErrorMessage());
+    //      }
+    //    } else if (DOWNLOAD.equalsIgnoreCase(mode)) {
+    //      if (null == children || children.isEmpty())
+    //        throwClientErrorException(noChildrenExists, noChildrenExists.getErrorMessage());
+    //    }
   }
 
   @SuppressWarnings("unchecked")

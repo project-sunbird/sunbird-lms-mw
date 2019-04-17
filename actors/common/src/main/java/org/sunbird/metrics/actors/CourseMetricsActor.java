@@ -214,7 +214,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
-    if (StringUtils.isBlank((String) requestedByInfo.get(JsonKey.ENC_EMAIL))) {
+    if (StringUtils.isBlank((String) requestedByInfo.get(JsonKey.EMAIL))) {
       ProjectCommonException.throwClientErrorException(ResponseCode.emailRequired);
     }
 
@@ -268,7 +268,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     requestDbInfo.put(JsonKey.CREATED_DATE, simpleDateFormat.format(new Date()));
     requestDbInfo.put(JsonKey.UPDATED_DATE, simpleDateFormat.format(new Date()));
     String decryptedEmail =
-        decryptionService.decryptData((String) requestedByInfo.get(JsonKey.ENC_EMAIL));
+        decryptionService.decryptData((String) requestedByInfo.get(JsonKey.EMAIL));
     requestDbInfo.put(JsonKey.EMAIL, decryptedEmail);
     requestDbInfo.put(JsonKey.TYPE, COURSE_PROGRESS_REPORT);
     requestDbInfo.put(JsonKey.FORMAT, fileFormat);

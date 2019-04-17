@@ -4,6 +4,7 @@ import static org.sunbird.common.models.util.ProjectUtil.isNotNull;
 import static org.sunbird.common.models.util.ProjectUtil.isNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -86,7 +87,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     SearchDTO searchDTO = new SearchDTO();
     if (!StringUtils.isEmpty(userName)) {
       searchDTO.setQuery(userName);
-      searchDTO.setQueryFields(Arrays.asList(JsonKey.FIRST_NAME));
+      searchDTO.setQueryFields(Arrays.asList(JsonKey.NAME));
     }
     searchDTO.setLimit(limit);
     searchDTO.setOffset(offset);
@@ -114,7 +115,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
           LoggerEnum.INFO.name());
       ProjectCommonException.throwClientErrorException(ResponseCode.invalidCourseBatchId);
     }
-
     List<Map<String, Object>> esContents = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
     Map<String, Object> courseProgressResult = new HashMap<>();
     List<Map<String, Object>> userData = new ArrayList<>();
@@ -140,7 +140,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     courseProgressResult.put(
         JsonKey.COMPLETED_COUNT, courseBatchResult.get(JsonKey.COMPLETED_COUNT));
     Response response = new Response();
-    response.put("response", JsonKey.SUCCESS);
+    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     response.getResult().putAll(courseProgressResult);
     sender().tell(response, self());
   }
@@ -855,7 +855,12 @@ public class CourseMetricsActor extends BaseMetricsActor {
       return JsonKey.ENROLLED_ON;
     } else if (JsonKey.ORG_NAME.equalsIgnoreCase(sortBy)) {
       return JsonKey.ROOT_ORG_NAME;
+    } else {
+      throw new ProjectCommonException(
+          ResponseCode.invalidParameterValue.getErrorCode(),
+          MessageFormat.format(
+              ResponseCode.invalidParameterValue.getErrorMessage(), sortBy, JsonKey.SORT_BY),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
     }
-    return "";
   }
 }

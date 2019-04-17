@@ -149,18 +149,14 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       }
     }
     String tbId = (String) request.get(TEXTBOOK_ID);
-    Map<String, Object> textbookData = getTextbook(tbId);
-    ProjectLogger.log(
-        "Timed:TextbookTocActor:upload duration for get textbook data: "
-            + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
-        INFO);
+
     Map<String, Object> hierarchy = getHierarchy(tbId);
     ProjectLogger.log(
         "Timed:TextbookTocActor:upload duration for get hirearchy data: "
             + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
         INFO);
-    validateTopics(topics, (String) textbookData.get(JsonKey.FRAMEWORK));
-    validateDialCodesWithReservedDialCodes(dialCodes, textbookData);
+    validateTopics(topics, (String) hierarchy.get(JsonKey.FRAMEWORK));
+    validateDialCodesWithReservedDialCodes(dialCodes, hierarchy);
     checkDialCodeUniquenessInTextBookHierarchy(reqDialCodeIdentifierMap, hierarchy);
     request.getRequest().put(JsonKey.DATA, resultMap);
     String mode = ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.MODE).toString();
@@ -168,16 +164,16 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         "Timed:TextbookTocActor:upload duration for validate topic and dial codes: "
             + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
         INFO);
-    validateRequest(request, mode, textbookData);
+    validateRequest(request, mode, hierarchy);
     ProjectLogger.log(
         "Timed:TextbookTocActor:upload duration for validate request: "
             + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
         INFO);
     Response response = new Response();
     if (StringUtils.equalsIgnoreCase(mode, JsonKey.CREATE)) {
-      response = createTextbook(request, textbookData);
+      response = createTextbook(request, hierarchy);
     } else if (StringUtils.equalsIgnoreCase(mode, JsonKey.UPDATE)) {
-      response = updateTextbook(request, textbookData, hierarchy);
+      response = updateTextbook(request, hierarchy);
     } else {
       unSupportedMessage();
     }
@@ -998,7 +994,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   }
 
   @SuppressWarnings("unchecked")
-  private Response createTextbook(Request request, Map<String, Object> textBookdata)
+  private Response createTextbook(Request request, Map<String, Object> textBookHierarchy)
       throws Exception {
     log("Create Textbook called ", INFO.name());
     Map<String, Object> file = (Map<String, Object>) request.get(JsonKey.DATA);
@@ -1029,14 +1025,14 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           tbId,
           new HashMap<String, Object>() {
             {
-              put(JsonKey.NAME, textBookdata.get(JsonKey.NAME));
-              put(CONTENT_TYPE, textBookdata.get(CONTENT_TYPE));
+              put(JsonKey.NAME, textBookHierarchy.get(JsonKey.NAME));
+              put(CONTENT_TYPE, textBookHierarchy.get(CONTENT_TYPE));
               put(CHILDREN, new ArrayList<>());
               put(JsonKey.TB_ROOT, true);
             }
           });
       for (Map<String, Object> row : data) {
-        populateNodes(row, tbId, textBookdata, nodesModified, hierarchyData);
+        populateNodes(row, tbId, textBookHierarchy, nodesModified, hierarchyData);
       }
 
       Map<String, Object> updateRequest = new HashMap<String, Object>();
@@ -1059,7 +1055,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           "Create Textbook - UpdateHierarchy Request : " + mapper.writeValueAsString(updateRequest),
           INFO.name());
       return callUpdateHierarchyAndLinkDialCodeApi(
-          tbId, updateRequest, nodesModified, (String) textBookdata.get(JsonKey.CHANNEL));
+          tbId, updateRequest, nodesModified, (String) textBookHierarchy.get(JsonKey.CHANNEL));
     }
   }
 
@@ -1178,12 +1174,11 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   }
 
   @SuppressWarnings("unchecked")
-  private Response updateTextbook(
-      Request request, Map<String, Object> textbookData, Map<String, Object> textbookHierarchy)
+  private Response updateTextbook(Request request, Map<String, Object> textbookHierarchy)
       throws Exception {
     Boolean linkContent =
         (boolean) ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.LINKED_CONTENT);
-    String channel = (String) textbookData.get(JsonKey.CHANNEL);
+    String channel = (String) textbookHierarchy.get(JsonKey.CHANNEL);
     List<Map<String, Object>> data =
         (List<Map<String, Object>>)
             ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.FILE_DATA);
@@ -1236,7 +1231,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         hierarchyList =
             getParentChildHierarchy(
                 tbId,
-                (String) textbookData.get(JsonKey.NAME),
+                (String) textbookHierarchy.get(JsonKey.NAME),
                 (List<Map<String, Object>>) textbookHierarchy.get(JsonKey.CHILDREN));
       }
       ProjectLogger.log(

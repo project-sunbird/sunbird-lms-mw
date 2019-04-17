@@ -258,7 +258,6 @@ public class MetricsBackGroundJobActor extends BaseActor {
         ProjectUtil.getConfigValue(JsonKey.SUNBIRD_COURSE_METRICS_REPORT_FOLDER);
     String fileUrl =
         courseMetricsBaseUrl
-            + "/"
             + courseMetricsContainer
             + "/"
             + courseMetricsReportFolder

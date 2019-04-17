@@ -28,6 +28,8 @@ import static org.sunbird.common.models.util.ProjectUtil.getConfigValue;
 import static org.sunbird.common.models.util.Slug.makeSlug;
 import static org.sunbird.common.responsecode.ResponseCode.SERVER_ERROR;
 import static org.sunbird.common.responsecode.ResponseCode.invalidTextbook;
+import static org.sunbird.common.responsecode.ResponseCode.noChildrenExists;
+import static org.sunbird.common.responsecode.ResponseCode.textbookChildrenExist;
 import static org.sunbird.content.textbook.FileExtension.Extension.CSV;
 import static org.sunbird.content.textbook.TextBookTocUploader.TEXTBOOK_TOC_FOLDER;
 import static org.sunbird.content.util.ContentCloudStore.getUri;
@@ -885,15 +887,15 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       throwClientErrorException(invalidTextbook, invalidTextbook.getErrorMessage());
     }
     log("Reading Content for TextBook | Id: " + textbookId, INFO.name());
-    Map<String, Object> content = getTextbook(textbookId);
+    Map<String, Object> contentHierarchy = getHierarchy(textbookId);
     ProjectLogger.log(
         "Timed:TextbookTocActor:getTocUrl duration for get textbook: "
             + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
         INFO);
-    validateTextBook(content, DOWNLOAD);
+    validateTextBook(contentHierarchy, DOWNLOAD);
     FileExtension fileExtension = CSV.getFileExtension();
-    String contentVersionKey = (String) content.get(VERSION_KEY);
-    String textBookNameSlug = makeSlug((String) content.get(NAME), true);
+    String contentVersionKey = (String) contentHierarchy.get(VERSION_KEY);
+    String textBookNameSlug = makeSlug((String) contentHierarchy.get(NAME), true);
     String textBookTocFileName = textbookId + "_" + textBookNameSlug + "_" + contentVersionKey;
     String prefix =
         TEXTBOOK_TOC_FOLDER + separator + textBookTocFileName + fileExtension.getDotExtension();
@@ -906,7 +908,6 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         INFO);
     if (isBlank(cloudPath)) {
       log("Reading Hierarchy for TextBook | Id: " + textbookId, INFO.name());
-      Map<String, Object> contentHierarchy = getHierarchy(textbookId);
       ProjectLogger.log(
           "Timed:TextbookTocActor:getTocUrl duration for get hirearchy: "
               + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
@@ -939,16 +940,15 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         || !allowedContentTypes.contains(textbook.get(CONTENT_TYPE).toString())) {
       throwClientErrorException(invalidTextbook, invalidTextbook.getErrorMessage());
     }
-    //    List<Object> children = (List<Object>) textbook.get(CHILDREN);
-    //    if (JsonKey.CREATE.equalsIgnoreCase(mode)) {
-    //      if (null != children && !children.isEmpty()) {
-    //        throwClientErrorException(textbookChildrenExist,
-    // textbookChildrenExist.getErrorMessage());
-    //      }
-    //    } else if (DOWNLOAD.equalsIgnoreCase(mode)) {
-    //      if (null == children || children.isEmpty())
-    //        throwClientErrorException(noChildrenExists, noChildrenExists.getErrorMessage());
-    //    }
+    List<Object> children = (List<Object>) textbook.get(CHILDREN);
+    if (JsonKey.CREATE.equalsIgnoreCase(mode)) {
+      if (null != children && !children.isEmpty()) {
+        throwClientErrorException(textbookChildrenExist, textbookChildrenExist.getErrorMessage());
+      }
+    } else if (DOWNLOAD.equalsIgnoreCase(mode)) {
+      if (null == children || children.isEmpty())
+        throwClientErrorException(noChildrenExists, noChildrenExists.getErrorMessage());
+    }
   }
 
   @SuppressWarnings("unchecked")

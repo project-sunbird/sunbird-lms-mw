@@ -443,7 +443,7 @@ public class CourseMetricsActorTest {
     userOrgMap.put(JsonKey.HASHTAGID, orgId);
     userOrgMap.put(JsonKey.ORG_NAME, "rootOrg");
     userOrgMap.put(JsonKey.FIRST_NAME, "user_first_name");
-    userOrgMap.put(JsonKey.ENC_EMAIL, "user_encrypted email");
+    userOrgMap.put(JsonKey.EMAIL, "user_encrypted email");
     userOrgMap.put(JsonKey.ROOT_ORG_ID, "root123");
     userOrgMap.put(JsonKey.HASHTAGID, "hash123");
     when(ElasticSearchUtil.getDataByIdentifier(
@@ -458,6 +458,7 @@ public class CourseMetricsActorTest {
     Map<String, Object> additionalInfo = new HashMap<>();
     additionalInfo.put(JsonKey.LEAF_NODE_COUNT, progress + "");
     batchData.put(JsonKey.COURSE_ADDITIONAL_INFO, additionalInfo);
+    batchData.put(JsonKey.COMPLETED_COUNT, 1);
     return batchData;
   }
 

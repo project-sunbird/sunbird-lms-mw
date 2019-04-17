@@ -84,13 +84,6 @@ public class MetricsBackGroundJobActor extends BaseActor {
       metricsRequest.setOperation(ActorOperations.ORG_CONSUMPTION_METRICS_DATA.getValue());
       metricsRequest.setRequest(request);
       tellToAnother(metricsRequest);
-    } else if (JsonKey.CourseProgress.equalsIgnoreCase(operation)) {
-      metricsRequest.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_DATA.getValue());
-      request.put(JsonKey.COURSE_NAME, actorMessage.getRequest().get(JsonKey.COURSE_NAME));
-      request.put(JsonKey.BATCH_NAME, actorMessage.getRequest().get(JsonKey.BATCH_NAME));
-      request.put(JsonKey.ROOT_ORG_ID, actorMessage.getRequest().get(JsonKey.ROOT_ORG_ID));
-      metricsRequest.setRequest(request);
-      tellToAnother(metricsRequest);
     }
   }
 

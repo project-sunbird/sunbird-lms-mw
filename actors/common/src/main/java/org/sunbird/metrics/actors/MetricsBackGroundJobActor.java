@@ -257,10 +257,12 @@ public class MetricsBackGroundJobActor extends BaseActor {
     }
     Map<String, Object> reportDbInfo = responseList.get(0);
     String batchId = (String) reportDbInfo.get(JsonKey.RESOURCE_ID);
-    String courseMetricsBaseUrl = ProjectUtil.getConfigValue(JsonKey.COURSE_METRICS_BASE_URL);
-    String courseMetricsContainer = ProjectUtil.getConfigValue(JsonKey.COURSE_METRICS_CONTANER);
+    String courseMetricsBaseUrl =
+        ProjectUtil.getConfigValue(JsonKey.SUNBIRD_COURSE_METRICS_BASE_URL);
+    String courseMetricsContainer =
+        ProjectUtil.getConfigValue(JsonKey.SUNBIRD_COURSE_METRICS_CONTANER);
     String courseMetricsReportFolder =
-        ProjectUtil.getConfigValue(JsonKey.COURSE_METRICS_REPORT_FOLDER);
+        ProjectUtil.getConfigValue(JsonKey.SUNBIRD_COURSE_METRICS_REPORT_FOLDER);
     String fileUrl =
         courseMetricsBaseUrl
             + "/"

@@ -1945,7 +1945,7 @@ public final class Util {
           JsonKey.SET_PASSWORD_LINK,
           urlShortner.shortUrl(
               KeycloakRequiredActionLinkUtil.getLink(
-                  (String) templateMap.get(JsonKey.USERNAME),
+                  getEncryptedData((String) templateMap.get(JsonKey.USERNAME)),
                   redirectUri,
                   KeycloakRequiredActionLinkUtil.UPDATE_PASSWORD)));
     } else {
@@ -1953,7 +1953,7 @@ public final class Util {
           JsonKey.VERIFY_EMAIL_LINK,
           urlShortner.shortUrl(
               KeycloakRequiredActionLinkUtil.getLink(
-                  (String) templateMap.get(JsonKey.USERNAME),
+                  getEncryptedData((String) templateMap.get(JsonKey.USERNAME)),
                   redirectUri,
                   KeycloakRequiredActionLinkUtil.VERIFY_EMAIL)));
     }

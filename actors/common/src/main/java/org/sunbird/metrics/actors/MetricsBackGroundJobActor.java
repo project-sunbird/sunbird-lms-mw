@@ -18,8 +18,14 @@ import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.FileUtil;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.ReportTrackingStatus;
+import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.models.util.azure.CloudService;
 import org.sunbird.common.models.util.azure.CloudServiceFactory;
 import org.sunbird.common.models.util.mail.SendMail;
@@ -34,7 +40,7 @@ import org.sunbird.learner.util.Util;
 /** Created by arvind on 28/8/17. */
 @ActorConfig(
   tasks = {},
-  asyncTasks = {"fileGenerationAndUpload", "processData", "fileGenerationAndUpload"}
+  asyncTasks = {"fileGenerationAndUpload", "processData", "courseProgressMailGeneration"}
 )
 public class MetricsBackGroundJobActor extends BaseActor {
 
@@ -53,6 +59,9 @@ public class MetricsBackGroundJobActor extends BaseActor {
       processData(request);
     } else if (operation.equalsIgnoreCase(ActorOperations.FILE_GENERATION_AND_UPLOAD.getValue())) {
       fileGenerationAndUpload(request);
+    } else if (operation.equalsIgnoreCase(
+        ActorOperations.COURSE_POGRESS_MAIL_GENERATION.getValue())) {
+      courseProgressMailGeneration(request);
     } else if (operation.equalsIgnoreCase(ActorOperations.SEND_MAIL.getValue())) {
       sendMail(request);
     } else {
@@ -73,13 +82,6 @@ public class MetricsBackGroundJobActor extends BaseActor {
       tellToAnother(metricsRequest);
     } else if (JsonKey.OrgConsumption.equalsIgnoreCase(operation)) {
       metricsRequest.setOperation(ActorOperations.ORG_CONSUMPTION_METRICS_DATA.getValue());
-      metricsRequest.setRequest(request);
-      tellToAnother(metricsRequest);
-    } else if (JsonKey.CourseProgress.equalsIgnoreCase(operation)) {
-      metricsRequest.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_DATA.getValue());
-      request.put(JsonKey.COURSE_NAME, actorMessage.getRequest().get(JsonKey.COURSE_NAME));
-      request.put(JsonKey.BATCH_NAME, actorMessage.getRequest().get(JsonKey.BATCH_NAME));
-      request.put(JsonKey.ROOT_ORG_ID, actorMessage.getRequest().get(JsonKey.ROOT_ORG_ID));
       metricsRequest.setRequest(request);
       tellToAnother(metricsRequest);
     }
@@ -229,6 +231,69 @@ public class MetricsBackGroundJobActor extends BaseActor {
     innerMap.put(JsonKey.ROOT_ORG_ID, map.get(JsonKey.ROOT_ORG_ID));
     backGroundRequest.setRequest(innerMap);
     self().tell(backGroundRequest, self());
+  }
+
+  private void courseProgressMailGeneration(Request request) {
+    Response response =
+        cassandraOperation.getRecordById(
+            reportTrackingdbInfo.getKeySpace(),
+            reportTrackingdbInfo.getTableName(),
+            (String) request.getRequest().get(JsonKey.REQUEST_ID));
+    List<Map<String, Object>> responseList =
+        (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    if (responseList.isEmpty()) {
+      ProjectLogger.log("Invalid data");
+      throw new ProjectCommonException(
+          ResponseCode.invalidRequestData.getErrorCode(),
+          ResponseCode.invalidRequestData.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+    Map<String, Object> reportDbInfo = responseList.get(0);
+    String batchId = (String) reportDbInfo.get(JsonKey.RESOURCE_ID);
+    String courseMetricsBaseUrl =
+        ProjectUtil.getConfigValue(JsonKey.SUNBIRD_COURSE_METRICS_BASE_URL);
+    String courseMetricsContainer =
+        ProjectUtil.getConfigValue(JsonKey.SUNBIRD_COURSE_METRICS_CONTANER);
+    String courseMetricsReportFolder =
+        ProjectUtil.getConfigValue(JsonKey.SUNBIRD_COURSE_METRICS_REPORT_FOLDER);
+    String fileUrl =
+        courseMetricsBaseUrl
+            + "/"
+            + courseMetricsContainer
+            + "/"
+            + courseMetricsReportFolder
+            + "/batchid="
+            + batchId
+            + "/report-"
+            + batchId
+            + ".csv";
+    ProjectLogger.log(
+        "MetricsBackGroundJobActor:courseProgressMailGeneration File Url=" + fileUrl,
+        LoggerEnum.INFO.name());
+    reportDbInfo.put(JsonKey.FILE_URL, fileUrl);
+
+    SimpleDateFormat simpleDateFormat = ProjectUtil.getDateFormatter();
+    simpleDateFormat.setLenient(false);
+
+    if (processMailSending(reportDbInfo, request.getRequest())) {
+      reportDbInfo.put(JsonKey.STATUS, ReportTrackingStatus.SENDING_MAIL_SUCCESS.getValue());
+      reportDbInfo.put(JsonKey.UPDATED_DATE, simpleDateFormat.format(new Date()));
+      cassandraOperation.updateRecord(
+          reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(), reportDbInfo);
+    } else {
+      increasetryCount(reportDbInfo);
+      if ((Integer) reportDbInfo.get(JsonKey.TRY_COUNT) > 3) {
+        reportDbInfo.put(JsonKey.STATUS, ReportTrackingStatus.FAILED.getValue());
+        reportDbInfo.put(JsonKey.UPDATED_DATE, simpleDateFormat.format(new Date()));
+        cassandraOperation.updateRecord(
+            reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(), reportDbInfo);
+      } else {
+        reportDbInfo.put(JsonKey.STATUS, ReportTrackingStatus.SENDING_MAIL.getValue());
+        reportDbInfo.put(JsonKey.UPDATED_DATE, simpleDateFormat.format(new Date()));
+        cassandraOperation.updateRecord(
+            reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(), reportDbInfo);
+      }
+    }
   }
 
   private boolean processMailSending(

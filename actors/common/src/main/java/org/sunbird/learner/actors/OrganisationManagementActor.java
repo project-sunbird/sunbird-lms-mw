@@ -1793,17 +1793,26 @@ public class OrganisationManagementActor extends BaseActor {
   private void validateChannel(Map<String, Object> req) {
     if (!req.containsKey(JsonKey.IS_ROOT_ORG) || !(Boolean) req.get(JsonKey.IS_ROOT_ORG)) {
       String channel = (String) req.get(JsonKey.CHANNEL);
-      String rootOrgId = getRootOrgIdFromChannel(channel);
-      if (!StringUtils.isBlank(rootOrgId)) {
-        req.put(JsonKey.ROOT_ORG_ID, rootOrgId);
-      } else {
-        ProjectLogger.log("Invalid channel id.");
+
+      Map<String, Object> rootOrg = getRootOrgFromChannel(channel);
+      if (MapUtils.isEmpty(rootOrg)) {
+        ProjectLogger.log("OrganisationManagementActor:validateChannel Invalid channel: " + channel,LoggerEnum.INFO.name());
         throw new ProjectCommonException(
             ResponseCode.invalidChannel.getErrorCode(),
             ResponseCode.invalidChannel.getErrorMessage(),
             ResponseCode.CLIENT_ERROR.getResponseCode());
       }
-      int status = getStatusFromChannel(channel);
+      String rootOrgId = (String) rootOrg.get(JsonKey.ID);
+      if (!StringUtils.isBlank(rootOrgId)) {
+        req.put(JsonKey.ROOT_ORG_ID, rootOrgId);
+      } else {
+        ProjectLogger.log("OrganisationManagementActor:validateChannel Invalid channel: " + channel,LoggerEnum.INFO.name());
+        throw new ProjectCommonException(
+            ResponseCode.invalidChannel.getErrorCode(),
+            ResponseCode.invalidChannel.getErrorMessage(),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+      int status = (int) rootOrg.get(JsonKey.STATUS);
       if (1 != status) {
         ProjectCommonException.throwClientErrorException(
             ResponseCode.errorInactiveOrg,
@@ -1811,12 +1820,40 @@ public class OrganisationManagementActor extends BaseActor {
                 ResponseCode.errorInactiveOrg.getErrorMessage(), JsonKey.CHANNEL, channel));
       }
     } else if (!validateChannelUniqueness((String) req.get(JsonKey.CHANNEL), null)) {
-      ProjectLogger.log("Channel validation failed");
+      ProjectLogger.log("OrganisationManagementActor:validateChannel channel validation failed ",LoggerEnum.INFO.name());
       throw new ProjectCommonException(
           ResponseCode.channelUniquenessInvalid.getErrorCode(),
           ResponseCode.channelUniquenessInvalid.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
+  }
+
+  /*
+   * This method will fetch root org details from elastic search based on channel value.
+   */
+  private Map<String, Object> getRootOrgFromChannel(String channel) {
+    ProjectLogger.log(
+        "OrganisationManagementActor:getRootOrgFromChannel: channel = " + channel,
+        LoggerEnum.INFO.name());
+    if (StringUtils.isNotBlank(channel)) {
+      Map<String, Object> filterMap = new HashMap<>();
+      filterMap.put(JsonKey.CHANNEL, channel);
+      filterMap.put(JsonKey.IS_ROOT_ORG, true);
+
+      SearchDTO searchDTO = new SearchDTO();
+      searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filterMap);
+      Map<String, Object> esResponse =
+          ElasticSearchUtil.complexSearch(
+              searchDTO,
+              ProjectUtil.EsIndex.sunbird.getIndexName(),
+              ProjectUtil.EsType.organisation.getTypeName());
+
+      List<Map<String, Object>> list = (List<Map<String, Object>>) esResponse.get(JsonKey.CONTENT);
+      if (CollectionUtils.isNotEmpty(list)) {
+        return list.get(0);
+      }
+    }
+    return new HashMap();
   }
 
   /*

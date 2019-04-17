@@ -8,7 +8,6 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -81,17 +80,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
     String requestedBy = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
     validateUserId(requestedBy);
     Map<String, Object> courseBatchResult = validateAndGetCourseBatch(batchId);
-    int leafNodeCount = 0;
-    Map<String, Object> tempMap =
-        (Map<String, Object>) courseBatchResult.get(JsonKey.COURSE_ADDITIONAL_INFO);
-    if (!MapUtils.isEmpty(tempMap)) {
-      String leafCount = (String) tempMap.get(JsonKey.LEAF_NODE_COUNT);
-      if (!StringUtils.isEmpty(leafCount) && StringUtils.isNumeric(leafCount)) {
-        leafNodeCount = Integer.parseInt(leafCount);
-      }
-    }
     Map<String, Object> filter = new HashMap<>();
-    filter.put(JsonKey.BATCHES + "." + JsonKey.BATCH_ID, batchId);
+    filter.put(JsonKey.BATCH_ID, batchId);
 
     SearchDTO searchDTO = new SearchDTO();
     if (!StringUtils.isEmpty(userName)) {
@@ -102,34 +92,11 @@ public class CourseMetricsActor extends BaseMetricsActor {
     searchDTO.setOffset(offset);
     if (!StringUtils.isEmpty(sortBy)) {
       Map<String, Object> sortMap = new HashMap<>();
-      boolean isNestedSearch = false;
-      if (JsonKey.USERNAME.equalsIgnoreCase(sortBy)) {
-        sortBy = JsonKey.FIRST_NAME;
-      }
-      if (JsonKey.PROGRESS.equalsIgnoreCase(sortBy)) {
-        sortBy = JsonKey.BATCHES + "." + JsonKey.PROGRESS;
-        isNestedSearch = true;
-      }
-      if (JsonKey.ENROLLED_ON.equalsIgnoreCase(sortBy)) {
-        sortBy = JsonKey.BATCHES + "." + JsonKey.ENROLLED_ON;
-        isNestedSearch = true;
-      }
-      if (JsonKey.ORG_NAME.equalsIgnoreCase(sortBy)) {
-        sortBy = JsonKey.ROOT_ORG_NAME;
-      }
-      if (!isNestedSearch) {
-        if (StringUtils.isEmpty(sortOrder)) {
-          sortMap.put(sortBy, JsonKey.ASC);
-        } else {
-          sortMap.put(sortBy, sortOrder);
-        }
+      sortBy = getSortyBy(sortBy);
+      if (StringUtils.isEmpty(sortOrder)) {
+        sortMap.put(sortBy, JsonKey.ASC);
       } else {
-        Map<String, Object> map = new HashMap<>();
-        map.put(JsonKey.ORDER, StringUtils.isEmpty(sortOrder) ? JsonKey.ASC : sortOrder);
-        Map<String, Object> nestedMap = new HashMap<>();
-        nestedMap.put(JsonKey.BATCHES + "." + JsonKey.BATCH_ID, batchId);
-        map.put(JsonKey.TERM, nestedMap);
-        sortMap.put(sortBy, map);
+        sortMap.put(sortBy, sortOrder);
       }
       searchDTO.setSortBy(sortMap);
     }
@@ -138,7 +105,9 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
     Map<String, Object> result =
         ElasticSearchUtil.complexSearch(
-            searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
+            searchDTO,
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            EsType.cbatchstats.getTypeName());
     if (isNull(result) || result.size() == 0) {
       ProjectLogger.log(
           "CourseMetricsActor:courseProgressMetricsV2: No search results found.",
@@ -149,35 +118,29 @@ public class CourseMetricsActor extends BaseMetricsActor {
     List<Map<String, Object>> esContents = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
     Map<String, Object> courseProgressResult = new HashMap<>();
     List<Map<String, Object>> userData = new ArrayList<>();
+    if (CollectionUtils.isEmpty(esContents)) {
+      courseProgressResult.put(JsonKey.SHOW_DOWNLOAD_LINK, false);
+    } else {
+      courseProgressResult.put(JsonKey.SHOW_DOWNLOAD_LINK, true);
+    }
     for (Map<String, Object> esContent : esContents) {
       Map<String, Object> map = new HashMap<>();
-      map.put(JsonKey.USER_NAME, (String) esContent.get(JsonKey.FIRST_NAME));
-      String phone = null;
-      if (esContent.containsKey(JsonKey.ENC_PHONE)) {
-        phone = decryptAndMaskPhone((String) esContent.get(JsonKey.ENC_PHONE));
-      }
-      map.put(JsonKey.PHONE, phone);
+      map.put(JsonKey.USER_NAME, esContent.get(JsonKey.NAME));
+      map.put(JsonKey.MASKED_PHONE, esContent.get(JsonKey.MASKED_PHONE));
       map.put(JsonKey.ORG_NAME, esContent.get(JsonKey.ROOT_ORG_NAME));
-      for (Map<String, Object> batchMap :
-          (List<Map<String, Object>>) esContent.get(JsonKey.BATCHES)) {
-        if (batchId.equalsIgnoreCase((String) batchMap.get(JsonKey.BATCH_ID))) {
-          calculateCourseProgressPercentage(batchMap, leafNodeCount);
-          formatEnrolledOn(batchMap);
-          map.putAll(batchMap);
-        }
-      }
+      map.put(JsonKey.PROGRESS, esContent.get(JsonKey.COMPLETED_PERCENT));
+      map.put(JsonKey.ENROLLED_ON, esContent.get(JsonKey.ENROLLED_ON));
       userData.add(map);
     }
 
-    courseProgressResult.put(JsonKey.COUNT, result.get(JsonKey.COUNT));
+    courseProgressResult.put(JsonKey.COUNT, courseBatchResult.get(JsonKey.PARTICIPANT_COUNT));
     courseProgressResult.put(JsonKey.DATA, userData);
     courseProgressResult.put(JsonKey.START_DATE, courseBatchResult.get(JsonKey.START_DATE));
     courseProgressResult.put(JsonKey.END_DATE, courseBatchResult.get(JsonKey.END_DATE));
     courseProgressResult.put(
-        JsonKey.COMPLETED_COUNT,
-        getCompletedCount(batchId, leafNodeCount, (Long) result.get(JsonKey.COUNT)));
+        JsonKey.COMPLETED_COUNT, courseBatchResult.get(JsonKey.COMPLETED_COUNT));
     Response response = new Response();
-    response.put("response", "SUCCESS");
+    response.put("response", JsonKey.SUCCESS);
     response.getResult().putAll(courseProgressResult);
     sender().tell(response, self());
   }
@@ -194,53 +157,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
       batchMap.put(JsonKey.LAST_ACCESSED_ON, ProjectUtil.formatDate(parsedDate));
     } catch (Exception e) {
       ProjectLogger.log("formatEnrolledOn : " + e.getMessage(), LoggerEnum.INFO);
-    }
-  }
-
-  private int getCompletedCount(String batchId, int leafNodeCount, Long limit) {
-    SearchDTO searchDTO = new SearchDTO();
-    Map<String, Object> filter = new HashMap<>();
-    filter.put(JsonKey.BATCHES + "." + JsonKey.BATCH_ID, batchId);
-    filter.put(JsonKey.BATCHES + "." + JsonKey.PROGRESS, leafNodeCount);
-    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filter);
-
-    if (limit != null) {
-      searchDTO.setLimit(limit.intValue());
-      searchDTO.setOffset(0);
-    }
-    Map<String, Object> result =
-        ElasticSearchUtil.complexSearch(
-            searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
-
-    if (isNull(result) || result.size() == 0) {
-      ProjectLogger.log(
-          "CourseMetricsActor:getCompletedCount: No search results found.", LoggerEnum.INFO.name());
-      return 0;
-    } else {
-      List<Map<String, Object>> esBatchResult =
-          (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-      int count = 0;
-      if (!CollectionUtils.isEmpty(esBatchResult)) {
-        for (Map<String, Object> esContent : esBatchResult) {
-          List<Map<String, Object>> batches =
-              (List<Map<String, Object>>) esContent.get(JsonKey.BATCHES);
-          if (!CollectionUtils.isEmpty(batches)) {
-            for (Map<String, Object> batchMap : batches) {
-              if (batchId.equalsIgnoreCase((String) batchMap.get(JsonKey.BATCH_ID))
-                  && leafNodeCount == (Integer) batchMap.get(JsonKey.PROGRESS)) {
-                count++;
-              }
-            }
-          }
-        }
-      }
-      ProjectLogger.log(
-          "CourseMetricsActor:getCompletedCount: search results found."
-              + result.get(JsonKey.COUNT)
-              + " LeafNodeCount = "
-              + leafNodeCount,
-          LoggerEnum.INFO.name());
-      return count;
     }
   }
 
@@ -298,7 +214,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
-    if (StringUtils.isBlank((String) requestedByInfo.get(JsonKey.ENC_EMAIL))) {
+    if (StringUtils.isBlank((String) requestedByInfo.get(JsonKey.EMAIL))) {
       ProjectCommonException.throwClientErrorException(ResponseCode.emailRequired);
     }
 
@@ -352,7 +268,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     requestDbInfo.put(JsonKey.CREATED_DATE, simpleDateFormat.format(new Date()));
     requestDbInfo.put(JsonKey.UPDATED_DATE, simpleDateFormat.format(new Date()));
     String decryptedEmail =
-        decryptionService.decryptData((String) requestedByInfo.get(JsonKey.ENC_EMAIL));
+        decryptionService.decryptData((String) requestedByInfo.get(JsonKey.EMAIL));
     requestDbInfo.put(JsonKey.EMAIL, decryptedEmail);
     requestDbInfo.put(JsonKey.TYPE, COURSE_PROGRESS_REPORT);
     requestDbInfo.put(JsonKey.FORMAT, fileFormat);
@@ -367,7 +283,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
     // assign the back ground task to background job actor ...
     Request backGroundRequest = new Request();
-    backGroundRequest.setOperation(ActorOperations.PROCESS_DATA.getValue());
+    backGroundRequest.setOperation(ActorOperations.COURSE_POGRESS_MAIL_GENERATION.getValue());
     backGroundRequest.getRequest().put(JsonKey.REQUEST, JsonKey.CourseProgress);
     backGroundRequest.getRequest().put(JsonKey.REQUEST_ID, requestId);
     backGroundRequest.getRequest().put(JsonKey.COURSE_NAME, courseName);
@@ -475,8 +391,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
     if (CollectionUtils.isNotEmpty(esContent)) {
       List<String> userIds = new ArrayList<>();
-
-      calculateCourseProgressPercentage(esContent);
       for (Map<String, Object> entry : esContent) {
         String userId = (String) entry.get(JsonKey.USER_ID);
         userIds.add(userId);
@@ -931,5 +845,18 @@ public class CourseMetricsActor extends BaseMetricsActor {
       ProjectLogger.log("Error occurred", e);
     }
     return result;
+  }
+
+  private String getSortyBy(String sortBy) {
+    if (JsonKey.USERNAME.equalsIgnoreCase(sortBy)) {
+      return JsonKey.NAME;
+    } else if (JsonKey.PROGRESS.equalsIgnoreCase(sortBy)) {
+      return JsonKey.COMPLETED_PERCENT;
+    } else if (JsonKey.ENROLLED_ON.equalsIgnoreCase(sortBy)) {
+      return JsonKey.ENROLLED_ON;
+    } else if (JsonKey.ORG_NAME.equalsIgnoreCase(sortBy)) {
+      return JsonKey.ROOT_ORG_NAME;
+    }
+    return "";
   }
 }

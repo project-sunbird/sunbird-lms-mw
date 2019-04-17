@@ -8,7 +8,6 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -81,15 +80,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
     String requestedBy = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
     validateUserId(requestedBy);
     Map<String, Object> courseBatchResult = validateAndGetCourseBatch(batchId);
-    int leafNodeCount = 0;
-    Map<String, Object> tempMap =
-        (Map<String, Object>) courseBatchResult.get(JsonKey.COURSE_ADDITIONAL_INFO);
-    if (!MapUtils.isEmpty(tempMap)) {
-      String leafCount = (String) tempMap.get(JsonKey.LEAF_NODE_COUNT);
-      if (!StringUtils.isEmpty(leafCount) && StringUtils.isNumeric(leafCount)) {
-        leafNodeCount = Integer.parseInt(leafCount);
-      }
-    }
     Map<String, Object> filter = new HashMap<>();
     filter.put(JsonKey.BATCH_ID, batchId);
 
@@ -102,19 +92,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     searchDTO.setOffset(offset);
     if (!StringUtils.isEmpty(sortBy)) {
       Map<String, Object> sortMap = new HashMap<>();
-      if (JsonKey.USERNAME.equalsIgnoreCase(sortBy)) {
-        sortBy = JsonKey.NAME;
-      }
-      if (JsonKey.PROGRESS.equalsIgnoreCase(sortBy)) {
-        sortBy = JsonKey.COMPLETED_PERCENT;
-      }
-      if (JsonKey.ENROLLED_ON.equalsIgnoreCase(sortBy)) {
-        sortBy = JsonKey.ENROLLED_ON;
-      }
-      if (JsonKey.ORG_NAME.equalsIgnoreCase(sortBy)) {
-        sortBy = JsonKey.ROOT_ORG_NAME;
-      }
-
+      sortBy = getSortyBy(sortBy);
       if (StringUtils.isEmpty(sortOrder)) {
         sortMap.put(sortBy, JsonKey.ASC);
       } else {
@@ -140,6 +118,11 @@ public class CourseMetricsActor extends BaseMetricsActor {
     List<Map<String, Object>> esContents = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
     Map<String, Object> courseProgressResult = new HashMap<>();
     List<Map<String, Object>> userData = new ArrayList<>();
+    if (CollectionUtils.isEmpty(esContents)) {
+      courseProgressResult.put(JsonKey.SHOW_DOWNLOAD_LINK, false);
+    } else {
+      courseProgressResult.put(JsonKey.SHOW_DOWNLOAD_LINK, true);
+    }
     for (Map<String, Object> esContent : esContents) {
       Map<String, Object> map = new HashMap<>();
       map.put(JsonKey.USER_NAME, esContent.get(JsonKey.NAME));
@@ -157,7 +140,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     courseProgressResult.put(
         JsonKey.COMPLETED_COUNT, courseBatchResult.get(JsonKey.COMPLETED_COUNT));
     Response response = new Response();
-    response.put("response", "SUCCESS");
+    response.put("response", JsonKey.SUCCESS);
     response.getResult().putAll(courseProgressResult);
     sender().tell(response, self());
   }
@@ -862,5 +845,18 @@ public class CourseMetricsActor extends BaseMetricsActor {
       ProjectLogger.log("Error occurred", e);
     }
     return result;
+  }
+
+  private String getSortyBy(String sortBy) {
+    if (JsonKey.USERNAME.equalsIgnoreCase(sortBy)) {
+      return JsonKey.NAME;
+    } else if (JsonKey.PROGRESS.equalsIgnoreCase(sortBy)) {
+      return JsonKey.COMPLETED_PERCENT;
+    } else if (JsonKey.ENROLLED_ON.equalsIgnoreCase(sortBy)) {
+      return JsonKey.ENROLLED_ON;
+    } else if (JsonKey.ORG_NAME.equalsIgnoreCase(sortBy)) {
+      return JsonKey.ROOT_ORG_NAME;
+    }
+    return "";
   }
 }

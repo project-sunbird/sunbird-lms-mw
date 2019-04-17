@@ -1796,7 +1796,7 @@ public class OrganisationManagementActor extends BaseActor {
 
       Map<String, Object> rootOrg = getRootOrgFromChannel(channel);
       if (MapUtils.isEmpty(rootOrg)) {
-        ProjectLogger.log("Invalid channel id - " + channel);
+        ProjectLogger.log("OrganisationManagementActor:validateChannel Invalid channel: " + channel,LoggerEnum.INFO.name());
         throw new ProjectCommonException(
             ResponseCode.invalidChannel.getErrorCode(),
             ResponseCode.invalidChannel.getErrorMessage(),
@@ -1806,7 +1806,7 @@ public class OrganisationManagementActor extends BaseActor {
       if (!StringUtils.isBlank(rootOrgId)) {
         req.put(JsonKey.ROOT_ORG_ID, rootOrgId);
       } else {
-        ProjectLogger.log("Invalid channel id.");
+        ProjectLogger.log("OrganisationManagementActor:validateChannel Invalid channel: " + channel,LoggerEnum.INFO.name());
         throw new ProjectCommonException(
             ResponseCode.invalidChannel.getErrorCode(),
             ResponseCode.invalidChannel.getErrorMessage(),
@@ -1820,7 +1820,7 @@ public class OrganisationManagementActor extends BaseActor {
                 ResponseCode.errorInactiveOrg.getErrorMessage(), JsonKey.CHANNEL, channel));
       }
     } else if (!validateChannelUniqueness((String) req.get(JsonKey.CHANNEL), null)) {
-      ProjectLogger.log("Channel validation failed");
+      ProjectLogger.log("OrganisationManagementActor:validateChannel channel validation failed ",LoggerEnum.INFO.name());
       throw new ProjectCommonException(
           ResponseCode.channelUniquenessInvalid.getErrorCode(),
           ResponseCode.channelUniquenessInvalid.getErrorMessage(),

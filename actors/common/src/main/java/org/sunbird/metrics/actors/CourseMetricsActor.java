@@ -115,8 +115,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
           LoggerEnum.INFO.name());
       ProjectCommonException.throwClientErrorException(ResponseCode.invalidCourseBatchId);
     }
-    ProjectLogger.log("CourseMetricsActor: courseProgressMetrics called.", LoggerEnum.INFO.name());
-
     List<Map<String, Object>> esContents = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
     Map<String, Object> courseProgressResult = new HashMap<>();
     List<Map<String, Object>> userData = new ArrayList<>();

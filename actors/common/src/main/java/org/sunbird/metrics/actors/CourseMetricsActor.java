@@ -139,6 +139,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
     courseProgressResult.put(JsonKey.END_DATE, courseBatchResult.get(JsonKey.END_DATE));
     courseProgressResult.put(
         JsonKey.COMPLETED_COUNT, courseBatchResult.get(JsonKey.COMPLETED_COUNT));
+    courseProgressResult.put(
+        JsonKey.REPORT_UPDATED_ON, courseBatchResult.get(JsonKey.REPORT_UPDATED_ON));
     Response response = new Response();
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     response.getResult().putAll(courseProgressResult);

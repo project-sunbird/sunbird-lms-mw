@@ -4,18 +4,22 @@ import static akka.testkit.JavaTestKit.duration;
 import static org.junit.Assert.assertTrue;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.when;
+import static scala.compat.java8.FutureConverters.*;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
+import akka.pattern.Patterns;
 import akka.testkit.javadsl.TestKit;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ConcurrentHashMap;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -23,47 +27,96 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
+import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.service.BaseMWService;
+import org.sunbird.actorutil.InterServiceCommunication;
+import org.sunbird.actorutil.InterServiceCommunicationFactory;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.ContentSearchUtil;
 import org.sunbird.learner.util.DataCacheHandler;
+import org.sunbird.learner.util.Util;
+import org.sunbird.user.dao.impl.UserOrgDaoImpl;
+import scala.concurrent.Await;
+import scala.concurrent.Future;
+import scala.concurrent.duration.Duration;
 
-// @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({ServiceFactory.class, ElasticSearchUtil.class, DataCacheHandler.class})
+@PrepareForTest({
+  ServiceFactory.class,
+  BaseMWService.class,
+  RequestRouter.class,
+  InterServiceCommunicationFactory.class,
+  ElasticSearchUtil.class,
+  Util.class,
+  UserOrgDaoImpl.class,
+  DecryptionService.class,
+  DataCacheHandler.class,
+  PageManagementActor.class,
+  ContentSearchUtil.class
+})
 @PowerMockIgnore({"javax.management.*"})
 public class PageManagementActorTest {
 
+  private ActorSystem system = ActorSystem.create("system");
   private static final Props props = Props.create(PageManagementActor.class);
-  private static final ActorSystem system = ActorSystem.create("system");
-
-  private static final TestKit probe = new TestKit(system);
-  ActorRef subject = system.actorOf(props);
+  private static final InterServiceCommunication interServiceCommunication =
+      Mockito.mock(InterServiceCommunication.class);
+  private static final Response response = Mockito.mock(Response.class);
+  private static CassandraOperationImpl cassandraOperation;
 
   private static String sectionId = null;
   private static String sectionId2 = null;
   private static String pageId = "anyID";
   private static String pageIdWithOrg = null;
   private static String pageIdWithOrg2 = null;
-  //  private static CassandraOperation cassandraOperation;
-  private static CassandraOperationImpl cassandraOperation;
+  private static Object[] arr = new Object[10];
+  private static ObjectMapper objectMapper;
+  private static Future<Map<String, Object>> result;
 
   @BeforeClass
-  public static void setUp() {
+  public static void beforeClass() {
 
-    //    PowerMockito.mockStatic(ServiceFactory.class);
+    PowerMockito.mockStatic(ServiceFactory.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
+    PowerMockito.mockStatic(ContentSearchUtil.class);
+    // result = new Future<Map<String, Object>>();
+    when(ContentSearchUtil.searchContent(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(result);
   }
 
   @Before
-  public void beforeTest() {
+  public void beforeEachTest() throws Exception {
+
     PowerMockito.mockStatic(ServiceFactory.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+
+    Map<String, Map<String, Object>> pageMap = new ConcurrentHashMap<>();
+    Map map = new HashMap();
+    map.put(JsonKey.PORTAL_MAP, "anyQuery");
+    pageMap.put("NA:Test Page Name Updated", map);
+    Map sectionMap = new HashMap();
+    sectionMap.put("anyId", getSectionMap());
+
+    PowerMockito.mockStatic(DataCacheHandler.class);
+    PowerMockito.when(DataCacheHandler.getPageMap()).thenReturn(pageMap);
+    PowerMockito.when(DataCacheHandler.getSectionMap()).thenReturn(sectionMap);
+
+    //    Object[] arr = new Object[10];
+    //    arr[0] = getObjectMap();
+
+    objectMapper = Mockito.mock(ObjectMapper.class);
+    PowerMockito.whenNew(ObjectMapper.class).withNoArguments().thenReturn(objectMapper);
+    //    when(objectMapper.readValue("anyQuery", Object[].class)).thenReturn(arr);
+    //    when(objectMapper.readValue("searchQuery", HashMap.class)).thenReturn(getHashMap());
 
     when(cassandraOperation.updateRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
@@ -78,35 +131,56 @@ public class PageManagementActorTest {
         .thenReturn(cassandraGetRecordById());
   }
 
-  private Response cassandraGetRecordByProperty(String reqMap) {
+  private HashMap<String, Object> getHashMap() {
+    HashMap<String, Object> m = new HashMap<>();
+    Map<String, Object> reqMap = new HashMap<>();
+    Map<String, Object> filterMap = new HashMap<>();
+    reqMap.put(JsonKey.FILTERS, filterMap);
+    m.put(JsonKey.REQUEST, reqMap);
+    return m;
+  }
+
+  private Map<String, Object> getSectionMap() {
+    Map<String, Object> m = new HashMap<>();
+    m.put(JsonKey.SEARCH_QUERY, "searchQuery");
+    //    m.put(JsonKey.DATA_SOURCE, )
+    return m;
+  }
+
+  private Object getObjectMap() {
+    Map<String, Object> m = new HashMap<>();
+    m.put(JsonKey.ID, "anyId");
+    m.put(JsonKey.GROUP, "anyGroup");
+    m.put(JsonKey.INDEX, "index");
+    return m;
+  }
+
+  private static Response getUpdateSuccess() {
     Response response = new Response();
-    List list = new ArrayList();
-    Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.NAME, "anyName");
-    map.put(JsonKey.ID, "anyID");
-    if (!reqMap.equals("")) {
-      map.put(reqMap, "anyQuery");
-    }
-    list.add(map);
-    response.put(JsonKey.RESPONSE, list);
+    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     return response;
   }
 
-  /* private Response cassandraGetRecordByProperty() {
+  private static Response cassandraGetRecordById() {
     Response response = new Response();
     List list = new ArrayList();
     Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.NAME, "anyName");
     map.put(JsonKey.ID, "anyId");
+    map.put(JsonKey.SECTIONS, "anySection");
     list.add(map);
     response.put(JsonKey.RESPONSE, list);
     return response;
-  }*/
+  }
 
   @Test
   public void testInvalidRequest() {
 
     Request reqObj = new Request();
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
     subject.tell(reqObj, probe.getRef());
     NullPointerException exc =
         probe.expectMsgClass(duration("100 second"), NullPointerException.class);
@@ -119,6 +193,9 @@ public class PageManagementActorTest {
     Request reqObj = new Request();
     reqObj.setOperation("INVALID_OPERATION");
 
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
     subject.tell(reqObj, probe.getRef());
     ProjectCommonException exc =
         probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
@@ -127,6 +204,9 @@ public class PageManagementActorTest {
 
   @Test
   public void testCreateSuccessPageWithOrgId() {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
 
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_PAGE.getValue());
@@ -167,6 +247,9 @@ public class PageManagementActorTest {
   @Test
   public void testCreatePageSuccessWithoutOrgId() {
 
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_PAGE.getValue());
     HashMap<String, Object> innerMap = new HashMap<>();
@@ -205,6 +288,9 @@ public class PageManagementActorTest {
   @Test
   public void testCreatePageFailureWithPageAlreadyExists() {
 
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.CREATE_PAGE.getValue());
     HashMap<String, Object> innerMap = new HashMap<>();
@@ -231,16 +317,23 @@ public class PageManagementActorTest {
     innerMap.put(JsonKey.PAGE, pageMap);
     reqObj.setRequest(innerMap);
 
+    when(cassandraOperation.getRecordsByProperties(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(cassandraGetRecordByProperty(""));
+
     subject.tell(reqObj, probe.getRef());
-    ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
     assertTrue(null != exc);
   }
 
   @Test
   public void testGetPageSetting() {
 
-    boolean pageName = false;
     TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    boolean pageName = false;
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.GET_PAGE_SETTING.getValue());
     reqObj.getRequest().put(JsonKey.ID, "Test Page");
@@ -262,8 +355,11 @@ public class PageManagementActorTest {
   @Test
   public void testGetPageSettingWithAppMap() {
 
-    boolean pageName = false;
     TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    boolean pageName = false;
+
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.GET_PAGE_SETTING.getValue());
     reqObj.getRequest().put(JsonKey.ID, "Test Page");
@@ -285,8 +381,10 @@ public class PageManagementActorTest {
   @Test
   public void testGetPageSettingWithPortalMap() {
 
-    boolean pageName = false;
     TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    boolean pageName = false;
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.GET_PAGE_SETTING.getValue());
     reqObj.getRequest().put(JsonKey.ID, "Test Page");
@@ -308,8 +406,10 @@ public class PageManagementActorTest {
   @Test
   public void testGetPageSettingsSuccess() {
 
-    boolean pageName = false;
     TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    boolean pageName = false;
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.GET_PAGE_SETTINGS.getValue());
     reqObj.getRequest().put(JsonKey.ID, "Test Page");
@@ -328,8 +428,10 @@ public class PageManagementActorTest {
   @Test
   public void testGetAllSectionsSuccess() {
 
-    boolean section = false;
     TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    boolean section = false;
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.GET_ALL_SECTION.getValue());
     subject.tell(reqObj, probe.getRef());
@@ -348,8 +450,10 @@ public class PageManagementActorTest {
   @Test
   public void testGetSectionSuccess() {
 
-    boolean section = false;
     TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    boolean section = false;
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.GET_SECTION.getValue());
     reqObj.getRequest().put(JsonKey.ID, sectionId);
@@ -369,6 +473,9 @@ public class PageManagementActorTest {
 
   @Test
   public void testUpdatePageSuccessWithPageName() {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
 
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.UPDATE_PAGE.getValue());
@@ -391,6 +498,9 @@ public class PageManagementActorTest {
 
   @Test
   public void testUpdatePageFailureWithPageName() {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
 
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.UPDATE_PAGE.getValue());
@@ -415,12 +525,14 @@ public class PageManagementActorTest {
   @Test
   public void testDUpdatePageSuccessWithoutPageAndWithPortalMap() {
 
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.UPDATE_PAGE.getValue());
     HashMap<String, Object> innerMap = new HashMap<>();
     Map<String, Object> pageMap = new HashMap<String, Object>();
 
-    //        pageMap.put(JsonKey.PAGE_NAME, "Test Page");
     pageMap.put(JsonKey.ID, pageId);
     pageMap.put(JsonKey.PORTAL_MAP, "anyQuery");
     innerMap.put(JsonKey.PAGE, pageMap);
@@ -438,12 +550,14 @@ public class PageManagementActorTest {
   @Test
   public void testDUpdatePageSuccessWithoutPageAndWithAppMap() {
 
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.UPDATE_PAGE.getValue());
     HashMap<String, Object> innerMap = new HashMap<>();
     Map<String, Object> pageMap = new HashMap<String, Object>();
 
-    //        pageMap.put(JsonKey.PAGE_NAME, "Test Page");
     pageMap.put(JsonKey.ID, pageId);
     pageMap.put(JsonKey.APP_MAP, "anyQuery");
     innerMap.put(JsonKey.PAGE, pageMap);
@@ -461,6 +575,9 @@ public class PageManagementActorTest {
   @Test
   public void testUpdatePageSection() {
 
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
     Map<String, Object> filterMap = new HashMap<>();
     Map<String, Object> reqMap = new HashMap<>();
     Map<String, Object> searchQueryMap = new HashMap<>();
@@ -470,8 +587,6 @@ public class PageManagementActorTest {
     reqMap.put(JsonKey.FILTERS, filterMap);
     searchQueryMap.put(JsonKey.REQUEST, reqMap);
 
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.UPDATE_SECTION.getValue());
     HashMap<String, Object> innerMap = new HashMap<>();
@@ -489,7 +604,10 @@ public class PageManagementActorTest {
   }
 
   @Test
-  public void testHGetPageData() {
+  public void testGetPageData() throws Exception {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
 
     Map<String, Object> header = new HashMap<>();
     header.put("Accept", "application/json");
@@ -527,8 +645,6 @@ public class PageManagementActorTest {
     gradeListist.add("Grade 1");
     filterMap.put("gradeLevel", gradeListist);
 
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.GET_PAGE_DATA.getValue());
     reqObj.getRequest().put(JsonKey.SOURCE, "web");
@@ -539,22 +655,47 @@ public class PageManagementActorTest {
     map.put(JsonKey.HEADER, header);
     reqObj.setRequest(map);
 
+    when(objectMapper.readValue("anyQuery", Object[].class)).thenReturn(arr);
+    when(objectMapper.readValue("searchQuery", HashMap.class)).thenReturn(getHashMap());
+
     subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("100 second"), Response.class);
-    assertTrue(null != res.get(JsonKey.RESPONSE));
+    probe.expectMsgClass(duration("100 second"), Response.class);
   }
 
+  @Ignore
   @Test
-  public void testHGetPageDataWithOrgCode() {
+  public void testGetPageDataWithSectionMap() throws Exception {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
 
     Map<String, Object> header = new HashMap<>();
     header.put("Accept", "application/json");
     header.put("Content-Type", "application/json");
-
     Map<String, Object> filterMap = new HashMap<>();
-    List<String> list = new ArrayList<>();
-    list.add("English");
-    filterMap.put("language", list);
+    List<String> contentList = new ArrayList<>();
+    contentList.add("Story");
+    contentList.add("Worksheet");
+    contentList.add("Collection");
+    contentList.add("Game");
+    contentList.add("Collection");
+    contentList.add("Course");
+    filterMap.put("contentType", contentList);
+
+    List<String> statusList = new ArrayList<>();
+    statusList.add("Live");
+    filterMap.put("language", statusList);
+
+    List<String> objectTypeList = new ArrayList<>();
+    objectTypeList.add("content");
+    filterMap.put("objectType", objectTypeList);
+
+    List<String> languageList = new ArrayList<>();
+    languageList.add("English");
+    languageList.add("Hindi");
+    languageList.add("Gujarati");
+    languageList.add("Bengali");
+    filterMap.put("language", languageList);
     Map<String, Object> compMap = new HashMap<>();
     compMap.put("<=", 2);
     compMap.put(">", 0.5);
@@ -564,38 +705,30 @@ public class PageManagementActorTest {
     gradeListist.add("Grade 1");
     filterMap.put("gradeLevel", gradeListist);
 
-    TestKit probe = new TestKit(system);
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.GET_PAGE_DATA.getValue());
     reqObj.getRequest().put(JsonKey.SOURCE, "web");
     reqObj.getRequest().put(JsonKey.PAGE_NAME, "Test Page Name Updated");
     reqObj.getRequest().put(JsonKey.FILTERS, filterMap);
-    reqObj.getRequest().put(JsonKey.ORG_CODE, "ORG1");
+    //      reqObj.getRequest().put(JsonKey.NAME, "anyName");
+
     HashMap<String, Object> map = new HashMap<>();
     map.put(JsonKey.PAGE, reqObj.getRequest());
     map.put(JsonKey.HEADER, header);
     reqObj.setRequest(map);
-    subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("100 second"), Response.class);
+
+    arr[0] = getObjectMap();
+    when(objectMapper.readValue("anyQuery", Object[].class)).thenReturn(arr);
+    when(objectMapper.readValue("searchQuery", HashMap.class)).thenReturn(getHashMap());
+
+    Future sfuture = Patterns.ask(subject, reqObj, 30000);
+    CompletionStage cs = toJava(sfuture);
+    CompletableFuture<Object> cf = (CompletableFuture<Object>) cs;
+    Duration d = Duration.create(60, "seconds");
+    Object obj = Await.result(sfuture, d);
+    System.out.println("the object is" + obj.toString());
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
     assertTrue(null != res.get(JsonKey.RESPONSE));
-  }
-
-  private static Response cassandraGetRecordById() {
-    Response response = new Response();
-    List list = new ArrayList();
-    Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.NAME, "anyName");
-    map.put(JsonKey.ID, "anyId");
-    map.put(JsonKey.SECTIONS, "anySection");
-    list.add(map);
-    response.put(JsonKey.RESPONSE, list);
-    return response;
-  }
-
-  private static Response getUpdateSuccess() {
-    Response response = new Response();
-    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-    return response;
   }
 
   private static Response getRecordByPropMap(boolean isValid) {
@@ -604,6 +737,20 @@ public class PageManagementActorTest {
     Map<String, Object> map = new HashMap();
     map.put(JsonKey.ID, "anyID");
     if (isValid) list.add(map);
+    response.put(JsonKey.RESPONSE, list);
+    return response;
+  }
+
+  private Response cassandraGetRecordByProperty(String reqMap) {
+    Response response = new Response();
+    List list = new ArrayList();
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.NAME, "anyName");
+    map.put(JsonKey.ID, "anyID");
+    if (!reqMap.equals("")) {
+      map.put(reqMap, "anyQuery");
+    }
+    list.add(map);
     response.put(JsonKey.RESPONSE, list);
     return response;
   }

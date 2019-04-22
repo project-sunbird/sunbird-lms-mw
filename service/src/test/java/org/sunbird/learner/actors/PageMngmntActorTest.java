@@ -4,18 +4,22 @@ import static akka.testkit.JavaTestKit.duration;
 import static org.junit.Assert.assertTrue;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.when;
+import static scala.compat.java8.FutureConverters.*;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
+import akka.pattern.Patterns;
 import akka.testkit.javadsl.TestKit;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ConcurrentHashMap;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -33,20 +37,20 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
-import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.actors.role.dao.impl.RoleDaoImpl;
+import org.sunbird.learner.util.ContentSearchUtil;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 import org.sunbird.user.dao.impl.UserOrgDaoImpl;
+import scala.concurrent.Await;
+import scala.concurrent.Future;
+import scala.concurrent.duration.Duration;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
   ServiceFactory.class,
-  RoleDaoImpl.class,
   BaseMWService.class,
   RequestRouter.class,
   InterServiceCommunicationFactory.class,
@@ -54,7 +58,9 @@ import org.sunbird.user.dao.impl.UserOrgDaoImpl;
   Util.class,
   UserOrgDaoImpl.class,
   DecryptionService.class,
-  DataCacheHandler.class
+  DataCacheHandler.class,
+  PageManagementActor.class,
+  ContentSearchUtil.class
 })
 @PowerMockIgnore({"javax.management.*"})
 public class PageMngmntActorTest {
@@ -71,64 +77,46 @@ public class PageMngmntActorTest {
   private static String pageId = "anyID";
   private static String pageIdWithOrg = null;
   private static String pageIdWithOrg2 = null;
+  private static Object[] arr = new Object[10];
+  private static ObjectMapper objectMapper;
+  private static Future<Map<String, Object>> result;
 
   @BeforeClass
   public static void beforeClass() {
 
     PowerMockito.mockStatic(ServiceFactory.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
-    PowerMockito.mockStatic(DataCacheHandler.class);
-    when(DataCacheHandler.getPageMap()).thenReturn(Mockito.anyMap());
-    Map map = mock(Map.class);
-    when(map.get(Mockito.anyString())).thenReturn(new HashMap<>());
+    PowerMockito.mockStatic(ContentSearchUtil.class);
+    // result = new Future<Map<String, Object>>();
+    when(ContentSearchUtil.searchContent(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(result);
   }
 
-  /* private static Response getRecordByPropertyResponse() {
-
-      Response response = new Response();
-      List<Map<String, Object>> list = new ArrayList<>();
-      Map<String, Object> orgMap = new HashMap<>();
-      orgMap.put(JsonKey.ID, "ORGANISATION_ID");
-      list.add(orgMap);
-      response.put(JsonKey.RESPONSE, list);
-      return response;
-  }*/
-
   @Before
-  public void beforeEachTest() {
+  public void beforeEachTest() throws Exception {
 
     PowerMockito.mockStatic(ServiceFactory.class);
-    /*PowerMockito.mockStatic(BaseMWService.class);
-    PowerMockito.mockStatic(RequestRouter.class);
-    PowerMockito.mockStatic(InterServiceCommunicationFactory.class);
-    PowerMockito.mockStatic(RoleDaoImpl.class);
-    PowerMockito.mockStatic(ElasticSearchUtil.class);
-    PowerMockito.mockStatic(Util.class);
-    PowerMockito.mockStatic(UserOrgDaoImpl.class);
-
-    when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
-    RoleDaoImpl roleDao = Mockito.mock(RoleDaoImpl.class);
-    when(RoleDaoImpl.getInstance()).thenReturn(roleDao);
-    UserOrgDao userOrgDao = Mockito.mock(UserOrgDaoImpl.class);
-    when(UserOrgDaoImpl.getInstance()).thenReturn(userOrgDao);
-    when(userOrgDao.updateUserOrg(Mockito.anyObject())).thenReturn(getSuccessResponse());
-    CompletionStage completionStage = Mockito.mock(CompletionStage.class);
-    ActorSelection actorSelection = Mockito.mock(ActorSelection.class);
-    when(BaseMWService.getRemoteRouter(Mockito.anyString())).thenReturn(actorSelection);
-    when(actorSelection.resolveOneCS(Duration.create(Mockito.anyLong(), "seconds")))
-            .thenReturn(completionStage);
-    ActorRef actorRef = Mockito.mock(ActorRef.class);
-    when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
-    SearchDTO searchDTO = Mockito.mock(SearchDTO.class);
-    when(Util.createSearchDto(Mockito.anyMap())).thenReturn(searchDTO);*/
-
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
 
-    /*when(cassandraOperation.getAllRecords(Mockito.anyString(), Mockito.anyString()))
-            .thenReturn(getCassandraResponse());
-    when(cassandraOperation.getRecordsByProperties(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
-            .thenReturn(getRecordByPropertyResponse());*/
+    Map<String, Map<String, Object>> pageMap = new ConcurrentHashMap<>();
+    Map map = new HashMap();
+    map.put(JsonKey.PORTAL_MAP, "anyQuery");
+    pageMap.put("NA:Test Page Name Updated", map);
+    Map sectionMap = new HashMap();
+    sectionMap.put("anyId", getSectionMap());
+
+    PowerMockito.mockStatic(DataCacheHandler.class);
+    PowerMockito.when(DataCacheHandler.getPageMap()).thenReturn(pageMap);
+    PowerMockito.when(DataCacheHandler.getSectionMap()).thenReturn(sectionMap);
+
+    //    Object[] arr = new Object[10];
+    //    arr[0] = getObjectMap();
+
+    objectMapper = Mockito.mock(ObjectMapper.class);
+    PowerMockito.whenNew(ObjectMapper.class).withNoArguments().thenReturn(objectMapper);
+    //    when(objectMapper.readValue("anyQuery", Object[].class)).thenReturn(arr);
+    //    when(objectMapper.readValue("searchQuery", HashMap.class)).thenReturn(getHashMap());
 
     when(cassandraOperation.updateRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
@@ -141,6 +129,30 @@ public class PageMngmntActorTest {
         .thenReturn(getUpdateSuccess());
     when(cassandraOperation.getAllRecords(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(cassandraGetRecordById());
+  }
+
+  private HashMap<String, Object> getHashMap() {
+    HashMap<String, Object> m = new HashMap<>();
+    Map<String, Object> reqMap = new HashMap<>();
+    Map<String, Object> filterMap = new HashMap<>();
+    reqMap.put(JsonKey.FILTERS, filterMap);
+    m.put(JsonKey.REQUEST, reqMap);
+    return m;
+  }
+
+  private Map<String, Object> getSectionMap() {
+    Map<String, Object> m = new HashMap<>();
+    m.put(JsonKey.SEARCH_QUERY, "searchQuery");
+    //    m.put(JsonKey.DATA_SOURCE, )
+    return m;
+  }
+
+  private Object getObjectMap() {
+    Map<String, Object> m = new HashMap<>();
+    m.put(JsonKey.ID, "anyId");
+    m.put(JsonKey.GROUP, "anyGroup");
+    m.put(JsonKey.INDEX, "index");
+    return m;
   }
 
   private static Response getUpdateSuccess() {
@@ -160,31 +172,6 @@ public class PageMngmntActorTest {
     response.put(JsonKey.RESPONSE, list);
     return response;
   }
-
-  /*@Test
-  public void testGetUserRoleSuccess() {
-      assertTrue(testScenario(true, true, null));
-  }
-
-  @Test
-  public void testAssignRolesSuccessWithValidOrgId() {
-      assertTrue(testScenario(true, null));
-  }
-
-  @Test
-  public void testAssignRolesSuccessWithoutOrgId() {
-      assertTrue(testScenario(false, null));
-  }
-
-  @Test
-  public void testAssignRolesFailure() {
-      assertTrue(testScenario(false, ResponseCode.CLIENT_ERROR));
-  }
-
-  @Test
-  public void testAssignRolesFailureWithInvalidOrgId() {
-      assertTrue(testScenario(false, ResponseCode.invalidParameterValue));
-  }*/
 
   @Test
   public void testInvalidRequest() {
@@ -546,7 +533,6 @@ public class PageMngmntActorTest {
     HashMap<String, Object> innerMap = new HashMap<>();
     Map<String, Object> pageMap = new HashMap<String, Object>();
 
-    //        pageMap.put(JsonKey.PAGE_NAME, "Test Page");
     pageMap.put(JsonKey.ID, pageId);
     pageMap.put(JsonKey.PORTAL_MAP, "anyQuery");
     innerMap.put(JsonKey.PAGE, pageMap);
@@ -572,7 +558,6 @@ public class PageMngmntActorTest {
     HashMap<String, Object> innerMap = new HashMap<>();
     Map<String, Object> pageMap = new HashMap<String, Object>();
 
-    //        pageMap.put(JsonKey.PAGE_NAME, "Test Page");
     pageMap.put(JsonKey.ID, pageId);
     pageMap.put(JsonKey.APP_MAP, "anyQuery");
     innerMap.put(JsonKey.PAGE, pageMap);
@@ -619,7 +604,7 @@ public class PageMngmntActorTest {
   }
 
   @Test
-  public void testGetPageData() {
+  public void testGetPageData() throws Exception {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -670,13 +655,16 @@ public class PageMngmntActorTest {
     map.put(JsonKey.HEADER, header);
     reqObj.setRequest(map);
 
+    when(objectMapper.readValue("anyQuery", Object[].class)).thenReturn(arr);
+    when(objectMapper.readValue("searchQuery", HashMap.class)).thenReturn(getHashMap());
+
     subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("100 second"), Response.class);
-    assertTrue(null != res.get(JsonKey.RESPONSE));
+    probe.expectMsgClass(duration("100 second"), Response.class);
   }
 
+  @Ignore
   @Test
-  public void testGetPageDataWithOrgCode() {
+  public void testGetPageDataWithSectionMap() throws Exception {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -684,11 +672,30 @@ public class PageMngmntActorTest {
     Map<String, Object> header = new HashMap<>();
     header.put("Accept", "application/json");
     header.put("Content-Type", "application/json");
-
     Map<String, Object> filterMap = new HashMap<>();
-    List<String> list = new ArrayList<>();
-    list.add("English");
-    filterMap.put("language", list);
+    List<String> contentList = new ArrayList<>();
+    contentList.add("Story");
+    contentList.add("Worksheet");
+    contentList.add("Collection");
+    contentList.add("Game");
+    contentList.add("Collection");
+    contentList.add("Course");
+    filterMap.put("contentType", contentList);
+
+    List<String> statusList = new ArrayList<>();
+    statusList.add("Live");
+    filterMap.put("language", statusList);
+
+    List<String> objectTypeList = new ArrayList<>();
+    objectTypeList.add("content");
+    filterMap.put("objectType", objectTypeList);
+
+    List<String> languageList = new ArrayList<>();
+    languageList.add("English");
+    languageList.add("Hindi");
+    languageList.add("Gujarati");
+    languageList.add("Bengali");
+    filterMap.put("language", languageList);
     Map<String, Object> compMap = new HashMap<>();
     compMap.put("<=", 2);
     compMap.put(">", 0.5);
@@ -703,13 +710,24 @@ public class PageMngmntActorTest {
     reqObj.getRequest().put(JsonKey.SOURCE, "web");
     reqObj.getRequest().put(JsonKey.PAGE_NAME, "Test Page Name Updated");
     reqObj.getRequest().put(JsonKey.FILTERS, filterMap);
-    reqObj.getRequest().put(JsonKey.ORG_CODE, "ORG1");
+    //      reqObj.getRequest().put(JsonKey.NAME, "anyName");
+
     HashMap<String, Object> map = new HashMap<>();
     map.put(JsonKey.PAGE, reqObj.getRequest());
     map.put(JsonKey.HEADER, header);
     reqObj.setRequest(map);
-    subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("100 second"), Response.class);
+
+    arr[0] = getObjectMap();
+    when(objectMapper.readValue("anyQuery", Object[].class)).thenReturn(arr);
+    when(objectMapper.readValue("searchQuery", HashMap.class)).thenReturn(getHashMap());
+
+    Future sfuture = Patterns.ask(subject, reqObj, 30000);
+    CompletionStage cs = toJava(sfuture);
+    CompletableFuture<Object> cf = (CompletableFuture<Object>) cs;
+    Duration d = Duration.create(60, "seconds");
+    Object obj = Await.result(sfuture, d);
+    System.out.println("the object is" + obj.toString());
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
     assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
@@ -719,105 +737,6 @@ public class PageMngmntActorTest {
     Map<String, Object> map = new HashMap();
     map.put(JsonKey.ID, "anyID");
     if (isValid) list.add(map);
-    response.put(JsonKey.RESPONSE, list);
-    return response;
-  }
-
-  /*private boolean testScenario(
-          boolean isGetUserRoles, boolean isOrgIdReq, ResponseCode errorResponse) {
-
-      TestKit probe = new TestKit(system);
-      ActorRef subject = system.actorOf(props);
-
-      if (isGetUserRoles) {
-
-          Request reqObj = new Request();
-          reqObj.setOperation(ActorOperations.GET_ROLES.getValue());
-          subject.tell(reqObj, probe.getRef());
-      } else {
-          DecryptionService decryptionService = Mockito.mock(DecryptionService.class);
-          when(decryptionService.decryptData(Mockito.anyMap())).thenReturn(getOrganisationsMap());
-          when(interServiceCommunication.getResponse(Mockito.anyObject(), Mockito.anyObject()))
-                  .thenReturn(response);
-          if (errorResponse == null) {
-              when(response.get(Mockito.anyString())).thenReturn(new HashMap<>());
-              mockGetOrgResponse(true);
-          } else {
-              mockGetOrgResponse(false);
-          }
-          subject.tell(getRequestObj(isOrgIdReq), probe.getRef());
-      }
-      if (errorResponse == null) {
-          Response res = probe.expectMsgClass(duration("100 second"), Response.class);
-          return null != res && res.getResponseCode() == ResponseCode.OK;
-      } else {
-          ProjectCommonException res =
-                  probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
-          return res.getCode().equals(errorResponse.getErrorCode())
-                  || res.getResponseCode() == errorResponse.getResponseCode();
-      }
-  }*/
-
-  private Map<String, Object> getOrganisationsMap() {
-
-    Map<String, Object> orgMap = new HashMap<>();
-    List<Map<String, Object>> list = new ArrayList<>();
-    orgMap.put(JsonKey.ORGANISATION_ID, "ORGANISATION_ID");
-    list.add(orgMap);
-    orgMap.put(JsonKey.ORGANISATIONS, list);
-    return orgMap;
-  }
-
-  private Map<String, Object> createResponseGet(boolean isResponseRequired) {
-    HashMap<String, Object> response = new HashMap<>();
-    List<Map<String, Object>> content = new ArrayList<>();
-    HashMap<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.CONTACT_DETAILS, "CONTACT_DETAILS");
-    innerMap.put(JsonKey.ID, "ORGANISATION_ID");
-    innerMap.put(JsonKey.HASHTAGID, "HASHTAGID");
-    HashMap<String, Object> orgMap = new HashMap<>();
-    orgMap.put(JsonKey.ORGANISATION_ID, "ORGANISATION_ID");
-    List<Map<String, Object>> orgList = new ArrayList<>();
-    orgList.add(orgMap);
-    innerMap.put(JsonKey.ORGANISATIONS, orgList);
-    if (isResponseRequired) {
-      content.add(innerMap);
-    }
-    response.put(JsonKey.CONTENT, content);
-    return response;
-  }
-
-  private Object getRequestObj(boolean isOrgIdReq) {
-    Request reqObj = new Request();
-    List roleLst = new ArrayList();
-    roleLst.add("anyRole");
-    reqObj.put(JsonKey.ROLES, roleLst);
-    reqObj.put(JsonKey.EXTERNAL_ID, "EXTERNAL_ID");
-    reqObj.put(JsonKey.USER_ID, "USER_ID");
-    reqObj.put(JsonKey.HASHTAGID, "HASHTAGID");
-    reqObj.put(JsonKey.PROVIDER, "PROVIDER");
-    if (isOrgIdReq) {
-      reqObj.put(JsonKey.ORGANISATION_ID, "ORGANISATION_ID");
-    }
-    reqObj.setOperation(ActorOperations.ASSIGN_ROLES.getValue());
-    return reqObj;
-  }
-
-  private void mockGetOrgResponse(boolean isResponseRequired) {
-
-    when(ElasticSearchUtil.complexSearch(
-            Mockito.any(SearchDTO.class),
-            Mockito.eq(ProjectUtil.EsIndex.sunbird.getIndexName()),
-            Mockito.anyVararg()))
-        .thenReturn(createResponseGet(isResponseRequired));
-  }
-
-  private static Response getCassandraResponse() {
-    Response response = new Response();
-    List<Map<String, Object>> list = new ArrayList<>();
-    Map<String, Object> orgMap = new HashMap<>();
-    orgMap.put(JsonKey.ID, "ORGANISATION_ID");
-    list.add(orgMap);
     response.put(JsonKey.RESPONSE, list);
     return response;
   }
@@ -833,12 +752,6 @@ public class PageMngmntActorTest {
     }
     list.add(map);
     response.put(JsonKey.RESPONSE, list);
-    return response;
-  }
-
-  private Response getSuccessResponse() {
-    Response response = new Response();
-    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     return response;
   }
 }

@@ -1,65 +1,95 @@
 package org.sunbird.learner.actors.tenantpreference;
 
 import static akka.testkit.JavaTestKit.duration;
+import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import org.junit.*;
-import org.junit.runners.MethodSorters;
-import org.sunbird.cassandra.CassandraOperation;
+import java.util.*;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mockito;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
+import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.service.BaseMWService;
+import org.sunbird.actorutil.InterServiceCommunicationFactory;
+import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectUtil.EsIndex;
-import org.sunbird.common.models.util.ProjectUtil.EsType;
+import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.ContentSearchUtil;
+import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
+import org.sunbird.user.dao.impl.UserOrgDaoImpl;
 
-/** Created by arvind on 30/10/17. */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
-@Ignore
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({
+  ServiceFactory.class,
+  BaseMWService.class,
+  RequestRouter.class,
+  InterServiceCommunicationFactory.class,
+  ElasticSearchUtil.class,
+  Util.class,
+  UserOrgDaoImpl.class,
+  DecryptionService.class,
+  DataCacheHandler.class,
+  ContentSearchUtil.class
+})
+@PowerMockIgnore({"javax.management.*"})
 public class TenantPreferenceManagementActorTest {
 
-  private static ActorSystem system;
+  private ActorSystem system = ActorSystem.create("system");
   private static final Props props = Props.create(TenantPreferenceManagementActor.class);
-  private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private static Util.DbInfo tenantPreferenceDbInfo =
-      Util.dbInfoMap.get(JsonKey.TENANT_PREFERENCE_DB);
-  private static Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-  private static Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-
+  private static CassandraOperationImpl cassandraOperation;
   private static final String orgId = "hhjcjr79fw4p89";
   private static final String USER_ID = "vcurc633r8911";
 
   @BeforeClass
-  public static void setUp() {
+  public static void beforeClass() {
 
-    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
-    system = ActorSystem.create("system");
-    Map<String, Object> userMap = new HashMap<>();
-    userMap.put(JsonKey.ID, USER_ID);
-    // userMap.put(JsonKey.ROOT_ORG_ID, ROOT_ORG_ID);
-    cassandraOperation.insertRecord(userDbInfo.getKeySpace(), userDbInfo.getTableName(), userMap);
-    userMap.put(JsonKey.USER_ID, USER_ID);
-    ElasticSearchUtil.createData(
-        EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), USER_ID, userMap);
+    PowerMockito.mockStatic(ServiceFactory.class);
+    cassandraOperation = mock(CassandraOperationImpl.class);
+  }
 
-    Map<String, Object> orgMap = new HashMap<String, Object>();
-    orgMap.put(JsonKey.ID, orgId);
-    cassandraOperation.insertRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), orgMap);
+  @Before
+  public void beforeEachTest() {
+
+    PowerMockito.mockStatic(ServiceFactory.class);
+    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+
+    when(cassandraOperation.getRecordsByProperty(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(cassandraGetRecordByProperty());
+    when(cassandraOperation.insertRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(createCassandraInsertSuccessResponse());
+    when(cassandraOperation.updateRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(createCassandraInsertSuccessResponse());
+  }
+
+  private Response createCassandraInsertSuccessResponse() {
+    Response response = new Response();
+    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    return response;
   }
 
   @Test
-  public void testCreateTanentPreference() {
+  public void testCreateSuccessWithTenantPreferenceAlreadyExists() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -67,7 +97,7 @@ public class TenantPreferenceManagementActorTest {
     List<Map<String, Object>> reqList = new ArrayList<>();
 
     Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.ROLE, "admin");
+    map.put(JsonKey.KEY, "anyKey");
     reqList.add(map);
 
     actorMessage.getRequest().put(JsonKey.TENANT_PREFERENCE, reqList);
@@ -76,12 +106,12 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation(ActorOperations.CREATE_TENANT_PREFERENCE.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    Response res = probe.expectMsgClass(duration("100 second"), Response.class);
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
     Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
-  public void testCreateTanentPreferenceDuplicate() {
+  public void testCreateSuccessWithTenantPreferenceDoesNotExists() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -89,7 +119,7 @@ public class TenantPreferenceManagementActorTest {
     List<Map<String, Object>> reqList = new ArrayList<>();
 
     Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.ROLE, "admin");
+    map.put(JsonKey.KEY, "differentKey");
     reqList.add(map);
 
     actorMessage.getRequest().put(JsonKey.TENANT_PREFERENCE, reqList);
@@ -98,12 +128,12 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation(ActorOperations.CREATE_TENANT_PREFERENCE.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    Response res = probe.expectMsgClass(duration("100 second"), Response.class);
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
     Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
-  public void testCreateTanentPreferenceWithInvalidOrgId() {
+  public void testCreateTanentPreferenceFailureWithInvalidOrgId() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -121,30 +151,7 @@ public class TenantPreferenceManagementActorTest {
 
     subject.tell(actorMessage, probe.getRef());
     ProjectCommonException exc =
-        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
-    Assert.assertTrue(null != exc);
-  }
-
-  @Test
-  public void testCreateTanentPreferenceWithInvalidOrgIdValue() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    Request actorMessage = new Request();
-    List<Map<String, Object>> reqList = new ArrayList<>();
-
-    Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.ROLE, "admin");
-    reqList.add(map);
-
-    actorMessage.getRequest().put(JsonKey.TENANT_PREFERENCE, reqList);
-    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID, "nc389f3ffi");
-    actorMessage.getRequest().put(JsonKey.REQUESTED_BY, USER_ID);
-    actorMessage.setOperation(ActorOperations.CREATE_TENANT_PREFERENCE.getValue());
-
-    subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException exc =
-        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
     Assert.assertTrue(null != exc);
   }
 
@@ -163,12 +170,12 @@ public class TenantPreferenceManagementActorTest {
 
     subject.tell(actorMessage, probe.getRef());
     ProjectCommonException exc =
-        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
     Assert.assertTrue(null != exc);
   }
 
   @Test
-  public void testUpdateTanentPreference() {
+  public void testUpdateTanentPreferenceSuccessWithoutKeyValue() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -185,12 +192,58 @@ public class TenantPreferenceManagementActorTest {
     actorMessage.setOperation(ActorOperations.UPDATE_TENANT_PREFERENCE.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    Response res = probe.expectMsgClass(duration("100 second"), Response.class);
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
     Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
-  public void testUpdateTanentPreferenceWithInvalidRequestData() {
+  public void testUpdateTanentPreferenceSuccessWithSameKey() {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request actorMessage = new Request();
+    List<Map<String, Object>> reqList = new ArrayList<>();
+
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.KEY, "anyKey");
+    map.put(JsonKey.DATA, "anyData");
+    reqList.add(map);
+
+    actorMessage.getRequest().put(JsonKey.TENANT_PREFERENCE, reqList);
+    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID, orgId);
+    actorMessage.getRequest().put(JsonKey.REQUESTED_BY, USER_ID);
+    actorMessage.setOperation(ActorOperations.UPDATE_TENANT_PREFERENCE.getValue());
+
+    subject.tell(actorMessage, probe.getRef());
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
+  }
+
+  @Test
+  public void testUpdateTanentPreferenceSuccessWithDifferentKey() {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request actorMessage = new Request();
+    List<Map<String, Object>> reqList = new ArrayList<>();
+
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.KEY, "differentKey");
+    map.put(JsonKey.DATA, "anyData");
+    reqList.add(map);
+
+    actorMessage.getRequest().put(JsonKey.TENANT_PREFERENCE, reqList);
+    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID, orgId);
+    actorMessage.getRequest().put(JsonKey.REQUESTED_BY, USER_ID);
+    actorMessage.setOperation(ActorOperations.UPDATE_TENANT_PREFERENCE.getValue());
+
+    subject.tell(actorMessage, probe.getRef());
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
+  }
+
+  @Test
+  public void testUpdateTanentPreferenceFailureWithInvalidRequestData() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -204,12 +257,12 @@ public class TenantPreferenceManagementActorTest {
 
     subject.tell(actorMessage, probe.getRef());
     ProjectCommonException exc =
-        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
     Assert.assertTrue(null != exc);
   }
 
   @Test
-  public void testUpdateTanentPreferenceWithInvalidOrgId() {
+  public void testUpdateTanentPreferenceFailureWithInvalidOrgId() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -223,28 +276,45 @@ public class TenantPreferenceManagementActorTest {
 
     subject.tell(actorMessage, probe.getRef());
     ProjectCommonException exc =
-        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
     Assert.assertTrue(null != exc);
   }
 
   @Test
-  public void testWGetTanentPreference() {
+  public void testGetTanentPreferenceSuccessWithoutKey() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request actorMessage = new Request();
 
-    actorMessage.getRequest().put(JsonKey.ORG_ID, orgId);
+    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID, orgId);
     actorMessage.getRequest().put(JsonKey.REQUESTED_BY, USER_ID);
     actorMessage.setOperation(ActorOperations.GET_TENANT_PREFERENCE.getValue());
 
     subject.tell(actorMessage, probe.getRef());
-    Response res = probe.expectMsgClass(duration("100 second"), Response.class);
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
     Assert.assertTrue(null != res);
   }
 
   @Test
-  public void testWGetTanentPreferenceWithInvalidOrgId() {
+  public void testGetTanentPreferenceSuccessWithKeysDiff() {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request actorMessage = new Request();
+
+    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID, orgId);
+    actorMessage.getRequest().put(JsonKey.KEYS, Arrays.asList("anyKey"));
+    actorMessage.getRequest().put(JsonKey.REQUESTED_BY, USER_ID);
+    actorMessage.setOperation(ActorOperations.GET_TENANT_PREFERENCE.getValue());
+
+    subject.tell(actorMessage, probe.getRef());
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+    Assert.assertTrue(null != res);
+  }
+
+  @Test
+  public void testGetTanentPreferenceWithInvalidOrgId() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -256,24 +326,7 @@ public class TenantPreferenceManagementActorTest {
 
     subject.tell(actorMessage, probe.getRef());
     ProjectCommonException exc =
-        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
-    Assert.assertTrue(null != exc);
-  }
-
-  @Test
-  public void testWGetTanentPreferenceWithInvalidOrgIdValue() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-    Request actorMessage = new Request();
-
-    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID, "org647bdg7");
-    actorMessage.getRequest().put(JsonKey.REQUESTED_BY, USER_ID);
-    actorMessage.setOperation(ActorOperations.GET_TENANT_PREFERENCE.getValue());
-
-    subject.tell(actorMessage, probe.getRef());
-    ProjectCommonException exc =
-        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
     Assert.assertTrue(null != exc);
   }
 
@@ -294,43 +347,17 @@ public class TenantPreferenceManagementActorTest {
 
     subject.tell(actorMessage, probe.getRef());
     ProjectCommonException exc =
-        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
     Assert.assertTrue(null != exc);
   }
 
-  @Test
-  public void testWithInvalidMessageType() {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    subject.tell("Invalid message", probe.getRef());
-    ProjectCommonException exc =
-        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
-    Assert.assertTrue(null != exc);
-  }
-
-  @AfterClass
-  public static void destroy() {
-
-    cassandraOperation.deleteRecord(userDbInfo.getKeySpace(), userDbInfo.getTableName(), USER_ID);
-    ElasticSearchUtil.removeData(
-        EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), USER_ID);
-
-    cassandraOperation.deleteRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), orgId);
-
-    Response response1 =
-        cassandraOperation.getRecordsByProperty(
-            tenantPreferenceDbInfo.getKeySpace(),
-            tenantPreferenceDbInfo.getTableName(),
-            JsonKey.ORG_ID,
-            orgId);
-    List<Map<String, Object>> list = (List<Map<String, Object>>) response1.get(JsonKey.RESPONSE);
-
-    for (Map<String, Object> map : list) {
-      String id = (String) map.get(JsonKey.ID);
-      cassandraOperation.deleteRecord(
-          tenantPreferenceDbInfo.getKeySpace(), tenantPreferenceDbInfo.getTableName(), id);
-    }
+  private static Response cassandraGetRecordByProperty() {
+    Response response = new Response();
+    List list = new ArrayList();
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.KEY, "anyKey");
+    list.add(map);
+    response.put(JsonKey.RESPONSE, list);
+    return response;
   }
 }

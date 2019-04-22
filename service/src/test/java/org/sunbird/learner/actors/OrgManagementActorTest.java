@@ -206,9 +206,9 @@ public class OrgManagementActorTest {
         .thenReturn(getSuccess());
     when(cassandraOperation.getRecordsByProperties(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(getOrgStatus())
-        .thenReturn(getOrgStatus())
         .thenReturn(getRecordsByProperty(true));
+    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(getValidateChannelEsResponse(true));
     boolean result =
         testScenario(
             getRequest(
@@ -228,9 +228,9 @@ public class OrgManagementActorTest {
         .thenReturn(getSuccess());
     when(cassandraOperation.getRecordsByProperties(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(getOrgStatus())
-        .thenReturn(getOrgStatus())
         .thenReturn(getRecordsByProperty(true));
+    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(getValidateChannelEsResponse(true));
     Map<String, Object> map = getRequestDataForOrgCreate(basicRequestData);
     map.remove(JsonKey.EXTERNAL_ID);
     boolean result = testScenario(getRequest(map, ActorOperations.CREATE_ORG.getValue()), null);
@@ -313,6 +313,19 @@ public class OrgManagementActorTest {
       Map<String, Object> content = new HashMap<>();
       content.put(JsonKey.ORGANISATION_ID, "orgId");
       content.put(JsonKey.HASHTAGID, "hashtagId");
+      contentList.add(content);
+    }
+    response.put(JsonKey.CONTENT, contentList);
+    return response;
+  }
+
+  private Map<String, Object> getValidateChannelEsResponse(boolean isValidChannel) {
+    Map<String, Object> response = new HashMap<>();
+    List<Map<String, Object>> contentList = new ArrayList<>();
+    if (isValidChannel) {
+      Map<String, Object> content = new HashMap<>();
+      content.put(JsonKey.STATUS, 1);
+      content.put(JsonKey.ID, "id");
       contentList.add(content);
     }
     response.put(JsonKey.CONTENT, contentList);

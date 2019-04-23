@@ -106,7 +106,6 @@ public class SupportMultipleExternalIdsTest {
     try {
       Util.checkExternalIdUniqueness(user, JsonKey.CREATE);
     } catch (ProjectCommonException e) {
-      System.out.println("I was here");
       assertEquals(ResponseCode.userAlreadyExists.getErrorCode(), e.getCode());
     }
   }

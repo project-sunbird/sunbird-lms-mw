@@ -31,7 +31,6 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
-import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -41,7 +40,6 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.Util;
 
 /**
  * Junit test cases for Org creation and consumption metrics.
@@ -51,10 +49,10 @@ import org.sunbird.learner.util.Util;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({ElasticSearchUtil.class, HttpClientBuilder.class, ServiceFactory.class})
 @PowerMockIgnore("javax.management.*")
-@Ignore
+// @Ignore
 public class OrganisationMetricsActorTest {
 
-  private static ActorSystem system;
+  private ActorSystem system = ActorSystem.create("system");
   private static final Props prop = Props.create(OrganisationMetricsActor.class);
   private static String userId = "456-123";
   private static final String EXTERNAL_ID = "ex00001lvervk";
@@ -89,9 +87,8 @@ public class OrganisationMetricsActorTest {
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(userOrgMap);
 
-    SunbirdMWService.init();
-    system = ActorSystem.create("system");
-    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
+    //    SunbirdMWService.init();
+    //    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
   }
 
   @Before

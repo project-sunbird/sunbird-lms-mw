@@ -17,7 +17,6 @@ import java.util.Map;
 import java.util.concurrent.CompletionStage;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -58,10 +57,9 @@ import scala.concurrent.duration.Duration;
   ElasticSearchUtil.class,
   Util.class,
   UserOrgDaoImpl.class,
-  DecryptionService.class,
+  DecryptionService.class
 })
 @PowerMockIgnore({"javax.management.*"})
-@Ignore
 public class UserRoleActorTest {
 
   private ActorSystem system = ActorSystem.create("system");
@@ -69,14 +67,24 @@ public class UserRoleActorTest {
   private static final InterServiceCommunication interServiceCommunication =
       Mockito.mock(InterServiceCommunication.class);
   private static final Response response = Mockito.mock(Response.class);
+  private static CassandraOperationImpl cassandraOperation;
 
   @BeforeClass
   public static void beforeClass() {
+
     PowerMockito.mockStatic(ServiceFactory.class);
-    CassandraOperationImpl cassandraOperation = mock(CassandraOperationImpl.class);
-    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
-    when(cassandraOperation.getAllRecords(Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getCassandraResponse());
+    cassandraOperation = mock(CassandraOperationImpl.class);
+  }
+
+  private static Response getRecordByPropertyResponse() {
+
+    Response response = new Response();
+    List<Map<String, Object>> list = new ArrayList<>();
+    Map<String, Object> orgMap = new HashMap<>();
+    orgMap.put(JsonKey.ID, "ORGANISATION_ID");
+    list.add(orgMap);
+    response.put(JsonKey.RESPONSE, list);
+    return response;
   }
 
   @Before
@@ -106,6 +114,13 @@ public class UserRoleActorTest {
     when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
     SearchDTO searchDTO = Mockito.mock(SearchDTO.class);
     when(Util.createSearchDto(Mockito.anyMap())).thenReturn(searchDTO);
+
+    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+    when(cassandraOperation.getAllRecords(Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(getCassandraResponse());
+    when(cassandraOperation.getRecordsByProperties(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(getRecordByPropertyResponse());
   }
 
   @Test
@@ -125,7 +140,7 @@ public class UserRoleActorTest {
 
   @Test
   public void testAssignRolesFailure() {
-    assertTrue(testScenario(true, ResponseCode.CLIENT_ERROR));
+    assertTrue(testScenario(false, ResponseCode.CLIENT_ERROR));
   }
 
   @Test
@@ -162,11 +177,11 @@ public class UserRoleActorTest {
       subject.tell(getRequestObj(isOrgIdReq), probe.getRef());
     }
     if (errorResponse == null) {
-      Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+      Response res = probe.expectMsgClass(duration("100 second"), Response.class);
       return null != res && res.getResponseCode() == ResponseCode.OK;
     } else {
       ProjectCommonException res =
-          probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+          probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
       return res.getCode().equals(errorResponse.getErrorCode())
           || res.getResponseCode() == errorResponse.getResponseCode();
     }

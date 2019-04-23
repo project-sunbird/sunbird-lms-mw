@@ -260,7 +260,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                   LoggerEnum.INFO.name());
               String errorMsg = prepareErrorMsg(contentIdVsRowNumMap, searchedContentIds);
               ProjectCommonException.throwClientErrorException(
-                  ResponseCode.errorInvalidLinkedContentUrl, errorMsg);
+                  ResponseCode.errorInvalidLinkedContentId, errorMsg);
             }
             List<Map<String, Object>> content =
                 (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
@@ -272,7 +272,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
               if (searchedContentIds.size() != contentIds.size()) {
                 String errorMsg = prepareErrorMsg(contentIdVsRowNumMap, searchedContentIds);
                 ProjectCommonException.throwClientErrorException(
-                    ResponseCode.errorInvalidLinkedContentUrl, errorMsg);
+                    ResponseCode.errorInvalidLinkedContentId, errorMsg);
               }
             } else {
               ProjectLogger.log(
@@ -316,7 +316,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                     ProjectUtil.getConfigValue(JsonKey.SUNBIRD_LINKED_CONTENT_BASE_URL) + contentId;
                 String message =
                     MessageFormat.format(
-                        ResponseCode.errorInvalidLinkedContentUrl.getErrorMessage(),
+                        ResponseCode.errorInvalidLinkedContentId.getErrorMessage(),
                         contentUrl,
                         contentIdVsRowNumMap.get(contentId));
                 errorMsg.append(message);
@@ -686,7 +686,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           List<String> contentIds = Collections.EMPTY_LIST;
           try {
             contentIds =
-                validateLinkedContentUrlAndGetContentIds(
+                validateLinkedContentAndGetContentIds(
                     max_allowed_content_size, linkedContentKey, record, i + 1);
             rowNumVsContentIdsMap.put(i + 1, contentIds);
           } catch (Exception ex) {
@@ -795,22 +795,22 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     }
   }
 
-  private List<String> validateLinkedContentUrlAndGetContentIds(
+  private List<String> validateLinkedContentAndGetContentIds(
       int max_allowed_content_size, String linkedContentKey, CSVRecord record, int rowNumber) {
     List<String> contentIds = new ArrayList<>();
     for (int i = 1; i <= max_allowed_content_size; i++) {
       String key = MessageFormat.format(linkedContentKey, i).trim();
       if (record.isMapped(key)) {
-        String contentId = validateLinkedContentUrlAndGetContentId(record.get(key), rowNumber);
+        String contentId = record.get(key);
         if (StringUtils.isNotBlank(contentId)) {
           if (contentIds.contains(contentId)) {
             String message =
                 MessageFormat.format(
-                    ResponseCode.errorDuplicateLinkedContentUrl.getErrorMessage(),
+                    ResponseCode.errorDuplicateLinkedContentId.getErrorMessage(),
                     record.get(key),
                     rowNumber);
             ProjectCommonException.throwClientErrorException(
-                ResponseCode.errorDuplicateLinkedContentUrl, message);
+                ResponseCode.errorDuplicateLinkedContentId, message);
           }
           contentIds.add(contentId);
         } else {
@@ -819,33 +819,6 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       }
     }
     return contentIds;
-  }
-
-  private String validateLinkedContentUrlAndGetContentId(String contentUrl, int rowNumber) {
-    if (StringUtils.isNotBlank(contentUrl)) {
-      String linkedContentBaseUrl =
-          ProjectUtil.getConfigValue(JsonKey.SUNBIRD_LINKED_CONTENT_BASE_URL);
-      String[] arr = linkedContentBaseUrl.split("/");
-      String[] contentUrlArr = contentUrl.split("/");
-      if ((arr.length + 1) != contentUrlArr.length) {
-        throwInvalidLinkedContentUrl(contentUrl, rowNumber);
-      } else {
-        if (contentUrl.startsWith(linkedContentBaseUrl)) {
-          return contentUrlArr[contentUrlArr.length - 1];
-        } else {
-          throwInvalidLinkedContentUrl(contentUrl, rowNumber);
-        }
-      }
-    }
-    return "";
-  }
-
-  private void throwInvalidLinkedContentUrl(String contentUrl, Object rowNumber) {
-    String message =
-        MessageFormat.format(
-            ResponseCode.errorInvalidLinkedContentUrl.getErrorMessage(), contentUrl, rowNumber);
-    ProjectCommonException.throwClientErrorException(
-        ResponseCode.errorInvalidLinkedContentUrl, message);
   }
 
   private void validateQrCodeRequiredAndQrCode(Map<String, Object> recordMap) {

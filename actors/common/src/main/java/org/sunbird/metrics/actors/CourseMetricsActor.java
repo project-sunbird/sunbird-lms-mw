@@ -260,7 +260,8 @@ public class CourseMetricsActor extends BaseMetricsActor {
             + reportPath,
         LoggerEnum.INFO.name());
     String signedUrl =
-        CloudStorageUtil.getSignedUrl(CloudStorageType.AZURE, courseMetricsContainer, reportPath);
+        CloudStorageUtil.getAnalyticsSignedUrl(
+            CloudStorageType.AZURE, courseMetricsContainer, reportPath);
 
     Response response = new Response();
     response.put(JsonKey.SIGNED_URL, signedUrl);

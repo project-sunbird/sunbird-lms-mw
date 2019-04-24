@@ -106,7 +106,7 @@ public class LocationActor extends BaseLocationActor {
       sender().tell(response, self());
       ProjectLogger.log("Insert location data to ES");
       Boolean eventSync = Boolean.parseBoolean(getEventSyncSetting(JsonKey.LOCATION));
-      if(!eventSync) {
+      if (!eventSync) {
         ProjectLogger.log("LocationActor: createLocation : updating elastic search with BG-actor", LoggerEnum.INFO);
         saveDataToES(mapper.convertValue(location, Map.class), JsonKey.INSERT);
       }
@@ -124,7 +124,11 @@ public class LocationActor extends BaseLocationActor {
       Response response = locationDao.update(location);
       sender().tell(response, self());
       ProjectLogger.log("Update location data to ES");
-      saveDataToES(mapper.convertValue(location, Map.class), JsonKey.UPDATE);
+      Boolean eventSync = Boolean.parseBoolean(getEventSyncSetting(JsonKey.LOCATION));
+      if (!eventSync) {
+        ProjectLogger.log("LocationActor: updateLocation : updating elastic search with BG-actor", LoggerEnum.INFO);
+        saveDataToES(mapper.convertValue(location, Map.class), JsonKey.UPDATE);
+      }
       generateTelemetryForLocation(
           location.getId(), mapper.convertValue(location, Map.class), JsonKey.UPDATE);
     } catch (Exception ex) {
@@ -157,7 +161,11 @@ public class LocationActor extends BaseLocationActor {
       Response response = locationDao.delete(locationId);
       sender().tell(response, self());
       ProjectLogger.log("Delete location data from ES");
-      deleteDataFromES(locationId);
+      Boolean eventSync = Boolean.parseBoolean(getEventSyncSetting(JsonKey.LOCATION));
+      if (!eventSync) {
+        ProjectLogger.log("LocationActor: deleteLocation : updating elastic search with BG-actor", LoggerEnum.INFO);
+        deleteDataFromES(locationId);
+      }
       generateTelemetryForLocation(locationId, new HashMap<>(), JsonKey.DELETE);
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);

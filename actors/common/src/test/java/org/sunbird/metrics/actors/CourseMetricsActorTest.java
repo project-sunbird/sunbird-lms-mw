@@ -41,6 +41,7 @@ import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.common.util.CloudStorageUtil;
 import org.sunbird.helper.ServiceFactory;
 
 /**
@@ -49,7 +50,12 @@ import org.sunbird.helper.ServiceFactory;
  * @author arvind.
  */
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({ElasticSearchUtil.class, HttpClientBuilder.class, ServiceFactory.class})
+@PrepareForTest({
+  ElasticSearchUtil.class,
+  HttpClientBuilder.class,
+  ServiceFactory.class,
+  CloudStorageUtil.class
+})
 @PowerMockIgnore("javax.management.*")
 public class CourseMetricsActorTest {
 
@@ -65,7 +71,8 @@ public class CourseMetricsActorTest {
   private static Map<String, Object> userOrgMap = new HashMap<>();
   private static final String HTTP_POST = "POST";
   private static ObjectMapper mapper = new ObjectMapper();
-  private static CassandraOperationImpl cassandraOperation = mock(CassandraOperationImpl.class);;
+  private static CassandraOperationImpl cassandraOperation = mock(CassandraOperationImpl.class);
+  private static final String SIGNED_URL = "SIGNED_URL";
 
   @BeforeClass
   public static void setUp() {
@@ -221,11 +228,9 @@ public class CourseMetricsActorTest {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
-    Response response = createCassandraInsertSuccessResponse();
-    when(cassandraOperation.insertRecord(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(response);
-
+    PowerMockito.mockStatic(CloudStorageUtil.class);
+    when(CloudStorageUtil.getSignedUrl(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(SIGNED_URL);
     Request actorMessage = new Request();
     actorMessage.put(JsonKey.REQUESTED_BY, userId);
     actorMessage.put(JsonKey.BATCH_ID, batchId);
@@ -235,7 +240,7 @@ public class CourseMetricsActorTest {
 
     subject.tell(actorMessage, probe.getRef());
     Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    Assert.assertTrue(null != res.get(JsonKey.REQUEST_ID));
+    Assert.assertEquals(SIGNED_URL, res.get(JsonKey.SIGNED_URL));
   }
 
   @Test

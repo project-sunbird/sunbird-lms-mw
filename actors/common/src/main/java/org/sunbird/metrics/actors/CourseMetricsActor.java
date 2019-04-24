@@ -4,6 +4,7 @@ import static org.sunbird.common.models.util.ProjectUtil.isNotNull;
 import static org.sunbird.common.models.util.ProjectUtil.isNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.File;
 import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -18,14 +19,14 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
-import org.sunbird.common.models.util.ProjectUtil.ReportTrackingStatus;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.common.util.CloudStorageUtil;
+import org.sunbird.common.util.CloudStorageUtil.CloudStorageType;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.UserUtility;
-import org.sunbird.learner.util.Util;
 
 @ActorConfig(
   tasks = {
@@ -216,10 +217,6 @@ public class CourseMetricsActor extends BaseMetricsActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
-    if (StringUtils.isBlank((String) requestedByInfo.get(JsonKey.EMAIL))) {
-      ProjectCommonException.throwClientErrorException(ResponseCode.emailRequired);
-    }
-
     String batchId = (String) actorMessage.getRequest().get(JsonKey.BATCH_ID);
     if (StringUtils.isBlank(batchId)) {
       ProjectLogger.log(
@@ -250,49 +247,26 @@ public class CourseMetricsActor extends BaseMetricsActor {
       sender().tell(exception, self());
       return;
     }
+    String courseMetricsContainer =
+        ProjectUtil.getConfigValue(JsonKey.SUNBIRD_COURSE_METRICS_CONTANER);
+    String courseMetricsReportFolder =
+        ProjectUtil.getConfigValue(JsonKey.SUNBIRD_COURSE_METRICS_REPORT_FOLDER);
+    String reportPath = courseMetricsReportFolder + File.separator + "report-" + batchId + ".csv";
 
-    Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
-
-    String requestId = ProjectUtil.getUniqueIdFromTimestamp(1);
-
-    String periodStr = (String) actorMessage.getRequest().get(JsonKey.PERIOD);
-    String fileFormat = (String) actorMessage.getRequest().get(JsonKey.FORMAT);
-    String courseName = getCourseNameFromBatch(courseBatchResult);
-    String batchName = (String) courseBatchResult.get(JsonKey.NAME);
-
-    Map<String, Object> requestDbInfo = new HashMap<>();
-    requestDbInfo.put(JsonKey.ID, requestId);
-    requestDbInfo.put(JsonKey.USER_ID, requestedBy);
-    requestDbInfo.put(JsonKey.FIRST_NAME, requestedByInfo.get(JsonKey.FIRST_NAME));
-    requestDbInfo.put(JsonKey.STATUS, ReportTrackingStatus.NEW.getValue());
-    requestDbInfo.put(JsonKey.RESOURCE_ID, batchId);
-    requestDbInfo.put(JsonKey.PERIOD, periodStr);
-    requestDbInfo.put(JsonKey.CREATED_DATE, simpleDateFormat.format(new Date()));
-    requestDbInfo.put(JsonKey.UPDATED_DATE, simpleDateFormat.format(new Date()));
-    String decryptedEmail =
-        decryptionService.decryptData((String) requestedByInfo.get(JsonKey.EMAIL));
-    requestDbInfo.put(JsonKey.EMAIL, decryptedEmail);
-    requestDbInfo.put(JsonKey.TYPE, COURSE_PROGRESS_REPORT);
-    requestDbInfo.put(JsonKey.FORMAT, fileFormat);
-    requestDbInfo.put(JsonKey.RESOURCE_NAME, getCourseNameFromBatch(courseBatchResult));
-
-    cassandraOperation.insertRecord(
-        reportTrackingdbInfo.getKeySpace(), reportTrackingdbInfo.getTableName(), requestDbInfo);
+    ProjectLogger.log(
+        "CourseMetricsActor:courseProgressMetricsReport: courseMetricsContainer="
+            + courseMetricsContainer
+            + ", reportPath="
+            + reportPath,
+        LoggerEnum.INFO.name());
+    String signedUrl =
+        CloudStorageUtil.getSignedUrl(CloudStorageType.AZURE, courseMetricsContainer, reportPath);
 
     Response response = new Response();
-    response.put(JsonKey.REQUEST_ID, requestId);
+    response.put(JsonKey.SIGNED_URL, signedUrl);
+    response.put(
+        JsonKey.DURATION, ProjectUtil.getConfigValue(JsonKey.DOWNLOAD_LINK_EXPIRY_TIMEOUT));
     sender().tell(response, self());
-
-    // assign the back ground task to background job actor ...
-    Request backGroundRequest = new Request();
-    backGroundRequest.setOperation(ActorOperations.COURSE_POGRESS_MAIL_GENERATION.getValue());
-    backGroundRequest.getRequest().put(JsonKey.REQUEST_ID, requestId);
-    backGroundRequest.getRequest().put(JsonKey.COURSE_NAME, courseName);
-    backGroundRequest.getRequest().put(JsonKey.BATCH_NAME, batchName);
-    backGroundRequest
-        .getRequest()
-        .put(JsonKey.ROOT_ORG_ID, (String) requestedByInfo.get(JsonKey.ROOT_ORG_ID));
-    tellToAnother(backGroundRequest);
   }
 
   private String getCourseNameFromBatch(Map<String, Object> courseBatchResult) {

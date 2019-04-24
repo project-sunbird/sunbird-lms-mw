@@ -34,7 +34,8 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ContentSearchUtil;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
-import org.sunbird.user.dao.impl.UserOrgDaoImpl;
+
+// import org.sunbird.user.dao.impl.UserOrgDaoImpl;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
@@ -44,7 +45,7 @@ import org.sunbird.user.dao.impl.UserOrgDaoImpl;
   InterServiceCommunicationFactory.class,
   ElasticSearchUtil.class,
   Util.class,
-  UserOrgDaoImpl.class,
+  //  UserOrgDaoImpl.class,
   DecryptionService.class,
   DataCacheHandler.class,
   ContentSearchUtil.class

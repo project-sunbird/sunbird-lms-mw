@@ -34,7 +34,6 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
-import org.sunbird.location.util.LocationRequestValidator;
 import org.sunbird.validator.location.LocationRequestValidator;
 
 @RunWith(PowerMockRunner.class)

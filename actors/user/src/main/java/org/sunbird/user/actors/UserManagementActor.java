@@ -585,6 +585,9 @@ public class UserManagementActor extends BaseActor {
         UserExtension userExtension = new UserProviderRegistryImpl();
         userExtension.delete(userMap);
       }
+      if (response == null) {
+        response = new Response();
+      }
       response.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
       if (!isPasswordUpdated) {
         response.put(JsonKey.ERROR_MSG, ResponseMessage.Message.ERROR_USER_UPDATE_PASSWORD);

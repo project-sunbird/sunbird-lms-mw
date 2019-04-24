@@ -1072,7 +1072,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
         INFO);
     try {
-      linkDialCode(nodesModified, channel);
+      linkDialCode(nodesModified, channel, tbId);
       ProjectLogger.log(
           "Timed:TextbookTocActor:callUpdateHierarchyAndLinkDialCodeApi duration for link dial code: "
               + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
@@ -1364,7 +1364,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   }
 
   @SuppressWarnings("unchecked")
-  private void linkDialCode(Map<String, Object> modifiedNodes, String channel) throws Exception {
+  private void linkDialCode(Map<String, Object> modifiedNodes, String channel, String tbId)
+      throws Exception {
     List<Map<String, Object>> content = new ArrayList<>();
     modifiedNodes.forEach(
         (k, v) -> {
@@ -1390,14 +1391,17 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     Map<String, Object> linkDialCoderequest = new HashMap<>();
     linkDialCoderequest.put(JsonKey.REQUEST, request);
     if (CollectionUtils.isNotEmpty(content)) {
-      linkDialCodeApiCall(linkDialCoderequest, channel);
+      linkDialCodeApiCall(linkDialCoderequest, channel, tbId);
     }
   }
 
-  private Response linkDialCodeApiCall(Map<String, Object> updateRequest, String channel)
-      throws Exception {
+  private Response linkDialCodeApiCall(
+      Map<String, Object> updateRequest, String channel, String tbId) throws Exception {
     String requestUrl =
-        getConfigValue(JsonKey.EKSTEP_BASE_URL) + getConfigValue(JsonKey.LINK_DIAL_CODE_API);
+        getConfigValue(JsonKey.EKSTEP_BASE_URL)
+            + getConfigValue(JsonKey.LINK_DIAL_CODE_API)
+            + "/"
+            + tbId;
     HttpResponse<String> updateResponse = null;
     try {
       Map<String, String> headers = getDefaultHeaders();

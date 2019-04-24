@@ -25,7 +25,6 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.OrgStatus;
@@ -33,7 +32,6 @@ import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
-import org.sunbird.user.actors.UserManagementActor;
 
 /** @author arvind. */
 // @Ignore
@@ -44,7 +42,7 @@ public class OrganisationManagementActorTest {
   private static ActorSystem system;
   private static CassandraOperation operation = ServiceFactory.getInstance();
   private static final Props props = Props.create(OrganisationManagementActor.class);
-  private static final Props propsUser = Props.create(UserManagementActor.class);
+  //  private static final Props propsUser = Props.create(UserManagementActor.class);
   private static Util.DbInfo orgTypeDbInfo = null;
   // private static Util.DbInfo userManagementDB = null;
   private static Util.DbInfo addressDB = null;
@@ -161,7 +159,7 @@ public class OrganisationManagementActorTest {
   // @Test
   public void test10createUserForId() {
     TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(propsUser);
+    //    ActorRef subject = system.actorOf(propsUser);
 
     Request reqObj = new Request();
     reqObj.setRequestId("1");
@@ -174,7 +172,7 @@ public class OrganisationManagementActorTest {
     request.put(JsonKey.USER, innerMap);
     reqObj.setRequest(request);
 
-    subject.tell(reqObj, probe.getRef());
+    //    subject.tell(reqObj, probe.getRef());
     Response res = probe.expectMsgClass(Response.class);
     usrId = (String) res.get(JsonKey.USER_ID);
   }
@@ -1415,39 +1413,33 @@ public class OrganisationManagementActorTest {
     }
     if (!StringUtils.isBlank(usrId)) {
       ElasticSearchUtil.removeData(
-          ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.user.getTypeName(), usrId);
+          EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), usrId);
     }
 
     if (!StringUtils.isBlank(USER_ID)) {
       ElasticSearchUtil.removeData(
-          ProjectUtil.EsIndex.sunbird.getIndexName(),
-          ProjectUtil.EsType.user.getTypeName(),
-          USER_ID);
+          EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), USER_ID);
     }
 
     if (!StringUtils.isBlank(USER_ID + "01")) {
       ElasticSearchUtil.removeData(
-          ProjectUtil.EsIndex.sunbird.getIndexName(),
-          ProjectUtil.EsType.user.getTypeName(),
-          USER_ID + "01");
+          EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), USER_ID + "01");
     }
 
     if (!StringUtils.isBlank(orgId)) {
       ElasticSearchUtil.removeData(
-          ProjectUtil.EsIndex.sunbird.getIndexName(),
-          ProjectUtil.EsType.organisation.getTypeName(),
-          orgId);
+          EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName(), orgId);
     }
     if (!StringUtils.isBlank(OrgIDWithoutSourceAndExternalId)) {
       ElasticSearchUtil.removeData(
-          ProjectUtil.EsIndex.sunbird.getIndexName(),
-          ProjectUtil.EsType.organisation.getTypeName(),
+          EsIndex.sunbird.getIndexName(),
+          EsType.organisation.getTypeName(),
           OrgIDWithoutSourceAndExternalId);
     }
     if (!StringUtils.isBlank(OrgIdWithSourceAndExternalId)) {
       ElasticSearchUtil.removeData(
-          ProjectUtil.EsIndex.sunbird.getIndexName(),
-          ProjectUtil.EsType.organisation.getTypeName(),
+          EsIndex.sunbird.getIndexName(),
+          EsType.organisation.getTypeName(),
           OrgIdWithSourceAndExternalId);
     }
 
@@ -1463,9 +1455,7 @@ public class OrganisationManagementActorTest {
         System.out.println("ID is " + id);
         operation.deleteRecord(orgDB.getKeySpace(), orgDB.getTableName(), id);
         ElasticSearchUtil.removeData(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.organisation.getTypeName(),
-            id);
+            EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName(), id);
       }
     }
     try {
@@ -1480,9 +1470,7 @@ public class OrganisationManagementActorTest {
           System.out.println("ID is " + id);
           operation.deleteRecord(orgDB.getKeySpace(), orgDB.getTableName(), id);
           ElasticSearchUtil.removeData(
-              ProjectUtil.EsIndex.sunbird.getIndexName(),
-              ProjectUtil.EsType.organisation.getTypeName(),
-              id);
+              EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName(), id);
         }
       }
     } catch (Exception e) {
@@ -1499,9 +1487,7 @@ public class OrganisationManagementActorTest {
         System.out.println("ID is " + id);
         operation.deleteRecord(orgDB.getKeySpace(), orgDB.getTableName(), id);
         ElasticSearchUtil.removeData(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.organisation.getTypeName(),
-            id);
+            EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName(), id);
       }
     }
 
@@ -1518,9 +1504,7 @@ public class OrganisationManagementActorTest {
         System.out.println("ID is " + id);
         operation.deleteRecord(orgDB.getKeySpace(), orgDB.getTableName(), id);
         ElasticSearchUtil.removeData(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.organisation.getTypeName(),
-            id);
+            EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName(), id);
       }
     }
 
@@ -1537,9 +1521,7 @@ public class OrganisationManagementActorTest {
         System.out.println("ID is " + id);
         operation.deleteRecord(orgDB.getKeySpace(), orgDB.getTableName(), id);
         ElasticSearchUtil.removeData(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.organisation.getTypeName(),
-            id);
+            EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName(), id);
       }
     }
 

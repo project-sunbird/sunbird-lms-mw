@@ -105,7 +105,11 @@ public class LocationActor extends BaseLocationActor {
       Response response = locationDao.create(location);
       sender().tell(response, self());
       ProjectLogger.log("Insert location data to ES");
-      saveDataToES(mapper.convertValue(location, Map.class), JsonKey.INSERT);
+      Boolean elasticSync = Boolean.parseBoolean(getEventSyncSetting(JsonKey.LOCATION));
+      if(!elasticSync) {
+        ProjectLogger.log("LocationActor: createLocation : updating elastic search with BG-actor", LoggerEnum.INFO);
+        saveDataToES(mapper.convertValue(location, Map.class), JsonKey.INSERT);
+      }
       generateTelemetryForLocation(id, mapper.convertValue(location, Map.class), JsonKey.CREATE);
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);

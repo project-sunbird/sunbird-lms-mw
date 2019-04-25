@@ -12,18 +12,15 @@ import java.util.List;
 import java.util.Map;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
-import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
 import org.sunbird.learner.actors.search.SearchHandlerActor;
-import org.sunbird.learner.util.Util;
 
-@Ignore
+// @Ignore
 public class SearchHandlerActorTest {
 
   private static ActorSystem system;
@@ -31,9 +28,9 @@ public class SearchHandlerActorTest {
 
   @BeforeClass
   public static void setUp() {
-    SunbirdMWService.init();
+    //    SunbirdMWService.init();
     system = ActorSystem.create("system");
-    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
+    //    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
   }
 
   @Test

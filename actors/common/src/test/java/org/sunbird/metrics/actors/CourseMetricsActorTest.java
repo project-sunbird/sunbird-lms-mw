@@ -229,7 +229,8 @@ public class CourseMetricsActorTest {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     PowerMockito.mockStatic(CloudStorageUtil.class);
-    when(CloudStorageUtil.getSignedUrl(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+    when(CloudStorageUtil.getAnalyticsSignedUrl(
+            Mockito.any(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(SIGNED_URL);
     Request actorMessage = new Request();
     actorMessage.put(JsonKey.REQUESTED_BY, userId);

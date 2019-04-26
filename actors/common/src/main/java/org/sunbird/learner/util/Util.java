@@ -1439,7 +1439,6 @@ public final class Util {
       userDetails.put(JsonKey.ORGANISATIONS, getUserOrgDetails(userId));
       userDetails.put(JsonKey.BADGE_ASSERTIONS, getUserBadge(userId));
       userDetails.put(JsonKey.SKILLS, getUserSkills(userId));
-      userDetails.put(JsonKey.BATCHES, getUserCourseBatch(userId));
       Map<String, Object> orgMap = getOrgDetails((String) userDetails.get(JsonKey.ROOT_ORG_ID));
       if (!MapUtils.isEmpty(orgMap)) {
         userDetails.put(JsonKey.ROOT_ORG_NAME, orgMap.get(JsonKey.ORG_NAME));
@@ -1607,36 +1606,6 @@ public final class Util {
       ProjectLogger.log(e.getMessage(), e);
     }
     return badges;
-  }
-
-  public static List<Map<String, Object>> getUserCourseBatch(String userId) {
-    ProjectLogger.log("Util: getUserCourseBatch called", LoggerEnum.INFO);
-    DbInfo userCourseDb = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
-    List<Map<String, Object>> userCourses = new ArrayList<>();
-    try {
-      Response result =
-          cassandraOperation.getRecordsByIndexedProperty(
-              userCourseDb.getKeySpace(), userCourseDb.getTableName(), JsonKey.USER_ID, userId);
-      List<Map<String, Object>> courseBatch =
-          (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-      if (!CollectionUtils.isEmpty(courseBatch)) {
-        for (Map<String, Object> userCourseBatch : courseBatch) {
-          ProjectLogger.log("Util: getUserCourseBatch has course", LoggerEnum.INFO);
-          Map<String, Object> tempMap = new HashMap<>();
-          tempMap.put(JsonKey.ENROLLED_ON, userCourseBatch.get(JsonKey.COURSE_ENROLL_DATE));
-          tempMap.put(JsonKey.COURSE_ID, userCourseBatch.get(JsonKey.COURSE_ID));
-          tempMap.put(JsonKey.BATCH_ID, userCourseBatch.get(JsonKey.BATCH_ID));
-          tempMap.put(JsonKey.PROGRESS, userCourseBatch.get(JsonKey.PROGRESS));
-          tempMap.put(JsonKey.LAST_ACCESSED_ON, userCourseBatch.get(JsonKey.DATE_TIME));
-          userCourses.add(tempMap);
-        }
-      }
-
-    } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(), e);
-    }
-    ProjectLogger.log("Util: getUserCourseBatch completed", LoggerEnum.INFO);
-    return userCourses;
   }
 
   public static List<Map<String, Object>> getUserOrgDetails(String userId) {

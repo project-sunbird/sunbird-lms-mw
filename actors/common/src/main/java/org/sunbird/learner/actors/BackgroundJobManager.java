@@ -203,10 +203,6 @@ public class BackgroundJobManager extends BaseActor {
         ProjectUtil.EsType.usercourses.getTypeName(),
         (String) batch.get(JsonKey.ID),
         batch);
-    syncUserCourseBatchProgress(
-        (String) batch.get(JsonKey.BATCH_ID),
-        (String) batch.get(JsonKey.USER_ID),
-        (int) batch.get(JsonKey.PROGRESS));
   }
 
   @SuppressWarnings("unchecked")
@@ -636,46 +632,5 @@ public class BackgroundJobManager extends BaseActor {
         ProjectUtil.EsType.usernotes.getTypeName(),
         (String) noteMap.get(JsonKey.ID),
         noteMap);
-  }
-
-  public void syncUserCourseBatchProgress(String batchId, String userId, Integer progress) {
-    ProjectLogger.log(
-        "BackgroundJobManager:syncUserCourseBatchProgress: data"
-            + userId
-            + "=="
-            + progress
-            + "  timeStamp ==",
-        LoggerEnum.INFO.name());
-    Map<String, Object> userMap =
-        ElasticSearchUtil.getDataByIdentifier(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.user.getTypeName(),
-            userId);
-    if (userMap != null) {
-      List<Map<String, Object>> batches;
-      if (userMap.get(JsonKey.BATCHES) != null) {
-        batches = (List<Map<String, Object>>) userMap.get(JsonKey.BATCHES);
-        for (Map<String, Object> map : batches) {
-          if (batchId.equalsIgnoreCase((String) map.get(JsonKey.BATCH_ID))) {
-            map.put(JsonKey.PROGRESS, progress);
-            map.put(JsonKey.LAST_ACCESSED_ON, new Date());
-            break;
-          }
-        }
-        userMap.put(JsonKey.BATCHES, batches);
-      }
-    }
-    boolean response =
-        ElasticSearchUtil.upsertData(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.user.getTypeName(),
-            userId,
-            userMap);
-    ProjectLogger.log(
-        "BackgroundJobManager:syncUserCourseBatchProgress: sync user courses batch and  response  "
-            + userId
-            + "=="
-            + response,
-        LoggerEnum.INFO.name());
   }
 }

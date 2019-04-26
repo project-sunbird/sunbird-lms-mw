@@ -39,7 +39,7 @@ public class LocationActor extends BaseLocationActor {
   private Map<String, Integer> orderMap;
   private ObjectMapper mapper = new ObjectMapper();
   private LocationDao locationDao = LocationDaoFactory.getInstance();
-
+ 
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, TelemetryEnvKey.LOCATION);
@@ -105,11 +105,7 @@ public class LocationActor extends BaseLocationActor {
       Response response = locationDao.create(location);
       sender().tell(response, self());
       ProjectLogger.log("Insert location data to ES");
-      Boolean eventSync = Boolean.parseBoolean(getEventSyncSetting(JsonKey.LOCATION));
-      if (!eventSync) {
-        ProjectLogger.log("LocationActor: createLocation : updating elastic search with BG-actor", LoggerEnum.INFO);
-        saveDataToES(mapper.convertValue(location, Map.class), JsonKey.INSERT);
-      }
+      saveDataToES(mapper.convertValue(location, Map.class), JsonKey.INSERT);
       generateTelemetryForLocation(id, mapper.convertValue(location, Map.class), JsonKey.CREATE);
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);
@@ -124,11 +120,7 @@ public class LocationActor extends BaseLocationActor {
       Response response = locationDao.update(location);
       sender().tell(response, self());
       ProjectLogger.log("Update location data to ES");
-      Boolean eventSync = Boolean.parseBoolean(getEventSyncSetting(JsonKey.LOCATION));
-      if (!eventSync) {
-        ProjectLogger.log("LocationActor: updateLocation : updating elastic search with BG-actor", LoggerEnum.INFO);
-        saveDataToES(mapper.convertValue(location, Map.class), JsonKey.UPDATE);
-      }
+      saveDataToES(mapper.convertValue(location, Map.class), JsonKey.UPDATE);
       generateTelemetryForLocation(
           location.getId(), mapper.convertValue(location, Map.class), JsonKey.UPDATE);
     } catch (Exception ex) {
@@ -161,11 +153,7 @@ public class LocationActor extends BaseLocationActor {
       Response response = locationDao.delete(locationId);
       sender().tell(response, self());
       ProjectLogger.log("Delete location data from ES");
-      Boolean eventSync = Boolean.parseBoolean(getEventSyncSetting(JsonKey.LOCATION));
-      if (!eventSync) {
-        ProjectLogger.log("LocationActor: deleteLocation : updating elastic search with BG-actor", LoggerEnum.INFO);
-        deleteDataFromES(locationId);
-      }
+      deleteDataFromES(locationId);
       generateTelemetryForLocation(locationId, new HashMap<>(), JsonKey.DELETE);
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);
@@ -174,6 +162,10 @@ public class LocationActor extends BaseLocationActor {
   }
 
   private void saveDataToES(Map<String, Object> locData, String opType) {
+    if (isEventSyncEnabled()) {
+      ProjectLogger.log("LocationActor: createLocation : Not updating elastic search with BG-actor", LoggerEnum.INFO);
+      return;
+    }
     Request request = new Request();
     request.setOperation(LocationActorOperation.UPSERT_LOCATION_TO_ES.getValue());
     request.getRequest().put(JsonKey.LOCATION, locData);
@@ -184,8 +176,17 @@ public class LocationActor extends BaseLocationActor {
       ProjectLogger.log("Exception Ocurred during saving location data to ES : ", ex);
     }
   }
+  
+  private boolean isEventSyncEnabled() { 
+    Boolean eventSync = Boolean.parseBoolean(getEventSyncSetting(JsonKey.LOCATION));
+    return eventSync;
+  }
 
   private void deleteDataFromES(String locId) {
+    if (isEventSyncEnabled()) {
+      ProjectLogger.log("LocationActor: createLocation : Not deleting elastic search with BG-actor", LoggerEnum.INFO);
+      return;
+    }
     Request request = new Request();
     request.setOperation(LocationActorOperation.DELETE_LOCATION_FROM_ES.getValue());
     request.getRequest().put(JsonKey.LOCATION_ID, locId);

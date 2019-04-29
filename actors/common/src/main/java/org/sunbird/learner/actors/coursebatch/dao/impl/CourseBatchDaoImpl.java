@@ -45,6 +45,7 @@ public class CourseBatchDaoImpl implements CourseBatchDao {
           ResponseCode.invalidCourseBatchId.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     } else {
+      courseList.get(0).remove(JsonKey.PARTICIPANT);
       return mapper.convertValue(courseList.get(0), CourseBatch.class);
     }
   }

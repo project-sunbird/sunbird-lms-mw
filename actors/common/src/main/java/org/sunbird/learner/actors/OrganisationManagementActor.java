@@ -447,23 +447,27 @@ public class OrganisationManagementActor extends BaseActor {
           (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION),
           targetObject,
           correlatedObject);
-      if (null != addressReq) {
-        request.put(JsonKey.ADDRESS, addressReq);
-      }
-      if (listOfMap != null) {
-        request.put(JsonKey.CONTACT_DETAILS, listOfMap);
+      if (isEventSyncEnabled()) {
+        ProjectLogger.log("OrganisationManagementActor:createOrg: Event sync is enabled", LoggerEnum.INFO);
+        return;
       } else {
-        listOfMap = new ArrayList<>();
-        request.put(JsonKey.CONTACT_DETAILS, listOfMap);
+        if (null != addressReq) {
+          request.put(JsonKey.ADDRESS, addressReq);
+        }
+        if (listOfMap != null) {
+          request.put(JsonKey.CONTACT_DETAILS, listOfMap);
+        } else {
+          listOfMap = new ArrayList<>();
+          request.put(JsonKey.CONTACT_DETAILS, listOfMap);
+        }
+
+        Request orgReq = new Request();
+        orgReq.getRequest().put(JsonKey.ORGANISATION, request);
+        orgReq.setOperation(ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
+        ProjectLogger.log("OrgManagementActor : createOrg : Calling background job to save org data into ES" + uniqueId,
+            LoggerEnum.INFO);
+        tellToAnother(orgReq);
       }
-      Request orgReq = new Request();
-      orgReq.getRequest().put(JsonKey.ORGANISATION, request);
-      orgReq.setOperation(ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
-      ProjectLogger.log(
-          "OrgManagementActor : createOrg : Calling background job to save org data into ES"
-              + uniqueId,
-          LoggerEnum.INFO);
-      tellToAnother(orgReq);
     } catch (ProjectCommonException e) {
       ProjectLogger.log(
           "OrgManagementActor : createOrg : Some error occurs" + e.getMessage(), LoggerEnum.INFO);
@@ -938,20 +942,25 @@ public class OrganisationManagementActor extends BaseActor {
           TelemetryUtil.generateTargetObject(
               (String) orgDao.get(JsonKey.ID), JsonKey.ORGANISATION, JsonKey.UPDATE, null);
       TelemetryUtil.telemetryProcessingCall(updateOrgDao, targetObject, correlatedObject);
-
-      if (null != addressReq) {
-        updateOrgDao.put(JsonKey.ADDRESS, addressReq);
-      }
-      if (listOfMap != null) {
-        updateOrgDao.put(JsonKey.CONTACT_DETAILS, listOfMap);
+      if (isEventSyncEnabled()) {
+        ProjectLogger.log("OrganisationManagementActor:createOrg: Event sync is enabled", LoggerEnum.INFO);
+        return;
       } else {
-        listOfMap = new ArrayList<>();
-        updateOrgDao.put(JsonKey.CONTACT_DETAILS, listOfMap);
+        if (null != addressReq) {
+          updateOrgDao.put(JsonKey.ADDRESS, addressReq);
+        }
+        if (listOfMap != null) {
+          updateOrgDao.put(JsonKey.CONTACT_DETAILS, listOfMap);
+        } else {
+          listOfMap = new ArrayList<>();
+          updateOrgDao.put(JsonKey.CONTACT_DETAILS, listOfMap);
+        }
+
+        Request orgRequest = new Request();
+        orgRequest.getRequest().put(JsonKey.ORGANISATION, updateOrgDao);
+        orgRequest.setOperation(ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
+        tellToAnother(orgRequest);
       }
-      Request orgRequest = new Request();
-      orgRequest.getRequest().put(JsonKey.ORGANISATION, updateOrgDao);
-      orgRequest.setOperation(ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
-      tellToAnother(orgRequest);
     } catch (ProjectCommonException e) {
       sender().tell(e, self());
       return;
@@ -1879,4 +1888,9 @@ public class OrganisationManagementActor extends BaseActor {
       }
     }
   }
+  private boolean isEventSyncEnabled() { 
+    Boolean eventSync = Boolean.parseBoolean(getEventSyncSetting(JsonKey.ORGANISATION));
+    return eventSync;
+  }
+
 }

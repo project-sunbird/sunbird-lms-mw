@@ -163,7 +163,7 @@ public class LocationActor extends BaseLocationActor {
 
   private void saveDataToES(Map<String, Object> locData, String opType) {
     if (isEventSyncEnabled()) {
-      ProjectLogger.log("LocationActor: createLocation : Not updating elastic search with BG-actor", LoggerEnum.INFO);
+      ProjectLogger.log("LocationActor:saveDataToES: Event sync is enabled", LoggerEnum.INFO);
       return;
     }
     Request request = new Request();
@@ -173,7 +173,7 @@ public class LocationActor extends BaseLocationActor {
     try {
       tellToAnother(request);
     } catch (Exception ex) {
-      ProjectLogger.log("Exception Ocurred during saving location data to ES : ", ex);
+      ProjectLogger.log("LocationActor:saveDataToES: Exception occurred with error message = ", ex.getMessage());
     }
   }
   
@@ -184,7 +184,7 @@ public class LocationActor extends BaseLocationActor {
 
   private void deleteDataFromES(String locId) {
     if (isEventSyncEnabled()) {
-      ProjectLogger.log("LocationActor: createLocation : Not deleting elastic search with BG-actor", LoggerEnum.INFO);
+      ProjectLogger.log("LocationActor:deleteDataFromES: Event sync is enabled", LoggerEnum.INFO);
       return;
     }
     Request request = new Request();
@@ -193,7 +193,7 @@ public class LocationActor extends BaseLocationActor {
     try {
       tellToAnother(request);
     } catch (Exception ex) {
-      ProjectLogger.log("Exception Ocurred during saving location data to ES : ", ex);
+      ProjectLogger.log("LocationActor:saveDataToES: Exception occurred with error message = ", ex.getMessage());
     }
   }
 

@@ -15,15 +15,12 @@ import org.sunbird.actorutil.org.OrganisationClient;
 import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
-import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.dto.SearchDTO;
+import org.sunbird.learner.actors.coursebatch.service.UserCoursesService;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
@@ -49,7 +46,7 @@ public class SearchHandlerActor extends BaseActor {
   @Override
   public void onReceive(Request request) throws Throwable {
     request.toLower();
-    Util.initializeContext(request, JsonKey.USER);
+    Util.initializeContext(request, TelemetryEnvKey.USER);
     // set request id fto thread loacl...
     ExecutionContext.setRequestId(request.getRequestId());
     String requestedFields = (String) request.getContext().get(JsonKey.FIELDS);
@@ -70,6 +67,9 @@ public class SearchHandlerActor extends BaseActor {
           filterObjectType = EsType.user.getTypeName();
           UserUtility.encryptUserSearchFilterQueryData(searchQueryMap);
         }
+        if (EsType.course.getTypeName().equalsIgnoreCase(type)) {
+          filterObjectType = EsType.course.getTypeName();
+        }
       }
       SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
       if (filterObjectType.equalsIgnoreCase(EsType.user.getTypeName())) {
@@ -89,6 +89,17 @@ public class SearchHandlerActor extends BaseActor {
         }
         updateUserDetailsWithOrgName(requestedFields, userMapList);
       }
+      if (EsType.course.getTypeName().equalsIgnoreCase(filterObjectType)) {
+        if (JsonKey.PARTICIPANTS.equalsIgnoreCase(
+            (String) request.getContext().get(JsonKey.PARTICIPANTS))) {
+          List<Map<String, Object>> courseBatchList =
+              (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+          for (Map<String, Object> courseBatch : courseBatchList) {
+            courseBatch.put(
+                JsonKey.PARTICIPANTS, getParticipantList((String) courseBatch.get(JsonKey.ID)));
+          }
+        }
+      }
       Response response = new Response();
       if (result != null) {
         response.put(JsonKey.RESPONSE, result);
@@ -102,6 +113,11 @@ public class SearchHandlerActor extends BaseActor {
     } else {
       onReceiveUnsupportedOperation(request.getOperation());
     }
+  }
+
+  private List<String> getParticipantList(String id) {
+    UserCoursesService userCourseService = new UserCoursesService();
+    return userCourseService.getEnrolledUserFromBatch(id);
   }
 
   @SuppressWarnings("unchecked")

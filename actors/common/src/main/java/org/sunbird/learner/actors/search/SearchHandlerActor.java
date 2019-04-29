@@ -70,7 +70,30 @@ public class SearchHandlerActor extends BaseActor {
           filterObjectType = EsType.user.getTypeName();
           UserUtility.encryptUserSearchFilterQueryData(searchQueryMap);
         } else if (EsType.course.getTypeName().equalsIgnoreCase(type)) {
-          filterObjectType = EsType.course.getTypeName();
+          List<String> fields = (List<String>) searchQueryMap.get(JsonKey.FIELDS);
+          if (CollectionUtils.isEmpty(fields)) {
+            searchQueryMap.put(
+                JsonKey.FIELDS,
+                Arrays.asList(
+                    JsonKey.ID,
+                    JsonKey.MENTORS,
+                    JsonKey.COURSE_ADDITIONAL_INFO,
+                    JsonKey.COURSE_CREATED_FOR,
+                    JsonKey.COUNTER_INCREMENT_STATUS,
+                    JsonKey.COUNTER_DECREMENT_STATUS,
+                    JsonKey.CREATED_DATE,
+                    JsonKey.CREATED_BY,
+                    JsonKey.COURSE_CREATOR,
+                    JsonKey.HASH_TAG_ID,
+                    JsonKey.NAME,
+                    JsonKey.ENROLMENTTYPE,
+                    JsonKey.COURSE_ID,
+                    JsonKey.START_DATE,
+                    JsonKey.END_DATE,
+                    JsonKey.STATUS,
+                    JsonKey.DESCRIPTION,
+                    JsonKey.UPDATED_DATE));
+          }
         }
       }
       SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
@@ -90,15 +113,6 @@ public class SearchHandlerActor extends BaseActor {
           userMap.remove(JsonKey.ENC_PHONE);
         }
         updateUserDetailsWithOrgName(requestedFields, userMapList);
-      } else if (EsType.course.getTypeName().equalsIgnoreCase(filterObjectType)) {
-        List<Map<String, Object>> batchMapList =
-            (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-        batchMapList.forEach(
-            batchMap -> {
-              if (JsonKey.OPEN.equalsIgnoreCase((String) batchMap.get(JsonKey.ENROLLMENT_TYPE))) {
-                batchMap.remove(JsonKey.PARTICIPANT);
-              }
-            });
       }
       Response response = new Response();
       if (result != null) {

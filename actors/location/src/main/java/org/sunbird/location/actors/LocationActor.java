@@ -39,7 +39,7 @@ public class LocationActor extends BaseLocationActor {
   private Map<String, Integer> orderMap;
   private ObjectMapper mapper = new ObjectMapper();
   private LocationDao locationDao = LocationDaoFactory.getInstance();
-
+ 
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, TelemetryEnvKey.LOCATION);
@@ -162,6 +162,10 @@ public class LocationActor extends BaseLocationActor {
   }
 
   private void saveDataToES(Map<String, Object> locData, String opType) {
+    if (isEventSyncEnabled()) {
+      ProjectLogger.log("LocationActor:saveDataToES: Event sync is enabled", LoggerEnum.INFO);
+      return;
+    }
     Request request = new Request();
     request.setOperation(LocationActorOperation.UPSERT_LOCATION_TO_ES.getValue());
     request.getRequest().put(JsonKey.LOCATION, locData);
@@ -169,18 +173,27 @@ public class LocationActor extends BaseLocationActor {
     try {
       tellToAnother(request);
     } catch (Exception ex) {
-      ProjectLogger.log("Exception Ocurred during saving location data to ES : ", ex);
+      ProjectLogger.log("LocationActor:saveDataToES: Exception occurred with error message = ", ex.getMessage());
     }
+  }
+  
+  private boolean isEventSyncEnabled() { 
+    Boolean eventSync = Boolean.parseBoolean(getEventSyncSetting(JsonKey.LOCATION));
+    return eventSync;
   }
 
   private void deleteDataFromES(String locId) {
+    if (isEventSyncEnabled()) {
+      ProjectLogger.log("LocationActor:deleteDataFromES: Event sync is enabled", LoggerEnum.INFO);
+      return;
+    }
     Request request = new Request();
     request.setOperation(LocationActorOperation.DELETE_LOCATION_FROM_ES.getValue());
     request.getRequest().put(JsonKey.LOCATION_ID, locId);
     try {
       tellToAnother(request);
     } catch (Exception ex) {
-      ProjectLogger.log("Exception Ocurred during saving location data to ES : ", ex);
+      ProjectLogger.log("LocationActor:saveDataToES: Exception occurred with error message = ", ex.getMessage());
     }
   }
 

@@ -429,6 +429,9 @@ public class CourseBatchManagementActor extends BaseActor {
             ProjectUtil.EsType.course.getTypeName(),
             (String) actorMessage.getContext().get(JsonKey.BATCH_ID));
     Response response = new Response();
+    if (JsonKey.OPEN.equalsIgnoreCase((String) result.get(JsonKey.ENROLLMENT_TYPE))) {
+      result.remove(JsonKey.PARTICIPANT);
+    }
     if (null != result) {
       response.put(JsonKey.RESPONSE, result);
     } else {

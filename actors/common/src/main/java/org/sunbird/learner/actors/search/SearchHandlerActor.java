@@ -69,6 +69,8 @@ public class SearchHandlerActor extends BaseActor {
         if (EsType.user.getTypeName().equalsIgnoreCase(type)) {
           filterObjectType = EsType.user.getTypeName();
           UserUtility.encryptUserSearchFilterQueryData(searchQueryMap);
+        } else if (EsType.course.getTypeName().equalsIgnoreCase(type)) {
+          filterObjectType = EsType.course.getTypeName();
         }
       }
       SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
@@ -88,6 +90,15 @@ public class SearchHandlerActor extends BaseActor {
           userMap.remove(JsonKey.ENC_PHONE);
         }
         updateUserDetailsWithOrgName(requestedFields, userMapList);
+      } else if (EsType.course.getTypeName().equalsIgnoreCase(filterObjectType)) {
+        List<Map<String, Object>> batchMapList =
+            (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+        batchMapList.forEach(
+            batchMap -> {
+              if (JsonKey.OPEN.equalsIgnoreCase((String) batchMap.get(JsonKey.ENROLLMENT_TYPE))) {
+                batchMap.remove(JsonKey.PARTICIPANT);
+              }
+            });
       }
       Response response = new Response();
       if (result != null) {

@@ -943,7 +943,7 @@ public class OrganisationManagementActor extends BaseActor {
               (String) orgDao.get(JsonKey.ID), JsonKey.ORGANISATION, JsonKey.UPDATE, null);
       TelemetryUtil.telemetryProcessingCall(updateOrgDao, targetObject, correlatedObject);
       if (isEventSyncEnabled()) {
-        ProjectLogger.log("OrganisationManagementActor:createOrg: Event sync is enabled", LoggerEnum.INFO);
+        ProjectLogger.log("OrganisationManagementActor:updateOrgData: Event sync is enabled", LoggerEnum.INFO);
         return;
       } else {
         if (null != addressReq) {

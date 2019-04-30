@@ -1892,9 +1892,8 @@ public class OrganisationManagementActor extends BaseActor {
       }
     }
   }
-  private boolean isEventSyncEnabled() { 
-    Boolean eventSync = Boolean.parseBoolean(getEventSyncSetting(JsonKey.ORGANISATION));
-    return eventSync;
-  }
 
+  private boolean isEventSyncEnabled() { 
+    return Boolean.parseBoolean(getEventSyncSetting(JsonKey.ORGANISATION));
+  }
 }

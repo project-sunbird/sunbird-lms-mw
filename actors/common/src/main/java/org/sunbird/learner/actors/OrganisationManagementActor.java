@@ -635,18 +635,22 @@ public class OrganisationManagementActor extends BaseActor {
       sender().tell(response, self());
 
       // update the ES --
-      Request orgRequest = new Request();
-      orgRequest.getRequest().put(JsonKey.ORGANISATION, updateOrgDao);
-      orgRequest.setOperation(ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
-      tellToAnother(orgRequest);
+      if (isEventSyncEnabled()) {
+        ProjectLogger.log("OrganisationManagementActor:updateOrgStatus: Event sync is enabled", LoggerEnum.INFO);
+        return;
+      } else {
+        Request orgRequest = new Request();
+        orgRequest.getRequest().put(JsonKey.ORGANISATION, updateOrgDao);
+        orgRequest.setOperation(ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
+        tellToAnother(orgRequest);
 
-      targetObject =
-          TelemetryUtil.generateTargetObject(orgId, JsonKey.ORGANISATION, JsonKey.UPDATE, null);
-      Map<String, Object> telemetryAction = new HashMap<>();
-      telemetryAction.put("updateOrgStatus", "org status updated.");
-      TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, new ArrayList<>());
+        targetObject = TelemetryUtil.generateTargetObject(orgId, JsonKey.ORGANISATION, JsonKey.UPDATE, null);
+        Map<String, Object> telemetryAction = new HashMap<>();
+        telemetryAction.put("updateOrgStatus", "org status updated.");
+        TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, new ArrayList<>());
 
-      return;
+        return;
+      }
     } catch (ProjectCommonException e) {
       sender().tell(e, self());
       return;

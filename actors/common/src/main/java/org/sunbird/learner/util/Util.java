@@ -881,6 +881,7 @@ public final class Util {
       env = StringUtils.isNotBlank(env) ? env : "N/A";
       String deviceId = getKeyFromContext(JsonKey.DEVICE_ID, actorMessage);
       String channel = getKeyFromContext(JsonKey.CHANNEL, actorMessage);
+      String logLevel = getKeyFromContext(JsonKey.LOG_LEVEL, actorMessage);
       requestContext.put(JsonKey.CHANNEL, channel);
       requestContext.put(JsonKey.ACTOR_ID, actorId);
       requestContext.put(JsonKey.ACTOR_TYPE, actorType);
@@ -889,6 +890,7 @@ public final class Util {
       requestContext.put(JsonKey.REQUEST_TYPE, JsonKey.API_CALL);
       requestContext.put(JsonKey.REQUEST_ID, actorMessage.getRequestId());
       requestContext.put(JsonKey.DEVICE_ID, deviceId);
+      requestContext.put(JsonKey.LOG_LEVEL, logLevel);
 
       if (JsonKey.USER.equalsIgnoreCase(
           (String) actorMessage.getContext().get(JsonKey.ACTOR_TYPE))) {

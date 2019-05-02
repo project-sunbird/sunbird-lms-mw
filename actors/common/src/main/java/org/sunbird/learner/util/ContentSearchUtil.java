@@ -22,6 +22,7 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.RestUtil;
+import org.sunbird.common.request.HeaderBuilder;
 import scala.concurrent.Future;
 
 /** @author Mahesh Kumar Gangula */
@@ -44,7 +45,7 @@ public class ContentSearchUtil {
     headers.put(
         HttpHeaders.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.SUNBIRD_AUTHORIZATION));
     headers.put(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
-    return headers;
+    return new HeaderBuilder(headers).build();
   }
 
   public static Future<Map<String, Object>> searchContent(

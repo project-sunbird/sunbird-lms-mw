@@ -79,6 +79,7 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.TextbookActorOperation;
+import org.sunbird.common.request.HeaderBuilder;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.content.textbook.FileExtension;
@@ -1522,7 +1523,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     headers.put("Content-Type", "application/json");
     headers.put(
         JsonKey.AUTHORIZATION, JsonKey.BEARER + getConfigValue(JsonKey.SUNBIRD_AUTHORIZATION));
-    return headers;
+    return new HeaderBuilder(headers).build();
   }
 
   @SuppressWarnings("unchecked")

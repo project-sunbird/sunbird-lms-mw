@@ -41,7 +41,6 @@ import org.sunbird.learner.util.Util;
   ContentSearchUtil.class
 })
 @PowerMockIgnore({"javax.management.*"})
-// @Ignore
 public class LearnerStateUpdateActorTest {
 
   private static ActorSystem system = ActorSystem.create("system");;
@@ -50,11 +49,7 @@ public class LearnerStateUpdateActorTest {
   private static String userId = "user121gama";
   private static String courseId = "alpha01crs";
   private static final String contentId = "cont3544TeBukGame";
-  private static Util.DbInfo contentdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
-  private static Util.DbInfo coursedbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
   private static final String batchId = "220j2536h37841hc3u";
-  private static Util.DbInfo batchdbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
-
   private static CassandraOperationImpl cassandraOperation;
 
   @BeforeClass
@@ -126,7 +121,7 @@ public class LearnerStateUpdateActorTest {
     req.setOperation(ActorOperations.ADD_CONTENT.getValue());
     req.setRequest(innerMap);
     subject.tell(req, probe.getRef());
-    Response response = probe.expectMsgClass(duration("100 second"), Response.class);
+    Response response = probe.expectMsgClass(duration("10 second"), Response.class);
     List<String> list = new ArrayList<>();
     list.add("name");
     Assert.assertEquals(1, list.size());
@@ -150,7 +145,7 @@ public class LearnerStateUpdateActorTest {
     req.setOperation(ActorOperations.ADD_CONTENT.getValue());
     req.setRequest(innerMap);
     subject.tell(req, probe.getRef());
-    Response response = probe.expectMsgClass(duration("100 second"), Response.class);
+    Response response = probe.expectMsgClass(duration("10 second"), Response.class);
     List<String> list = new ArrayList<>();
     list.add("name");
     Assert.assertEquals(1, list.size());
@@ -179,7 +174,7 @@ public class LearnerStateUpdateActorTest {
         .thenReturn(getCassandraEmptyRecordById());
 
     subject.tell(req, probe.getRef());
-    Response response = probe.expectMsgClass(duration("100 second"), Response.class);
+    Response response = probe.expectMsgClass(duration("10 second"), Response.class);
     List<String> list = new ArrayList<>();
     list.add("name");
     Assert.assertEquals(1, list.size());
@@ -201,7 +196,6 @@ public class LearnerStateUpdateActorTest {
     List<Map<String, Object>> contentList = new ArrayList<Map<String, Object>>();
     Map<String, Object> content1 = createContent();
     content1.remove(JsonKey.BATCH_ID);
-    content1.put(JsonKey.STATUS, new BigInteger("2"));
     content1.put(JsonKey.STATUS, new BigInteger("2"));
     contentList.add(content1);
     HashMap<String, Object> innerMap = new HashMap<>();

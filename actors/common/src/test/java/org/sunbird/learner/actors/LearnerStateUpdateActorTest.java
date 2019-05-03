@@ -1,22 +1,25 @@
 package org.sunbird.learner.actors;
 
+import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.when;
+
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
 import java.math.BigInteger;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.*;
-import org.junit.runners.MethodSorters;
+import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
-import org.sunbird.cassandra.CassandraOperation;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
+import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -25,33 +28,75 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.ContentSearchUtil;
+import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 
-/** @author arvind */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({
+  ServiceFactory.class,
+  Util.class,
+  DataCacheHandler.class,
+  PageManagementActor.class,
+  ContentSearchUtil.class
+})
+@PowerMockIgnore({"javax.management.*"})
 @Ignore
 public class LearnerStateUpdateActorTest {
 
-  private static ActorSystem system;
+  private static ActorSystem system = ActorSystem.create("system");;
   private static final Props props = Props.create(LearnerStateUpdateActor.class);
+
   private static String userId = "user121gama";
   private static String courseId = "alpha01crs";
   private static final String contentId = "cont3544TeBukGame";
-  private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static Util.DbInfo contentdbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
   private static Util.DbInfo coursedbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
   private static final String batchId = "220j2536h37841hc3u";
   private static Util.DbInfo batchdbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
 
+  private static CassandraOperationImpl cassandraOperation;
+
   @BeforeClass
   public static void setUp() {
-    system = ActorSystem.create("system");
-    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
-    insertCourse();
-    insertBatch();
+
+    PowerMockito.mockStatic(ServiceFactory.class);
+    cassandraOperation = mock(CassandraOperationImpl.class);
+
+    //
+    //
+    ////    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
+    //    insertCourse();
+    //    insertBatch();
   }
 
-  private static void insertBatch() {
+  @Before
+  public void beforeTest() {
+
+    PowerMockito.mockStatic(ServiceFactory.class);
+    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+    when(cassandraOperation.updateRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(getSuccessResponse());
+
+    when(cassandraOperation.getRecordsByProperty(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(getCassandraRecordById());
+  }
+
+  private Response getCassandraRecordById() {
+
+    Response response = new Response();
+    return response;
+  }
+
+  private static Response getSuccessResponse() {
+    Response response = new Response();
+    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    return response;
+  }
+
+  /* private static void insertBatch() {
 
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
     Map<String, Object> batchMap = new HashMap<String, Object>();
@@ -66,9 +111,9 @@ public class LearnerStateUpdateActorTest {
 
     cassandraOperation.insertRecord(
         batchdbInfo.getKeySpace(), batchdbInfo.getTableName(), batchMap);
-  }
+  }*/
 
-  private static void insertCourse() {
+  /*private static void insertCourse() {
     Map<String, Object> courseMap = new HashMap<String, Object>();
     courseMap.put(
         JsonKey.ID,
@@ -78,13 +123,14 @@ public class LearnerStateUpdateActorTest {
                 + courseId
                 + JsonKey.PRIMARY_KEY_DELIMETER
                 + batchId));
+
     courseMap.put(JsonKey.COURSE_ID, courseId);
     courseMap.put(JsonKey.USER_ID, userId);
     courseMap.put(JsonKey.CONTENT_ID, courseId);
     courseMap.put(JsonKey.BATCH_ID, batchId);
     cassandraOperation.insertRecord(
         coursedbInfo.getKeySpace(), coursedbInfo.getTableName(), courseMap);
-  }
+  }*/
 
   @Test
   public void checkTelemetryKeyFailure() throws Exception {

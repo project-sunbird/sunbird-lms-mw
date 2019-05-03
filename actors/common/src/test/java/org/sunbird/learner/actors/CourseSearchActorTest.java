@@ -61,7 +61,7 @@ public class CourseSearchActorTest {
     map.put(JsonKey.SEARCH, innerMap);
     reqObj.setRequest(map);
     subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("100 second"), Response.class);
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
     Object[] objects = ((Object[]) res.getResult().get(JsonKey.RESPONSE));
 
     if (null != objects && objects.length > 0) {
@@ -99,7 +99,7 @@ public class CourseSearchActorTest {
     innerMap.put(JsonKey.REQUESTED_BY, "user-001");
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
     Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 }

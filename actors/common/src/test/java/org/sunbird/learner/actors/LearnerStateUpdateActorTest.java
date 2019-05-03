@@ -211,7 +211,7 @@ public class LearnerStateUpdateActorTest {
     subject.tell(req, probe.getRef());
     subject.tell(req, probe.getRef());
     ProjectCommonException exc =
-        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
     Assert.assertTrue(null != exc);
   }
 

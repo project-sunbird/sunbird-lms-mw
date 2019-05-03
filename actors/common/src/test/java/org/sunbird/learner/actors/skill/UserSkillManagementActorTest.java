@@ -296,7 +296,7 @@ public class UserSkillManagementActorTest {
     List<Map<String, Object>> result = new ArrayList<>();
     Map<String, Object> skill = new HashMap<>();
     skill.put(JsonKey.SKILL_NAME, ENDORSED_SKILL_NAME);
-    skill.put(JsonKey.SKILL_NAME_TO_LOWERCASE, ENDORSED_SKILL_NAME.toLowerCase());
+    skill.put(JsonKey.SKILL_NAME_TO_LOWERCASE, ENDORSED_SKILL_NAME);
     skill.put(JsonKey.ENDORSERS_LIST, new ArrayList<>());
     result.add(skill);
     response.put(JsonKey.RESPONSE, result);

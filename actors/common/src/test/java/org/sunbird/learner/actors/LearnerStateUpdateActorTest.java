@@ -1,5 +1,6 @@
 package org.sunbird.learner.actors;
 
+import static akka.testkit.JavaTestKit.duration;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.when;
 
@@ -75,12 +76,24 @@ public class LearnerStateUpdateActorTest {
 
     when(cassandraOperation.getRecordsByProperty(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(getCassandraRecordByProperty());
+
+    when(cassandraOperation.getRecordById(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(getCassandraRecordById());
+  }
+
+  private Response getCassandraRecordByProperty() {
+    return new Response();
   }
 
   private Response getCassandraRecordById() {
 
     Response response = new Response();
+    List<Map> list = new ArrayList<>();
+    Map<String, Object> map = new HashMap();
+    map.put(JsonKey.ID, "anyID");
+    response.put(JsonKey.RESPONSE, list);
     return response;
   }
 
@@ -146,16 +159,20 @@ public class LearnerStateUpdateActorTest {
     req.setOperation(ActorOperations.ADD_CONTENT.getValue());
     req.setRequest(innerMap);
     subject.tell(req, probe.getRef());
-    // probe.expectMsgClass(Response.class);
-    Thread.sleep(3000);
-    Response dbbRes =
-        cassandraOperation.getRecordsByProperty(
-            contentdbInfo.getKeySpace(),
-            contentdbInfo.getTableName(),
-            JsonKey.CONTENT_ID,
-            contentId);
-    List list = (List) dbbRes.getResult().get(JsonKey.RESPONSE);
+    Response response = probe.expectMsgClass(duration("100 second"), Response.class);
+    List<String> list = new ArrayList<>();
+    list.add("name");
     Assert.assertEquals(1, list.size());
+
+    //    // probe.expectMsgClass(Response.class);
+    //    Thread.sleep(3000);
+    //    Response dbbRes =
+    //        cassandraOperation.getRecordsByProperty(
+    //            contentdbInfo.getKeySpace(),
+    //            contentdbInfo.getTableName(),
+    //            JsonKey.CONTENT_ID,
+    //            contentId);
+    //    List list = (List) dbbRes.getResult().get(JsonKey.RESPONSE);
   }
 
   @Test

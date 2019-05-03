@@ -111,7 +111,7 @@ public class LocationActorTest {
   @Test
   public void testCreateLocationFailureWithInvalidValue() {
 
-    data.put(GeoLocationJsonKey.LOCATION_TYPE, "anyType");
+    data.put(GeoLocationJsonKey.LOCATION_TYPE, "anyLocationType");
     boolean result =
         testScenario(
             LocationActorOperation.CREATE_LOCATION, false, data, ResponseCode.invalidValue);

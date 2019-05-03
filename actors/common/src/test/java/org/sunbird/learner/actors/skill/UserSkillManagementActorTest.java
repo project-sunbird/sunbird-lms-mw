@@ -199,6 +199,7 @@ public class UserSkillManagementActorTest {
             && exception.getResponseCode() == ResponseCode.CLIENT_ERROR.getResponseCode());
   }
 
+  @Ignore
   @Test
   public void testAddSkillEndorsementSuccess() {
 

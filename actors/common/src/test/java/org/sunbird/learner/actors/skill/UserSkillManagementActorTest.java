@@ -32,7 +32,6 @@ import scala.concurrent.duration.FiniteDuration;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({ServiceFactory.class, ElasticSearchUtil.class})
 @PowerMockIgnore("javax.management.*")
-@Ignore
 public class UserSkillManagementActorTest {
 
   private static ActorSystem system;

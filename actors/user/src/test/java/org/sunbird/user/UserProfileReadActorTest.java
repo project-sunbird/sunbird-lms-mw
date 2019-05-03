@@ -1,4 +1,4 @@
-package org.sunbird.learner.actors;
+package org.sunbird.user;
 
 import static akka.testkit.JavaTestKit.duration;
 import static org.junit.Assert.assertTrue;

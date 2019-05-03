@@ -2,6 +2,9 @@ package org.sunbird.learner.actors.geolocation;
 
 import static akka.testkit.JavaTestKit.duration;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
@@ -11,50 +14,91 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.commons.lang3.StringUtils;
-import org.junit.*;
-import org.junit.runners.MethodSorters;
-import org.sunbird.cassandra.CassandraOperation;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mockito;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
+import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.ContentSearchUtil;
+import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 
-/** Created by arvind on 3/11/17. */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
-@Ignore
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({ServiceFactory.class, Util.class, DataCacheHandler.class, ContentSearchUtil.class})
+@PowerMockIgnore({"javax.management.*"})
 public class GeoLocationManagementActorTest {
 
-  private static ActorSystem system;
+  private ActorSystem system = ActorSystem.create("system");
   private static final Props props = Props.create(GeoLocationManagementActor.class);
-  private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private static Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
-  private static Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
+  private static CassandraOperationImpl cassandraOperation;
   private static final String orgId = "hhjcjr79fw4p89";
   private static final String type = "husvej";
   private static final String userId = "vcurc633r8911";
   private static List<Map<String, Object>> createResponse;
-  private static String id;
+  private static String id = "anyId";
 
   @BeforeClass
   public static void setUp() {
 
-    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
-    system = ActorSystem.create("system");
-
+    PowerMockito.mockStatic(ServiceFactory.class);
+    cassandraOperation = mock(CassandraOperationImpl.class);
     Map<String, Object> orgMap = new HashMap<String, Object>();
     orgMap.put(JsonKey.ID, orgId);
-    cassandraOperation.insertRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), orgMap);
+  }
+
+  @Before
+  public void beforeTest() {
+    PowerMockito.mockStatic(ServiceFactory.class);
+    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+    when(cassandraOperation.insertRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(getSuccessResponse());
+    when(cassandraOperation.getRecordById(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(cassandraGetRecordById());
+    when(cassandraOperation.getRecordsByProperty(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(cassandraGetRecordById());
+    when(cassandraOperation.getRecordsByProperty(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyList()))
+        .thenReturn(cassandraGetRecordById());
+  }
+
+  private static Response cassandraGetRecordById() {
+    Response response = new Response();
+    List list = new ArrayList();
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.NAME, "anyName");
+    map.put(JsonKey.ID, "anyId");
+    map.put(JsonKey.USER_COUNT, 0);
+    list.add(map);
+    response.put(JsonKey.RESPONSE, list);
+    return response;
+  }
+
+  private static Response getSuccessResponse() {
+    Response response = new Response();
+    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    return response;
   }
 
   @Test
-  public void acreateGeoLocationTest() {
+  public void createGeoLocationSuccess() {
 
     List<Map<String, Object>> dataList = new ArrayList<>();
-
     Map<String, Object> dataMap = new HashMap<>();
     dataMap.put(JsonKey.LOCATION, "location");
     dataMap.put(JsonKey.TYPE, type);
@@ -82,7 +126,7 @@ public class GeoLocationManagementActorTest {
   }
 
   @Test
-  public void createGeoLocationTestWithNullOrgId() {
+  public void createGeoLocationFailureWithNullOrgId() {
 
     List<Map<String, Object>> dataList = new ArrayList<>();
 
@@ -104,8 +148,8 @@ public class GeoLocationManagementActorTest {
 
     subject.tell(actorMessage, probe.getRef());
     ProjectCommonException exc =
-        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
-    Assert.assertTrue(null != exc);
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    assertTrue(exc.getCode().equals(ResponseCode.invalidOrgId.getErrorCode()));
   }
 
   @Test
@@ -127,16 +171,26 @@ public class GeoLocationManagementActorTest {
     actorMessage.setOperation(ActorOperations.CREATE_GEO_LOCATION.getValue());
 
     actorMessage.getRequest().put(JsonKey.DATA, dataList);
-    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID, orgId + "jfjrrou");
+    actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID, "invalidOrgId");
 
+    when(cassandraOperation.getRecordById(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(getFailureResponse());
     subject.tell(actorMessage, probe.getRef());
     ProjectCommonException exc =
-        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
-    Assert.assertTrue(null != exc);
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    assertTrue(exc.getCode().equals(ResponseCode.invalidOrgId.getErrorCode()));
+  }
+
+  private Response getFailureResponse() {
+    Response response = new Response();
+    List<Map<String, Object>> objList = new ArrayList<>();
+    response.put(JsonKey.RESPONSE, objList);
+    return response;
   }
 
   @Test
-  public void createGeoLocationTestWithInvalidData() {
+  public void createGeoLocationFailureWithInvalidData() {
 
     List<Map<String, Object>> dataList = new ArrayList<>();
 
@@ -152,12 +206,12 @@ public class GeoLocationManagementActorTest {
 
     subject.tell(actorMessage, probe.getRef());
     ProjectCommonException exc =
-        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
-    Assert.assertTrue(null != exc);
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    assertTrue(exc.getCode().equals(ResponseCode.invalidRequestData.getErrorCode()));
   }
 
   @Test
-  public void getGeoLocationTestyOrgId() {
+  public void getGeoLocationSuccessOrgId() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -176,7 +230,7 @@ public class GeoLocationManagementActorTest {
   }
 
   @Test
-  public void getGeoLocationTestyLocationId() {
+  public void getGeoLocationSuccessWithLocationId() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -195,7 +249,7 @@ public class GeoLocationManagementActorTest {
   }
 
   @Test
-  public void getGeoLocationTestWithNullType() {
+  public void getGeoLocationFailureWithNullType() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -207,15 +261,14 @@ public class GeoLocationManagementActorTest {
     actorMessage.setOperation(ActorOperations.GET_GEO_LOCATION.getValue());
 
     actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID, orgId);
-
     subject.tell(actorMessage, probe.getRef());
     ProjectCommonException exc =
-        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
-    Assert.assertTrue(null != exc);
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    assertTrue(exc.getCode().equals(ResponseCode.invalidRequestData.getErrorCode()));
   }
 
   @Test
-  public void getGeoLocationTestWithInvalidType() {
+  public void getGeoLocationFailureWithInvalidType() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -229,34 +282,32 @@ public class GeoLocationManagementActorTest {
     actorMessage.getRequest().put(JsonKey.ROOT_ORG_ID, orgId);
 
     subject.tell(actorMessage, probe.getRef());
+
     ProjectCommonException exc =
-        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
-    Assert.assertTrue(null != exc);
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    assertTrue(exc.getCode().equals(ResponseCode.invalidTypeValue.getErrorCode()));
   }
 
   @Test
-  public void updateGeoLocationTest() {
+  public void updateGeoLocationSuccess() {
 
-    if (null != id) {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request actorMessage = new Request();
 
-      TestKit probe = new TestKit(system);
-      ActorRef subject = system.actorOf(props);
-      Request actorMessage = new Request();
+    actorMessage.getRequest().put(JsonKey.REQUESTED_BY, userId);
+    actorMessage.getRequest().put(JsonKey.LOCATION, "updated location");
+    actorMessage.getRequest().put(JsonKey.TYPE, type);
+    actorMessage.getRequest().put(JsonKey.LOCATION_ID, id);
+    actorMessage.setOperation(ActorOperations.UPDATE_GEO_LOCATION.getValue());
 
-      actorMessage.getRequest().put(JsonKey.REQUESTED_BY, userId);
-      actorMessage.getRequest().put(JsonKey.LOCATION, "updated location");
-      actorMessage.getRequest().put(JsonKey.TYPE, type);
-      actorMessage.getRequest().put(JsonKey.LOCATION_ID, id);
-      actorMessage.setOperation(ActorOperations.UPDATE_GEO_LOCATION.getValue());
-
-      subject.tell(actorMessage, probe.getRef());
-      Response res = probe.expectMsgClass(duration("100 second"), Response.class);
-      Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
-    }
+    subject.tell(actorMessage, probe.getRef());
+    Response res = probe.expectMsgClass(duration("100 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
-  public void updateGeoLocationTestWithNullId() {
+  public void updateGeoLocationFailureWithNullId() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -270,12 +321,12 @@ public class GeoLocationManagementActorTest {
 
     subject.tell(actorMessage, probe.getRef());
     ProjectCommonException exc =
-        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
-    Assert.assertTrue(null != exc);
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    assertTrue(exc.getCode().equals(ResponseCode.invalidRequestData.getErrorCode()));
   }
 
   @Test
-  public void updateGeoLocationTestWithInvalidId() {
+  public void updateGeoLocationFailureWithInvalidId() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -284,17 +335,21 @@ public class GeoLocationManagementActorTest {
     actorMessage.getRequest().put(JsonKey.REQUESTED_BY, userId);
     actorMessage.getRequest().put(JsonKey.LOCATION, "updated location");
     actorMessage.getRequest().put(JsonKey.TYPE, type);
-    actorMessage.getRequest().put(JsonKey.LOCATION_ID, id + "-invalid");
+    actorMessage.getRequest().put(JsonKey.LOCATION_ID, "invalId");
     actorMessage.setOperation(ActorOperations.UPDATE_GEO_LOCATION.getValue());
+
+    when(cassandraOperation.getRecordById(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(getFailureResponse());
 
     subject.tell(actorMessage, probe.getRef());
     ProjectCommonException exc =
-        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
-    Assert.assertTrue(null != exc);
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    assertTrue(exc.getCode().equals(ResponseCode.invalidLocationId.getErrorCode()));
   }
 
   @Test
-  public void zdeleteGeoLocationTest() {
+  public void deleteGeoLocationSuccess() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -309,7 +364,7 @@ public class GeoLocationManagementActorTest {
   }
 
   @Test
-  public void deleteGeoLocationTestWithNullId() {
+  public void deleteGeoLocationFailureWithNullId() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -320,12 +375,12 @@ public class GeoLocationManagementActorTest {
 
     subject.tell(actorMessage, probe.getRef());
     ProjectCommonException exc =
-        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
-    Assert.assertTrue(null != exc);
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    assertTrue(exc.getCode().equals(ResponseCode.invalidRequestData.getErrorCode()));
   }
 
   @Test
-  public void geoLocationTestWithInvalidOperation() {
+  public void geoLocationFailureWithInvalidOperation() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -336,24 +391,13 @@ public class GeoLocationManagementActorTest {
 
     subject.tell(actorMessage, probe.getRef());
     ProjectCommonException exc =
-        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
-    Assert.assertTrue(null != exc);
+        probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
+    assertTrue(exc.getCode().equals(ResponseCode.invalidRequestData.getErrorCode()));
   }
 
   @Test
-  public void geoLocationTestWithInvalidObjectType() {
+  public void getUserCountSuccess() {
 
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    subject.tell("Invalid Request", probe.getRef());
-    ProjectCommonException exc =
-        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
-    Assert.assertTrue(null != exc);
-  }
-
-  @Test
-  public void getUserCount() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request actorMessage = new Request();
@@ -364,6 +408,7 @@ public class GeoLocationManagementActorTest {
 
     subject.tell(actorMessage, probe.getRef());
     Response res = probe.expectMsgClass(duration("100 second"), Response.class);
+
     List<Map<String, Object>> result =
         (List<Map<String, Object>>) res.getResult().get(JsonKey.LOCATIONS);
     Map<String, Object> map = result.get(0);
@@ -372,35 +417,43 @@ public class GeoLocationManagementActorTest {
   }
 
   @Test
-  public void getUserCount2() {
+  public void sendNotificationGeoLocationSuccess() {
+
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     Request actorMessage = new Request();
-    List<Object> list = new ArrayList<>();
-    list.add(id);
-    actorMessage.getRequest().put(JsonKey.LOCATION_IDS, list);
-    actorMessage.setOperation(ActorOperations.GET_USER_COUNT.getValue());
+
+    actorMessage.getRequest().put(JsonKey.REQUESTED_BY, userId);
+    actorMessage.getRequest().put(JsonKey.LOCATION, "updated location");
+    actorMessage.getRequest().put(JsonKey.TYPE, type);
+    actorMessage.getRequest().put(JsonKey.LOCATION_ID, id);
+    actorMessage.setOperation(ActorOperations.SEND_NOTIFICATION.getValue());
 
     subject.tell(actorMessage, probe.getRef());
     Response res = probe.expectMsgClass(duration("100 second"), Response.class);
-    List<Map<String, Object>> result =
-        (List<Map<String, Object>>) res.getResult().get(JsonKey.LOCATIONS);
-    Map<String, Object> map = result.get(0);
-    int count = (int) map.get(JsonKey.USER_COUNT);
-    assertEquals(0, count);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
-  @AfterClass
-  public static void destroy() {
+  @Test
+  public void sendNotificationGeoLocationFailure() {
 
-    cassandraOperation.deleteRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), orgId);
-    for (Map<String, Object> m : createResponse) {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    Request actorMessage = new Request();
 
-      String id = (String) m.get(JsonKey.ID);
-      if (!StringUtils.isBlank(id)) {
-        cassandraOperation.deleteRecord(
-            geoLocationDbInfo.getKeySpace(), geoLocationDbInfo.getTableName(), id);
-      }
-    }
+    actorMessage.getRequest().put(JsonKey.REQUESTED_BY, userId);
+    actorMessage.getRequest().put(JsonKey.LOCATION, "updated location");
+    actorMessage.getRequest().put(JsonKey.TYPE, type);
+    actorMessage.getRequest().put(JsonKey.LOCATION_ID, id);
+    actorMessage.setOperation(ActorOperations.SEND_NOTIFICATION.getValue());
+
+    when(cassandraOperation.getRecordById(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(getFailureResponse());
+
+    subject.tell(actorMessage, probe.getRef());
+    ProjectCommonException exc =
+        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
+    assertTrue(exc.getCode().equals(ResponseCode.invalidTopic.getErrorCode()));
   }
 }

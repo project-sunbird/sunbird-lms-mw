@@ -11,10 +11,7 @@ import akka.testkit.javadsl.TestKit;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
@@ -38,26 +35,30 @@ import org.sunbird.helper.ServiceFactory;
 public class CourseBatchManagementActorTest {
 
   private TestKit probe;
-  private ActorRef subject;
-
+  private static ActorSystem system = ActorSystem.create("system");
+  private static Props props = Props.create(CourseBatchManagementActor.class);
   private static CassandraOperationImpl mockCassandraOperation;
   private static final String BATCH_ID = "123";
   private static final String BATCH_NAME = "Some Batch Name";
+  //  TestKit probe = new TestKit(system);
+  private ActorRef subject;
+
   SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
 
   private String existingStartDate = "";
   private String existingEndDate = "";
 
+  @BeforeClass
+  public static void beforeClass() {
+
+    PowerMockito.mockStatic(ServiceFactory.class);
+    mockCassandraOperation = mock(CassandraOperationImpl.class);
+  }
+
   @Before
   public void setUp() {
-    mockCassandraOperation = mock(CassandraOperationImpl.class);
 
-    ActorSystem system = ActorSystem.create("system");
-    probe = new TestKit(system);
-
-    Props props = Props.create(CourseBatchManagementActor.class, mockCassandraOperation);
     subject = system.actorOf(props);
-
     PowerMockito.mockStatic(ServiceFactory.class);
     when(ServiceFactory.getInstance()).thenReturn(mockCassandraOperation);
   }

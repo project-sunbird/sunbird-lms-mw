@@ -62,12 +62,6 @@ public class LearnerStateUpdateActorTest {
 
     PowerMockito.mockStatic(ServiceFactory.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
-
-    //
-    //
-    ////    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
-    //    insertCourse();
-    //    insertBatch();
   }
 
   @Before
@@ -95,42 +89,6 @@ public class LearnerStateUpdateActorTest {
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     return response;
   }
-
-  /* private static void insertBatch() {
-
-    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-    Map<String, Object> batchMap = new HashMap<String, Object>();
-    batchMap.put(JsonKey.ID, batchId);
-    batchMap.put(JsonKey.COURSE_ID, courseId);
-    batchMap.put(JsonKey.CREATED_DATE, (String) format.format(new Date()));
-    batchMap.put(JsonKey.START_DATE, (String) format.format(new Date()));
-    Calendar now = Calendar.getInstance();
-    now.add(Calendar.DAY_OF_MONTH, 5);
-    Date after5Days = now.getTime();
-    batchMap.put(JsonKey.END_DATE, (String) format.format(after5Days));
-
-    cassandraOperation.insertRecord(
-        batchdbInfo.getKeySpace(), batchdbInfo.getTableName(), batchMap);
-  }*/
-
-  /*private static void insertCourse() {
-    Map<String, Object> courseMap = new HashMap<String, Object>();
-    courseMap.put(
-        JsonKey.ID,
-        OneWayHashing.encryptVal(
-            userId
-                + JsonKey.PRIMARY_KEY_DELIMETER
-                + courseId
-                + JsonKey.PRIMARY_KEY_DELIMETER
-                + batchId));
-
-    courseMap.put(JsonKey.COURSE_ID, courseId);
-    courseMap.put(JsonKey.USER_ID, userId);
-    courseMap.put(JsonKey.CONTENT_ID, courseId);
-    courseMap.put(JsonKey.BATCH_ID, batchId);
-    cassandraOperation.insertRecord(
-        coursedbInfo.getKeySpace(), coursedbInfo.getTableName(), courseMap);
-  }*/
 
   @Test
   public void checkTelemetryKeyFailure() throws Exception {

@@ -312,12 +312,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         .forEach(
             contentId -> {
               if (!searchedContentIds.contains(contentId)) {
-                String contentUrl =
-                    ProjectUtil.getConfigValue(JsonKey.SUNBIRD_LINKED_CONTENT_BASE_URL) + contentId;
                 String message =
                     MessageFormat.format(
                         ResponseCode.errorInvalidLinkedContentId.getErrorMessage(),
-                        contentUrl,
+                        contentId,
                         contentIdVsRowNumMap.get(contentId));
                 errorMsg.append(message);
                 errorMsg.append(" ");

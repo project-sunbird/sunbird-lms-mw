@@ -11,7 +11,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
@@ -30,16 +29,10 @@ import org.sunbird.learner.actors.search.CourseSearchActor;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({ServiceFactory.class, ElasticSearchUtil.class, ProjectUtil.class})
 @PowerMockIgnore("javax.management.*")
-@Ignore
 public class CourseSearchActorTest {
   private ActorSystem system = ActorSystem.create("system");
   private static final Props props = Props.create(CourseSearchActor.class);
   private String courseId = "";
-
-  /*@BeforeClass
-  public static void setUp() {
-
-  }*/
 
   @Test
   public void searchCourseOnReceiveTest() {
@@ -92,22 +85,6 @@ public class CourseSearchActorTest {
     ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
     Assert.assertTrue(null != exc);
   }
-
-  /*@Test
-  public void JsonProcessingExceptionTest() throws Exception{
-
-      TestKit probe = new TestKit(system);
-      ActorRef subject = system.actorOf(props);
-
-      Request reqObj = new Request();
-      reqObj.setOperation(ActorOperations.SEARCH_COURSE.getValue());
-
-      PowerMockito.when(ProjectUtil.getConfigValue(JsonKey.SEARCH_SERVICE_API_BASE_URL)).thenThrow(new ProjectCommonException("", "", 0));
-
-      subject.tell(reqObj, probe.getRef());
-      ProjectCommonException exception = probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
-      Assert.assertTrue(null != exception);
-  }*/
 
   @Test
   public void getCourseByIdOnReceiveTest() {

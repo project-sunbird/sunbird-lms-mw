@@ -41,7 +41,7 @@ public class UserSkillManagementActorTest {
   private static final String ROOT_ORG_ID = "someRootOrgId";
   private static final String ENDORSED_USER_ID = "someEndorsedUserId";
   private static final String ENDORSED_SKILL_NAME = "someEndorsedSkillName";
-  private FiniteDuration duration = duration("8 second");
+  private FiniteDuration duration = duration("10 second");
 
   @BeforeClass
   public static void setUp() {

@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.Map;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -38,7 +37,6 @@ import org.sunbird.helper.ServiceFactory;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({ServiceFactory.class, ElasticSearchUtil.class})
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*", "javax.security.*"})
-@Ignore
 public class LocationActorTest {
 
   private static final ActorSystem system = ActorSystem.create("system");
@@ -81,6 +79,7 @@ public class LocationActorTest {
   @Test
   public void testCreateLocationSuccess() {
 
+    data.put(GeoLocationJsonKey.LOCATION_TYPE, "state");
     boolean result = testScenario(LocationActorOperation.CREATE_LOCATION, true, null, null);
     assertTrue(result);
   }
@@ -88,6 +87,7 @@ public class LocationActorTest {
   @Test
   public void testUpdateLocationSuccess() {
 
+    data.put(GeoLocationJsonKey.LOCATION_TYPE, "state");
     boolean result = testScenario(LocationActorOperation.UPDATE_LOCATION, true, data, null);
     assertTrue(result);
   }
@@ -95,6 +95,7 @@ public class LocationActorTest {
   @Test
   public void testDeleteLocationSuccess() {
 
+    data.put(GeoLocationJsonKey.LOCATION_TYPE, "state");
     boolean result = testScenario(LocationActorOperation.DELETE_LOCATION, true, data, null);
     assertTrue(result);
   }
@@ -102,6 +103,7 @@ public class LocationActorTest {
   @Test
   public void testSearchLocationSuccess() {
 
+    data.put(GeoLocationJsonKey.LOCATION_TYPE, "state");
     boolean result = testScenario(LocationActorOperation.SEARCH_LOCATION, true, data, null);
     assertTrue(result);
   }
@@ -109,7 +111,7 @@ public class LocationActorTest {
   @Test
   public void testCreateLocationFailureWithInvalidValue() {
 
-    data.put(GeoLocationJsonKey.LOCATION_TYPE, "anyType");
+    data.put(GeoLocationJsonKey.LOCATION_TYPE, "anyLocationType");
     boolean result =
         testScenario(
             LocationActorOperation.CREATE_LOCATION, false, data, ResponseCode.invalidValue);

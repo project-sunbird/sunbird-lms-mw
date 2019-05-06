@@ -4,7 +4,6 @@ import static org.sunbird.learner.util.Util.isNotNull;
 import static org.sunbird.learner.util.Util.isNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.IOException;
 import java.math.BigInteger;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -435,16 +434,20 @@ public class OrganisationManagementActor extends BaseActor {
           targetObject,
           correlatedObject);
       if (isEventSyncEnabled()) {
-        ProjectLogger.log("OrganisationManagementActor:createOrg: Event sync is enabled", LoggerEnum.INFO);
+        ProjectLogger.log(
+            "OrganisationManagementActor:createOrg: Event sync is enabled", LoggerEnum.INFO);
         return;
       } else {
         if (null != addressReq) {
           request.put(JsonKey.ADDRESS, addressReq);
         }
+        request.remove(JsonKey.CONTACT_DETAILS);
         Request orgReq = new Request();
         orgReq.getRequest().put(JsonKey.ORGANISATION, request);
         orgReq.setOperation(ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
-        ProjectLogger.log("OrgManagementActor : createOrg : Calling background job to save org data into ES" + uniqueId,
+        ProjectLogger.log(
+            "OrgManagementActor : createOrg : Calling background job to save org data into ES"
+                + uniqueId,
             LoggerEnum.INFO);
         tellToAnother(orgReq);
       }
@@ -616,7 +619,8 @@ public class OrganisationManagementActor extends BaseActor {
 
       // update the ES --
       if (isEventSyncEnabled()) {
-        ProjectLogger.log("OrganisationManagementActor:updateOrgStatus: Event sync is enabled", LoggerEnum.INFO);
+        ProjectLogger.log(
+            "OrganisationManagementActor:updateOrgStatus: Event sync is enabled", LoggerEnum.INFO);
         return;
       } else {
         Request orgRequest = new Request();
@@ -624,7 +628,8 @@ public class OrganisationManagementActor extends BaseActor {
         orgRequest.setOperation(ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
         tellToAnother(orgRequest);
 
-        targetObject = TelemetryUtil.generateTargetObject(orgId, JsonKey.ORGANISATION, JsonKey.UPDATE, null);
+        targetObject =
+            TelemetryUtil.generateTargetObject(orgId, JsonKey.ORGANISATION, JsonKey.UPDATE, null);
         Map<String, Object> telemetryAction = new HashMap<>();
         telemetryAction.put("updateOrgStatus", "org status updated.");
         TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, new ArrayList<>());
@@ -889,16 +894,8 @@ public class OrganisationManagementActor extends BaseActor {
 
       // check contactDetail filed is coming or not. it will always come as list of
       // map
-      List<Map<String, Object>> listOfMap = null;
       if (updateOrgDao.containsKey(JsonKey.CONTACT_DETAILS)) {
-        listOfMap = (List<Map<String, Object>>) updateOrgDao.get(JsonKey.CONTACT_DETAILS);
-        if (listOfMap != null && !listOfMap.isEmpty()) {
-          try {
-            updateOrgDao.put(JsonKey.CONTACT_DETAILS, mapper.writeValueAsString(listOfMap));
-          } catch (IOException e) {
-            ProjectLogger.log(e.getMessage(), e);
-          }
-        }
+        updateOrgDao.remove(JsonKey.CONTACT_DETAILS);
       }
       // This will remove all extra unnecessary parameter from request
       Organisation org = mapper.convertValue(updateOrgDao, Organisation.class);
@@ -927,17 +924,12 @@ public class OrganisationManagementActor extends BaseActor {
               (String) orgDao.get(JsonKey.ID), JsonKey.ORGANISATION, JsonKey.UPDATE, null);
       TelemetryUtil.telemetryProcessingCall(updateOrgDao, targetObject, correlatedObject);
       if (isEventSyncEnabled()) {
-        ProjectLogger.log("OrganisationManagementActor:updateOrgData: Event sync is enabled", LoggerEnum.INFO);
+        ProjectLogger.log(
+            "OrganisationManagementActor:updateOrgData: Event sync is enabled", LoggerEnum.INFO);
         return;
       } else {
         if (null != addressReq) {
           updateOrgDao.put(JsonKey.ADDRESS, addressReq);
-        }
-        if (listOfMap != null) {
-          updateOrgDao.put(JsonKey.CONTACT_DETAILS, listOfMap);
-        } else {
-          listOfMap = new ArrayList<>();
-          updateOrgDao.put(JsonKey.CONTACT_DETAILS, listOfMap);
         }
 
         Request orgRequest = new Request();
@@ -1267,7 +1259,7 @@ public class OrganisationManagementActor extends BaseActor {
           ResponseCode.orgDoesNotExist.getErrorMessage(),
           ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
     }
-
+    result.remove(JsonKey.CONTACT_DETAILS);
     Response response = new Response();
     response.put(JsonKey.RESPONSE, result);
     sender().tell(response, self());
@@ -1789,7 +1781,9 @@ public class OrganisationManagementActor extends BaseActor {
 
       Map<String, Object> rootOrg = getRootOrgFromChannel(channel);
       if (MapUtils.isEmpty(rootOrg)) {
-        ProjectLogger.log("OrganisationManagementActor:validateChannel Invalid channel: " + channel,LoggerEnum.INFO.name());
+        ProjectLogger.log(
+            "OrganisationManagementActor:validateChannel Invalid channel: " + channel,
+            LoggerEnum.INFO.name());
         throw new ProjectCommonException(
             ResponseCode.invalidChannel.getErrorCode(),
             ResponseCode.invalidChannel.getErrorMessage(),
@@ -1799,7 +1793,9 @@ public class OrganisationManagementActor extends BaseActor {
       if (!StringUtils.isBlank(rootOrgId)) {
         req.put(JsonKey.ROOT_ORG_ID, rootOrgId);
       } else {
-        ProjectLogger.log("OrganisationManagementActor:validateChannel Invalid channel: " + channel,LoggerEnum.INFO.name());
+        ProjectLogger.log(
+            "OrganisationManagementActor:validateChannel Invalid channel: " + channel,
+            LoggerEnum.INFO.name());
         throw new ProjectCommonException(
             ResponseCode.invalidChannel.getErrorCode(),
             ResponseCode.invalidChannel.getErrorMessage(),
@@ -1813,7 +1809,9 @@ public class OrganisationManagementActor extends BaseActor {
                 ResponseCode.errorInactiveOrg.getErrorMessage(), JsonKey.CHANNEL, channel));
       }
     } else if (!validateChannelUniqueness((String) req.get(JsonKey.CHANNEL), null)) {
-      ProjectLogger.log("OrganisationManagementActor:validateChannel channel validation failed ",LoggerEnum.INFO.name());
+      ProjectLogger.log(
+          "OrganisationManagementActor:validateChannel channel validation failed ",
+          LoggerEnum.INFO.name());
       throw new ProjectCommonException(
           ResponseCode.channelUniquenessInvalid.getErrorCode(),
           ResponseCode.channelUniquenessInvalid.getErrorMessage(),
@@ -1873,7 +1871,7 @@ public class OrganisationManagementActor extends BaseActor {
     }
   }
 
-  private boolean isEventSyncEnabled() { 
+  private boolean isEventSyncEnabled() {
     return Boolean.parseBoolean(getEventSyncSetting(JsonKey.ORGANISATION));
   }
 }

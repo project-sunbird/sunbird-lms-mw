@@ -30,9 +30,7 @@ public class CacheLoaderService implements Runnable {
         }
       }
     } catch (Exception e) {
-      ProjectLogger.log(
-          "CacheLoaderService:cacheLoader: Exception in retrieving page section " + e.getMessage(),
-          e);
+      ProjectLogger.log("CacheLoaderService:cacheLoader: Exception occurred = " + e.getMessage(), e);
     }
     return map;
   }
@@ -48,12 +46,14 @@ public class CacheLoaderService implements Runnable {
 
   void loadPagesInCache(
       List<Map<String, Object>> responseList, Map<String, Map<String, Object>> map) {
+
     for (Map<String, Object> resultMap : responseList) {
-      String orgId =
-          (((String) resultMap.get(JsonKey.ORGANISATION_ID)) == null
-              ? "NA"
-              : (String) resultMap.get(JsonKey.ORGANISATION_ID));
-      map.put(orgId + ":" + ((String) resultMap.get(JsonKey.PAGE_NAME)), resultMap);
+      String pageName = (String) resultMap.get(JsonKey.PAGE_NAME);
+      String orgId = (String) resultMap.get(JsonKey.ORGANISATION_ID);
+      if (orgId == null) {
+        orgId = "NA";
+      }
+      map.put(orgId + ":" + pageName, resultMap);
     }
   }
 
@@ -63,9 +63,10 @@ public class CacheLoaderService implements Runnable {
   }
 
   private void updateAllCache() {
+    ProjectLogger.log("CacheLoaderService: updateAllCache called", LoggerEnum.INFO.name());
+
     updateCache(cacheLoader("page_section"), ActorOperations.GET_SECTION.getValue());
     updateCache(cacheLoader("page_management"), ActorOperations.GET_PAGE_DATA.getValue());
-    ProjectLogger.log("CacheLoaderService:updateAllCache completed", LoggerEnum.INFO.name());
   }
 
   private static void updateCache(Map<String, Map<String, Object>> cache, String mapName) {
@@ -77,7 +78,7 @@ public class CacheLoaderService implements Runnable {
         map.put(key, value);
       }
     } catch (Exception e) {
-      ProjectLogger.log("CacheLoaderService:updateCache Error occured" + e, LoggerEnum.INFO.name());
+      ProjectLogger.log("CacheLoaderService:updateCache: Error occured = " + e.getMessage(), LoggerEnum.ERROR.name());
     }
   }
 }

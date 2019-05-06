@@ -4,10 +4,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.redisson.api.RMap;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.redis.RedisConnectionManager;
 
 public class CacheLoaderService implements Runnable {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -60,16 +62,14 @@ public class CacheLoaderService implements Runnable {
     updateAllCache();
   }
 
-  private static void updateAllCache() {
-
-    updateCache(cachingService.cacheLoader("page_section"), ActorOperations.GET_SECTION.getValue());
-    updateCache(
-        cachingService.cacheLoader("page_management"), ActorOperations.GET_PAGE_DATA.getValue());
+  private void updateAllCache() {
+    updateCache(cacheLoader("page_section"), ActorOperations.GET_SECTION.getValue());
+    updateCache(cacheLoader("page_management"), ActorOperations.GET_PAGE_DATA.getValue());
     ProjectLogger.log("RedisConnectionManager:updateAllCache completed", LoggerEnum.INFO.name());
   }
 
   private static void updateCache(Map<String, Map<String, Object>> cache, String mapName) {
-    RMap<Object, Object> map = client.getMap(mapName);
+    RMap<Object, Object> map = RedisConnectionManager.getClient().getMap(mapName);
     Set<String> keys = cache.keySet();
     for (String key : keys) {
       String value = ProjectUtil.getJsonString(cache.get(key));

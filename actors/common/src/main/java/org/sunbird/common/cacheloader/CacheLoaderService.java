@@ -14,16 +14,14 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.Util;
 import org.sunbird.notification.utils.JsonUtil;
 
 public class CacheLoaderService implements Runnable {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static final String KEY_SPACE_NAME = "sunbird";
   private static boolean cacheEnable =
-      Boolean.parseBoolean(ProjectUtil.propertiesCache.getProperty(JsonKey.SUNBIRD_CACHE_ENABLE));
+      Boolean.parseBoolean(ProjectUtil.getConfigValue(JsonKey.IS_CACHE_ENABLE));
   private static Cache cache = CacheFactory.getInstance();
-  private Util.DbInfo sectionDbInfo = Util.dbInfoMap.get(JsonKey.SECTION_MGMT_DB);
 
   @SuppressWarnings("unchecked")
   public Map<String, Map<String, Object>> cacheLoader(String tableName) {
@@ -35,7 +33,7 @@ public class CacheLoaderService implements Runnable {
       if (null != responseList && !responseList.isEmpty()) {
         if (tableName.equalsIgnoreCase(JsonKey.PAGE_SECTION)) {
           loadPageSectionInCache(responseList, map);
-        } else if (tableName.equalsIgnoreCase("page_management")) {
+        } else if (tableName.equalsIgnoreCase(JsonKey.PAGE_MANAGEMENT)) {
           loadPagesInCache(responseList, map);
         }
       }

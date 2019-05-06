@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.commons.collections.CollectionUtils;
 import org.sunbird.cache.CacheFactory;
 import org.sunbird.cache.interfaces.Cache;
 import org.sunbird.cassandra.CassandraOperation;
@@ -14,13 +15,14 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.notification.utils.JsonUtil;
 
 public class CacheLoaderService implements Runnable {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static final String KEY_SPACE_NAME = "sunbird";
-  private static boolean cacheEnable =
-      Boolean.parseBoolean(ProjectUtil.getConfigValue(JsonKey.IS_CACHE_ENABLE));
+  private static boolean isCacheEnable =
+      Boolean.parseBoolean(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_CACHE_ENABLE));
   private static Cache cache = CacheFactory.getInstance();
 
   @SuppressWarnings("unchecked")
@@ -30,7 +32,7 @@ public class CacheLoaderService implements Runnable {
       Response response = cassandraOperation.getAllRecords(KEY_SPACE_NAME, tableName);
       List<Map<String, Object>> responseList =
           (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-      if (null != responseList && !responseList.isEmpty()) {
+      if (CollectionUtils.isNotEmpty(responseList)) {
         if (tableName.equalsIgnoreCase(JsonKey.PAGE_SECTION)) {
           loadPageSectionInCache(responseList, map);
         } else if (tableName.equalsIgnoreCase(JsonKey.PAGE_MANAGEMENT)) {
@@ -103,21 +105,37 @@ public class CacheLoaderService implements Runnable {
   }
 
   public static <T> T getDataFromCache(String mapName, String key, Class<T> class1) {
-    if (cacheEnable) {
+    if (isCacheEnable) {
       String res = cache.get(mapName, key);
       if (res != null) {
         return JsonUtil.getAsObject(res, class1);
       }
+    } else {
+      Map<String, Map<String, Object>> map = getDCMap(mapName);
+      return (T) map.get(key);
     }
     return null;
   }
 
   public static boolean putDataIntoCache(String mapName, String key, Object obj) {
-    if (cacheEnable) {
+    if (isCacheEnable) {
       String res = JsonUtil.toJson(obj);
       cache.put(mapName, key, res);
       return true;
+    } else {
+      Map<String, Map<String, Object>> map = getDCMap(mapName);
+      map.put(key, (Map<String, Object>) obj);
     }
     return false;
+  }
+
+  private static Map<String, Map<String, Object>> getDCMap(String mapName) {
+    switch (mapName) {
+      case "getPageData":
+        return DataCacheHandler.getPageMap();
+      case "getSection":
+        return DataCacheHandler.getSectionMap();
+    }
+    return null;
   }
 }

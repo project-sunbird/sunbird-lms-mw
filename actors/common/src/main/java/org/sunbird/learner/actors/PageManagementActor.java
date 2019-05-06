@@ -25,7 +25,6 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ContentSearchUtil;
-import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 import org.sunbird.notification.utils.JsonUtil;
 import org.sunbird.telemetry.util.TelemetryUtil;
@@ -240,9 +239,6 @@ public class PageManagementActor extends BaseActor {
                     ActorOperations.GET_SECTION.getValue(),
                     (String) sectionMap.get(JsonKey.ID),
                     sectionMap);
-
-                DataCacheHandler.getSectionMap()
-                    .put((String) sectionMap.get(JsonKey.ID), sectionMap);
               }
             })
         .start();
@@ -277,9 +273,6 @@ public class PageManagementActor extends BaseActor {
         CacheLoaderService.getDataFromCache(
             ActorOperations.GET_PAGE_DATA.getValue(), orgId + ":" + pageName, Map.class);
 
-    if (pageMapData != null) {
-      pageMapData = DataCacheHandler.getPageMap().get(orgId + ":" + pageName);
-    }
     Map<String, Object> pageMap = pageMapData;
 
     if (null == pageMap) {
@@ -342,10 +335,6 @@ public class PageManagementActor extends BaseActor {
                     ActorOperations.GET_SECTION.getValue(),
                     (String) sectionMap.get(JsonKey.ID),
                     Map.class);
-            if (sectionData == null) {
-              sectionData =
-                  new HashMap<>(DataCacheHandler.getSectionMap().get(sectionMap.get(JsonKey.ID)));
-            }
             if (MapUtils.isNotEmpty(sectionData)) {
               Future<Map<String, Object>> contentFuture =
                   getContentData(
@@ -583,13 +572,10 @@ public class PageManagementActor extends BaseActor {
                 if (pageMap.containsKey(JsonKey.ORGANISATION_ID)) {
                   orgId = (String) pageMap.get(JsonKey.ORGANISATION_ID);
                 }
-                if (!CacheLoaderService.putDataIntoCache(
+                CacheLoaderService.putDataIntoCache(
                     ActorOperations.GET_PAGE_DATA.getValue(),
                     orgId + ":" + (String) pageMap.get(JsonKey.PAGE_NAME),
-                    pageMap)) {
-                  DataCacheHandler.getPageMap()
-                      .put(orgId + ":" + (String) pageMap.get(JsonKey.PAGE_NAME), pageMap);
-                }
+                    pageMap);
               }
             })
         .start();

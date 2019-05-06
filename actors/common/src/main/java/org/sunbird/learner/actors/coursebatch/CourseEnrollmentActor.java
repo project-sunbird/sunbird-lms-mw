@@ -4,7 +4,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -105,7 +109,6 @@ public class CourseEnrollmentActor extends BaseActor {
     if (courseNotificationActive()) {
       batchOperationNotifier(courseMap, courseBatch, JsonKey.ADD);
     }
-    generateAndProcessTelemetryEvent(courseMap, "user.batch.course");
     if (userCourseResult == null) {
       UserCoursesService.syncUserCourses(
           (String) courseMap.get(JsonKey.COURSE_ID),
@@ -123,6 +126,7 @@ public class CourseEnrollmentActor extends BaseActor {
           userCourseResult.getTimestamp(),
           (String) actorMessage.getRequest().get(JsonKey.USER_ID));
     }
+    generateAndProcessTelemetryEvent(courseMap, "user.batch.course");
   }
 
   private boolean courseNotificationActive() {

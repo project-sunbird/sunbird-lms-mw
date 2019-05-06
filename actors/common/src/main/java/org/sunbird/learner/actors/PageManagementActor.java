@@ -6,23 +6,16 @@ import akka.pattern.Patterns;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import io.netty.util.internal.StringUtil;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
-import org.sunbird.cache.CacheServiceFactory;
+import org.sunbird.cache.CacheFactory;
 import org.sunbird.cache.interfaces.Cache;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.cacheloader.CacheLoaderService;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
@@ -34,9 +27,14 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ContentSearchUtil;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
+import org.sunbird.notification.utils.JsonUtil;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import scala.concurrent.Future;
 import scala.concurrent.Promise;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.Map.Entry;
 
 /**
  * This actor will handle page management operation .
@@ -66,8 +64,8 @@ public class PageManagementActor extends BaseActor {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private ObjectMapper mapper = new ObjectMapper();
   private boolean redisCacheEnable =
-      Boolean.parseBoolean(ProjectUtil.propertiesCache.getProperty(JsonKey.REDIS_CACHE_ENABLE));
-  private Cache cache = CacheServiceFactory.getInstance();
+      Boolean.parseBoolean(ProjectUtil.propertiesCache.getProperty(JsonKey.SUNBIRD_CACHE_ENABLE));
+  private Cache cache = CacheFactory.getInstance();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -104,34 +102,11 @@ public class PageManagementActor extends BaseActor {
   }
 
   private void getAllSections() {
-    Response response = null;
-    String res = null;
-    if (redisCacheEnable) {
-      res = cache.get(ActorOperations.GET_ALL_SECTION.getValue(), JsonKey.SECTION);
-    }
-    if (StringUtil.isNullOrEmpty(res)) {
-      response =
-          cassandraOperation.getAllRecords(
-              sectionDbInfo.getKeySpace(), sectionDbInfo.getTableName());
-      @SuppressWarnings("unchecked")
-      List<Map<String, Object>> result =
-          (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
-      for (Map<String, Object> map : result) {
-        removeUnwantedData(map, "");
-      }
-      Response sectionMap = new Response();
-      sectionMap.put(JsonKey.SECTIONS, response.get(JsonKey.RESPONSE));
-      if (redisCacheEnable) {
-        cache.put(
-            ActorOperations.GET_ALL_SECTION.getValue(),
-            JsonKey.SECTION,
-            ProjectUtil.getJsonString(response));
-        sender().tell(response, self());
-      }
-    } else {
-      Response section = ProjectUtil.getAsObject(res, Response.class);
-      sender().tell(section, self());
-    }
+    CacheLoaderService cacheLoaderService = new CacheLoaderService();
+    Response section = JsonUtil.getAsObject(cacheLoaderService.getAllSections(), Response.class);
+    Response sectionMap = new Response();
+    sectionMap.put(JsonKey.SECTIONS, section.get(JsonKey.RESPONSE));
+    sender().tell(sectionMap, self());
   }
 
   private void getSection(Request actorMessage) {
@@ -154,13 +129,17 @@ public class PageManagementActor extends BaseActor {
         removeUnwantedData(map, "");
         Response section = new Response();
         section.put(JsonKey.SECTION, response.get(JsonKey.RESPONSE));
+        if (redisCacheEnable) {
+          cache.put(
+                  ActorOperations.GET_SECTION.getValue(), sectionId, JsonUtil.toJson(section));
+        }
+        sender().tell(section, self());
+        return;
       }
-      if (redisCacheEnable) {
-        cache.put(
-            ActorOperations.GET_SECTION.getValue(), sectionId, ProjectUtil.getJsonString(response));
-      }
+
     } else {
-      response = ProjectUtil.getAsObject(res, Response.class);
+      response = JsonUtil.getAsObject(res, Response.class);
+
     }
     sender().tell(response, self());
   }
@@ -261,7 +240,7 @@ public class PageManagementActor extends BaseActor {
                   cache.put(
                       ActorOperations.GET_SECTION.getValue(),
                       (String) sectionMap.get(JsonKey.ID),
-                      ProjectUtil.getJsonString(sectionMap));
+                          JsonUtil.toJson(sectionMap));
                 } else {
                   DataCacheHandler.getSectionMap()
                       .put((String) sectionMap.get(JsonKey.ID), sectionMap);
@@ -344,10 +323,10 @@ public class PageManagementActor extends BaseActor {
       reqMap.put(JsonKey.HEADER, headers);
       reqMap.put(JsonKey.FILTER, filterMap);
       reqMap.put(JsonKey.URL_QUERY_STRING, urlQueryString);
-      requestHashCode = ProjectUtil.getHashCode(reqMap);
+      requestHashCode = JsonUtil.getHashCode(reqMap);
       String cachedResponse = cache.get(JsonKey.SECTIONS, String.valueOf(requestHashCode));
       if (cachedResponse != null) {
-        Response res = ProjectUtil.getAsObject(cachedResponse, Response.class);
+        Response res = JsonUtil.getAsObject(cachedResponse, Response.class);
         sender().tell(res, self());
         return;
       }
@@ -365,7 +344,7 @@ public class PageManagementActor extends BaseActor {
                   cache.get(
                       ActorOperations.GET_SECTION.getValue(), (String) sectionMap.get(JsonKey.ID));
               if (!StringUtils.isEmpty(sectionMapStr)) {
-                sectionData = ProjectUtil.getAsObject(sectionMapStr, Map.class);
+                sectionData = JsonUtil.getAsObject(sectionMapStr, Map.class);
               }
             } else {
               sectionData =
@@ -410,7 +389,7 @@ public class PageManagementActor extends BaseActor {
       Patterns.pipe(response, getContext().dispatcher()).to(sender());
       if (redisCacheEnable) {
         cache.put(
-            JsonKey.SECTIONS, String.valueOf(requestHashCode), ProjectUtil.getJsonString(response));
+            JsonKey.SECTIONS, String.valueOf(requestHashCode), JsonUtil.toJson(response));
       }
     } catch (Exception e) {
       ProjectLogger.log(
@@ -446,11 +425,11 @@ public class PageManagementActor extends BaseActor {
         response.getResult().remove(JsonKey.RESPONSE);
       }
       if (redisCacheEnable) {
-        String responseString = ProjectUtil.getJsonString(response);
+        String responseString = JsonUtil.toJson(response);
         cache.put(ActorOperations.GET_PAGE_SETTING.name(), pageName, responseString);
       }
     } else {
-      response = ProjectUtil.getAsObject(res, Response.class);
+      response = JsonUtil.getAsObject(res, Response.class);
       ProjectLogger.log("PageManagementActor:getPageSetting  response return using cache");
     }
     sender().tell(response, self());
@@ -481,11 +460,11 @@ public class PageManagementActor extends BaseActor {
         cache.put(
             ActorOperations.GET_PAGE_SETTING.name(),
             JsonKey.PAGE,
-            ProjectUtil.getJsonString(response));
+                JsonUtil.toJson(response));
       }
       return;
     }
-    response = ProjectUtil.getAsObject(res, Response.class);
+    response = JsonUtil.getAsObject(res, Response.class);
     sender().tell(response, self());
   }
 
@@ -626,7 +605,7 @@ public class PageManagementActor extends BaseActor {
                 cache.put(
                     ActorOperations.GET_PAGE_DATA.getValue(),
                     orgId + ":" + (String) pageMap.get(JsonKey.PAGE_NAME),
-                    ProjectUtil.getJsonString(pageMap));
+                        JsonUtil.toJson(pageMap));
               }
             })
         .start();

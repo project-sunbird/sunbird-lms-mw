@@ -4,17 +4,26 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import org.apache.commons.lang.StringUtils;
 import org.redisson.api.RMap;
+import org.sunbird.cache.CacheFactory;
+import org.sunbird.cache.interfaces.Cache;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.Util;
+import org.sunbird.notification.utils.JsonUtil;
 import org.sunbird.redis.RedisConnectionManager;
 
 public class CacheLoaderService implements Runnable {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static final String KEY_SPACE_NAME = "sunbird";
-
+  private boolean cacheEnable =
+          Boolean.parseBoolean(ProjectUtil.propertiesCache.getProperty(JsonKey.SUNBIRD_CACHE_ENABLE));
+  private Cache cache = CacheFactory.getInstance();
+  private Util.DbInfo sectionDbInfo = Util.dbInfoMap.get(JsonKey.SECTION_MGMT_DB);
   @SuppressWarnings("unchecked")
   public Map<String, Map<String, Object>> cacheLoader(String tableName) {
     Map<String, Map<String, Object>> map = new HashMap<>();
@@ -39,7 +48,7 @@ public class CacheLoaderService implements Runnable {
       List<Map<String, Object>> responseList, Map<String, Map<String, Object>> map) {
 
     for (Map<String, Object> resultMap : responseList) {
-
+      removeUnwantedData(resultMap,"");
       map.put((String) resultMap.get(JsonKey.ID), resultMap);
     }
   }
@@ -65,8 +74,55 @@ public class CacheLoaderService implements Runnable {
   private void updateAllCache() {
     ProjectLogger.log("CacheLoaderService: updateAllCache called", LoggerEnum.INFO.name());
 
-    updateCache(cacheLoader("page_section"), ActorOperations.GET_SECTION.getValue());
-    updateCache(cacheLoader("page_management"), ActorOperations.GET_PAGE_DATA.getValue());
+    updateCache(cacheLoader(JsonKey.PAGE_SECTION), ActorOperations.GET_SECTION.getValue());
+    updateCache(cacheLoader(JsonKey.PAGE_MANAGEMENT), ActorOperations.GET_PAGE_DATA.getValue());
+  }
+  private void removeUnwantedData(Map<String, Object> map, String from) {
+    map.remove(JsonKey.CREATED_DATE);
+    map.remove(JsonKey.CREATED_BY);
+    map.remove(JsonKey.UPDATED_DATE);
+    map.remove(JsonKey.UPDATED_BY);
+    if (from.equalsIgnoreCase("getPageData")) {
+      map.remove(JsonKey.STATUS);
+    }
+  }
+
+  public String getAllSections(){
+
+    String res = null;
+    if (cacheEnable) {
+      res = cache.get(ActorOperations.GET_ALL_SECTION.getValue(), JsonKey.SECTION);
+      if(StringUtils.isEmpty(res)){
+        Response response = getAllSectionsFromDb();
+
+          cache.put(
+                  ActorOperations.GET_ALL_SECTION.getValue(),
+                  JsonKey.SECTION,
+                  JsonUtil.toJson(response));
+
+          return  JsonUtil.toJson(response);
+
+      }else {
+        return res;
+      }
+    }else{
+      Response response = getAllSectionsFromDb();
+      return JsonUtil.toJson(response);
+    }
+
+  }
+
+  private Response getAllSectionsFromDb(){
+    Response response =
+            cassandraOperation.getAllRecords(
+                    sectionDbInfo.getKeySpace(), sectionDbInfo.getTableName());
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> result =
+            (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
+    for (Map<String, Object> map : result) {
+      removeUnwantedData(map, "");
+    }
+    return response;
   }
 
   private static void updateCache(Map<String, Map<String, Object>> cache, String mapName) {
@@ -74,7 +130,7 @@ public class CacheLoaderService implements Runnable {
       RMap<Object, Object> map = RedisConnectionManager.getClient().getMap(mapName);
       Set<String> keys = cache.keySet();
       for (String key : keys) {
-        String value = ProjectUtil.getJsonString(cache.get(key));
+        String value = JsonUtil.toJson(cache.get(key));
         map.put(key, value);
       }
     } catch (Exception e) {

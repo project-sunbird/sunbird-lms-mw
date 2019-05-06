@@ -58,7 +58,7 @@ public class PageManagementActor extends BaseActor {
   private Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private ObjectMapper mapper = new ObjectMapper();
-  private boolean cacheEnable =
+  private boolean isCacheEnable =
       Boolean.parseBoolean(ProjectUtil.propertiesCache.getProperty(JsonKey.SUNBIRD_CACHE_ENABLE));
 
   @Override
@@ -306,7 +306,7 @@ public class PageManagementActor extends BaseActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     int requestHashCode = 0;
-    if (cacheEnable) {
+    if (isCacheEnable) {
       Map<String, Object> reqMap = new HashMap<>();
       reqMap.put(JsonKey.SECTION, arr);
       reqMap.put(JsonKey.FILTERS, reqFilters);

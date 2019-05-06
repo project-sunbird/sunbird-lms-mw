@@ -21,7 +21,7 @@ import org.sunbird.notification.utils.JsonUtil;
 public class CacheLoaderService implements Runnable {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static final String KEY_SPACE_NAME = "sunbird";
-  private static boolean isCacheEnable =
+  private static boolean isCacheEnabled =
       Boolean.parseBoolean(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_CACHE_ENABLE));
   private static Cache cache = CacheFactory.getInstance();
 
@@ -105,7 +105,7 @@ public class CacheLoaderService implements Runnable {
   }
 
   public static <T> T getDataFromCache(String mapName, String key, Class<T> class1) {
-    if (isCacheEnable) {
+    if (isCacheEnabled) {
       String res = cache.get(mapName, key);
       if (res != null) {
         return JsonUtil.getAsObject(res, class1);
@@ -118,7 +118,7 @@ public class CacheLoaderService implements Runnable {
   }
 
   public static boolean putDataIntoCache(String mapName, String key, Object obj) {
-    if (isCacheEnable) {
+    if (isCacheEnabled) {
       String res = JsonUtil.toJson(obj);
       cache.put(mapName, key, res);
       return true;

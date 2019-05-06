@@ -4,26 +4,27 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import org.apache.commons.lang.StringUtils;
-import org.redisson.api.RMap;
 import org.sunbird.cache.CacheFactory;
 import org.sunbird.cache.interfaces.Cache;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.notification.utils.JsonUtil;
-import org.sunbird.redis.RedisConnectionManager;
 
 public class CacheLoaderService implements Runnable {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static final String KEY_SPACE_NAME = "sunbird";
-  private boolean cacheEnable =
-          Boolean.parseBoolean(ProjectUtil.propertiesCache.getProperty(JsonKey.SUNBIRD_CACHE_ENABLE));
-  private Cache cache = CacheFactory.getInstance();
+  private static boolean cacheEnable =
+      Boolean.parseBoolean(ProjectUtil.propertiesCache.getProperty(JsonKey.SUNBIRD_CACHE_ENABLE));
+  private static Cache cache = CacheFactory.getInstance();
   private Util.DbInfo sectionDbInfo = Util.dbInfoMap.get(JsonKey.SECTION_MGMT_DB);
+
   @SuppressWarnings("unchecked")
   public Map<String, Map<String, Object>> cacheLoader(String tableName) {
     Map<String, Map<String, Object>> map = new HashMap<>();
@@ -39,7 +40,8 @@ public class CacheLoaderService implements Runnable {
         }
       }
     } catch (Exception e) {
-      ProjectLogger.log("CacheLoaderService:cacheLoader: Exception occurred = " + e.getMessage(), e);
+      ProjectLogger.log(
+          "CacheLoaderService:cacheLoader: Exception occurred = " + e.getMessage(), e);
     }
     return map;
   }
@@ -48,7 +50,7 @@ public class CacheLoaderService implements Runnable {
       List<Map<String, Object>> responseList, Map<String, Map<String, Object>> map) {
 
     for (Map<String, Object> resultMap : responseList) {
-      removeUnwantedData(resultMap,"");
+      removeUnwantedData(resultMap, "");
       map.put((String) resultMap.get(JsonKey.ID), resultMap);
     }
   }
@@ -77,6 +79,7 @@ public class CacheLoaderService implements Runnable {
     updateCache(cacheLoader(JsonKey.PAGE_SECTION), ActorOperations.GET_SECTION.getValue());
     updateCache(cacheLoader(JsonKey.PAGE_MANAGEMENT), ActorOperations.GET_PAGE_DATA.getValue());
   }
+
   private void removeUnwantedData(Map<String, Object> map, String from) {
     map.remove(JsonKey.CREATED_DATE);
     map.remove(JsonKey.CREATED_BY);
@@ -87,54 +90,36 @@ public class CacheLoaderService implements Runnable {
     }
   }
 
-  public String getAllSections(){
-
-    String res = null;
-    if (cacheEnable) {
-      res = cache.get(ActorOperations.GET_ALL_SECTION.getValue(), JsonKey.SECTION);
-      if(StringUtils.isEmpty(res)){
-        Response response = getAllSectionsFromDb();
-
-          cache.put(
-                  ActorOperations.GET_ALL_SECTION.getValue(),
-                  JsonKey.SECTION,
-                  JsonUtil.toJson(response));
-
-          return  JsonUtil.toJson(response);
-
-      }else {
-        return res;
-      }
-    }else{
-      Response response = getAllSectionsFromDb();
-      return JsonUtil.toJson(response);
-    }
-
-  }
-
-  private Response getAllSectionsFromDb(){
-    Response response =
-            cassandraOperation.getAllRecords(
-                    sectionDbInfo.getKeySpace(), sectionDbInfo.getTableName());
-    @SuppressWarnings("unchecked")
-    List<Map<String, Object>> result =
-            (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
-    for (Map<String, Object> map : result) {
-      removeUnwantedData(map, "");
-    }
-    return response;
-  }
-
-  private static void updateCache(Map<String, Map<String, Object>> cache, String mapName) {
+  private static void updateCache(Map<String, Map<String, Object>> cacheMap, String mapName) {
     try {
-      RMap<Object, Object> map = RedisConnectionManager.getClient().getMap(mapName);
-      Set<String> keys = cache.keySet();
+      Set<String> keys = cacheMap.keySet();
       for (String key : keys) {
-        String value = JsonUtil.toJson(cache.get(key));
-        map.put(key, value);
+        String value = JsonUtil.toJson(cacheMap.get(key));
+        cache.put(mapName, key, value);
       }
     } catch (Exception e) {
-      ProjectLogger.log("CacheLoaderService:updateCache: Error occured = " + e.getMessage(), LoggerEnum.ERROR.name());
+      ProjectLogger.log(
+          "CacheLoaderService:updateCache: Error occured = " + e.getMessage(),
+          LoggerEnum.ERROR.name());
     }
+  }
+
+  public static <T> T getDataFromCache(String mapName, String key, Class<T> class1) {
+    if (cacheEnable) {
+      String res = cache.get(mapName, key);
+      if (res != null) {
+        return JsonUtil.getAsObject(res, class1);
+      }
+    }
+    return null;
+  }
+
+  public static boolean putDataIntoCache(String mapName, String key, Object obj) {
+    if (cacheEnable) {
+      String res = JsonUtil.toJson(obj);
+      cache.put(mapName, key, res);
+      return true;
+    }
+    return false;
   }
 }

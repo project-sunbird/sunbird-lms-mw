@@ -312,20 +312,7 @@ public class BackgroundJobManager extends BaseActor {
       Map<String, Object> esMap = new HashMap<>();
       if (!(orgList.isEmpty())) {
         esMap = orgList.get(0);
-        String contactDetails = (String) esMap.get(JsonKey.CONTACT_DETAILS);
-        if (StringUtils.isNotBlank(contactDetails)) {
-          Object[] arr;
-          try {
-            arr = mapper.readValue(contactDetails, Object[].class);
-            esMap.put(JsonKey.CONTACT_DETAILS, arr);
-          } catch (IOException e) {
-            esMap.put(JsonKey.CONTACT_DETAILS, new Object[] {});
-            ProjectLogger.log(e.getMessage(), e);
-          }
-        } else {
-          esMap.put(JsonKey.CONTACT_DETAILS, new Object[] {});
-        }
-
+        
         if (MapUtils.isNotEmpty((Map<String, Object>) orgMap.get(JsonKey.ADDRESS))) {
           esMap.put(JsonKey.ADDRESS, orgMap.get(JsonKey.ADDRESS));
         } else {

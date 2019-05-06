@@ -273,6 +273,7 @@ public class OrganisationManagementActor extends BaseActor {
         addressReq = (Map<String, Object>) request.get(JsonKey.ADDRESS);
         request.remove(JsonKey.ADDRESS);
       }
+      request.remove(JsonKey.CONTACT_DETAILS);
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
 
       channelMandatoryValidation(request);
@@ -441,7 +442,6 @@ public class OrganisationManagementActor extends BaseActor {
         if (null != addressReq) {
           request.put(JsonKey.ADDRESS, addressReq);
         }
-        request.remove(JsonKey.CONTACT_DETAILS);
         Request orgReq = new Request();
         orgReq.getRequest().put(JsonKey.ORGANISATION, request);
         orgReq.setOperation(ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
@@ -793,6 +793,7 @@ public class OrganisationManagementActor extends BaseActor {
       updateOrgDao.remove(JsonKey.IS_APPROVED);
       updateOrgDao.remove(JsonKey.APPROVED_BY);
       updateOrgDao.remove(JsonKey.APPROVED_DATE);
+      updateOrgDao.remove(JsonKey.CONTACT_DETAILS);
       if (JsonKey.BULK_ORG_UPLOAD.equalsIgnoreCase(callerId)) {
         if (null == request.get(JsonKey.STATUS)) {
           updateOrgDao.remove(JsonKey.STATUS);
@@ -892,11 +893,6 @@ public class OrganisationManagementActor extends BaseActor {
         }
       }
 
-      // check contactDetail filed is coming or not. it will always come as list of
-      // map
-      if (updateOrgDao.containsKey(JsonKey.CONTACT_DETAILS)) {
-        updateOrgDao.remove(JsonKey.CONTACT_DETAILS);
-      }
       // This will remove all extra unnecessary parameter from request
       Organisation org = mapper.convertValue(updateOrgDao, Organisation.class);
       updateOrgDao = mapper.convertValue(org, Map.class);

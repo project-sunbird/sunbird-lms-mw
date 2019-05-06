@@ -58,7 +58,7 @@ public class PageManagementActor extends BaseActor {
   private Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private ObjectMapper mapper = new ObjectMapper();
-  private boolean isCacheEnable =
+  private boolean isCacheEnabled =
       Boolean.parseBoolean(ProjectUtil.propertiesCache.getProperty(JsonKey.SUNBIRD_CACHE_ENABLE));
 
   @Override

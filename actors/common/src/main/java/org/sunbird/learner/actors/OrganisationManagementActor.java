@@ -445,15 +445,13 @@ public class OrganisationManagementActor extends BaseActor {
         Request orgReq = new Request();
         orgReq.getRequest().put(JsonKey.ORGANISATION, request);
         orgReq.setOperation(ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
-        ProjectLogger.log(
-            "OrgManagementActor : createOrg : Calling background job to save org data into ES"
-                + uniqueId,
+        ProjectLogger.log("OrganisationManagementActor:createOrg: Calling background job to sync org data " + uniqueId,
             LoggerEnum.INFO);
         tellToAnother(orgReq);
       }
     } catch (ProjectCommonException e) {
       ProjectLogger.log(
-          "OrgManagementActor : createOrg : Some error occurs" + e.getMessage(), LoggerEnum.INFO);
+          "OrganisationManagementActor:createOrg: Error occurred = " + e.getMessage(), LoggerEnum.INFO);
       sender().tell(e, self());
       return;
     }
@@ -1778,7 +1776,7 @@ public class OrganisationManagementActor extends BaseActor {
       Map<String, Object> rootOrg = getRootOrgFromChannel(channel);
       if (MapUtils.isEmpty(rootOrg)) {
         ProjectLogger.log(
-            "OrganisationManagementActor:validateChannel Invalid channel: " + channel,
+            "OrganisationManagementActor:validateChannel: Invalid channel = " + channel,
             LoggerEnum.INFO.name());
         throw new ProjectCommonException(
             ResponseCode.invalidChannel.getErrorCode(),
@@ -1790,7 +1788,7 @@ public class OrganisationManagementActor extends BaseActor {
         req.put(JsonKey.ROOT_ORG_ID, rootOrgId);
       } else {
         ProjectLogger.log(
-            "OrganisationManagementActor:validateChannel Invalid channel: " + channel,
+            "OrganisationManagementActor:validateChannel: Invalid channel = " + channel,
             LoggerEnum.INFO.name());
         throw new ProjectCommonException(
             ResponseCode.invalidChannel.getErrorCode(),
@@ -1806,7 +1804,7 @@ public class OrganisationManagementActor extends BaseActor {
       }
     } else if (!validateChannelUniqueness((String) req.get(JsonKey.CHANNEL), null)) {
       ProjectLogger.log(
-          "OrganisationManagementActor:validateChannel channel validation failed ",
+          "OrganisationManagementActor:validateChannel: Channel validation failed",
           LoggerEnum.INFO.name());
       throw new ProjectCommonException(
           ResponseCode.channelUniquenessInvalid.getErrorCode(),

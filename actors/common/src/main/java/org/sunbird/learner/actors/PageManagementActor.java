@@ -296,14 +296,15 @@ public class PageManagementActor extends BaseActor {
       orgId = "NA";
     }
     ProjectLogger.log("Fetching data from Cache for " + orgId + ":" + pageName, LoggerEnum.INFO);
-    Map<String, Object> pageMap = null;
+    Map<String, Object> pageMapData = null;
     if (redisCacheEnable) {
       String pageString =
           cache.get(ActorOperations.GET_PAGE_DATA.getValue(), orgId + ":" + pageName);
-      pageMap = ProjectUtil.convertJsonStringToMap(pageString);
+      pageMapData = ProjectUtil.convertJsonStringToMap(pageString);
     } else {
-      pageMap = DataCacheHandler.getPageMap().get(orgId + ":" + pageName);
+      pageMapData = DataCacheHandler.getPageMap().get(orgId + ":" + pageName);
     }
+    Map<String, Object> pageMap = pageMapData;
 
     if (null == pageMap) {
       throw new ProjectCommonException(
@@ -335,6 +336,7 @@ public class PageManagementActor extends BaseActor {
           ResponseCode.errorInvalidPageSection.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
+    int requestHashCode = 0;
     if (redisCacheEnable) {
       Map<String, Object> reqMap = new HashMap<>();
       reqMap.put(JsonKey.SECTION, arr);
@@ -342,7 +344,7 @@ public class PageManagementActor extends BaseActor {
       reqMap.put(JsonKey.HEADER, headers);
       reqMap.put(JsonKey.FILTER, filterMap);
       reqMap.put(JsonKey.URL_QUERY_STRING, urlQueryString);
-      int requestHashCode = ProjectUtil.getHashCode(reqMap);
+      requestHashCode = ProjectUtil.getHashCode(reqMap);
       String cachedResponse = cache.get(JsonKey.SECTIONS, String.valueOf(requestHashCode));
       if (cachedResponse != null) {
         Response res = ProjectUtil.getAsObject(cachedResponse, Response.class);

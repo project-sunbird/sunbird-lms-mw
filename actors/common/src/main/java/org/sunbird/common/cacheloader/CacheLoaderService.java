@@ -31,7 +31,7 @@ public class CacheLoaderService implements Runnable {
       }
     } catch (Exception e) {
       ProjectLogger.log(
-          "CacheLoadingService:cacheLoader: Exception in retrieving page section " + e.getMessage(),
+          "CacheLoaderService:cacheLoader: Exception in retrieving page section " + e.getMessage(),
           e);
     }
     return map;
@@ -65,7 +65,7 @@ public class CacheLoaderService implements Runnable {
   private void updateAllCache() {
     updateCache(cacheLoader("page_section"), ActorOperations.GET_SECTION.getValue());
     updateCache(cacheLoader("page_management"), ActorOperations.GET_PAGE_DATA.getValue());
-    ProjectLogger.log("RedisConnectionManager:updateAllCache completed", LoggerEnum.INFO.name());
+    ProjectLogger.log("CacheLoaderService:updateAllCache completed", LoggerEnum.INFO.name());
   }
 
   private static void updateCache(Map<String, Map<String, Object>> cache, String mapName) {

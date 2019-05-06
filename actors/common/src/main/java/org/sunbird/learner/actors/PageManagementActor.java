@@ -64,7 +64,7 @@ public class PageManagementActor extends BaseActor {
   private Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private ObjectMapper mapper = new ObjectMapper();
-  private Cache cacheUtil = CacheServiceFactory.getInstance();
+  private Cache cache = CacheServiceFactory.getInstance();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -102,7 +102,7 @@ public class PageManagementActor extends BaseActor {
 
   private void getAllSections() {
     Response response = null;
-    String res = cacheUtil.get(ActorOperations.GET_ALL_SECTION.getValue(), JsonKey.SECTION);
+    String res = cache.get(ActorOperations.GET_ALL_SECTION.getValue(), JsonKey.SECTION);
     if (StringUtil.isNullOrEmpty(res)) {
       response =
           cassandraOperation.getAllRecords(
@@ -115,7 +115,7 @@ public class PageManagementActor extends BaseActor {
       }
       Response sectionMap = new Response();
       sectionMap.put(JsonKey.SECTIONS, response.get(JsonKey.RESPONSE));
-      cacheUtil.put(
+      cache.put(
           ActorOperations.GET_ALL_SECTION.getValue(),
           JsonKey.SECTION,
           ProjectUtil.getJsonString(response));
@@ -130,7 +130,7 @@ public class PageManagementActor extends BaseActor {
     Response response = null;
     Map<String, Object> req = actorMessage.getRequest();
     String sectionId = (String) req.get(JsonKey.ID);
-    String res = cacheUtil.get(ActorOperations.GET_SECTION.getValue(), sectionId);
+    String res = cache.get(ActorOperations.GET_SECTION.getValue(), sectionId);
     if (StringUtil.isNullOrEmpty(res)) {
       response =
           cassandraOperation.getRecordById(
@@ -144,7 +144,7 @@ public class PageManagementActor extends BaseActor {
         Response section = new Response();
         section.put(JsonKey.SECTION, response.get(JsonKey.RESPONSE));
       }
-      cacheUtil.put(
+      cache.put(
           ActorOperations.GET_SECTION.getValue(), sectionId, ProjectUtil.getJsonString(response));
     } else {
       response = ProjectUtil.getAsObject(res, Response.class);
@@ -244,7 +244,7 @@ public class PageManagementActor extends BaseActor {
     new Thread(
             () -> {
               if ((JsonKey.SUCCESS).equalsIgnoreCase((String) response.get(JsonKey.RESPONSE))) {
-                cacheUtil.put(
+                cache.put(
                     ActorOperations.GET_SECTION.getValue(),
                     (String) sectionMap.get(JsonKey.ID),
                     ProjectUtil.getJsonString(sectionMap));
@@ -279,7 +279,7 @@ public class PageManagementActor extends BaseActor {
     }
     ProjectLogger.log("Fetching data from Cache for " + orgId + ":" + pageName, LoggerEnum.INFO);
     String pageString =
-        cacheUtil.get(ActorOperations.GET_PAGE_DATA.getValue(), orgId + ":" + pageName);
+        cache.get(ActorOperations.GET_PAGE_DATA.getValue(), orgId + ":" + pageName);
     Map<String, Object> pageMap = ProjectUtil.convertJsonStringToMap(pageString);
 
     if (null == pageMap) {
@@ -319,7 +319,7 @@ public class PageManagementActor extends BaseActor {
     reqMap.put(JsonKey.FILTER, filterMap);
     reqMap.put(JsonKey.URL_QUERY_STRING, urlQueryString);
     int requestHashCode = ProjectUtil.getHashCode(reqMap);
-    String cachedResponse = cacheUtil.get(JsonKey.SECTIONS, String.valueOf(requestHashCode));
+    String cachedResponse = cache.get(JsonKey.SECTIONS, String.valueOf(requestHashCode));
     if (cachedResponse != null) {
       Response res = ProjectUtil.getAsObject(cachedResponse, Response.class);
       sender().tell(res, self());
@@ -334,7 +334,7 @@ public class PageManagementActor extends BaseActor {
 
           if (MapUtils.isNotEmpty(sectionMap)) {
             String sectionMapStr =
-                cacheUtil.get(
+                cache.get(
                     ActorOperations.GET_SECTION.getValue(), (String) sectionMap.get(JsonKey.ID));
             if (!StringUtils.isEmpty(sectionMapStr)) {
               Map<String, Object> sectionData = ProjectUtil.getAsObject(sectionMapStr, Map.class);
@@ -376,7 +376,7 @@ public class PageManagementActor extends BaseActor {
               },
               getContext().dispatcher());
       Patterns.pipe(response, getContext().dispatcher()).to(sender());
-      cacheUtil.put(
+      cache.put(
           JsonKey.SECTIONS, String.valueOf(requestHashCode), ProjectUtil.getJsonString(response));
     } catch (Exception e) {
       ProjectLogger.log(
@@ -395,7 +395,7 @@ public class PageManagementActor extends BaseActor {
     Map<String, Object> req = actorMessage.getRequest();
     String pageName = (String) req.get(JsonKey.ID);
     Response response = null;
-    String res = cacheUtil.get(ActorOperations.GET_PAGE_SETTING.name(), pageName);
+    String res = cache.get(ActorOperations.GET_PAGE_SETTING.name(), pageName);
     if (StringUtils.isEmpty(res)) {
       response =
           cassandraOperation.getRecordsByProperty(
@@ -409,7 +409,7 @@ public class PageManagementActor extends BaseActor {
         response.getResult().remove(JsonKey.RESPONSE);
       }
       String responseString = ProjectUtil.getJsonString(response);
-      cacheUtil.put(ActorOperations.GET_PAGE_SETTING.name(), pageName, responseString);
+      cache.put(ActorOperations.GET_PAGE_SETTING.name(), pageName, responseString);
     } else {
       response = ProjectUtil.getAsObject(res, Response.class);
       ProjectLogger.log("PageManagementActor:getPageSetting  response return using cache");
@@ -419,7 +419,7 @@ public class PageManagementActor extends BaseActor {
 
   @SuppressWarnings("unchecked")
   private void getPageSettings() {
-    String res = cacheUtil.get(ActorOperations.GET_PAGE_SETTINGS.name(), JsonKey.PAGE);
+    String res = cache.get(ActorOperations.GET_PAGE_SETTINGS.name(), JsonKey.PAGE);
     List<Map<String, Object>> pageList = new ArrayList<>();
     Response response = null;
     if (StringUtil.isNullOrEmpty(res)) {
@@ -435,7 +435,7 @@ public class PageManagementActor extends BaseActor {
       response.getResult().remove(JsonKey.RESPONSE);
 
       sender().tell(response, self());
-      cacheUtil.put(
+      cache.put(
           ActorOperations.GET_PAGE_SETTING.name(),
           JsonKey.PAGE,
           ProjectUtil.getJsonString(response));
@@ -579,7 +579,7 @@ public class PageManagementActor extends BaseActor {
                 if (pageMap.containsKey(JsonKey.ORGANISATION_ID)) {
                   orgId = (String) pageMap.get(JsonKey.ORGANISATION_ID);
                 }
-                cacheUtil.put(
+                cache.put(
                     ActorOperations.GET_PAGE_DATA.getValue(),
                     orgId + ":" + (String) pageMap.get(JsonKey.PAGE_NAME),
                     ProjectUtil.getJsonString(pageMap));

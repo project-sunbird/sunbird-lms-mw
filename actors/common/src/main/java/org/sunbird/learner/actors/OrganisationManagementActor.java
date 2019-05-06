@@ -382,19 +382,6 @@ public class OrganisationManagementActor extends BaseActor {
           request.put(JsonKey.SLUG, slug);
         }
       }
-      // check contactDetail filed is coming or not. it will always come as list of
-      // map
-      List<Map<String, Object>> listOfMap = null;
-      if (request.containsKey(JsonKey.CONTACT_DETAILS)) {
-        listOfMap = (List<Map<String, Object>>) request.get(JsonKey.CONTACT_DETAILS);
-        if (listOfMap != null && !listOfMap.isEmpty()) {
-          try {
-            request.put(JsonKey.CONTACT_DETAILS, mapper.writeValueAsString(listOfMap));
-          } catch (IOException e) {
-            ProjectLogger.log(e.getMessage(), e);
-          }
-        }
-      }
 
       if (null != isRootOrg && isRootOrg) {
         boolean bool = Util.registerChannel(request);
@@ -454,13 +441,6 @@ public class OrganisationManagementActor extends BaseActor {
         if (null != addressReq) {
           request.put(JsonKey.ADDRESS, addressReq);
         }
-        if (listOfMap != null) {
-          request.put(JsonKey.CONTACT_DETAILS, listOfMap);
-        } else {
-          listOfMap = new ArrayList<>();
-          request.put(JsonKey.CONTACT_DETAILS, listOfMap);
-        }
-
         Request orgReq = new Request();
         orgReq.getRequest().put(JsonKey.ORGANISATION, request);
         orgReq.setOperation(ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());

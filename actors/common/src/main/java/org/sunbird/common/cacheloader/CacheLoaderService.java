@@ -69,11 +69,15 @@ public class CacheLoaderService implements Runnable {
   }
 
   private static void updateCache(Map<String, Map<String, Object>> cache, String mapName) {
-    RMap<Object, Object> map = RedisConnectionManager.getClient().getMap(mapName);
-    Set<String> keys = cache.keySet();
-    for (String key : keys) {
-      String value = ProjectUtil.getJsonString(cache.get(key));
-      map.put(key, value);
+    try {
+      RMap<Object, Object> map = RedisConnectionManager.getClient().getMap(mapName);
+      Set<String> keys = cache.keySet();
+      for (String key : keys) {
+        String value = ProjectUtil.getJsonString(cache.get(key));
+        map.put(key, value);
+      }
+    } catch (Exception e) {
+      ProjectLogger.log("CacheLoaderService:updateCache Error occured" + e, LoggerEnum.INFO.name());
     }
   }
 }

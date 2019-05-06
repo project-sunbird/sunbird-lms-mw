@@ -79,6 +79,7 @@ public class LocationActorTest {
   @Test
   public void testCreateLocationSuccess() {
 
+    data.put(GeoLocationJsonKey.LOCATION_TYPE, "state");
     boolean result = testScenario(LocationActorOperation.CREATE_LOCATION, true, null, null);
     assertTrue(result);
   }
@@ -86,6 +87,7 @@ public class LocationActorTest {
   @Test
   public void testUpdateLocationSuccess() {
 
+    data.put(GeoLocationJsonKey.LOCATION_TYPE, "state");
     boolean result = testScenario(LocationActorOperation.UPDATE_LOCATION, true, data, null);
     assertTrue(result);
   }
@@ -93,6 +95,7 @@ public class LocationActorTest {
   @Test
   public void testDeleteLocationSuccess() {
 
+    data.put(GeoLocationJsonKey.LOCATION_TYPE, "state");
     boolean result = testScenario(LocationActorOperation.DELETE_LOCATION, true, data, null);
     assertTrue(result);
   }
@@ -100,6 +103,7 @@ public class LocationActorTest {
   @Test
   public void testSearchLocationSuccess() {
 
+    data.put(GeoLocationJsonKey.LOCATION_TYPE, "state");
     boolean result = testScenario(LocationActorOperation.SEARCH_LOCATION, true, data, null);
     assertTrue(result);
   }
@@ -107,7 +111,7 @@ public class LocationActorTest {
   @Test
   public void testCreateLocationFailureWithInvalidValue() {
 
-    data.put(GeoLocationJsonKey.LOCATION_TYPE, "state");
+    data.put(GeoLocationJsonKey.LOCATION_TYPE, "anyLocationType");
     boolean result =
         testScenario(
             LocationActorOperation.CREATE_LOCATION, false, data, ResponseCode.invalidValue);

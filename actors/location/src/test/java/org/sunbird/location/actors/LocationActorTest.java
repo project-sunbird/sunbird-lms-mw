@@ -78,7 +78,8 @@ public class LocationActorTest {
 
   @Test
   public void testCreateLocationSuccess() {
-
+    data.remove(GeoLocationJsonKey.PARENT_CODE);
+    data.remove(GeoLocationJsonKey.PARENT_ID);
     data.put(GeoLocationJsonKey.LOCATION_TYPE, "state");
     boolean result = testScenario(LocationActorOperation.CREATE_LOCATION, true, null, null);
     assertTrue(result);

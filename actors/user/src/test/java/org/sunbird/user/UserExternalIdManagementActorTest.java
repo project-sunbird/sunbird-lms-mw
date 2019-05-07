@@ -89,10 +89,11 @@ public class UserExternalIdManagementActorTest {
 
   private Response getCassandraRecordsByIndexedProperty() {
     Response response = new Response();
-    List<Map<String, Object>> list = new ArrayList<>();
+    List list = new ArrayList<>();
     Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.ID_TYPE, "anyType");
-    response.put(JsonKey.RESPONSE, response);
+    map.put(JsonKey.ID_TYPE, "anyIdType");
+    list.add(map);
+    response.put(JsonKey.RESPONSE, list);
     return response;
   }
 
@@ -136,11 +137,38 @@ public class UserExternalIdManagementActorTest {
     request.setOperation(UserActorOperations.UPSERT_USER_EXTERNAL_IDENTITY_DETAILS.getValue());
 
     HashMap<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.OPERATION_TYPE, "CREATE");
+    innerMap.put(JsonKey.OPERATION_TYPE, "UPDATE");
 
     List<Map<String, Object>> list = new ArrayList<>();
     Map<String, Object> extIdMap = new HashMap<>();
     extIdMap.put(JsonKey.OPERATION, "ADD");
+    extIdMap.put(JsonKey.ID_TYPE, "anyIdType");
+    list.add(extIdMap);
+    innerMap.put(JsonKey.EXTERNAL_IDS, list);
+    request.setRequest(innerMap);
+
+    subject.tell(request, probe.getRef());
+    Response response = probe.expectMsgClass(duration("100 second"), Response.class);
+    Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
+  }
+
+  @Test
+  public void upsertUserExternalIdentityDetailsSuccess3() {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request request = new Request();
+    request.setOperation(UserActorOperations.UPSERT_USER_EXTERNAL_IDENTITY_DETAILS.getValue());
+
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.OPERATION_TYPE, "UPDATE");
+
+    List<Map<String, Object>> list = new ArrayList<>();
+    Map<String, Object> extIdMap = new HashMap<>();
+    extIdMap.put(JsonKey.OPERATION, "SUBTRACT");
+    extIdMap.put(JsonKey.ID_TYPE, "anyIdType");
+    extIdMap.put(JsonKey.PROVIDER, "anyProvider");
     list.add(extIdMap);
     innerMap.put(JsonKey.EXTERNAL_IDS, list);
     request.setRequest(innerMap);

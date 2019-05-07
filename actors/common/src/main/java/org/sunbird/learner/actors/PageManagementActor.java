@@ -306,7 +306,7 @@ public class PageManagementActor extends BaseActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     int requestHashCode = 0;
-    if (isCacheEnable) {
+    if (isCacheEnabled) {
       Map<String, Object> reqMap = new HashMap<>();
       reqMap.put(JsonKey.SECTION, arr);
       reqMap.put(JsonKey.FILTERS, reqFilters);

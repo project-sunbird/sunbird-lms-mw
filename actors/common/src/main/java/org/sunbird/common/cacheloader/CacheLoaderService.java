@@ -70,7 +70,9 @@ public class CacheLoaderService implements Runnable {
 
   @Override
   public void run() {
-    updateAllCache();
+    if (isCacheEnabled) {
+      updateAllCache();
+    }
   }
 
   private void updateAllCache() {

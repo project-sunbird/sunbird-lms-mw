@@ -112,7 +112,9 @@ public class CacheLoaderService implements Runnable {
       }
     } else {
       Map<String, Map<String, Object>> map = getDCMap(mapName);
-      return (T) map.get(key);
+      if (map != null) {
+        return (T) map.get(key);
+      }
     }
     return null;
   }
@@ -124,7 +126,9 @@ public class CacheLoaderService implements Runnable {
       return true;
     } else {
       Map<String, Map<String, Object>> map = getDCMap(mapName);
-      map.put(key, (Map<String, Object>) obj);
+      if (map != null) {
+        map.put(key, (Map<String, Object>) obj);
+      }
     }
     return false;
   }

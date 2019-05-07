@@ -92,6 +92,7 @@ public class UserExternalIdManagementActorTest {
     List list = new ArrayList<>();
     Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.ID_TYPE, "anyIdType");
+    map.put(JsonKey.PROVIDER, "anyProvider");
     list.add(map);
     response.put(JsonKey.RESPONSE, list);
     return response;
@@ -104,7 +105,7 @@ public class UserExternalIdManagementActorTest {
   }
 
   @Test
-  public void upsertUserExternalIdentityDetailsSuccess() {
+  public void testCreateUserExternalIdentityDetailsSuccess() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -128,7 +129,7 @@ public class UserExternalIdManagementActorTest {
   }
 
   @Test
-  public void upsertUserExternalIdentityDetailsSuccess2() {
+  public void testUpsertUserExternalIdentityDetailsAddSuccess() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -143,6 +144,7 @@ public class UserExternalIdManagementActorTest {
     Map<String, Object> extIdMap = new HashMap<>();
     extIdMap.put(JsonKey.OPERATION, "ADD");
     extIdMap.put(JsonKey.ID_TYPE, "anyIdType");
+    extIdMap.put(JsonKey.PROVIDER, "anyProvider");
     list.add(extIdMap);
     innerMap.put(JsonKey.EXTERNAL_IDS, list);
     request.setRequest(innerMap);
@@ -153,7 +155,7 @@ public class UserExternalIdManagementActorTest {
   }
 
   @Test
-  public void upsertUserExternalIdentityDetailsSuccess3() {
+  public void testUpsertUserExternalIdentityDetailsRemoveSuccess() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
@@ -166,11 +168,39 @@ public class UserExternalIdManagementActorTest {
 
     List<Map<String, Object>> list = new ArrayList<>();
     Map<String, Object> extIdMap = new HashMap<>();
-    extIdMap.put(JsonKey.OPERATION, "SUBTRACT");
+    extIdMap.put(JsonKey.OPERATION, "REMOVE");
     extIdMap.put(JsonKey.ID_TYPE, "anyIdType");
     extIdMap.put(JsonKey.PROVIDER, "anyProvider");
     list.add(extIdMap);
     innerMap.put(JsonKey.EXTERNAL_IDS, list);
+    innerMap.put(JsonKey.USER_ID, "anyUserId");
+    request.setRequest(innerMap);
+
+    subject.tell(request, probe.getRef());
+    Response response = probe.expectMsgClass(duration("100 second"), Response.class);
+    Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
+  }
+
+  @Test
+  public void testUpsertUserExternalIdentityDetailsEditSuccess() {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request request = new Request();
+    request.setOperation(UserActorOperations.UPSERT_USER_EXTERNAL_IDENTITY_DETAILS.getValue());
+
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.OPERATION_TYPE, "UPDATE");
+
+    List<Map<String, Object>> list = new ArrayList<>();
+    Map<String, Object> extIdMap = new HashMap<>();
+    extIdMap.put(JsonKey.OPERATION, "EDIT");
+    extIdMap.put(JsonKey.ID_TYPE, "anyIdType");
+    extIdMap.put(JsonKey.PROVIDER, "anyProvider");
+    list.add(extIdMap);
+    innerMap.put(JsonKey.EXTERNAL_IDS, list);
+    innerMap.put(JsonKey.USER_ID, "anyUserId");
     request.setRequest(innerMap);
 
     subject.tell(request, probe.getRef());

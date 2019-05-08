@@ -322,6 +322,7 @@ public class PageManagementActor extends BaseActor {
         return;
       }
     }
+    int reqHashCode = requestHashCode;
     try {
       List<Future<Map<String, Object>>> sectionList = new ArrayList<>();
       if (arr != null) {
@@ -367,13 +368,17 @@ public class PageManagementActor extends BaseActor {
                   result.put(JsonKey.SECTIONS, sectionList);
                   Response response = new Response();
                   response.put(JsonKey.RESPONSE, result);
+                  ProjectLogger.log(
+                      "PageManagementActor:getPageData: Response before caching it = " + response,
+                      LoggerEnum.INFO);
+                  CacheLoaderService.putDataIntoCache(
+                      JsonKey.SECTIONS, String.valueOf(reqHashCode), response);
                   return response;
                 }
               },
               getContext().dispatcher());
       Patterns.pipe(response, getContext().dispatcher()).to(sender());
-      CacheLoaderService.putDataIntoCache(
-          JsonKey.SECTIONS, String.valueOf(requestHashCode), response);
+
     } catch (Exception e) {
       ProjectLogger.log(
           "PageManagementActor:getPageData: Exception occurred with error message = "

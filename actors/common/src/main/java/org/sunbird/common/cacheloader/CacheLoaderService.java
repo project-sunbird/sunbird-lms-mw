@@ -77,9 +77,19 @@ public class CacheLoaderService implements Runnable {
 
   private void updateAllCache() {
     ProjectLogger.log("CacheLoaderService: updateAllCache called", LoggerEnum.INFO.name());
-
+    clearCache();
     updateCache(cacheLoader(JsonKey.PAGE_SECTION), ActorOperations.GET_SECTION.getValue());
     updateCache(cacheLoader(JsonKey.PAGE_MANAGEMENT), ActorOperations.GET_PAGE_DATA.getValue());
+  }
+
+  private void clearCache() {
+    try {
+      cache.clear(JsonKey.SECTIONS);
+    } catch (Exception e) {
+      ProjectLogger.log(
+          "CacheLoaderService:clearCache : error occured while clearing the cache",
+          LoggerEnum.INFO.name());
+    }
   }
 
   private void removeUnwantedData(Map<String, Object> map, String from) {

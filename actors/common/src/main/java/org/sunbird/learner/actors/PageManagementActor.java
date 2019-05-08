@@ -322,6 +322,7 @@ public class PageManagementActor extends BaseActor {
         return;
       }
     }
+    int reqHashCode = requestHashCode;
     try {
       List<Future<Map<String, Object>>> sectionList = new ArrayList<>();
       if (arr != null) {
@@ -351,15 +352,15 @@ public class PageManagementActor extends BaseActor {
         }
       }
 
-      Future<Iterable<Map<String, Object>>> sctionsFuture =
+      Future<Iterable<Map<String, Object>>> sectionsFuture =
           Futures.sequence(sectionList, getContext().dispatcher());
       Future<Response> response =
-          sctionsFuture.map(
+          sectionsFuture.map(
               new Mapper<Iterable<Map<String, Object>>, Response>() {
                 @Override
                 public Response apply(Iterable<Map<String, Object>> sections) {
                   ProjectLogger.log(
-                      "PageManagementActor:getPageData: apply called ", LoggerEnum.INFO);
+                      "PageManagementActor:getPageData: apply called", LoggerEnum.INFO);
                   ArrayList<Map<String, Object>> sectionList = Lists.newArrayList(sections);
                   Map<String, Object> result = new HashMap<>();
                   result.put(JsonKey.NAME, pageMap.get(JsonKey.NAME));
@@ -367,13 +368,17 @@ public class PageManagementActor extends BaseActor {
                   result.put(JsonKey.SECTIONS, sectionList);
                   Response response = new Response();
                   response.put(JsonKey.RESPONSE, result);
+                  ProjectLogger.log(
+                      "PageManagementActor:getPageData:apply: Response before caching it = " + response,
+                      LoggerEnum.INFO);
+                  CacheLoaderService.putDataIntoCache(
+                      JsonKey.SECTIONS, String.valueOf(reqHashCode), response);
                   return response;
                 }
               },
               getContext().dispatcher());
       Patterns.pipe(response, getContext().dispatcher()).to(sender());
-      CacheLoaderService.putDataIntoCache(
-          JsonKey.SECTIONS, String.valueOf(requestHashCode), response);
+
     } catch (Exception e) {
       ProjectLogger.log(
           "PageManagementActor:getPageData: Exception occurred with error message = "

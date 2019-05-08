@@ -3,11 +3,14 @@ package org.sunbird.systemsettings.actors;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.text.MessageFormat;
 import java.util.*;
+import java.util.stream.Collectors;
+import org.apache.commons.collections.CollectionUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.user.UserClient;
 import org.sunbird.actorutil.user.impl.UserClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.common.cacheloader.CacheLoaderService;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
@@ -29,6 +32,27 @@ public class SystemSettingsActor extends BaseActor {
   private UserClient userClient = new UserClientImpl();
   private final SystemSettingDaoImpl systemSettingDaoImpl =
       new SystemSettingDaoImpl(cassandraOperation);
+  private Map<String, SystemSetting> systemSettingsCache = new HashMap<String, SystemSetting>();
+
+  @Override
+  public void preStart() throws Exception {
+    super.preStart();
+    try {
+      List<SystemSetting> settings = systemSettingDaoImpl.readAll();
+      System.out.println("SystemSettings count: " + settings.size());
+      if (CollectionUtils.isNotEmpty(settings)) {
+        settings
+            .stream()
+            .map(
+                f ->
+                    CacheLoaderService.putDataIntoCache(
+                        ActorOperations.GET_SYSTEM_SETTING.getValue(), f.getField(), f))
+            .collect(Collectors.toList());
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -58,8 +82,14 @@ public class SystemSettingsActor extends BaseActor {
         "SystemSettingsActor:getSystemSetting: request is " + actorMessage.getRequest(),
         LoggerEnum.INFO.name());
     SystemSetting setting =
-        systemSettingDaoImpl.readByField((String) actorMessage.getContext().get(JsonKey.FIELD));
-
+        CacheLoaderService.getDataFromCache(
+            ActorOperations.GET_SYSTEM_SETTING.getValue(),
+            (String) actorMessage.getContext().get(JsonKey.FIELD),
+            SystemSetting.class);
+    if (setting == null) {
+      setting =
+          systemSettingDaoImpl.readByField((String) actorMessage.getContext().get(JsonKey.FIELD));
+    }
     if (setting == null) {
       throw new ProjectCommonException(
           ResponseCode.resourceNotFound.getErrorCode(),

@@ -317,7 +317,7 @@ public class PageManagementActor extends BaseActor {
       Response cachedResponse =
           PageCacheLoaderService.getDataFromCache(
               JsonKey.SECTIONS, String.valueOf(requestHashCode), Response.class);
-      if (cachedResponse != null) {
+      if (cachedResponse != null && requestHashCode != 0) {
         sender().tell(cachedResponse, self());
         return;
       }
@@ -372,8 +372,10 @@ public class PageManagementActor extends BaseActor {
                       "PageManagementActor:getPageData:apply: Response before caching it = "
                           + response,
                       LoggerEnum.INFO);
-                  PageCacheLoaderService.putDataIntoCache(
-                      JsonKey.SECTIONS, String.valueOf(reqHashCode), response);
+                  if (reqHashCode != 0) {
+                    PageCacheLoaderService.putDataIntoCache(
+                        JsonKey.SECTIONS, String.valueOf(reqHashCode), response);
+                  }
                   return response;
                 }
               },

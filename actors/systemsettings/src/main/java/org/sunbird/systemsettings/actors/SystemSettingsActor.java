@@ -48,8 +48,8 @@ public class SystemSettingsActor extends BaseActor {
       }
     } catch (Exception e) {
       ProjectLogger.log(
-          "SystemSettingsActor: getSystemSetting error occured " + e.getMessage(),
-          LoggerEnum.INFO.name());
+          "SystemSettingsActor:getSystemSetting: Error occurred = " + e.getMessage(),
+          LoggerEnum.ERROR.name());
     }
   }
 

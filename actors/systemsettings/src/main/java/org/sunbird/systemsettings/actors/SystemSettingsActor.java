@@ -21,7 +21,6 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.systemsetting.SystemSetting;
-import org.sunbird.notification.utils.JsonUtil;
 import org.sunbird.systemsettings.dao.impl.SystemSettingDaoImpl;
 
 @ActorConfig(
@@ -44,12 +43,7 @@ public class SystemSettingsActor extends BaseActor {
       if (CollectionUtils.isNotEmpty(settings)) {
         settings
             .stream()
-            .map(
-                f ->
-                    cache.put(
-                        ActorOperations.GET_SYSTEM_SETTING.getValue(),
-                        f.getField(),
-                        JsonUtil.toJson(f)))
+            .map(f -> cache.put(ActorOperations.GET_SYSTEM_SETTING.getValue(), f.getField(), f))
             .collect(Collectors.toList());
       }
     } catch (Exception e) {
@@ -85,11 +79,11 @@ public class SystemSettingsActor extends BaseActor {
         "SystemSettingsActor:getSystemSetting: request is " + actorMessage.getRequest(),
         LoggerEnum.INFO.name());
     SystemSetting setting =
-        JsonUtil.getAsObject(
+        (SystemSetting)
             cache.get(
                 ActorOperations.GET_SYSTEM_SETTING.getValue(),
-                (String) actorMessage.getContext().get(JsonKey.FIELD)),
-            SystemSetting.class);
+                (String) actorMessage.getContext().get(JsonKey.FIELD),
+                SystemSetting.class);
     if (setting == null) {
       setting =
           systemSettingDaoImpl.readByField((String) actorMessage.getContext().get(JsonKey.FIELD));
@@ -97,7 +91,7 @@ public class SystemSettingsActor extends BaseActor {
         cache.put(
             ActorOperations.GET_SYSTEM_SETTING.getValue(),
             (String) actorMessage.getContext().get(JsonKey.FIELD),
-            JsonUtil.toJson(setting));
+            setting);
       }
     }
     if (setting == null) {
@@ -139,8 +133,7 @@ public class SystemSettingsActor extends BaseActor {
     SystemSetting systemSetting = mapper.convertValue(request, SystemSetting.class);
     Response response = systemSettingDaoImpl.write(systemSetting);
     if (response != null) {
-      cache.put(
-          ActorOperations.GET_SYSTEM_SETTING.getValue(), field, JsonUtil.toJson(systemSetting));
+      cache.put(ActorOperations.GET_SYSTEM_SETTING.getValue(), field, systemSetting);
     }
     sender().tell(response, self());
   }

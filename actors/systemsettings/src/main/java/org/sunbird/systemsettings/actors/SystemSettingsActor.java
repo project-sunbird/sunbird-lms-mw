@@ -9,8 +9,9 @@ import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.user.UserClient;
 import org.sunbird.actorutil.user.impl.UserClientImpl;
+import org.sunbird.cache.CacheFactory;
+import org.sunbird.cache.interfaces.Cache;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.cacheloader.CacheLoaderService;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
@@ -20,6 +21,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.systemsetting.SystemSetting;
+import org.sunbird.notification.utils.JsonUtil;
 import org.sunbird.systemsettings.dao.impl.SystemSettingDaoImpl;
 
 @ActorConfig(
@@ -32,21 +34,22 @@ public class SystemSettingsActor extends BaseActor {
   private UserClient userClient = new UserClientImpl();
   private final SystemSettingDaoImpl systemSettingDaoImpl =
       new SystemSettingDaoImpl(cassandraOperation);
-  private Map<String, SystemSetting> systemSettingsCache = new HashMap<String, SystemSetting>();
+  private Cache cache = CacheFactory.getInstance();
 
   @Override
   public void preStart() throws Exception {
     super.preStart();
     try {
       List<SystemSetting> settings = systemSettingDaoImpl.readAll();
-      System.out.println("SystemSettings count: " + settings.size());
       if (CollectionUtils.isNotEmpty(settings)) {
         settings
             .stream()
             .map(
                 f ->
-                    CacheLoaderService.putDataIntoCache(
-                        ActorOperations.GET_SYSTEM_SETTING.getValue(), f.getField(), f))
+                    cache.put(
+                        ActorOperations.GET_SYSTEM_SETTING.getValue(),
+                        f.getField(),
+                        JsonUtil.toJson(f)))
             .collect(Collectors.toList());
       }
     } catch (Exception e) {
@@ -82,18 +85,19 @@ public class SystemSettingsActor extends BaseActor {
         "SystemSettingsActor:getSystemSetting: request is " + actorMessage.getRequest(),
         LoggerEnum.INFO.name());
     SystemSetting setting =
-        CacheLoaderService.getDataFromCache(
-            ActorOperations.GET_SYSTEM_SETTING.getValue(),
-            (String) actorMessage.getContext().get(JsonKey.FIELD),
+        JsonUtil.getAsObject(
+            cache.get(
+                ActorOperations.GET_SYSTEM_SETTING.getValue(),
+                (String) actorMessage.getContext().get(JsonKey.FIELD)),
             SystemSetting.class);
     if (setting == null) {
       setting =
           systemSettingDaoImpl.readByField((String) actorMessage.getContext().get(JsonKey.FIELD));
       if (setting != null) {
-        CacheLoaderService.putDataIntoCache(
+        cache.put(
             ActorOperations.GET_SYSTEM_SETTING.getValue(),
             (String) actorMessage.getContext().get(JsonKey.FIELD),
-            setting);
+            JsonUtil.toJson(setting));
       }
     }
     if (setting == null) {
@@ -135,8 +139,8 @@ public class SystemSettingsActor extends BaseActor {
     SystemSetting systemSetting = mapper.convertValue(request, SystemSetting.class);
     Response response = systemSettingDaoImpl.write(systemSetting);
     if (response != null) {
-      CacheLoaderService.putDataIntoCache(
-          ActorOperations.GET_SYSTEM_SETTING.getValue(), field, systemSetting);
+      cache.put(
+          ActorOperations.GET_SYSTEM_SETTING.getValue(), field, JsonUtil.toJson(systemSetting));
     }
     sender().tell(response, self());
   }

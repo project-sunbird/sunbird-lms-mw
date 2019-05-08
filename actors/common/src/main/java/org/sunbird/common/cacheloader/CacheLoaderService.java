@@ -86,9 +86,7 @@ public class CacheLoaderService implements Runnable {
     try {
       cache.clear(JsonKey.SECTIONS);
     } catch (Exception e) {
-      ProjectLogger.log(
-          "CacheLoaderService:clearCache : error occured while clearing the cache",
-          LoggerEnum.INFO.name());
+      ProjectLogger.log("CacheLoaderService:clearCache: Error occurred = " + e.getMessage(), LoggerEnum.INFO.name());
     }
   }
 

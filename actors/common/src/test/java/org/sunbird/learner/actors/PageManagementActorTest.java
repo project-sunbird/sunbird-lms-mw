@@ -27,7 +27,7 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.cacheloader.CacheLoaderService;
+import org.sunbird.common.cacheloader.PageCacheLoaderService;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -47,7 +47,7 @@ import scala.concurrent.Future;
   DataCacheHandler.class,
   PageManagementActor.class,
   ContentSearchUtil.class,
-  CacheLoaderService.class
+  PageCacheLoaderService.class
 })
 @PowerMockIgnore({"javax.management.*"})
 public class PageManagementActorTest {
@@ -67,7 +67,7 @@ public class PageManagementActorTest {
 
   @BeforeClass
   public static void beforeClass() {
-    PowerMockito.mockStatic(CacheLoaderService.class);
+    PowerMockito.mockStatic(PageCacheLoaderService.class);
     PowerMockito.mockStatic(ServiceFactory.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
     PowerMockito.mockStatic(ContentSearchUtil.class);

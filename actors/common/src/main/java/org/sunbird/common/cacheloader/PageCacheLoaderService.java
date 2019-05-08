@@ -18,7 +18,7 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.notification.utils.JsonUtil;
 
-public class CacheLoaderService implements Runnable {
+public class PageCacheLoaderService implements Runnable {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static final String KEY_SPACE_NAME = "sunbird";
   private static boolean isCacheEnabled =
@@ -77,17 +77,9 @@ public class CacheLoaderService implements Runnable {
 
   private void updateAllCache() {
     ProjectLogger.log("CacheLoaderService: updateAllCache called", LoggerEnum.INFO.name());
-    clearCache();
+
     updateCache(cacheLoader(JsonKey.PAGE_SECTION), ActorOperations.GET_SECTION.getValue());
     updateCache(cacheLoader(JsonKey.PAGE_MANAGEMENT), ActorOperations.GET_PAGE_DATA.getValue());
-  }
-
-  private void clearCache() {
-    try {
-      cache.clear(JsonKey.SECTIONS);
-    } catch (Exception e) {
-      ProjectLogger.log("CacheLoaderService:clearCache: Error occurred = " + e.getMessage(), LoggerEnum.INFO.name());
-    }
   }
 
   private void removeUnwantedData(Map<String, Object> map, String from) {
@@ -114,11 +106,12 @@ public class CacheLoaderService implements Runnable {
     }
   }
 
+  @SuppressWarnings("unchecked")
   public static <T> T getDataFromCache(String mapName, String key, Class<T> class1) {
     if (isCacheEnabled) {
-      String res = cache.get(mapName, key);
+      Object res = cache.get(mapName, key, class1);
       if (res != null) {
-        return JsonUtil.getAsObject(res, class1);
+        return (T) res;
       }
     } else {
       Map<String, Map<String, Object>> map = getDCMap(mapName);
@@ -129,10 +122,10 @@ public class CacheLoaderService implements Runnable {
     return null;
   }
 
+  @SuppressWarnings("unchecked")
   public static boolean putDataIntoCache(String mapName, String key, Object obj) {
     if (isCacheEnabled) {
-      String res = JsonUtil.toJson(obj);
-      cache.put(mapName, key, res);
+      cache.put(mapName, key, obj);
       return true;
     } else {
       Map<String, Map<String, Object>> map = getDCMap(mapName);

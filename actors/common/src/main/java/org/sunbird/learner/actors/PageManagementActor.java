@@ -15,8 +15,9 @@ import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
-import org.sunbird.common.cacheloader.CacheLoaderService;
+import org.sunbird.common.cacheloader.PageCacheLoaderService;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.hash.HashGenratorUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
@@ -116,14 +117,13 @@ public class PageManagementActor extends BaseActor {
     Map<String, Object> req = actorMessage.getRequest();
     String sectionId = (String) req.get(JsonKey.ID);
     Map<String, Object> sectionMap =
-        CacheLoaderService.getDataFromCache(
+        PageCacheLoaderService.getDataFromCache(
             ActorOperations.GET_SECTION.getValue(), sectionId, Map.class);
 
     if (sectionMap == null) {
       response =
           cassandraOperation.getRecordById(
               sectionDbInfo.getKeySpace(), sectionDbInfo.getTableName(), sectionId);
-      @SuppressWarnings("unchecked")
       List<Map<String, Object>> result =
           (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
       if (!(result.isEmpty())) {
@@ -131,7 +131,7 @@ public class PageManagementActor extends BaseActor {
         removeUnwantedData(map, "");
         Response section = new Response();
         section.put(JsonKey.SECTION, response.get(JsonKey.RESPONSE));
-        CacheLoaderService.putDataIntoCache(
+        PageCacheLoaderService.putDataIntoCache(
             ActorOperations.GET_SECTION.getValue(), sectionId, response.get(JsonKey.RESPONSE));
         sender().tell(section, self());
         return;
@@ -235,7 +235,7 @@ public class PageManagementActor extends BaseActor {
     new Thread(
             () -> {
               if ((JsonKey.SUCCESS).equalsIgnoreCase((String) response.get(JsonKey.RESPONSE))) {
-                CacheLoaderService.putDataIntoCache(
+                PageCacheLoaderService.putDataIntoCache(
                     ActorOperations.GET_SECTION.getValue(),
                     (String) sectionMap.get(JsonKey.ID),
                     sectionMap);
@@ -270,7 +270,7 @@ public class PageManagementActor extends BaseActor {
     }
     ProjectLogger.log("Fetching data from Cache for " + orgId + ":" + pageName, LoggerEnum.INFO);
     Map<String, Object> pageMapData =
-        CacheLoaderService.getDataFromCache(
+        PageCacheLoaderService.getDataFromCache(
             ActorOperations.GET_PAGE_DATA.getValue(), orgId + ":" + pageName, Map.class);
 
     Map<String, Object> pageMap = pageMapData;
@@ -305,7 +305,7 @@ public class PageManagementActor extends BaseActor {
           ResponseCode.errorInvalidPageSection.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
-    int requestHashCode = 0;
+    long requestHashCode = 0;
     if (isCacheEnabled) {
       Map<String, Object> reqMap = new HashMap<>();
       reqMap.put(JsonKey.SECTION, arr);
@@ -313,16 +313,16 @@ public class PageManagementActor extends BaseActor {
       reqMap.put(JsonKey.HEADER, headers);
       reqMap.put(JsonKey.FILTER, filterMap);
       reqMap.put(JsonKey.URL_QUERY_STRING, urlQueryString);
-      requestHashCode = JsonUtil.getHashCode(reqMap);
+      requestHashCode = HashGenratorUtil.getHashCode(JsonUtil.toJson(reqMap));
       Response cachedResponse =
-          CacheLoaderService.getDataFromCache(
+          PageCacheLoaderService.getDataFromCache(
               JsonKey.SECTIONS, String.valueOf(requestHashCode), Response.class);
       if (cachedResponse != null) {
         sender().tell(cachedResponse, self());
         return;
       }
     }
-    int reqHashCode = requestHashCode;
+    long reqHashCode = requestHashCode;
     try {
       List<Future<Map<String, Object>>> sectionList = new ArrayList<>();
       if (arr != null) {
@@ -332,7 +332,7 @@ public class PageManagementActor extends BaseActor {
           if (MapUtils.isNotEmpty(sectionMap)) {
             Map<String, Object> sectionData = null;
             sectionData =
-                CacheLoaderService.getDataFromCache(
+                PageCacheLoaderService.getDataFromCache(
                     ActorOperations.GET_SECTION.getValue(),
                     (String) sectionMap.get(JsonKey.ID),
                     Map.class);
@@ -369,9 +369,10 @@ public class PageManagementActor extends BaseActor {
                   Response response = new Response();
                   response.put(JsonKey.RESPONSE, result);
                   ProjectLogger.log(
-                      "PageManagementActor:getPageData:apply: Response before caching it = " + response,
+                      "PageManagementActor:getPageData:apply: Response before caching it = "
+                          + response,
                       LoggerEnum.INFO);
-                  CacheLoaderService.putDataIntoCache(
+                  PageCacheLoaderService.putDataIntoCache(
                       JsonKey.SECTIONS, String.valueOf(reqHashCode), response);
                   return response;
                 }
@@ -396,7 +397,7 @@ public class PageManagementActor extends BaseActor {
     Map<String, Object> req = actorMessage.getRequest();
     String pageName = (String) req.get(JsonKey.ID);
     Response response =
-        CacheLoaderService.getDataFromCache(
+        PageCacheLoaderService.getDataFromCache(
             ActorOperations.GET_PAGE_SETTING.name(), pageName, Response.class);
     if (response == null) {
       response =
@@ -411,7 +412,7 @@ public class PageManagementActor extends BaseActor {
         response.getResult().remove(JsonKey.RESPONSE);
       }
 
-      CacheLoaderService.putDataIntoCache(
+      PageCacheLoaderService.putDataIntoCache(
           ActorOperations.GET_PAGE_SETTING.name(), pageName, response);
     }
     sender().tell(response, self());
@@ -420,7 +421,7 @@ public class PageManagementActor extends BaseActor {
   @SuppressWarnings("unchecked")
   private void getPageSettings() {
     Response response =
-        CacheLoaderService.getDataFromCache(
+        PageCacheLoaderService.getDataFromCache(
             ActorOperations.GET_PAGE_SETTINGS.name(), JsonKey.PAGE, Response.class);
     List<Map<String, Object>> pageList = new ArrayList<>();
     if (response == null) {
@@ -436,7 +437,7 @@ public class PageManagementActor extends BaseActor {
       response.getResult().remove(JsonKey.RESPONSE);
 
       sender().tell(response, self());
-      CacheLoaderService.putDataIntoCache(
+      PageCacheLoaderService.putDataIntoCache(
           ActorOperations.GET_PAGE_SETTINGS.name(), JsonKey.PAGE, response);
       return;
     }
@@ -577,7 +578,7 @@ public class PageManagementActor extends BaseActor {
                 if (pageMap.containsKey(JsonKey.ORGANISATION_ID)) {
                   orgId = (String) pageMap.get(JsonKey.ORGANISATION_ID);
                 }
-                CacheLoaderService.putDataIntoCache(
+                PageCacheLoaderService.putDataIntoCache(
                     ActorOperations.GET_PAGE_DATA.getValue(),
                     orgId + ":" + (String) pageMap.get(JsonKey.PAGE_NAME),
                     pageMap);

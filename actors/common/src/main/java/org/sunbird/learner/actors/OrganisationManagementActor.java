@@ -1795,12 +1795,14 @@ public class OrganisationManagementActor extends BaseActor {
             ResponseCode.invalidChannel.getErrorMessage(),
             ResponseCode.CLIENT_ERROR.getResponseCode());
       }
-      int status = (int) rootOrg.get(JsonKey.STATUS);
-      if (1 != status) {
-        ProjectCommonException.throwClientErrorException(
-            ResponseCode.errorInactiveOrg,
-            ProjectUtil.formatMessage(
-                ResponseCode.errorInactiveOrg.getErrorMessage(), JsonKey.CHANNEL, channel));
+      Object status = rootOrg.get(JsonKey.STATUS);
+      if(null !=status) {
+          if (1 != (Integer) status) {
+              ProjectCommonException.throwClientErrorException(
+                      ResponseCode.errorInactiveOrg,
+                      ProjectUtil.formatMessage(
+                              ResponseCode.errorInactiveOrg.getErrorMessage(), JsonKey.CHANNEL, channel));
+          }
       }
     } else if (!validateChannelUniqueness((String) req.get(JsonKey.CHANNEL), null)) {
       ProjectLogger.log(

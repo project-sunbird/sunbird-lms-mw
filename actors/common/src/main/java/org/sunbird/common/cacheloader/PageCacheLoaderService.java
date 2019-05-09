@@ -16,7 +16,6 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.DataCacheHandler;
-import org.sunbird.notification.utils.JsonUtil;
 
 public class PageCacheLoaderService implements Runnable {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -96,8 +95,7 @@ public class PageCacheLoaderService implements Runnable {
     try {
       Set<String> keys = cacheMap.keySet();
       for (String key : keys) {
-        String value = JsonUtil.toJson(cacheMap.get(key));
-        cache.put(mapName, key, value);
+        cache.put(mapName, key, cacheMap.get(key));
       }
     } catch (Exception e) {
       ProjectLogger.log(

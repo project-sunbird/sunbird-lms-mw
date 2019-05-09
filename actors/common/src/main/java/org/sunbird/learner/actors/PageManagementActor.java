@@ -327,7 +327,7 @@ public class PageManagementActor extends BaseActor {
       Response cachedResponse =
           PageCacheLoaderService.getDataFromCache(
               JsonKey.SECTIONS, String.valueOf(requestHashCode), Response.class);
-      if (cachedResponse != null && requestHashCode != 0) {
+      if (requestHashCode != 0 && cachedResponse != null) {
         sender().tell(cachedResponse, self());
         return;
       }

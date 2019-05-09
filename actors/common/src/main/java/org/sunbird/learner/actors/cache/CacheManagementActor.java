@@ -17,7 +17,6 @@ import org.sunbird.common.responsecode.ResponseCode;
   asyncTasks = {}
 )
 public class CacheManagementActor extends BaseActor {
-
   private Cache cache = CacheFactory.getInstance();
 
   @Override
@@ -31,33 +30,24 @@ public class CacheManagementActor extends BaseActor {
 
   private void clearCache(Request request) {
     String mapName = (String) request.getContext().get(JsonKey.MAP_NAME);
+    ProjectLogger.log("CacheManagementActor:clearCache: mapName = " + mapName, LoggerEnum.INFO);
 
-    Response response = new Response();
-    if (!JsonKey.ALL.equals(mapName)) {
-      try {
+    try {
+      if (!JsonKey.ALL.equals(mapName)) {
         cache.clear(mapName);
-        response.setResponseCode(ResponseCode.success);
-        ProjectLogger.log("CacheManagementActor:clearCache :mapName : " + mapName, LoggerEnum.INFO);
-        sender().tell(response, self());
-      } catch (Exception e) {
-        ProjectLogger.log(
-            "CacheManagementActor:clearCache : failed for map : " + mapName + " with error " + e,
-            LoggerEnum.INFO);
-        sender().tell(e, self());
-      }
-
-    } else {
-
-      try {
+      } else {
         cache.clearAll();
-        ProjectLogger.log("CacheManagementActor:clearALLCache ", LoggerEnum.INFO);
-        response.setResponseCode(ResponseCode.success);
-        sender().tell(response, self());
-      } catch (Exception e) {
-        ProjectLogger.log(
-            "CacheManagementActor:clearALLCache " + " with error " + e, LoggerEnum.INFO);
-        sender().tell(e, self());
       }
+
+      Response response = new Response();
+      response.setResponseCode(ResponseCode.success);
+
+      sender().tell(response, self());
+    } catch (Exception e) {
+      ProjectLogger.log(
+          "CacheManagementActor:clearCache: Error occurred for mapName = " + mapName + " error = " + e.getMessage(),
+          LoggerEnum.ERROR);
+      sender().tell(e, self());
     }
   }
 }

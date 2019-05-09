@@ -39,12 +39,13 @@ public class CourseBatchDaoImpl implements CourseBatchDao {
             courseBatchDb.getKeySpace(), courseBatchDb.getTableName(), id);
     List<Map<String, Object>> courseList =
         (List<Map<String, Object>>) courseBatchResult.get(JsonKey.RESPONSE);
-    if ((courseList.isEmpty())) {
+    if (courseList.isEmpty()) {
       throw new ProjectCommonException(
           ResponseCode.invalidCourseBatchId.getErrorCode(),
           ResponseCode.invalidCourseBatchId.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     } else {
+      courseList.get(0).remove(JsonKey.PARTICIPANT);
       return mapper.convertValue(courseList.get(0), CourseBatch.class);
     }
   }

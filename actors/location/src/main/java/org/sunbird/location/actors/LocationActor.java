@@ -42,10 +42,10 @@ public class LocationActor extends BaseLocationActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
-    Util.initializeContext(request, JsonKey.LOCATION);
+    Util.initializeContext(request, TelemetryEnvKey.LOCATION);
     ExecutionContext.setRequestId(request.getRequestId());
     initOrderMap();
-    
+
     String operation = request.getOperation();
     switch (operation) {
       case "createLocation":
@@ -74,7 +74,8 @@ public class LocationActor extends BaseLocationActor {
 
       List<String> subTypeList =
           Arrays.asList(
-              ProjectUtil.getConfigValue(GeoLocationJsonKey.SUNBIRD_VALID_LOCATION_TYPES).split(";"));
+              ProjectUtil.getConfigValue(GeoLocationJsonKey.SUNBIRD_VALID_LOCATION_TYPES)
+                  .split(";"));
       for (String str : subTypeList) {
         List<String> typeList =
             (((Arrays.asList(str.split(","))).stream().map(String::toLowerCase))
@@ -85,7 +86,7 @@ public class LocationActor extends BaseLocationActor {
       }
     }
   }
-  
+
   private void getRelatedLocationIds(Request request) {
     Response response = new Response();
     List<String> relatedLocationIds =

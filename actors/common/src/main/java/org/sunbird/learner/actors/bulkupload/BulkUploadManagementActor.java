@@ -1,5 +1,6 @@
 package org.sunbird.learner.actors.bulkupload;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -7,20 +8,13 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.BulkUploadJsonKey;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.BulkProcessStatus;
-import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -37,8 +31,6 @@ import org.sunbird.learner.actors.bulkupload.model.StorageDetails;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * This actor will handle bulk upload operation .
@@ -104,7 +96,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
-    Util.initializeContext(request, JsonKey.USER);
+    Util.initializeContext(request, TelemetryEnvKey.USER);
     // set request id fto thread local...
     ExecutionContext.setRequestId(request.getRequestId());
     if (request.getOperation().equalsIgnoreCase(ActorOperations.BULK_UPLOAD.getValue())) {

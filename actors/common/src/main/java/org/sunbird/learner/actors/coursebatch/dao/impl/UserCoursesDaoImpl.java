@@ -1,8 +1,7 @@
 package org.sunbird.learner.actors.coursebatch.dao.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import org.apache.commons.collections.CollectionUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
@@ -49,6 +48,36 @@ public class UserCoursesDaoImpl implements UserCoursesDao {
   @Override
   public Response update(Map<String, Object> updateAttributes) {
     return cassandraOperation.updateRecord(KEYSPACE_NAME, TABLE_NAME, updateAttributes);
+  }
+
+  @Override
+  public List<String> getAllActiveUserOfBatch(String batchId) {
+    Map<String, Object> queryMap = new HashMap<>();
+    queryMap.put(JsonKey.BATCH_ID, batchId);
+    Response response =
+        cassandraOperation.getRecordsByProperties(
+            KEYSPACE_NAME,
+            TABLE_NAME,
+            queryMap,
+            Arrays.asList(JsonKey.USER_ID, JsonKey.ACTIVE, JsonKey.ID));
+    List<Map<String, Object>> userCoursesList =
+        (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    if (CollectionUtils.isEmpty(userCoursesList)) {
+      return null;
+    }
+    List<String> users = new ArrayList<>();
+
+    userCoursesList.forEach(
+        userCourses -> {
+          if ((boolean) userCourses.get(JsonKey.ACTIVE))
+            users.add((String) userCourses.get(JsonKey.USER_ID));
+        });
+    return users;
+  }
+
+  @Override
+  public Response batchInsert(List<Map<String, Object>> userCoursesDetails) {
+    return cassandraOperation.batchInsert(KEYSPACE_NAME, TABLE_NAME, userCoursesDetails);
   }
 
   @Override

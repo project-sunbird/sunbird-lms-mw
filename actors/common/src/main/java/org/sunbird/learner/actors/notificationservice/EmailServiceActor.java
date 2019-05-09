@@ -101,7 +101,9 @@ public class EmailServiceActor extends BaseActor {
     Response res = new Response();
     res.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(res, self());
-
+    ProjectLogger.log(
+        "EmailServiceActor:sendMail: Sending email to = " + emails.size() + " emails",
+        LoggerEnum.INFO.name());
     try {
       SendMail.sendMailWithBody(
           emails.toArray(new String[emails.size()]),
@@ -222,7 +224,7 @@ public class EmailServiceActor extends BaseActor {
 
       List<String> fields = new ArrayList<>();
       fields.add(JsonKey.USER_ID);
-      fields.add(JsonKey.ENC_EMAIL);
+      fields.add(JsonKey.EMAIL);
       recipientSearchQuery.put(JsonKey.FIELDS, fields);
       Map<String, Object> esResult = Collections.emptyMap();
       try {
@@ -250,8 +252,8 @@ public class EmailServiceActor extends BaseActor {
             (List<Map<String, Object>>) esResult.get(JsonKey.CONTENT);
         usersList.forEach(
             user -> {
-              if (StringUtils.isNotBlank((String) user.get(JsonKey.ENC_EMAIL))) {
-                String email = decryptionService.decryptData((String) user.get(JsonKey.ENC_EMAIL));
+              if (StringUtils.isNotBlank((String) user.get(JsonKey.EMAIL))) {
+                String email = decryptionService.decryptData((String) user.get(JsonKey.EMAIL));
                 if (ProjectUtil.isEmailvalid(email)) {
                   emails.add(email);
                 } else {
@@ -303,7 +305,7 @@ public class EmailServiceActor extends BaseActor {
     }
     SearchDTO searchDTO = new SearchDTO();
     Map<String, Object> additionalProperties = new HashMap<>();
-    additionalProperties.put(JsonKey.ENC_EMAIL, encryptedMail);
+    additionalProperties.put(JsonKey.EMAIL, encryptedMail);
     searchDTO.addAdditionalProperty(JsonKey.FILTERS, additionalProperties);
     Map<String, Object> esResult =
         ElasticSearchUtil.complexSearch(

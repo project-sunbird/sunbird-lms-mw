@@ -11,10 +11,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.StringFormatter;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -30,7 +27,7 @@ public class UserProfileActor extends UserBaseActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
-    Util.initializeContext(request, JsonKey.USER);
+    Util.initializeContext(request, TelemetryEnvKey.USER);
     ExecutionContext.setRequestId(request.getRequestId());
     String operation = request.getOperation();
     switch (operation) {

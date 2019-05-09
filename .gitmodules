@@ -6,6 +6,11 @@
 	path = actors/sunbird-open-saber-bridge
 	url = https://github.com/project-sunbird/sunbird-open-saber-bridge.git
 	branch = master
+	branch = master
+[submodule "actors/sunbird-open-saber-bridge"]
+	path = actors/sunbird-open-saber-bridge
+	url = https://github.com/project-sunbird/sunbird-open-saber-bridge.git
+	branch = master
 [submodule "actors/open-saber-client"]
 	path = actors/open-saber-client
 	url = https://github.com/project-sunbird/open-saber-client.git

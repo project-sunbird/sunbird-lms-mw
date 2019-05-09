@@ -1,8 +1,6 @@
 package org.sunbird.ratelimit.dao;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.doAnswer;
 import static org.powermock.api.mockito.PowerMockito.when;
 

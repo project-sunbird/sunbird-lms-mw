@@ -27,13 +27,8 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
-import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.request.ExecutionContext;
@@ -73,7 +68,7 @@ public class UserProfileReadActor extends BaseActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
-    Util.initializeContext(request, JsonKey.USER);
+    Util.initializeContext(request, TelemetryEnvKey.USER);
     ExecutionContext.setRequestId(request.getRequestId());
     if (systemSettingActorRef == null) {
       systemSettingActorRef = getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
@@ -695,8 +690,8 @@ public class UserProfileReadActor extends BaseActor {
     objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     Map<String, Object> result = objectMapper.convertValue(foundUser, Map.class);
     if (result != null) {
-      result.remove(JsonKey.EMAIL);
-      result.remove(JsonKey.PHONE);
+      result.put(JsonKey.EMAIL, result.get(JsonKey.MASKED_EMAIL));
+      result.put(JsonKey.PHONE, result.get(JsonKey.MASKED_PHONE));
     }
     String username = ssoManager.getUsernameById(foundUser.getId());
     result.put(JsonKey.USERNAME, username);

@@ -10,7 +10,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
@@ -47,7 +46,6 @@ import org.sunbird.models.user.User;
   "javax.crypto.*",
   "javax.script.*"
 })
-@Ignore
 public class SupportMultipleExternalIdsTest {
 
   private static User user;
@@ -78,6 +76,7 @@ public class SupportMultipleExternalIdsTest {
     externalIdReqMap.put(JsonKey.ID_TYPE, "someIdType");
     externalIdReqMap.put(JsonKey.USER_ID, "reqUserId");
     externalIdReqMap.put(JsonKey.EXTERNAL_ID, "someExternalId");
+    
     externalIds.add(externalIdReqMap);
     user = new User();
     user.setExternalIds(externalIds);
@@ -108,22 +107,11 @@ public class SupportMultipleExternalIdsTest {
     try {
       Util.checkExternalIdUniqueness(user, JsonKey.CREATE);
     } catch (ProjectCommonException e) {
-      System.out.println("I was here");
       assertEquals(ResponseCode.userAlreadyExists.getErrorCode(), e.getCode());
     }
   }
 
-  @Test
-  @Ignore
-  public void testCheckExternalIdUniquenessSuccessForUpdate() {
-
-    try {
-      user.setUserId("someUserId2");
-      Util.checkExternalIdUniqueness(user, JsonKey.UPDATE);
-    } catch (ProjectCommonException e) {
-      assertEquals(ResponseCode.externalIdAssignedToOtherUser.getErrorCode(), e.getCode());
-    }
-  }
+ 
 
   @Test
   public void testCheckExternalIdUniquenessSuccessWithUpdateOperation() {
@@ -134,6 +122,17 @@ public class SupportMultipleExternalIdsTest {
       Util.checkExternalIdUniqueness(user, JsonKey.UPDATE);
     } catch (ProjectCommonException e) {
       assertEquals(ResponseCode.externalIdNotFound.getErrorCode(), e.getCode());
+    }
+  }
+  @Test
+  public void testCheckExternalIdUniquenessSuccessForUpdate() {
+
+    try {
+      user.setUserId("someUserId2");
+      user.getExternalIds().get(0).remove(JsonKey.OPERATION );
+      Util.checkExternalIdUniqueness(user, JsonKey.UPDATE);
+    } catch (ProjectCommonException e) {
+      assertEquals(ResponseCode.externalIdAssignedToOtherUser.getErrorCode(), e.getCode());
     }
   }
 

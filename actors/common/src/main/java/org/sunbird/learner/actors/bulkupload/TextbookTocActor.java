@@ -12,6 +12,7 @@ import static org.sunbird.common.models.util.JsonKey.DOWNLOAD;
 import static org.sunbird.common.models.util.JsonKey.HIERARCHY;
 import static org.sunbird.common.models.util.JsonKey.MIME_TYPE;
 import static org.sunbird.common.models.util.JsonKey.NAME;
+import static org.sunbird.common.models.util.JsonKey.SUNBIRD_CONTENT_GET_HIERARCHY_API;
 import static org.sunbird.common.models.util.JsonKey.TEXTBOOK;
 import static org.sunbird.common.models.util.JsonKey.TEXTBOOK_ID;
 import static org.sunbird.common.models.util.JsonKey.TEXTBOOK_TOC_ALLOWED_CONTNET_TYPES;
@@ -32,8 +33,8 @@ import static org.sunbird.common.responsecode.ResponseCode.textbookChildrenExist
 import static org.sunbird.content.textbook.FileExtension.Extension.CSV;
 import static org.sunbird.content.textbook.TextBookTocUploader.TEXTBOOK_TOC_FOLDER;
 import static org.sunbird.content.util.ContentCloudStore.getUri;
+import static org.sunbird.content.util.TextBookTocUtil.getObjectFrom;
 import static org.sunbird.content.util.TextBookTocUtil.readContent;
-import static org.sunbird.content.util.TextBookTocUtil.readHierarchy;
 import static org.sunbird.content.util.TextBookTocUtil.serialize;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -46,11 +47,13 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -91,9 +94,15 @@ import org.sunbird.services.sso.SSOServiceFactory;
 public class TextbookTocActor extends BaseBulkUploadActor {
 
   private SSOManager ssoManager = SSOServiceFactory.getInstance();
+  private Instant startTime = null;
+  private Map<String, Object> frameCategories = null;
 
   @Override
   public void onReceive(Request request) throws Throwable {
+    startTime = Instant.now();
+    Map<String, Object> outputMapping =
+        getObjectFrom(getConfigValue(JsonKey.TEXTBOOK_TOC_OUTPUT_MAPPING), Map.class);
+    frameCategories = (Map<String, Object>) outputMapping.get("frameworkCategories");
     if (request
         .getOperation()
         .equalsIgnoreCase(TextbookActorOperation.TEXTBOOK_TOC_UPLOAD.getValue())) {
@@ -110,8 +119,13 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   @SuppressWarnings("unchecked")
   private void upload(Request request) throws Exception {
     byte[] byteArray = (byte[]) request.getRequest().get(JsonKey.DATA);
+    ProjectLogger.log("Sized:TextbookTocActor:upload size of request " + byteArray.length, INFO);
     InputStream inputStream = new ByteArrayInputStream(byteArray);
     Map<String, Object> resultMap = readAndValidateCSV(inputStream);
+    ProjectLogger.log(
+        "Timed:TextbookTocActor:upload duration for read and validate csv: "
+            + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+        INFO);
     Set<String> dialCodes = (Set<String>) resultMap.get(JsonKey.DIAL_CODES);
     resultMap.remove(JsonKey.DIAL_CODES);
     Map<String, List<String>> reqDialCodeIdentifierMap =
@@ -123,6 +137,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         (Map<Integer, List<String>>) resultMap.get(JsonKey.LINKED_CONTENT);
     resultMap.remove(JsonKey.LINKED_CONTENT);
     validateLinkedContents(rowNumVsContentIdsMap);
+    ProjectLogger.log(
+        "Timed:TextbookTocActor:upload duration for validate linked content: "
+            + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+        INFO);
     resultMap.put(JsonKey.LINKED_CONTENT, false);
     for (Entry<Integer, List<String>> entry : rowNumVsContentIdsMap.entrySet()) {
       if (CollectionUtils.isNotEmpty(entry.getValue())) {
@@ -131,22 +149,40 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       }
     }
     String tbId = (String) request.get(TEXTBOOK_ID);
-    Map<String, Object> textbookData = getTextbook(tbId);
+
     Map<String, Object> hierarchy = getHierarchy(tbId);
-    validateTopics(topics, (String) textbookData.get(JsonKey.FRAMEWORK));
-    validateDialCodesWithReservedDialCodes(dialCodes, textbookData);
+    ProjectLogger.log(
+        "Timed:TextbookTocActor:upload duration for get hirearchy data: "
+            + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+        INFO);
+    validateTopics(topics, (String) hierarchy.get(JsonKey.FRAMEWORK));
+    validateDialCodesWithReservedDialCodes(dialCodes, hierarchy);
     checkDialCodeUniquenessInTextBookHierarchy(reqDialCodeIdentifierMap, hierarchy);
     request.getRequest().put(JsonKey.DATA, resultMap);
     String mode = ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.MODE).toString();
-    validateRequest(request, mode, textbookData);
+    ProjectLogger.log(
+        "Timed:TextbookTocActor:upload duration for validate topic and dial codes: "
+            + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+        INFO);
+    validateRequest(request, mode, hierarchy);
+    ProjectLogger.log(
+        "Timed:TextbookTocActor:upload duration for validate request: "
+            + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+        INFO);
     Response response = new Response();
     if (StringUtils.equalsIgnoreCase(mode, JsonKey.CREATE)) {
-      response = createTextbook(request, textbookData);
+      response = createTextbook(request, hierarchy);
     } else if (StringUtils.equalsIgnoreCase(mode, JsonKey.UPDATE)) {
-      response = updateTextbook(request, textbookData, hierarchy);
+      response = updateTextbook(request, hierarchy);
     } else {
       unSupportedMessage();
     }
+    ProjectLogger.log(
+        "Timed:TextbookTocActor:upload duration for textbook "
+            + mode
+            + " :"
+            + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+        INFO);
     sender().tell(response, sender());
   }
 
@@ -175,6 +211,12 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   @SuppressWarnings("unchecked")
   private void callSearchApiForContentIdsValidation(Map<String, List<Integer>> contentIdVsRowNumMap)
       throws Exception {
+    if (MapUtils.isEmpty(contentIdVsRowNumMap)) {
+      ProjectLogger.log(
+          "TextbookTocActor:callSearchApiForContentIdsValidation : Content id map is Empty.",
+          LoggerEnum.INFO.name());
+      return;
+    }
     List<String> contentIds = new ArrayList<>();
     contentIds.addAll(contentIdVsRowNumMap.keySet());
     Map<String, Object> requestMap = new HashMap<>();
@@ -187,74 +229,78 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     List<String> fields = new ArrayList<>();
     fields.add(JsonKey.IDENTIFIER);
     request.put(JsonKey.FIELDS, fields);
-    if (CollectionUtils.isNotEmpty(contentIds)) {
-      String requestUrl =
-          getConfigValue(JsonKey.SUNBIRD_CS_BASE_URL)
-              + getConfigValue(JsonKey.SUNBIRD_CONTENT_SEARCH_URL);
-      HttpResponse<String> updateResponse = null;
-      try {
-        updateResponse =
-            Unirest.post(requestUrl)
-                .headers(getDefaultHeaders())
-                .body(mapper.writeValueAsString(requestMap))
-                .asString();
-        if (null != updateResponse) {
-          Response response = mapper.readValue(updateResponse.getBody(), Response.class);
-          ProjectLogger.log(
-              "TextbookTocActor:callSearchApiForContentIdsValidation : response.getResponseCode().getResponseCode() : "
-                  + response.getResponseCode().getResponseCode(),
-              LoggerEnum.INFO.name());
-          if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
-            Map<String, Object> result = response.getResult();
-            Set<String> searchedContentIds = new HashSet<>();
-            if (MapUtils.isNotEmpty(result)) {
-              int count = (int) result.get(JsonKey.COUNT);
-              if (0 == count) {
+    request.put(JsonKey.LIMIT, contentIds.size());
+    String requestUrl =
+        getConfigValue(JsonKey.SUNBIRD_CS_BASE_URL)
+            + getConfigValue(JsonKey.SUNBIRD_CONTENT_SEARCH_URL);
+    HttpResponse<String> updateResponse = null;
+    ProjectLogger.log(
+        "TextbookTocActor:callSearchApiForContentIdsValidation : requestUrl=" + requestUrl,
+        LoggerEnum.INFO.name());
+    try {
+      updateResponse =
+          Unirest.post(requestUrl)
+              .headers(getDefaultHeaders())
+              .body(mapper.writeValueAsString(requestMap))
+              .asString();
+      if (null != updateResponse) {
+        Response response = mapper.readValue(updateResponse.getBody(), Response.class);
+        ProjectLogger.log(
+            "TextbookTocActor:callSearchApiForContentIdsValidation : response.getResponseCode().getResponseCode() : "
+                + response.getResponseCode().getResponseCode(),
+            LoggerEnum.INFO.name());
+        if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
+          Map<String, Object> result = response.getResult();
+          Set<String> searchedContentIds = new HashSet<>();
+          if (MapUtils.isNotEmpty(result)) {
+            int count = (int) result.get(JsonKey.COUNT);
+            if (0 == count) {
+              ProjectLogger.log(
+                  "TextbookTocActor:callSearchApiForContentIdsValidation : Content id count in response is zero.",
+                  LoggerEnum.INFO.name());
+              String errorMsg = prepareErrorMsg(contentIdVsRowNumMap, searchedContentIds);
+              ProjectCommonException.throwClientErrorException(
+                  ResponseCode.errorInvalidLinkedContentUrl, errorMsg);
+            }
+            List<Map<String, Object>> content =
+                (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+            if (CollectionUtils.isNotEmpty(content)) {
+              content.forEach(
+                  contentMap -> {
+                    searchedContentIds.add((String) contentMap.get(JsonKey.IDENTIFIER));
+                  });
+              if (searchedContentIds.size() != contentIds.size()) {
                 String errorMsg = prepareErrorMsg(contentIdVsRowNumMap, searchedContentIds);
                 ProjectCommonException.throwClientErrorException(
                     ResponseCode.errorInvalidLinkedContentUrl, errorMsg);
               }
-              List<Map<String, Object>> content =
-                  (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-              if (CollectionUtils.isNotEmpty(content)) {
-                content.forEach(
-                    contentMap -> {
-                      searchedContentIds.add((String) contentMap.get(JsonKey.IDENTIFIER));
-                    });
-                if (searchedContentIds.size() != contentIds.size()) {
-                  String errorMsg = prepareErrorMsg(contentIdVsRowNumMap, searchedContentIds);
-                  ProjectCommonException.throwClientErrorException(
-                      ResponseCode.errorInvalidLinkedContentUrl, errorMsg);
-                }
-              } else {
-                ProjectLogger.log(
-                    "TextbookTocActor:callSearchApiForContentIdsValidation : Content is Empty.",
-                    LoggerEnum.INFO.name());
-                throwCompositeSearchFailureError();
-              }
+            } else {
+              ProjectLogger.log(
+                  "TextbookTocActor:callSearchApiForContentIdsValidation : Content is Empty.",
+                  LoggerEnum.INFO.name());
+              throwCompositeSearchFailureError();
             }
-          } else {
-            ProjectLogger.log(
-                "TextbookTocActor:callSearchApiForContentIdsValidation : response.getResponseCode().getResponseCode() is not 200",
-                LoggerEnum.INFO.name());
-            throwCompositeSearchFailureError();
           }
         } else {
           ProjectLogger.log(
-              "TextbookTocActor:callSearchApiForContentIdsValidation : update response is null.",
+              "TextbookTocActor:callSearchApiForContentIdsValidation : response.getResponseCode().getResponseCode() is not 200",
               LoggerEnum.INFO.name());
           throwCompositeSearchFailureError();
         }
-      } catch (Exception e) {
-        if (e instanceof ProjectCommonException) {
-          throw e;
-        }
+      } else {
         ProjectLogger.log(
-            "TextbookTocActor:validateLinkedContents : Error occurred with message "
-                + e.getMessage(),
-            e);
+            "TextbookTocActor:callSearchApiForContentIdsValidation : update response is null.",
+            LoggerEnum.INFO.name());
         throwCompositeSearchFailureError();
       }
+    } catch (Exception e) {
+      ProjectLogger.log(
+          "TextbookTocActor:validateLinkedContents : Error occurred with message " + e.getMessage(),
+          e);
+      if (e instanceof ProjectCommonException) {
+        throw e;
+      }
+      throwCompositeSearchFailureError();
     }
   }
 
@@ -465,8 +511,17 @@ public class TextbookTocActor extends BaseBulkUploadActor {
               getConfigValue(JsonKey.SUNBIRD_SSO_USERNAME),
               getConfigValue(JsonKey.SUNBIRD_SSO_PASSWORD)));
       String reqBody = mapper.writeValueAsString(requestMap);
+      ProjectLogger.log(
+          "Sized :TextBookTocUtil:callDialcodeSearchApi: size of request "
+              + reqBody.getBytes().length,
+          INFO);
+
       updateResponse = Unirest.post(requestUrl).headers(headers).body(reqBody).asString();
       if (null != updateResponse) {
+        ProjectLogger.log(
+            "Sized :TextBookTocUtil:callDialcodeSearchApi: size of response "
+                + updateResponse.getBody().getBytes().length,
+            INFO);
         Response response = mapper.readValue(updateResponse.getBody(), Response.class);
         ProjectLogger.log(
             "TextbookTocActor:callDialcodeSearchApi : response.getResponseCode().getResponseCode() : "
@@ -580,8 +635,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       List<CSVRecord> csvRecords = csvFileParser.getRecords();
       validateCSV(csvRecords);
       Set<String> dialCodes = new HashSet<>();
+      Set<String> duplicateDialCodes = new LinkedHashSet<>();
       Map<String, List<String>> dialCodeIdentifierMap = new HashMap<>();
       Set<String> topics = new HashSet<>();
+      Map<String, Object> bgms = new HashMap<>();
       StringBuilder exceptionMsgs = new StringBuilder();
       for (int i = 0; i < csvRecords.size(); i++) {
         CSVRecord record = csvRecords.get(i);
@@ -595,6 +652,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           if (StringUtils.isNotBlank(record.get(entry.getValue())))
             hierarchyMap.put(entry.getKey(), record.get(entry.getValue()));
         }
+        validateBGMS(i, bgms, recordMap, metadata);
 
         if (!(MapUtils.isEmpty(recordMap) && MapUtils.isEmpty(hierarchyMap))) {
           validateQrCodeRequiredAndQrCode(recordMap);
@@ -604,10 +662,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
             dialCodeList = new ArrayList<String>(Arrays.asList(dialCode.split(",")));
             for (String dCode : dialCodeList) {
               if (!dialCodes.add(dCode.trim())) {
-                throwClientErrorException(
-                    ResponseCode.errorDduplicateDialCodeEntry,
-                    MessageFormat.format(
-                        ResponseCode.errorDduplicateDialCodeEntry.getErrorMessage(), dialCode));
+                duplicateDialCodes.add(dCode.trim());
               }
             }
           }
@@ -644,6 +699,13 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           rows.add(map);
         }
       }
+      if (CollectionUtils.isNotEmpty(duplicateDialCodes)) {
+        throwClientErrorException(
+            ResponseCode.errorDduplicateDialCodeEntry,
+            MessageFormat.format(
+                ResponseCode.errorDduplicateDialCodeEntry.getErrorMessage(),
+                StringUtils.join(duplicateDialCodes, ",")));
+      }
       if (StringUtils.isNotBlank(exceptionMsgs.toString())) {
         ProjectCommonException.throwClientErrorException(
             ResponseCode.customClientError, exceptionMsgs.toString());
@@ -670,6 +732,67 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       }
     }
     return result;
+  }
+
+  private void validateBGMS(
+      int recordNum,
+      Map<String, Object> bgms,
+      HashMap<String, Object> recordMap,
+      Map<String, String> metadata) {
+    if (recordNum == 0) {
+      getBgmsData(recordMap, bgms);
+    } else {
+      handleBGMSMismatchValidation(recordNum, metadata, bgms, recordMap);
+    }
+    // Removing fields from updating further
+    recordMap.remove(JsonKey.BOARD);
+    recordMap.remove(JsonKey.MEDIUM);
+    recordMap.remove(JsonKey.GRADE_LEVEL);
+    recordMap.remove(JsonKey.SUBJECT);
+  }
+
+  private void getBgmsData(HashMap<String, Object> recordMap, Map<String, Object> bgms) {
+    for (Entry<String, Object> entry : frameCategories.entrySet()) {
+      String key = entry.getKey();
+      bgms.put(key, recordMap.get(key));
+    }
+  }
+
+  private void handleBGMSMismatchValidation(
+      int recordNum,
+      Map<String, String> metadata,
+      Map<String, Object> bgms,
+      HashMap<String, Object> recordMap) {
+    for (Entry<String, Object> entry : frameCategories.entrySet()) {
+      String key = entry.getKey();
+      if (null != bgms.get(key) && null != recordMap.get(key)) {
+        String bgmsKey = ((String) bgms.get(key)).toLowerCase();
+        String recordMapKey = ((String) recordMap.get(key)).toLowerCase();
+        List<String> bgmsKeyList =
+            (Arrays.stream(bgmsKey.split(",")).map(s -> s.trim()).collect(Collectors.toList()));
+
+        Arrays.stream(recordMapKey.split(","))
+            .forEach(
+                s -> {
+                  if (!bgmsKeyList.contains(s.trim())) {
+                    throwClientErrorException(
+                        ResponseCode.errorBGMSMismatch,
+                        MessageFormat.format(
+                            ResponseCode.errorBGMSMismatch.getErrorMessage(),
+                            metadata.get(key),
+                            recordNum + 1));
+                  }
+                });
+      } else if ((null != bgms.get(key) && null == recordMap.get(key))
+          || (null == bgms.get(key) && null != recordMap.get(key))) {
+        throwClientErrorException(
+            ResponseCode.errorBGMSMismatch,
+            MessageFormat.format(
+                ResponseCode.errorBGMSMismatch.getErrorMessage(),
+                metadata.get(key),
+                recordNum + 1));
+      }
+    }
   }
 
   private List<String> validateLinkedContentUrlAndGetContentIds(
@@ -760,24 +883,39 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       throwClientErrorException(invalidTextbook, invalidTextbook.getErrorMessage());
     }
     log("Reading Content for TextBook | Id: " + textbookId, INFO.name());
-    Map<String, Object> content = getTextbook(textbookId);
-    validateTextBook(content, DOWNLOAD);
+    Map<String, Object> contentHierarchy = getHierarchy(textbookId);
+    ProjectLogger.log(
+        "Timed:TextbookTocActor:getTocUrl duration for get textbook: "
+            + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+        INFO);
+    validateTextBook(contentHierarchy, DOWNLOAD);
     FileExtension fileExtension = CSV.getFileExtension();
-    String contentVersionKey = (String) content.get(VERSION_KEY);
-    String textBookNameSlug = makeSlug((String) content.get(NAME), true);
+    String contentVersionKey = (String) contentHierarchy.get(VERSION_KEY);
+    String textBookNameSlug = makeSlug((String) contentHierarchy.get(NAME), true);
     String textBookTocFileName = textbookId + "_" + textBookNameSlug + "_" + contentVersionKey;
     String prefix =
         TEXTBOOK_TOC_FOLDER + separator + textBookTocFileName + fileExtension.getDotExtension();
     log("Fetching TextBook Toc URL from Cloud", INFO.name());
 
     String cloudPath = getUri(prefix, false);
+    ProjectLogger.log(
+        "Timed:TextbookTocActor:getTocUrl duration for get cloud path url: "
+            + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+        INFO);
     if (isBlank(cloudPath)) {
       log("Reading Hierarchy for TextBook | Id: " + textbookId, INFO.name());
-      Map<String, Object> contentHierarchy = getHierarchy(textbookId);
+      ProjectLogger.log(
+          "Timed:TextbookTocActor:getTocUrl duration for get hirearchy: "
+              + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+          INFO);
       String hierarchyVersionKey = (String) contentHierarchy.get(VERSION_KEY);
       cloudPath =
           new TextBookTocUploader(textBookTocFileName, fileExtension)
               .execute(contentHierarchy, textbookId, hierarchyVersionKey);
+      ProjectLogger.log(
+          "Timed:TextbookTocActor:getTocUrl duration for processing preparing and uploading: "
+              + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+          INFO);
     }
 
     log("Sending Response for Toc Download API for TextBook | Id: " + textbookId, INFO.name());
@@ -856,7 +994,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   }
 
   @SuppressWarnings("unchecked")
-  private Response createTextbook(Request request, Map<String, Object> textBookdata)
+  private Response createTextbook(Request request, Map<String, Object> textBookHierarchy)
       throws Exception {
     log("Create Textbook called ", INFO.name());
     Map<String, Object> file = (Map<String, Object>) request.get(JsonKey.DATA);
@@ -887,14 +1025,14 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           tbId,
           new HashMap<String, Object>() {
             {
-              put(JsonKey.NAME, textBookdata.get(JsonKey.NAME));
-              put(CONTENT_TYPE, textBookdata.get(CONTENT_TYPE));
+              put(JsonKey.NAME, textBookHierarchy.get(JsonKey.NAME));
+              put(CONTENT_TYPE, textBookHierarchy.get(CONTENT_TYPE));
               put(CHILDREN, new ArrayList<>());
               put(JsonKey.TB_ROOT, true);
             }
           });
       for (Map<String, Object> row : data) {
-        populateNodes(row, tbId, textBookdata, nodesModified, hierarchyData);
+        populateNodes(row, tbId, textBookHierarchy, nodesModified, hierarchyData);
       }
 
       Map<String, Object> updateRequest = new HashMap<String, Object>();
@@ -909,11 +1047,15 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       requestMap.put(JsonKey.DATA, dataMap);
       updateRequest.put(JsonKey.REQUEST, requestMap);
 
+      ProjectLogger.log(
+          "Timed:TextbookTocActor:createTextbook duration for processing create textbook: "
+              + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+          INFO);
       log(
           "Create Textbook - UpdateHierarchy Request : " + mapper.writeValueAsString(updateRequest),
           INFO.name());
       return callUpdateHierarchyAndLinkDialCodeApi(
-          tbId, updateRequest, nodesModified, (String) textBookdata.get(JsonKey.CHANNEL));
+          tbId, updateRequest, nodesModified, (String) textBookHierarchy.get(JsonKey.CHANNEL));
     }
   }
 
@@ -925,8 +1067,16 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       throws Exception {
     Response response = new Response();
     updateHierarchy(tbId, updateRequest);
+    ProjectLogger.log(
+        "Timed:TextbookTocActor:callUpdateHierarchyAndLinkDialCodeApi duration for update hirearchy data: "
+            + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+        INFO);
     try {
-      linkDialCode(nodesModified, channel);
+      linkDialCode(nodesModified, channel, tbId);
+      ProjectLogger.log(
+          "Timed:TextbookTocActor:callUpdateHierarchyAndLinkDialCodeApi duration for link dial code: "
+              + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+          INFO);
     } catch (Exception ex) {
       ProjectLogger.log(
           "TextbookTocActor:callUpdateHierarchyAndLinkDialCodeApi : Exception occurred while linking dial code : ",
@@ -989,7 +1139,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     Response response = null;
     Map<String, Object> textbook;
     try {
-      response = readContent(tbId);
+      response = readContent(tbId, JsonKey.SUNBIRD_CONTENT_READ_API);
       textbook = (Map<String, Object>) response.get(CONTENT);
       if (null == textbook) {
         log("Empty Content fetched | TextBook Id: " + tbId);
@@ -1008,7 +1158,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     Response response = null;
     Map<String, Object> hierarchy;
     try {
-      response = readHierarchy(tbId);
+      response = readContent(tbId, SUNBIRD_CONTENT_GET_HIERARCHY_API);
       hierarchy = (Map<String, Object>) response.get(CONTENT);
       if (null == hierarchy) {
         log("Empty Hierarchy fetched | TextBook Id: " + tbId);
@@ -1024,12 +1174,11 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   }
 
   @SuppressWarnings("unchecked")
-  private Response updateTextbook(
-      Request request, Map<String, Object> textbookData, Map<String, Object> textbookHierarchy)
+  private Response updateTextbook(Request request, Map<String, Object> textbookHierarchy)
       throws Exception {
     Boolean linkContent =
         (boolean) ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.LINKED_CONTENT);
-    String channel = (String) textbookData.get(JsonKey.CHANNEL);
+    String channel = (String) textbookHierarchy.get(JsonKey.CHANNEL);
     List<Map<String, Object>> data =
         (List<Map<String, Object>>)
             ((Map<String, Object>) request.get(JsonKey.DATA)).get(JsonKey.FILE_DATA);
@@ -1082,7 +1231,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         hierarchyList =
             getParentChildHierarchy(
                 tbId,
-                (String) textbookData.get(JsonKey.NAME),
+                (String) textbookHierarchy.get(JsonKey.NAME),
                 (List<Map<String, Object>>) textbookHierarchy.get(JsonKey.CHILDREN));
       }
       ProjectLogger.log(
@@ -1132,6 +1281,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       dataMap.put(JsonKey.HIERARCHY, hierarchyData);
       requestMap.put(JsonKey.DATA, dataMap);
       updateRequest.put(JsonKey.REQUEST, requestMap);
+      ProjectLogger.log(
+          "Timed:TextbookTocActor:updateTextbook duration for processing update: "
+              + (Instant.now().toEpochMilli() - startTime.toEpochMilli()),
+          INFO);
       log(
           "Update Textbook - UpdateHierarchy Request : " + mapper.writeValueAsString(updateRequest),
           INFO.name());
@@ -1211,7 +1364,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
   }
 
   @SuppressWarnings("unchecked")
-  private void linkDialCode(Map<String, Object> modifiedNodes, String channel) throws Exception {
+  private void linkDialCode(Map<String, Object> modifiedNodes, String channel, String tbId)
+      throws Exception {
     List<Map<String, Object>> content = new ArrayList<>();
     modifiedNodes.forEach(
         (k, v) -> {
@@ -1237,14 +1391,17 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     Map<String, Object> linkDialCoderequest = new HashMap<>();
     linkDialCoderequest.put(JsonKey.REQUEST, request);
     if (CollectionUtils.isNotEmpty(content)) {
-      linkDialCodeApiCall(linkDialCoderequest, channel);
+      linkDialCodeApiCall(linkDialCoderequest, channel, tbId);
     }
   }
 
-  private Response linkDialCodeApiCall(Map<String, Object> updateRequest, String channel)
-      throws Exception {
+  private Response linkDialCodeApiCall(
+      Map<String, Object> updateRequest, String channel, String tbId) throws Exception {
     String requestUrl =
-        getConfigValue(JsonKey.EKSTEP_BASE_URL) + getConfigValue(JsonKey.LINK_DIAL_CODE_API);
+        getConfigValue(JsonKey.EKSTEP_BASE_URL)
+            + getConfigValue(JsonKey.LINK_DIAL_CODE_API)
+            + "/"
+            + tbId;
     HttpResponse<String> updateResponse = null;
     try {
       Map<String, String> headers = getDefaultHeaders();
@@ -1258,8 +1415,17 @@ public class TextbookTocActor extends BaseBulkUploadActor {
           "TextbookTocActor:linkDialCodeApiCall : Request for link dial code api : "
               + mapper.writeValueAsString(updateRequest),
           LoggerEnum.INFO.name());
+
+      ProjectLogger.log(
+          "Sized: TextbookTocActor:linkDialCodeApiCall : size of request : "
+              + mapper.writeValueAsString(updateRequest).getBytes().length,
+          LoggerEnum.INFO);
       if (null != updateResponse) {
         Response response = mapper.readValue(updateResponse.getBody(), Response.class);
+        ProjectLogger.log(
+            "Sized: TextbookTocActor:linkDialCodeApiCall : size of response : "
+                + updateResponse.getBody().getBytes().length,
+            LoggerEnum.INFO);
         if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {
           return response;
         } else {
@@ -1304,6 +1470,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     Map<String, String> headers = getDefaultHeaders();
     HttpResponse<String> updateResponse = null;
     try {
+      ProjectLogger.log(
+          "Sized:updateHierarchy:upload size of request "
+              + mapper.writeValueAsString(updateRequest).getBytes().length,
+          INFO);
       updateResponse =
           Unirest.patch(requestUrl)
               .headers(headers)
@@ -1326,6 +1496,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                 + updateResponse.getStatus()
                 + "status message "
                 + updateResponse.getStatusText(),
+            INFO);
+        ProjectLogger.log(
+            "Sized:updateHierarchy:upload size of response "
+                + updateResponse.getBody().getBytes().length,
             INFO);
         Response response = mapper.readValue(updateResponse.getBody(), Response.class);
         if (response.getResponseCode().getResponseCode() == ResponseCode.OK.getResponseCode()) {

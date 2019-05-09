@@ -17,6 +17,7 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.request.HeaderParam;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.coursebatch.CourseEnrollmentActor;
@@ -168,7 +169,9 @@ public final class CourseBatchSchedulerUtil {
                 + courseId,
             LoggerEnum.INFO.name());
         addHeaderProps(
-            getBasicHeader(), JsonKey.CHANNEL_ID, (String) ekStepContent.get(JsonKey.CHANNEL));
+            getBasicHeader(),
+            HeaderParam.CHANNEL_ID.getName(),
+            (String) ekStepContent.get(JsonKey.CHANNEL));
       } else {
         ProjectLogger.log(
             "No channel value available in content with Id " + courseId, LoggerEnum.INFO.name());

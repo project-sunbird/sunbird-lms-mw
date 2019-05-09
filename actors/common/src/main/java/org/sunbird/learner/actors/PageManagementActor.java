@@ -22,11 +22,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -69,7 +65,7 @@ public class PageManagementActor extends BaseActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
-    Util.initializeContext(request, JsonKey.PAGE);
+    Util.initializeContext(request, TelemetryEnvKey.PAGE);
 
     ExecutionContext.setRequestId(request.getRequestId());
     if (request.getOperation().equalsIgnoreCase(ActorOperations.CREATE_PAGE.getValue())) {
@@ -168,7 +164,10 @@ public class PageManagementActor extends BaseActor {
     sender().tell(response, self());
     targetObject =
         TelemetryUtil.generateTargetObject(
-            (String) sectionMap.get(JsonKey.ID), JsonKey.PAGE_SECTION, JsonKey.CREATE, null);
+            (String) sectionMap.get(JsonKey.ID),
+            TelemetryEnvKey.PAGE_SECTION,
+            JsonKey.CREATE,
+            null);
     TelemetryUtil.telemetryProcessingCall(
         actorMessage.getRequest(), targetObject, correlatedObject);
     // update DataCacheHandler section map with updated page section data
@@ -211,7 +210,8 @@ public class PageManagementActor extends BaseActor {
     response.put(JsonKey.SECTION_ID, uniqueId);
     sender().tell(response, self());
     targetObject =
-        TelemetryUtil.generateTargetObject(uniqueId, JsonKey.PAGE_SECTION, JsonKey.CREATE, null);
+        TelemetryUtil.generateTargetObject(
+            uniqueId, TelemetryEnvKey.PAGE_SECTION, JsonKey.CREATE, null);
     TelemetryUtil.telemetryProcessingCall(
         actorMessage.getRequest(), targetObject, correlatedObject);
     // update DataCacheHandler section map with new page section data

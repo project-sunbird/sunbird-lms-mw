@@ -4,7 +4,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -83,8 +87,6 @@ public class CourseEnrollmentActor extends BaseActor {
           ResponseCode.userAlreadyEnrolledCourse,
           ResponseCode.userAlreadyEnrolledCourse.getErrorMessage());
     }
-    courseBatch.setParticipant(
-        addUserToParticipant(courseBatch, (String) actorMessage.getRequest().get(JsonKey.USER_ID)));
     courseMap = createUserCourseMap(courseMap, courseBatch, userCourseResult);
     Response result = null;
     if (userCourseResult == null) {
@@ -107,8 +109,6 @@ public class CourseEnrollmentActor extends BaseActor {
     if (courseNotificationActive()) {
       batchOperationNotifier(courseMap, courseBatch, JsonKey.ADD);
     }
-    updateCourseBatch(courseBatch);
-    generateAndProcessTelemetryEvent(courseMap, "user.batch.course");
     if (userCourseResult == null) {
       UserCoursesService.syncUserCourses(
           (String) courseMap.get(JsonKey.COURSE_ID),
@@ -126,11 +126,12 @@ public class CourseEnrollmentActor extends BaseActor {
           userCourseResult.getTimestamp(),
           (String) actorMessage.getRequest().get(JsonKey.USER_ID));
     }
+    generateAndProcessTelemetryEvent(courseMap, "user.batch.course");
   }
 
   private boolean courseNotificationActive() {
     ProjectLogger.log(
-        "CourseEnrollMentActor: courseNotificationActive: "
+        "CourseEnrollmentActor: courseNotificationActive: "
             + Boolean.parseBoolean(
                 PropertiesCache.getInstance()
                     .getProperty(JsonKey.SUNBIRD_COURSE_BATCH_NOTIFICATIONS_ENABLED)),
@@ -186,9 +187,6 @@ public class CourseEnrollmentActor extends BaseActor {
     UserCoursesService.validateUserUnenroll(userCourseResult);
     Response result = updateUserCourses(userCourseResult);
     sender().tell(result, self());
-    courseBatch.setParticipant(
-        removeUserFromParticipant(courseBatch, (String) request.get(JsonKey.USER_ID)));
-    updateCourseBatch(courseBatch);
     generateAndProcessTelemetryEvent(request, "user.batch.course.unenroll");
 
     if (courseNotificationActive()) {
@@ -333,7 +331,6 @@ public class CourseEnrollmentActor extends BaseActor {
   @SuppressWarnings("unchecked")
   private void updateCourseBatch(CourseBatch courseBatch) {
     Map<String, Object> CourseBatchUpdatedAttributes = new HashMap<>();
-    CourseBatchUpdatedAttributes.put(JsonKey.PARTICIPANT, courseBatch.getParticipant());
     CourseBatchUpdatedAttributes.put(JsonKey.ID, (String) courseBatch.getId());
     Response response = courseBatchDao.update(CourseBatchUpdatedAttributes);
     Map<String, Object> courseBatchMap = mapper.convertValue(courseBatch, Map.class);
@@ -344,17 +341,5 @@ public class CourseEnrollmentActor extends BaseActor {
           "CourseBatchManagementActor:updateCourseBatch: Course batch not synced to ES as response is not successful",
           LoggerEnum.INFO.name());
     }
-  }
-
-  private Map<String, Boolean> removeUserFromParticipant(CourseBatch courseBatch, String userId) {
-    Map<String, Boolean> participantMap = courseBatch.getParticipant();
-    participantMap.remove(userId);
-    return participantMap;
-  }
-
-  private Map<String, Boolean> addUserToParticipant(CourseBatch courseBatch, String userId) {
-    Map<String, Boolean> participantMap = courseBatch.getParticipant();
-    participantMap.put(userId, true);
-    return participantMap;
   }
 }

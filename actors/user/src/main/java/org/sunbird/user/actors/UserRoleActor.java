@@ -13,11 +13,7 @@ import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.StringFormatter;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -40,7 +36,7 @@ public class UserRoleActor extends UserBaseActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
-    Util.initializeContext(request, JsonKey.USER);
+    Util.initializeContext(request, TelemetryEnvKey.USER);
     ExecutionContext.setRequestId(request.getRequestId());
     String operation = request.getOperation();
 

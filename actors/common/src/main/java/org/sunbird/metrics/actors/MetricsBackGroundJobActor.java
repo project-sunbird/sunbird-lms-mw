@@ -25,6 +25,7 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.ReportTrackingStatus;
+import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.models.util.azure.CloudService;
 import org.sunbird.common.models.util.azure.CloudServiceFactory;
 import org.sunbird.common.models.util.mail.SendMail;
@@ -39,7 +40,7 @@ import org.sunbird.learner.util.Util;
 /** Created by arvind on 28/8/17. */
 @ActorConfig(
   tasks = {},
-  asyncTasks = {"fileGenerationAndUpload", "processData", "fileGenerationAndUpload"}
+  asyncTasks = {"fileGenerationAndUpload", "processData"}
 )
 public class MetricsBackGroundJobActor extends BaseActor {
 
@@ -50,7 +51,7 @@ public class MetricsBackGroundJobActor extends BaseActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
-    Util.initializeContext(request, JsonKey.USER);
+    Util.initializeContext(request, TelemetryEnvKey.USER);
     ExecutionContext.setRequestId(request.getRequestId());
     String operation = request.getOperation();
     ProjectLogger.log("Operation name is ==" + operation);
@@ -78,13 +79,6 @@ public class MetricsBackGroundJobActor extends BaseActor {
       tellToAnother(metricsRequest);
     } else if (JsonKey.OrgConsumption.equalsIgnoreCase(operation)) {
       metricsRequest.setOperation(ActorOperations.ORG_CONSUMPTION_METRICS_DATA.getValue());
-      metricsRequest.setRequest(request);
-      tellToAnother(metricsRequest);
-    } else if (JsonKey.CourseProgress.equalsIgnoreCase(operation)) {
-      metricsRequest.setOperation(ActorOperations.COURSE_PROGRESS_METRICS_DATA.getValue());
-      request.put(JsonKey.COURSE_NAME, actorMessage.getRequest().get(JsonKey.COURSE_NAME));
-      request.put(JsonKey.BATCH_NAME, actorMessage.getRequest().get(JsonKey.BATCH_NAME));
-      request.put(JsonKey.ROOT_ORG_ID, actorMessage.getRequest().get(JsonKey.ROOT_ORG_ID));
       metricsRequest.setRequest(request);
       tellToAnother(metricsRequest);
     }

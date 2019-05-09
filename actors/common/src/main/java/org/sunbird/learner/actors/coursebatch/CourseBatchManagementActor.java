@@ -111,11 +111,10 @@ public class CourseBatchManagementActor extends BaseActor {
 
     validateContentOrg(courseBatch.getCreatedFor());
     validateMentors(courseBatch);
+    Map<String, Object> participantsMap = null;
     if (participants != null) {
       validateParticipants(participants, courseBatch);
-      Map<String, Object> participantsMap = getParticipantsMap(participants, courseBatch);
-
-      courseBatch.setParticipant((Map<String, Boolean>) participantsMap.get(JsonKey.PARTICIPANTS));
+      participantsMap = getParticipantsMap(participants, courseBatch);
     }
 
     Response result = courseBatchDao.create(courseBatch);
@@ -127,16 +126,18 @@ public class CourseBatchManagementActor extends BaseActor {
 
     targetObject =
         TelemetryUtil.generateTargetObject(
-            (String) request.get(JsonKey.ID), JsonKey.BATCH, JsonKey.CREATE, null);
+            courseBatchId, TelemetryEnvKey.BATCH, JsonKey.CREATE, null);
     TelemetryUtil.generateCorrelatedObject(
         (String) request.get(JsonKey.COURSE_ID), JsonKey.COURSE, null, correlatedObject);
-    TelemetryUtil.telemetryProcessingCall(request, targetObject, correlatedObject);
 
     Map<String, String> rollUp = new HashMap<>();
     rollUp.put("l1", (String) request.get(JsonKey.COURSE_ID));
     TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
+    TelemetryUtil.telemetryProcessingCall(request, targetObject, correlatedObject);
 
     if (courseNotificationActive()) {
+      if (participantsMap != null)
+        courseBatch.setParticipant((List<String>) participantsMap.get(JsonKey.PARTICIPANTS));
       batchOperationNotifier(courseBatch, null);
     }
     updateBatchCount(courseBatch);
@@ -175,8 +176,7 @@ public class CourseBatchManagementActor extends BaseActor {
     } else {
       batchNotificationMap.put(JsonKey.OPERATION_TYPE, JsonKey.ADD);
       batchNotificationMap.put(JsonKey.ADDED_MENTORS, courseBatch.getMentors());
-      batchNotificationMap.put(
-          JsonKey.ADDED_PARTICIPANTS, getParticipantsList(courseBatch.getParticipant()));
+      batchNotificationMap.put(JsonKey.ADDED_PARTICIPANTS, courseBatch.getParticipant());
     }
     batchNotificationMap.put(JsonKey.COURSE_BATCH, courseBatch);
     batchNotification.setRequest(batchNotificationMap);
@@ -205,8 +205,6 @@ public class CourseBatchManagementActor extends BaseActor {
         && JsonKey.INVITE_ONLY.equalsIgnoreCase(courseBatch.getEnrollmentType())) {
       validateParticipants(participants, courseBatch);
       participantsMap = getParticipantsMap(participants, courseBatch);
-
-      courseBatch.setParticipant((Map<String, Boolean>) participantsMap.get(JsonKey.PARTICIPANTS));
     } else {
       participantsMap = new HashMap<>();
     }
@@ -227,13 +225,16 @@ public class CourseBatchManagementActor extends BaseActor {
         TelemetryUtil.generateTargetObject(
             (String) request.get(JsonKey.ID), JsonKey.BATCH, JsonKey.UPDATE, null);
 
-    TelemetryUtil.telemetryProcessingCall(courseBatchMap, targetObject, correlatedObject);
-
     Map<String, String> rollUp = new HashMap<>();
     rollUp.put("l1", courseBatch.getCourseId());
     TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
+    TelemetryUtil.telemetryProcessingCall(courseBatchMap, targetObject, correlatedObject);
 
     if (courseNotificationActive()) {
+      if (participants != null
+          && JsonKey.INVITE_ONLY.equalsIgnoreCase(courseBatch.getEnrollmentType())) {
+        courseBatch.setParticipant((List<String>) participantsMap.get(JsonKey.PARTICIPANTS));
+      }
       batchOperationNotifier(courseBatch, participantsMap);
     }
   }
@@ -347,44 +348,43 @@ public class CourseBatchManagementActor extends BaseActor {
           ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
     }
     String batchCreatorRootOrgId = getRootOrg(batchCreator);
-    Map<String, Boolean> participants =
-        (Map<String, Boolean>) courseBatchObject.get(JsonKey.PARTICIPANT);
+    List<String> participants = userCoursesService.getEnrolledUserFromBatch(courseBatch.getId());
+    courseBatch.setParticipant(participants);
     List<String> userIds = (List<String>) req.get(JsonKey.USER_IDs);
     if (participants == null) {
-      participants = new HashMap<>();
+      participants = new ArrayList<>();
     }
     Map<String, String> participantWithRootOrgIds = getRootOrgForMultipleUsers(userIds);
-
+    List<String> addedParticipants = new ArrayList<>();
     for (String userId : userIds) {
-      if (!(participants.containsKey(userId))) {
+      if (!(participants.contains(userId))) {
         if (!participantWithRootOrgIds.containsKey(userId)
             || (!batchCreatorRootOrgId.equals(participantWithRootOrgIds.get(userId)))) {
           response.put(userId, ResponseCode.userNotAssociatedToRootOrg.getErrorMessage());
           continue;
         }
-
-        participants.put(
-            userId,
-            userCoursesService.enroll(
-                batchId,
-                (String) courseBatchObject.get(JsonKey.COURSE_ID),
-                userId,
-                (Map<String, String>) (courseBatchObject.get(JsonKey.COURSE_ADDITIONAL_INFO))));
-
-        response.getResult().put(userId, JsonKey.SUCCESS);
-
-        targetObject =
-            TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
-        correlatedObject = new ArrayList<>();
-        TelemetryUtil.generateCorrelatedObject(batchId, JsonKey.BATCH, null, correlatedObject);
-        TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
+        addedParticipants.add(userId);
 
       } else {
         response.getResult().put(userId, JsonKey.SUCCESS);
       }
     }
-    courseBatchObject.put(JsonKey.PARTICIPANT, participants);
-    courseBatchDao.update(courseBatchObject);
+
+    userCoursesService.enroll(
+        batchId,
+        (String) courseBatchObject.get(JsonKey.COURSE_ID),
+        addedParticipants,
+        (Map<String, String>) (courseBatchObject.get(JsonKey.COURSE_ADDITIONAL_INFO)));
+    for (String userId : addedParticipants) {
+      participants.add(userId);
+      response.getResult().put(userId, JsonKey.SUCCESS);
+
+      targetObject = TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
+      correlatedObject = new ArrayList<>();
+      TelemetryUtil.generateCorrelatedObject(batchId, JsonKey.BATCH, null, correlatedObject);
+      TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
+    }
+
     sender().tell(response, self());
     Request request = new Request();
     request.setOperation(ActorOperations.UPDATE_COURSE_BATCH_ES.getValue());
@@ -405,16 +405,15 @@ public class CourseBatchManagementActor extends BaseActor {
     }
   }
 
-  private Map<String, Boolean> getAddedParticipants(
-      Map<String, Boolean> participants, CourseBatch courseBatch) {
-    Map<String, Boolean> currentParticipants = courseBatch.getParticipant();
+  private List<String> getAddedParticipants(List<String> participants, CourseBatch courseBatch) {
+    List<String> currentParticipants = courseBatch.getParticipant();
     if (participants == null) return courseBatch.getParticipant();
     else if (currentParticipants == null || currentParticipants.isEmpty()) {
       return participants;
     } else {
-      Set<String> keys = currentParticipants.keySet();
-      for (String key : keys) {
-        if (participants.containsKey(key)) {
+
+      for (String key : currentParticipants) {
+        if (participants.contains(key)) {
           participants.remove(key);
         }
       }
@@ -430,6 +429,12 @@ public class CourseBatchManagementActor extends BaseActor {
             (String) actorMessage.getContext().get(JsonKey.BATCH_ID));
     Response response = new Response();
     if (null != result) {
+      if (JsonKey.INVITE_ONLY.equalsIgnoreCase((String) result.get(JsonKey.ENROLLMENT_TYPE))) {
+        List<String> participants =
+            userCoursesService.getEnrolledUserFromBatch(
+                (String) actorMessage.getContext().get(JsonKey.BATCH_ID));
+        result.put(JsonKey.PARTICIPANTS, participants);
+      }
       response.put(JsonKey.RESPONSE, result);
     } else {
       result = new HashMap<>();
@@ -508,34 +513,37 @@ public class CourseBatchManagementActor extends BaseActor {
       List<String> participants, CourseBatch courseBatchObject) {
     Map<String, Object> participantsList = new HashMap<>();
     String batchId = courseBatchObject.getId();
-    Map<String, Boolean> dbParticipants = courseBatchObject.getParticipant();
-    if (dbParticipants == null) {
-      dbParticipants = new HashMap();
+    List<String> dbParticipants = getParticipantsFromUserCourses(courseBatchObject.getId());
+    if (CollectionUtils.isEmpty(dbParticipants)) {
+      dbParticipants = new ArrayList<>();
     }
-    Map<String, Boolean> finalParticipants = new HashMap<>();
-    Map<String, Boolean> addedParticipants = new HashMap<>();
+    List<String> finalParticipants = new ArrayList<>();
+    List<String> addedParticipants = new ArrayList<>();
     for (String userId : participants) {
-      if (!(dbParticipants.containsKey(userId))) {
-        finalParticipants.put(
-            userId,
-            userCoursesService.enroll(
-                batchId,
-                courseBatchObject.getCourseId(),
-                userId,
-                (courseBatchObject.getCourseAdditionalInfo())));
-        addedParticipants.put(userId, finalParticipants.get(userId));
+      if (!(dbParticipants.contains(userId))) {
+        finalParticipants.add(userId);
+        addedParticipants.add(userId);
       } else {
-        finalParticipants.put(userId, dbParticipants.get(userId));
+        finalParticipants.add(userId);
         dbParticipants.remove(userId);
       }
     }
+    userCoursesService.enroll(
+        batchId,
+        courseBatchObject.getCourseId(),
+        addedParticipants,
+        (courseBatchObject.getCourseAdditionalInfo()));
     if (!dbParticipants.isEmpty()) {
       removeParticipants(dbParticipants, batchId, courseBatchObject.getCourseId());
     }
-    participantsList.put(JsonKey.REMOVED_PARTICIPANTS, getParticipantsList(dbParticipants));
-    participantsList.put(JsonKey.ADDED_PARTICIPANTS, getParticipantsList(addedParticipants));
+    participantsList.put(JsonKey.REMOVED_PARTICIPANTS, dbParticipants);
+    participantsList.put(JsonKey.ADDED_PARTICIPANTS, addedParticipants);
     participantsList.put(JsonKey.PARTICIPANTS, finalParticipants);
     return participantsList;
+  }
+
+  private List<String> getParticipantsFromUserCourses(String id) {
+    return userCoursesService.getEnrolledUserFromBatch(id);
   }
 
   private List<String> getParticipantsList(Map<String, Boolean> participantsMap) {
@@ -579,9 +587,9 @@ public class CourseBatchManagementActor extends BaseActor {
   }
 
   private void removeParticipants(
-      Map<String, Boolean> removedParticipant, String batchId, String courseId) {
+      List<String> removedParticipant, String batchId, String courseId) {
     removedParticipant.forEach(
-        (userId, aBoolean) -> {
+        (userId) -> {
           new UserCoursesService().unenroll(userId, courseId, batchId);
         });
   }

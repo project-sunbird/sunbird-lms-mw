@@ -14,6 +14,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -32,7 +33,7 @@ import org.sunbird.learner.util.Util.DbInfo;
 import scala.concurrent.duration.FiniteDuration;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({ServiceFactory.class, ElasticSearchUtil.class})
+@PrepareForTest({ServiceFactory.class, ElasticSearchUtil.class, Util.class})
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*", "javax.security.*"})
 public class UserBadgeAssertionTest {
 
@@ -82,6 +83,41 @@ public class UserBadgeAssertionTest {
         .thenReturn(true);
     Props props = Props.create(UserBadgeAssertion.class);
     subject = system.actorOf(props);
+  }
+
+  @Test
+  public void checkTelemetryKeyFailure() throws Exception {
+    result = new HashMap<>();
+    String telemetryEnvKey = "user";
+
+    PowerMockito.mockStatic(Util.class);
+    PowerMockito.doNothing()
+        .when(
+            Util.class,
+            "initializeContext",
+            Mockito.any(Request.class),
+            Mockito.eq(telemetryEnvKey));
+    List<Map<String, Object>> badgeAssertionsList = new ArrayList<>();
+    Map<String, Object> tempMap = new HashMap<>();
+    tempMap.put(JsonKey.ID, getUserBadgeAssertionId(badge));
+    badgeAssertionsList.add(tempMap);
+    result.put(BadgingJsonKey.BADGE_ASSERTIONS, badgeAssertionsList);
+    PowerMockito.when(
+            ElasticSearchUtil.getDataByIdentifier(
+                ProjectUtil.EsIndex.sunbird.getIndexName(),
+                ProjectUtil.EsType.user.getTypeName(),
+                "userId-123"))
+        .thenReturn(result);
+    PowerMockito.when(
+            cassandraOperation.insertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), tempMap))
+        .thenReturn(new Response());
+
+    actorMessage.setOperation(BadgeOperations.assignBadgeToUser.name());
+
+    subject.tell(actorMessage, probe.getRef());
+
+    probe.expectMsgClass(ACTOR_MAX_WAIT_DURATION, Response.class);
+    Assert.assertTrue(!(telemetryEnvKey.charAt(0) >= 65 && telemetryEnvKey.charAt(0) <= 90));
   }
 
   @Test

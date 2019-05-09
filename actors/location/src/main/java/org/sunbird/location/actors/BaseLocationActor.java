@@ -62,7 +62,8 @@ public abstract class BaseLocationActor extends BaseActor {
   }
 
   private List<Map<String, Object>> generateTopNResult(Map<String, Object> result) {
-    List<Map<String, Object>> dataMapList = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+    List<Map<String, Object>> dataMapList =
+        (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
     Integer topN =
         Integer.parseInt(PropertiesCache.getInstance().getProperty(JsonKey.SEARCH_TOP_N));
     int count = Math.min(topN, dataMapList.size());

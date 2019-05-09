@@ -12,12 +12,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.HttpUtil;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -40,7 +35,7 @@ public class HealthActor extends BaseActor {
       try {
         ProjectLogger.log("AssessmentItemActor onReceive called");
         Request actorMessage = message;
-        Util.initializeContext(actorMessage, JsonKey.USER);
+        Util.initializeContext(actorMessage, TelemetryEnvKey.USER);
         // set request id fto thread loacl...
         ExecutionContext.setRequestId(actorMessage.getRequestId());
         if (actorMessage.getOperation().equalsIgnoreCase(ActorOperations.HEALTH_CHECK.getValue())) {

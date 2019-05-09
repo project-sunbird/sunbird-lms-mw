@@ -49,6 +49,7 @@ import scala.concurrent.Future;
   ContentSearchUtil.class,
   PageCacheLoaderService.class
 })
+@Ignore
 @PowerMockIgnore({"javax.management.*"})
 public class PageManagementActorTest {
 
@@ -67,7 +68,6 @@ public class PageManagementActorTest {
 
   @BeforeClass
   public static void beforeClass() {
-    PowerMockito.mockStatic(PageCacheLoaderService.class);
     PowerMockito.mockStatic(ServiceFactory.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
     PowerMockito.mockStatic(ContentSearchUtil.class);

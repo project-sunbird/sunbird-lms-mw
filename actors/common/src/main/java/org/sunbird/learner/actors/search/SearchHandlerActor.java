@@ -1,5 +1,7 @@
 package org.sunbird.learner.actors.search;
 
+import akka.dispatch.Mapper;
+import akka.pattern.Patterns;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -15,8 +17,14 @@ import org.sunbird.actorutil.org.OrganisationClient;
 import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
+import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.dto.SearchDTO;
@@ -26,6 +34,7 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
 import org.sunbird.telemetry.util.TelemetryLmaxWriter;
 import org.sunbird.telemetry.util.TelemetryUtil;
+import scala.concurrent.Future;
 
 /**
  * This class will handle search operation for all different type of index and types
@@ -66,53 +75,83 @@ public class SearchHandlerActor extends BaseActor {
         if (EsType.user.getTypeName().equalsIgnoreCase(type)) {
           filterObjectType = EsType.user.getTypeName();
           UserUtility.encryptUserSearchFilterQueryData(searchQueryMap);
-        }
-        if (EsType.course.getTypeName().equalsIgnoreCase(type)) {
+        } else if (EsType.course.getTypeName().equalsIgnoreCase(type)) {
           filterObjectType = EsType.course.getTypeName();
+        } else if (EsType.organisation.getTypeName().equalsIgnoreCase(type)) {
+          filterObjectType = EsType.organisation.getTypeName();
         }
       }
       SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
       if (filterObjectType.equalsIgnoreCase(EsType.user.getTypeName())) {
         searchDto.setExcludedFields(Arrays.asList(ProjectUtil.excludes));
       }
-      Map<String, Object> result =
-          ElasticSearchUtil.complexSearch(
-              searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), types);
-      // Decrypt the data
-      if (EsType.user.getTypeName().equalsIgnoreCase(filterObjectType)) {
-        List<Map<String, Object>> userMapList =
-            (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-        for (Map<String, Object> userMap : userMapList) {
-          UserUtility.decryptUserDataFrmES(userMap);
-          userMap.remove(JsonKey.ENC_EMAIL);
-          userMap.remove(JsonKey.ENC_PHONE);
-        }
-        updateUserDetailsWithOrgName(requestedFields, userMapList);
-      }
-      if (EsType.course.getTypeName().equalsIgnoreCase(filterObjectType)) {
-        if (JsonKey.PARTICIPANTS.equalsIgnoreCase(
-            (String) request.getContext().get(JsonKey.PARTICIPANTS))) {
-          List<Map<String, Object>> courseBatchList =
+      Map<String, Object> result = null;
+      if (EsType.organisation.getTypeName().equalsIgnoreCase(filterObjectType)) {
+        handleOrgSearchAsyncRequest(
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            EsType.organisation.getTypeName(),
+            searchDto);
+      } else {
+        result =
+            ElasticSearchUtil.complexSearch(
+                searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), types);
+        // Decrypt the data
+        if (EsType.user.getTypeName().equalsIgnoreCase(filterObjectType)) {
+          List<Map<String, Object>> userMapList =
               (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-          for (Map<String, Object> courseBatch : courseBatchList) {
-            courseBatch.put(
-                JsonKey.PARTICIPANTS, getParticipantList((String) courseBatch.get(JsonKey.ID)));
+          for (Map<String, Object> userMap : userMapList) {
+            UserUtility.decryptUserDataFrmES(userMap);
+            userMap.remove(JsonKey.ENC_EMAIL);
+            userMap.remove(JsonKey.ENC_PHONE);
+          }
+          updateUserDetailsWithOrgName(requestedFields, userMapList);
+        }
+        if (EsType.course.getTypeName().equalsIgnoreCase(filterObjectType)) {
+          if (JsonKey.PARTICIPANTS.equalsIgnoreCase(
+              (String) request.getContext().get(JsonKey.PARTICIPANTS))) {
+            List<Map<String, Object>> courseBatchList =
+                (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+            for (Map<String, Object> courseBatch : courseBatchList) {
+              courseBatch.put(
+                  JsonKey.PARTICIPANTS, getParticipantList((String) courseBatch.get(JsonKey.ID)));
+            }
           }
         }
+        Response response = new Response();
+        if (result != null) {
+          response.put(JsonKey.RESPONSE, result);
+        } else {
+          result = new HashMap<>();
+          response.put(JsonKey.RESPONSE, result);
+        }
+        sender().tell(response, self());
+        // create search telemetry event here ...
+        generateSearchTelemetryEvent(searchDto, types, result);
       }
-      Response response = new Response();
-      if (result != null) {
-        response.put(JsonKey.RESPONSE, result);
-      } else {
-        result = new HashMap<>();
-        response.put(JsonKey.RESPONSE, result);
-      }
-      sender().tell(response, self());
-      // create search telemetry event here ...
-      generateSearchTelemetryEvent(searchDto, types, result);
     } else {
       onReceiveUnsupportedOperation(request.getOperation());
     }
+  }
+
+  private void handleOrgSearchAsyncRequest(
+      String indexName, String indexType, SearchDTO searchDto) {
+    Future<Map<String, Object>> futureResponse =
+        ElasticSearchUtil.doAsyncSearch(indexName, indexType, searchDto);
+    Future<Response> response =
+        futureResponse.map(
+            new Mapper<Map<String, Object>, Response>() {
+              @Override
+              public Response apply(Map<String, Object> responseMap) {
+                ProjectLogger.log(
+                    "SearchHandlerActor:handleOrgSearchAsyncRequest org search call ",
+                    LoggerEnum.INFO);
+                Response response = new Response();
+                response.put(JsonKey.RESPONSE, responseMap);
+                return response;
+              }
+            },
+            getContext().dispatcher());
+    Patterns.pipe(response, getContext().dispatcher()).to(sender());
   }
 
   private List<String> getParticipantList(String id) {

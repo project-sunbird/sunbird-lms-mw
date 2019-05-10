@@ -9,8 +9,6 @@ import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.user.UserClient;
 import org.sunbird.actorutil.user.impl.UserClientImpl;
-import org.sunbird.cache.CacheFactory;
-import org.sunbird.cache.interfaces.Cache;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -21,6 +19,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.systemsetting.SystemSetting;
+import org.sunbird.redis.JedisCache;
 import org.sunbird.systemsettings.dao.impl.SystemSettingDaoImpl;
 
 @ActorConfig(
@@ -33,7 +32,7 @@ public class SystemSettingsActor extends BaseActor {
   private UserClient userClient = new UserClientImpl();
   private final SystemSettingDaoImpl systemSettingDaoImpl =
       new SystemSettingDaoImpl(cassandraOperation);
-  private Cache cache = CacheFactory.getInstance();
+  JedisCache cache = new JedisCache();
 
   @Override
   public void preStart() throws Exception {
@@ -96,6 +95,7 @@ public class SystemSettingsActor extends BaseActor {
             setting);
       }
     }
+
     if (setting == null) {
       throw new ProjectCommonException(
           ResponseCode.resourceNotFound.getErrorCode(),

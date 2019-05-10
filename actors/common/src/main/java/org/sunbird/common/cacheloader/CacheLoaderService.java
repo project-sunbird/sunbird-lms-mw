@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.commons.collections.CollectionUtils;
-import org.sunbird.cache.CacheFactory;
 import org.sunbird.cache.interfaces.Cache;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
@@ -24,7 +23,7 @@ public class CacheLoaderService implements Runnable {
   private static boolean isCacheEnabled =
       Boolean.parseBoolean(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_CACHE_ENABLE));
 
-  private static Cache cache = CacheFactory.getInstance();
+  private static Cache cache = null;
 
   @SuppressWarnings("unchecked")
   public Map<String, Map<String, Object>> cacheLoader(String tableName) {

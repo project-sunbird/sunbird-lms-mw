@@ -445,13 +445,16 @@ public class OrganisationManagementActor extends BaseActor {
         Request orgReq = new Request();
         orgReq.getRequest().put(JsonKey.ORGANISATION, request);
         orgReq.setOperation(ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue());
-        ProjectLogger.log("OrganisationManagementActor:createOrg: Calling background job to sync org data " + uniqueId,
+        ProjectLogger.log(
+            "OrganisationManagementActor:createOrg: Calling background job to sync org data "
+                + uniqueId,
             LoggerEnum.INFO);
         tellToAnother(orgReq);
       }
     } catch (ProjectCommonException e) {
       ProjectLogger.log(
-          "OrganisationManagementActor:createOrg: Error occurred = " + e.getMessage(), LoggerEnum.INFO);
+          "OrganisationManagementActor:createOrg: Error occurred = " + e.getMessage(),
+          LoggerEnum.INFO);
       sender().tell(e, self());
       return;
     }
@@ -1795,8 +1798,8 @@ public class OrganisationManagementActor extends BaseActor {
             ResponseCode.invalidChannel.getErrorMessage(),
             ResponseCode.CLIENT_ERROR.getResponseCode());
       }
-      int status = (int) rootOrg.get(JsonKey.STATUS);
-      if (1 != status) {
+      Object status = rootOrg.get(JsonKey.STATUS);
+      if (null != status && 1 != (Integer) status) {
         ProjectCommonException.throwClientErrorException(
             ResponseCode.errorInactiveOrg,
             ProjectUtil.formatMessage(

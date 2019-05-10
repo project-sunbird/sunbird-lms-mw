@@ -2,7 +2,9 @@ package org.sunbird.systemsettings.actors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.text.MessageFormat;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.sunbird.actor.core.BaseActor;
@@ -10,11 +12,14 @@ import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.user.UserClient;
 import org.sunbird.actorutil.user.impl.UserClientImpl;
 import org.sunbird.cache.CacheFactory;
-import org.sunbird.cache.interfaces.Cache;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -50,6 +55,25 @@ public class SystemSettingsActor extends BaseActor {
       ProjectLogger.log(
           "SystemSettingsActor:getSystemSetting: Error occurred = " + e.getMessage(),
           LoggerEnum.ERROR.name());
+    }
+  }
+
+  private Map<String, SystemSetting> systemSettingsCache = new HashMap<String, SystemSetting>();
+
+  @Override
+  public void preStart() throws Exception {
+    super.preStart();
+    try {
+      List<SystemSetting> settings = systemSettingDaoImpl.readAll();
+      System.out.println("SystemSettings count: " + settings.size());
+      if (CollectionUtils.isNotEmpty(settings)) {
+        settings
+            .stream()
+            .map(f -> systemSettingsCache.put(f.getField(), f))
+            .collect(Collectors.toList());
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
     }
   }
 

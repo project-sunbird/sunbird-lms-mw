@@ -48,7 +48,8 @@ import scala.concurrent.Promise;
     "getSection",
     "getAllSection"
   },
-  asyncTasks = {}
+  asyncTasks = {},
+  dispatcher = "page-mgr-actor-dispatcher"
 )
 public class PageManagementActor extends BaseActor {
 
@@ -58,8 +59,6 @@ public class PageManagementActor extends BaseActor {
   private Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private ObjectMapper mapper = new ObjectMapper();
-  private boolean isCacheEnabled =
-      Boolean.parseBoolean(ProjectUtil.propertiesCache.getProperty(JsonKey.SUNBIRD_CACHE_ENABLE));
 
   @Override
   public void onReceive(Request request) throws Throwable {

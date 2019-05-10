@@ -34,7 +34,6 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 
-// @Ignore
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({ServiceFactory.class, ElasticSearchUtil.class})
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*", "javax.security.*"})
@@ -83,7 +82,6 @@ public class LocationActorTest {
     Map<String, Object> res = new HashMap<>(data);
     res.remove(GeoLocationJsonKey.PARENT_CODE);
     res.remove(GeoLocationJsonKey.PARENT_ID);
-    //    res.put(GeoLocationJsonKey.LOCATION_TYPE, "state");
     boolean result = testScenario(LocationActorOperation.CREATE_LOCATION, true, null, null);
     assertTrue(result);
   }
@@ -91,7 +89,6 @@ public class LocationActorTest {
   @Test
   public void testUpdateLocationSuccess() {
 
-    //    data.put(GeoLocationJsonKey.LOCATION_TYPE, "state");
     boolean result = testScenario(LocationActorOperation.UPDATE_LOCATION, true, data, null);
     assertTrue(result);
   }
@@ -99,7 +96,6 @@ public class LocationActorTest {
   @Test
   public void testDeleteLocationSuccess() {
 
-    //    data.put(GeoLocationJsonKey.LOCATION_TYPE, "state");
     boolean result = testScenario(LocationActorOperation.DELETE_LOCATION, true, data, null);
     assertTrue(result);
   }
@@ -107,7 +103,6 @@ public class LocationActorTest {
   @Test
   public void testSearchLocationSuccess() {
 
-    //    data.put(GeoLocationJsonKey.LOCATION_TYPE, "state");
     boolean result = testScenario(LocationActorOperation.SEARCH_LOCATION, true, data, null);
     assertTrue(result);
   }
@@ -138,7 +133,6 @@ public class LocationActorTest {
   @Test
   public void testCreateLocationFailureWithParentLocationNotAllowed() {
 
-    //    data.put(GeoLocationJsonKey.LOCATION_TYPE, "state");
     data.put(GeoLocationJsonKey.PARENT_CODE, "anyCode");
     boolean result =
         testScenario(

@@ -269,11 +269,9 @@ public class PageManagementActor extends BaseActor {
       orgId = "NA";
     }
     ProjectLogger.log("Fetching data from Cache for " + orgId + ":" + pageName, LoggerEnum.INFO);
-    Map<String, Object> pageMapData =
+      Map<String, Object> pageMap =
         CacheLoaderService.getDataFromCache(
             ActorOperations.GET_PAGE_DATA.getValue(), orgId + ":" + pageName, Map.class);
-
-    Map<String, Object> pageMap = pageMapData;
 
     if (null == pageMap) {
       throw new ProjectCommonException(
@@ -305,24 +303,7 @@ public class PageManagementActor extends BaseActor {
           ResponseCode.errorInvalidPageSection.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
-    int requestHashCode = 0;
-    if (isCacheEnabled) {
-      Map<String, Object> reqMap = new HashMap<>();
-      reqMap.put(JsonKey.SECTION, arr);
-      reqMap.put(JsonKey.FILTERS, reqFilters);
-      reqMap.put(JsonKey.HEADER, headers);
-      reqMap.put(JsonKey.FILTER, filterMap);
-      reqMap.put(JsonKey.URL_QUERY_STRING, urlQueryString);
-      requestHashCode = JsonUtil.getHashCode(reqMap);
-      Response cachedResponse =
-          CacheLoaderService.getDataFromCache(
-              JsonKey.SECTIONS, String.valueOf(requestHashCode), Response.class);
-      if (cachedResponse != null) {
-        sender().tell(cachedResponse, self());
-        return;
-      }
-    }
-    int reqHashCode = requestHashCode;
+
     try {
       List<Future<Map<String, Object>>> sectionList = new ArrayList<>();
       if (arr != null) {
@@ -330,8 +311,7 @@ public class PageManagementActor extends BaseActor {
           Map<String, Object> sectionMap = (Map<String, Object>) obj;
 
           if (MapUtils.isNotEmpty(sectionMap)) {
-            Map<String, Object> sectionData = null;
-            sectionData =
+            Map<String, Object> sectionData =
                 CacheLoaderService.getDataFromCache(
                     ActorOperations.GET_SECTION.getValue(),
                     (String) sectionMap.get(JsonKey.ID),
@@ -371,8 +351,6 @@ public class PageManagementActor extends BaseActor {
                   ProjectLogger.log(
                       "PageManagementActor:getPageData:apply: Response before caching it = " + response,
                       LoggerEnum.INFO);
-                  CacheLoaderService.putDataIntoCache(
-                      JsonKey.SECTIONS, String.valueOf(reqHashCode), response);
                   return response;
                 }
               },
@@ -596,24 +574,24 @@ public class PageManagementActor extends BaseActor {
       Object group,
       Object index)
       throws Exception {
-    Map<String, Object> map = new HashMap<>();
-    map = mapper.readValue((String) section.get(JsonKey.SEARCH_QUERY), HashMap.class);
-    Set<Entry<String, Object>> filterEntrySet = filterMap.entrySet();
-    for (Entry<String, Object> entry : filterEntrySet) {
+    Map<String, Object> searchQueryMap = mapper.readValue((String) section.get(JsonKey.SEARCH_QUERY), HashMap.class);
+    if (MapUtils.isEmpty(searchQueryMap)) {
+        searchQueryMap = new HashMap<String, Object>();
+        searchQueryMap.put(JsonKey.REQUEST, new HashMap<String, Object>());
+    }
+    Map<String, Object> request = (Map<String, Object>) searchQueryMap.get(JsonKey.REQUEST);
+
+    for (Entry<String, Object> entry : filterMap.entrySet()) {
       if (!entry.getKey().equalsIgnoreCase(JsonKey.FILTERS)) {
-        ((Map<String, Object>) map.get(JsonKey.REQUEST)).put(entry.getKey(), entry.getValue());
+          request.put(entry.getKey(), entry.getValue());
       }
     }
-    Map<String, Object> filters =
-        (Map<String, Object>) ((Map<String, Object>) map.get(JsonKey.REQUEST)).get(JsonKey.FILTERS);
-    ProjectLogger.log(
-        "default search query for ekstep for page data assemble api : "
-            + (String) section.get(JsonKey.SEARCH_QUERY),
-        LoggerEnum.INFO.name());
-    applyFilters(filters, reqFilters);
-    String queryRequestBody = "";
+    request.put("limit", 10);
 
-    queryRequestBody = mapper.writeValueAsString(map);
+    Map<String, Object> filters = (Map<String, Object>) request.get(JsonKey.FILTERS);
+
+    applyFilters(filters, reqFilters);
+    String queryRequestBody = mapper.writeValueAsString(searchQueryMap);
     if (StringUtils.isBlank(queryRequestBody)) {
       queryRequestBody = (String) section.get(JsonKey.SEARCH_QUERY);
     }
@@ -649,7 +627,7 @@ public class PageManagementActor extends BaseActor {
           getContext().dispatcher());
     } else {
       Map<String, Object> esResponse =
-          searchFromES((Map<String, Object>) map.get(JsonKey.REQUEST), dataSource);
+          searchFromES((Map<String, Object>) searchQueryMap.get(JsonKey.REQUEST), dataSource);
       section.put(JsonKey.COUNT, esResponse.get(JsonKey.COUNT));
       section.put(JsonKey.CONTENTS, esResponse.get(JsonKey.CONTENT));
       removeUnwantedData(section, "getPageData");

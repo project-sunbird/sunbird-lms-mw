@@ -6,7 +6,6 @@ import java.util.concurrent.TimeUnit;
 import org.sunbird.common.cacheloader.CacheLoaderService;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.helper.ConnectionManager;
 
 /** @author Manzarul All the scheduler job will be handle by this class. */
 public class SchedulerManager {
@@ -17,7 +16,6 @@ public class SchedulerManager {
    * service ScheduledExecutorService object
    */
   public static ScheduledExecutorService service = ExecutorManager.getExecutorService();
-  public static ConnectionManager connectionManager;
 
   /** all scheduler job will be configure here. */
   public static void schedule() {

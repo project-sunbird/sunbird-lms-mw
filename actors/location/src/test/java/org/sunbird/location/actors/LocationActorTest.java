@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.Map;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -35,7 +34,6 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 
-@Ignore
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({ServiceFactory.class, ElasticSearchUtil.class})
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*", "javax.security.*"})
@@ -43,7 +41,7 @@ public class LocationActorTest {
 
   private static final ActorSystem system = ActorSystem.create("system");
   private static final Props props = Props.create(LocationActor.class);
-  private static Map<String, Object> data = getDataMap();
+  private static Map<String, Object> data;
 
   @BeforeClass
   public static void init() {
@@ -76,6 +74,7 @@ public class LocationActorTest {
     when(ElasticSearchUtil.getDataByIdentifier(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(esRespone);
+    data = getDataMap();
   }
 
   @Test
@@ -83,7 +82,6 @@ public class LocationActorTest {
     Map<String, Object> res = new HashMap<>(data);
     res.remove(GeoLocationJsonKey.PARENT_CODE);
     res.remove(GeoLocationJsonKey.PARENT_ID);
-    res.put(GeoLocationJsonKey.LOCATION_TYPE, "state");
     boolean result = testScenario(LocationActorOperation.CREATE_LOCATION, true, null, null);
     assertTrue(result);
   }
@@ -91,7 +89,6 @@ public class LocationActorTest {
   @Test
   public void testUpdateLocationSuccess() {
 
-    data.put(GeoLocationJsonKey.LOCATION_TYPE, "state");
     boolean result = testScenario(LocationActorOperation.UPDATE_LOCATION, true, data, null);
     assertTrue(result);
   }
@@ -99,7 +96,6 @@ public class LocationActorTest {
   @Test
   public void testDeleteLocationSuccess() {
 
-    data.put(GeoLocationJsonKey.LOCATION_TYPE, "state");
     boolean result = testScenario(LocationActorOperation.DELETE_LOCATION, true, data, null);
     assertTrue(result);
   }
@@ -107,7 +103,6 @@ public class LocationActorTest {
   @Test
   public void testSearchLocationSuccess() {
 
-    data.put(GeoLocationJsonKey.LOCATION_TYPE, "state");
     boolean result = testScenario(LocationActorOperation.SEARCH_LOCATION, true, data, null);
     assertTrue(result);
   }
@@ -138,7 +133,6 @@ public class LocationActorTest {
   @Test
   public void testCreateLocationFailureWithParentLocationNotAllowed() {
 
-    data.put(GeoLocationJsonKey.LOCATION_TYPE, "state");
     data.put(GeoLocationJsonKey.PARENT_CODE, "anyCode");
     boolean result =
         testScenario(

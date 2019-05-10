@@ -58,25 +58,6 @@ public class SystemSettingsActor extends BaseActor {
     }
   }
 
-  private Map<String, SystemSetting> systemSettingsCache = new HashMap<String, SystemSetting>();
-
-  @Override
-  public void preStart() throws Exception {
-    super.preStart();
-    try {
-      List<SystemSetting> settings = systemSettingDaoImpl.readAll();
-      System.out.println("SystemSettings count: " + settings.size());
-      if (CollectionUtils.isNotEmpty(settings)) {
-        settings
-            .stream()
-            .map(f -> systemSettingsCache.put(f.getField(), f))
-            .collect(Collectors.toList());
-      }
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
-  }
-
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, TelemetryEnvKey.SYSTEM_SETTINGS);

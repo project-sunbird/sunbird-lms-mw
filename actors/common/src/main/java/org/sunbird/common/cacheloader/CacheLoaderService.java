@@ -23,6 +23,7 @@ public class CacheLoaderService implements Runnable {
   private static final String KEY_SPACE_NAME = "sunbird";
   private static boolean isCacheEnabled =
       Boolean.parseBoolean(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_CACHE_ENABLE));
+
   private static Cache cache = CacheFactory.getInstance();
 
   @SuppressWarnings("unchecked")
@@ -88,7 +89,7 @@ public class CacheLoaderService implements Runnable {
     } catch (Exception e) {
       ProjectLogger.log(
           "CacheLoaderService:clearCache: Error occurred = " + e.getMessage(),
-          LoggerEnum.INFO.name());
+          LoggerEnum.ERROR.name());
     }
   }
 

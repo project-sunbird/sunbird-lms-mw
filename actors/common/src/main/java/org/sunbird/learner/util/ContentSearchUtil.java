@@ -1,7 +1,6 @@
 package org.sunbird.learner.util;
 
 
-import akka.dispatch.ExecutionContexts;
 import akka.dispatch.Mapper;
 import com.mashape.unirest.http.HttpResponse;
 import com.mashape.unirest.http.JsonNode;
@@ -23,20 +22,17 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.RestUtil;
-import scala.concurrent.ExecutionContext;
+import scala.concurrent.ExecutionContextExecutor;
 import scala.concurrent.Future;
 
-import java.util.concurrent.ForkJoinPool;
 
 
 /** @author Mahesh Kumar Gangula */
 public class ContentSearchUtil {
 
   private static String contentSearchURL = null;
-  private static ExecutionContext executionContext = null;
 
   static {
-    executionContext = ExecutionContexts.fromExecutor(new ForkJoinPool(3));
     String baseUrl = System.getenv(JsonKey.SUNBIRD_API_MGR_BASE_URL);
     String searchPath = System.getenv(JsonKey.SUNBIRD_CS_SEARCH_PATH);
     if (StringUtils.isBlank(searchPath))
@@ -57,12 +53,12 @@ public class ContentSearchUtil {
   }
 
   public static Future<Map<String, Object>> searchContent(
-      String queryRequestBody, Map<String, String> headers) {
-    return searchContent(null, queryRequestBody, headers);
+      String queryRequestBody, Map<String, String> headers, ExecutionContextExecutor ec) {
+    return searchContent(null, queryRequestBody, headers, ec);
   }
 
   public static Future<Map<String, Object>> searchContent(
-String urlQueryString, String queryRequestBody, Map<String, String> headers) {
+String urlQueryString, String queryRequestBody, Map<String, String> headers, ExecutionContextExecutor ec) {
     String logMsgPrefix = "ContentSearchUtil:searchContent: ";
 
     Unirest.clearDefaultHeaders();
@@ -72,7 +68,6 @@ String urlQueryString, String queryRequestBody, Map<String, String> headers) {
             : contentSearchURL;
     BaseRequest request =
         Unirest.post(urlString).headers(getUpdatedHeaders(headers)).body(queryRequestBody);
-    Unirest.setTimeouts(120000,120000);
     Future<HttpResponse<JsonNode>> response = RestUtil.executeAsync(request);
 
     return response.map(
@@ -104,7 +99,7 @@ String urlQueryString, String queryRequestBody, Map<String, String> headers) {
               return null;
             }
           }
-        }, executionContext);
+        }, ec);
   }
 
   public static Map<String, Object> searchContentSync(

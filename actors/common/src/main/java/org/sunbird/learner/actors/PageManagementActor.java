@@ -27,6 +27,7 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ContentSearchUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.telemetry.util.TelemetryUtil;
+import scala.concurrent.ExecutionContextExecutor;
 import scala.concurrent.Future;
 import scala.concurrent.Promise;
 
@@ -323,7 +324,7 @@ public class PageManagementActor extends BaseActor {
                       filterMap,
                       urlQueryString,
                       sectionMap.get(JsonKey.GROUP),
-                      sectionMap.get(JsonKey.INDEX));
+                      sectionMap.get(JsonKey.INDEX), context().dispatcher());
               sectionList.add(contentFuture);
             }
           }
@@ -564,13 +565,13 @@ public class PageManagementActor extends BaseActor {
 
   @SuppressWarnings("unchecked")
   private Future<Map<String, Object>> getContentData(
-      Map<String, Object> section,
-      Map<String, Object> reqFilters,
-      Map<String, String> headers,
-      Map<String, Object> filterMap,
-      String urlQueryString,
-      Object group,
-      Object index)
+          Map<String, Object> section,
+          Map<String, Object> reqFilters,
+          Map<String, String> headers,
+          Map<String, Object> filterMap,
+          String urlQueryString,
+          Object group,
+          Object index, ExecutionContextExecutor ec)
       throws Exception {
     Map<String, Object> searchQueryMap = mapper.readValue((String) section.get(JsonKey.SEARCH_QUERY), HashMap.class);
     if (MapUtils.isEmpty(searchQueryMap)) {
@@ -600,7 +601,7 @@ public class PageManagementActor extends BaseActor {
     section.put(JsonKey.INDEX, index);
     if (StringUtils.isEmpty(dataSource) || JsonKey.CONTENT.equalsIgnoreCase(dataSource)) {
 
-      result = ContentSearchUtil.searchContent(urlQueryString, queryRequestBody, headers);
+      result = ContentSearchUtil.searchContent(urlQueryString, queryRequestBody, headers, ec);
       return result.map(
           new Mapper<Map<String, Object>, Map<String, Object>>() {
             @Override

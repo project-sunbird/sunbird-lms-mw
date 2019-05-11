@@ -18,7 +18,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.RestUtil;
@@ -109,9 +108,7 @@ String urlQueryString, String queryRequestBody, Map<String, String> headers, Exe
         StringUtils.isNotBlank(urlQueryString)
             ? contentSearchURL + urlQueryString
             : contentSearchURL;
-    ProjectLogger.log(
-        "ContentSearchUtil:searchContentSync Making content search call to = " + urlString,
-        LoggerEnum.INFO);
+
     BaseRequest request =
         Unirest.post(urlString).headers(getUpdatedHeaders(headers)).body(queryRequestBody);
     try {
@@ -122,12 +119,6 @@ String urlQueryString, String queryRequestBody, Map<String, String> headers, Exe
         Object contents = resultMap.get(JsonKey.CONTENT);
         resultMap.remove(JsonKey.CONTENT);
         resultMap.put(JsonKey.CONTENTS, contents);
-        ProjectLogger.log(
-            "ContentSearchUtil:searchContentSync requestBody = "
-                + queryRequestBody
-                + " content = "
-                + contents,
-            LoggerEnum.DEBUG.name());
         String resmsgId = RestUtil.getFromResponse(response, "params.resmsgid");
         String apiId = RestUtil.getFromResponse(response, "id");
         Map<String, Object> param = new HashMap<>();

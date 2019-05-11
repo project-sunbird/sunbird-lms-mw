@@ -245,7 +245,6 @@ public class PageManagementActor extends BaseActor {
 
   @SuppressWarnings("unchecked")
   private void getPageData(Request actorMessage) throws Exception {
-    ProjectLogger.log("Inside getPageData method", LoggerEnum.INFO);
     String sectionQuery = null;
     Map<String, Object> filterMap = new HashMap<>();
     Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.PAGE);
@@ -267,8 +266,7 @@ public class PageManagementActor extends BaseActor {
     if (StringUtils.isBlank(orgId)) {
       orgId = "NA";
     }
-    ProjectLogger.log("Fetching data from Cache for " + orgId + ":" + pageName, LoggerEnum.INFO);
-      Map<String, Object> pageMap =
+    Map<String, Object> pageMap =
         CacheLoaderService.getDataFromCache(
             ActorOperations.GET_PAGE_DATA.getValue(), orgId + ":" + pageName, Map.class);
 
@@ -289,8 +287,6 @@ public class PageManagementActor extends BaseActor {
     }
     Object[] arr = null;
     try {
-      ProjectLogger.log(
-          "PageManagementActor:getPageData: section query = " + sectionQuery, LoggerEnum.INFO);
       arr = mapper.readValue(sectionQuery, Object[].class);
     } catch (Exception e) {
       ProjectLogger.log(
@@ -338,8 +334,6 @@ public class PageManagementActor extends BaseActor {
               new Mapper<Iterable<Map<String, Object>>, Response>() {
                 @Override
                 public Response apply(Iterable<Map<String, Object>> sections) {
-                  ProjectLogger.log(
-                      "PageManagementActor:getPageData: apply called", LoggerEnum.INFO);
                   ArrayList<Map<String, Object>> sectionList = Lists.newArrayList(sections);
                   Map<String, Object> result = new HashMap<>();
                   result.put(JsonKey.NAME, pageMap.get(JsonKey.NAME));
@@ -347,9 +341,6 @@ public class PageManagementActor extends BaseActor {
                   result.put(JsonKey.SECTIONS, sectionList);
                   Response response = new Response();
                   response.put(JsonKey.RESPONSE, result);
-                  ProjectLogger.log(
-                      "PageManagementActor:getPageData:apply: Response before caching it = " + response,
-                      LoggerEnum.INFO);
                   return response;
                 }
               },

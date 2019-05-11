@@ -52,7 +52,7 @@ import scala.concurrent.Future;
 @PowerMockIgnore({"javax.management.*"})
 public class PageManagementActorTest {
 
-  private ActorSystem system = ActorSystem.create("system");
+  private static ActorSystem system = ActorSystem.create("system");
   private static final Props props = Props.create(PageManagementActor.class);
   private static CassandraOperationImpl cassandraOperation;
 
@@ -72,7 +72,7 @@ public class PageManagementActorTest {
     cassandraOperation = mock(CassandraOperationImpl.class);
     PowerMockito.mockStatic(ContentSearchUtil.class);
     when(ContentSearchUtil.searchContent(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap(), system.dispatcher()))
         .thenReturn(result);
   }
 

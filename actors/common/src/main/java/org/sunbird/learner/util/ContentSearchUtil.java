@@ -67,6 +67,7 @@ String urlQueryString, String queryRequestBody, Map<String, String> headers, Exe
             : contentSearchURL;
     BaseRequest request =
         Unirest.post(urlString).headers(getUpdatedHeaders(headers)).body(queryRequestBody);
+    long startTime = System.currentTimeMillis();
     Future<HttpResponse<JsonNode>> response = RestUtil.executeAsync(request);
 
     return response.map(
@@ -75,6 +76,7 @@ String urlQueryString, String queryRequestBody, Map<String, String> headers, Exe
           public Map<String, Object> apply(HttpResponse<JsonNode> response) {
             try {
               if (RestUtil.isSuccessful(response)) {
+                System.out.println("content-search API took time: " + (System.currentTimeMillis() - startTime));
                 JSONObject result = response.getBody().getObject().getJSONObject("result");
                 Map<String, Object> resultMap = jsonToMap(result);
                 Object contents = resultMap.get(JsonKey.CONTENT);

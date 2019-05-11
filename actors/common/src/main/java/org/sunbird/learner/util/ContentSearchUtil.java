@@ -1,5 +1,6 @@
 package org.sunbird.learner.util;
 
+
 import akka.dispatch.ExecutionContexts;
 import akka.dispatch.Mapper;
 import com.mashape.unirest.http.HttpResponse;
@@ -22,19 +23,26 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.RestUtil;
+import scala.concurrent.ExecutionContext;
 import scala.concurrent.Future;
+
+import java.util.concurrent.ForkJoinPool;
+
 
 /** @author Mahesh Kumar Gangula */
 public class ContentSearchUtil {
 
   private static String contentSearchURL = null;
+  private static ExecutionContext executionContext = null;
 
   static {
+    executionContext = ExecutionContexts.fromExecutor(new ForkJoinPool(3));
     String baseUrl = System.getenv(JsonKey.SUNBIRD_API_MGR_BASE_URL);
     String searchPath = System.getenv(JsonKey.SUNBIRD_CS_SEARCH_PATH);
     if (StringUtils.isBlank(searchPath))
       searchPath = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_CS_SEARCH_PATH);
     contentSearchURL = baseUrl + searchPath;
+
   }
 
   private static Map<String, String> getUpdatedHeaders(Map<String, String> headers) {
@@ -44,6 +52,7 @@ public class ContentSearchUtil {
     headers.put(
         HttpHeaders.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.SUNBIRD_AUTHORIZATION));
     headers.put(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
+    headers.put("Connection", "Keep-Alive");
     return headers;
   }
 
@@ -53,7 +62,7 @@ public class ContentSearchUtil {
   }
 
   public static Future<Map<String, Object>> searchContent(
-      String urlQueryString, String queryRequestBody, Map<String, String> headers) {
+String urlQueryString, String queryRequestBody, Map<String, String> headers) {
     String logMsgPrefix = "ContentSearchUtil:searchContent: ";
 
     Unirest.clearDefaultHeaders();
@@ -61,10 +70,9 @@ public class ContentSearchUtil {
         StringUtils.isNotBlank(urlQueryString)
             ? contentSearchURL + urlQueryString
             : contentSearchURL;
-    ProjectLogger.log(
-        logMsgPrefix + "Making content search call to = " + urlString, LoggerEnum.INFO);
     BaseRequest request =
         Unirest.post(urlString).headers(getUpdatedHeaders(headers)).body(queryRequestBody);
+    Unirest.setTimeouts(120000,120000);
     Future<HttpResponse<JsonNode>> response = RestUtil.executeAsync(request);
 
     return response.map(
@@ -78,9 +86,6 @@ public class ContentSearchUtil {
                 Object contents = resultMap.get(JsonKey.CONTENT);
                 resultMap.remove(JsonKey.CONTENT);
                 resultMap.put(JsonKey.CONTENTS, contents);
-                ProjectLogger.log(
-                    logMsgPrefix + "requestBody = " + queryRequestBody + " content = " + contents,
-                    LoggerEnum.DEBUG.name());
                 String resmsgId = RestUtil.getFromResponse(response, "params.resmsgid");
                 String apiId = RestUtil.getFromResponse(response, "id");
                 Map<String, Object> param = new HashMap<>();
@@ -99,8 +104,7 @@ public class ContentSearchUtil {
               return null;
             }
           }
-        },
-        ExecutionContexts.global());
+        }, executionContext);
   }
 
   public static Map<String, Object> searchContentSync(

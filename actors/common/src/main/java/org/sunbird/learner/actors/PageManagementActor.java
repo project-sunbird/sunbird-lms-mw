@@ -26,7 +26,6 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ContentSearchUtil;
 import org.sunbird.learner.util.Util;
-import org.sunbird.notification.utils.JsonUtil;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import scala.concurrent.Future;
 import scala.concurrent.Promise;
@@ -594,21 +593,18 @@ public class PageManagementActor extends BaseActor {
     if (StringUtils.isBlank(queryRequestBody)) {
       queryRequestBody = (String) section.get(JsonKey.SEARCH_QUERY);
     }
-    ProjectLogger.log(
-        "PageManagementActor:getContentData: Page assemble final search query: " + queryRequestBody,
-        LoggerEnum.INFO.name());
+
     Future<Map<String, Object>> result = null;
     String dataSource = (String) section.get(JsonKey.DATA_SOURCE);
     section.put(JsonKey.GROUP, group);
     section.put(JsonKey.INDEX, index);
     if (StringUtils.isEmpty(dataSource) || JsonKey.CONTENT.equalsIgnoreCase(dataSource)) {
+
       result = ContentSearchUtil.searchContent(urlQueryString, queryRequestBody, headers);
       return result.map(
           new Mapper<Map<String, Object>, Map<String, Object>>() {
             @Override
             public Map<String, Object> apply(Map<String, Object> result) {
-              ProjectLogger.log(
-                  "PageManagementActor:getContentData:apply: result = ", LoggerEnum.INFO.name());
               if (MapUtils.isNotEmpty(result)) {
                 section.putAll(result);
                 Map<String, Object> tempMap = (Map<String, Object>) result.get(JsonKey.PARAMS);

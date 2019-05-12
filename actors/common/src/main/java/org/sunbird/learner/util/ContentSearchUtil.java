@@ -54,12 +54,12 @@ public class ContentSearchUtil {
   }
 
   public static Future<Map<String, Object>> searchContent(
-      String queryRequestBody, Map<String, String> headers, ExecutionContextExecutor ec) throws Exception {
+      String queryRequestBody, Map<String, String> headers, ExecutionContextExecutor ec) {
     return searchContent(null, queryRequestBody, headers, ec);
   }
 
   public static Future<Map<String, Object>> searchContent(
-String urlQueryString, String queryRequestBody, Map<String, String> headers, ExecutionContextExecutor ec) throws Exception {
+String urlQueryString, String queryRequestBody, Map<String, String> headers, ExecutionContextExecutor ec) {
     String logMsgPrefix = "ContentSearchUtil:searchContent: ";
 
     Unirest.clearDefaultHeaders();
@@ -70,7 +70,7 @@ String urlQueryString, String queryRequestBody, Map<String, String> headers, Exe
     BaseRequest request =
         Unirest.post(urlString).headers(getUpdatedHeaders(headers)).body(queryRequestBody);
     long startTime = System.currentTimeMillis();
-    Future<HttpResponse<JsonNode>> response = Future.successful(RestUtil.execute(request));
+    Future<HttpResponse<JsonNode>> response = RestUtil.executeAsync(request);
 
     return response.map(
         new Mapper<HttpResponse<JsonNode>, Map<String, Object>>() {

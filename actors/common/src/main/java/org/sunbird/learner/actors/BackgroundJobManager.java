@@ -539,7 +539,7 @@ public class BackgroundJobManager extends BaseActor {
   private boolean insertDataToElastic(
       String index, String type, String identifier, Map<String, Object> data) {
     ProjectLogger.log(
-        "making call to ES for type ,identifier==" + type + " " + identifier,
+        "BackgroundJobManager:insertDataToElastic: type = " + type + " identifier = " + identifier,
         LoggerEnum.INFO.name());
     /*
      * if (type.equalsIgnoreCase(ProjectUtil.EsType.user.getTypeName())) { // now

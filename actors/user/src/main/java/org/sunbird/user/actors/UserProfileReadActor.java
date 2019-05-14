@@ -27,8 +27,14 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
+import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.request.ExecutionContext;
@@ -216,8 +222,8 @@ public class UserProfileReadActor extends BaseActor {
       result.remove(JsonKey.LOGIN_ID);
       result.remove(JsonKey.ENC_EMAIL);
       result.remove(JsonKey.ENC_PHONE);
-      String username = ssoManager.getUsernameById(userId);
-      result.put(JsonKey.USERNAME, username);
+      // String username = ssoManager.getUsernameById(userId);
+      //  result.put(JsonKey.USERNAME, username);
       response.put(JsonKey.RESPONSE, result);
     } else {
       result = new HashMap<>();
@@ -639,8 +645,8 @@ public class UserProfileReadActor extends BaseActor {
             ResponseCode.userNotFound.getErrorMessage(),
             ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
       }
-      String username = ssoManager.getUsernameById((String) result.get(JsonKey.USER_ID));
-      result.put(JsonKey.USERNAME, username);
+      // String username = ssoManager.getUsernameById((String) result.get(JsonKey.USER_ID));
+      // result.put(JsonKey.USERNAME, username);
       sendResponse(actorMessage, result);
 
     } else {
@@ -693,8 +699,8 @@ public class UserProfileReadActor extends BaseActor {
       result.put(JsonKey.EMAIL, result.get(JsonKey.MASKED_EMAIL));
       result.put(JsonKey.PHONE, result.get(JsonKey.MASKED_PHONE));
     }
-    String username = ssoManager.getUsernameById(foundUser.getId());
-    result.put(JsonKey.USERNAME, username);
+    // String username = ssoManager.getUsernameById(foundUser.getId());
+    // result.put(JsonKey.USERNAME, username);
     sendResponse(actorMessage, result);
   }
 

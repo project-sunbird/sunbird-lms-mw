@@ -39,6 +39,7 @@ import org.sunbird.learner.util.ContentSearchUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.notification.utils.JsonUtil;
 import org.sunbird.telemetry.util.TelemetryUtil;
+import scala.concurrent.ExecutionContextExecutor;
 import scala.concurrent.Future;
 import scala.concurrent.Promise;
 
@@ -59,7 +60,8 @@ import scala.concurrent.Promise;
     "getSection",
     "getAllSection"
   },
-  asyncTasks = {}
+  asyncTasks = {},
+  dispatcher = "page-mgr-actor-dispatcher"
 )
 public class PageManagementActor extends BaseActor {
 
@@ -256,7 +258,6 @@ public class PageManagementActor extends BaseActor {
 
   @SuppressWarnings("unchecked")
   private void getPageData(Request actorMessage) throws Exception {
-    ProjectLogger.log("Inside getPageData method", LoggerEnum.INFO);
     String sectionQuery = null;
     Map<String, Object> filterMap = new HashMap<>();
     Map<String, Object> req = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.PAGE);
@@ -302,8 +303,6 @@ public class PageManagementActor extends BaseActor {
     }
     Object[] arr = null;
     try {
-      ProjectLogger.log(
-          "PageManagementActor:getPageData: section query = " + sectionQuery, LoggerEnum.INFO);
       arr = mapper.readValue(sectionQuery, Object[].class);
     } catch (Exception e) {
       ProjectLogger.log(
@@ -315,6 +314,7 @@ public class PageManagementActor extends BaseActor {
           ResponseCode.errorInvalidPageSection.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
+
     long requestHashCode = 0;
     if (isCacheEnabled) {
       Map<String, Object> reqMap = new HashMap<>();
@@ -340,6 +340,7 @@ public class PageManagementActor extends BaseActor {
           Map<String, Object> sectionMap = (Map<String, Object>) obj;
 
           if (MapUtils.isNotEmpty(sectionMap)) {
+
             Map<String, Object> sectionData = null;
             sectionData =
                 PageCacheLoaderService.getDataFromCache(
@@ -355,7 +356,8 @@ public class PageManagementActor extends BaseActor {
                       filterMap,
                       urlQueryString,
                       sectionMap.get(JsonKey.GROUP),
-                      sectionMap.get(JsonKey.INDEX));
+                      sectionMap.get(JsonKey.INDEX),
+                      context().dispatcher());
               sectionList.add(contentFuture);
             }
           }
@@ -369,8 +371,6 @@ public class PageManagementActor extends BaseActor {
               new Mapper<Iterable<Map<String, Object>>, Response>() {
                 @Override
                 public Response apply(Iterable<Map<String, Object>> sections) {
-                  ProjectLogger.log(
-                      "PageManagementActor:getPageData: apply called", LoggerEnum.INFO);
                   ArrayList<Map<String, Object>> sectionList = Lists.newArrayList(sections);
                   Map<String, Object> result = new HashMap<>();
                   result.put(JsonKey.NAME, pageMap.get(JsonKey.NAME));
@@ -607,44 +607,43 @@ public class PageManagementActor extends BaseActor {
       Map<String, Object> filterMap,
       String urlQueryString,
       Object group,
-      Object index)
+      Object index,
+      ExecutionContextExecutor ec)
       throws Exception {
-    Map<String, Object> map = new HashMap<>();
-    map = mapper.readValue((String) section.get(JsonKey.SEARCH_QUERY), HashMap.class);
-    Set<Entry<String, Object>> filterEntrySet = filterMap.entrySet();
-    for (Entry<String, Object> entry : filterEntrySet) {
+    Map<String, Object> searchQueryMap =
+        mapper.readValue((String) section.get(JsonKey.SEARCH_QUERY), HashMap.class);
+    if (MapUtils.isEmpty(searchQueryMap)) {
+      searchQueryMap = new HashMap<String, Object>();
+      searchQueryMap.put(JsonKey.REQUEST, new HashMap<String, Object>());
+    }
+    Map<String, Object> request = (Map<String, Object>) searchQueryMap.get(JsonKey.REQUEST);
+
+    for (Entry<String, Object> entry : filterMap.entrySet()) {
       if (!entry.getKey().equalsIgnoreCase(JsonKey.FILTERS)) {
-        ((Map<String, Object>) map.get(JsonKey.REQUEST)).put(entry.getKey(), entry.getValue());
+        request.put(entry.getKey(), entry.getValue());
       }
     }
-    Map<String, Object> filters =
-        (Map<String, Object>) ((Map<String, Object>) map.get(JsonKey.REQUEST)).get(JsonKey.FILTERS);
-    ProjectLogger.log(
-        "default search query for ekstep for page data assemble api : "
-            + (String) section.get(JsonKey.SEARCH_QUERY),
-        LoggerEnum.INFO.name());
-    applyFilters(filters, reqFilters);
-    String queryRequestBody = "";
+    request.put("limit", 10);
 
-    queryRequestBody = mapper.writeValueAsString(map);
+    Map<String, Object> filters = (Map<String, Object>) request.get(JsonKey.FILTERS);
+
+    applyFilters(filters, reqFilters);
+    String queryRequestBody = mapper.writeValueAsString(searchQueryMap);
     if (StringUtils.isBlank(queryRequestBody)) {
       queryRequestBody = (String) section.get(JsonKey.SEARCH_QUERY);
     }
-    ProjectLogger.log(
-        "PageManagementActor:getContentData: Page assemble final search query: " + queryRequestBody,
-        LoggerEnum.INFO.name());
+
     Future<Map<String, Object>> result = null;
     String dataSource = (String) section.get(JsonKey.DATA_SOURCE);
     section.put(JsonKey.GROUP, group);
     section.put(JsonKey.INDEX, index);
     if (StringUtils.isEmpty(dataSource) || JsonKey.CONTENT.equalsIgnoreCase(dataSource)) {
-      result = ContentSearchUtil.searchContent(urlQueryString, queryRequestBody, headers);
+
+      result = ContentSearchUtil.searchContent(urlQueryString, queryRequestBody, headers, ec);
       return result.map(
           new Mapper<Map<String, Object>, Map<String, Object>>() {
             @Override
             public Map<String, Object> apply(Map<String, Object> result) {
-              ProjectLogger.log(
-                  "PageManagementActor:getContentData:apply: result = ", LoggerEnum.INFO.name());
               if (MapUtils.isNotEmpty(result)) {
                 section.putAll(result);
                 Map<String, Object> tempMap = (Map<String, Object>) result.get(JsonKey.PARAMS);
@@ -662,7 +661,7 @@ public class PageManagementActor extends BaseActor {
           getContext().dispatcher());
     } else {
       Map<String, Object> esResponse =
-          searchFromES((Map<String, Object>) map.get(JsonKey.REQUEST), dataSource);
+          searchFromES((Map<String, Object>) searchQueryMap.get(JsonKey.REQUEST), dataSource);
       section.put(JsonKey.COUNT, esResponse.get(JsonKey.COUNT));
       section.put(JsonKey.CONTENTS, esResponse.get(JsonKey.CONTENT));
       removeUnwantedData(section, "getPageData");

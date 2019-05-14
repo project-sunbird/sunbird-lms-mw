@@ -6,8 +6,13 @@ import akka.pattern.Patterns;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -15,10 +20,16 @@ import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
-import org.sunbird.common.cacheloader.CacheLoaderService;
+import org.sunbird.common.cacheloader.PageCacheLoaderService;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.hash.HashGeneratorUtil;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -26,6 +37,7 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.ContentSearchUtil;
 import org.sunbird.learner.util.Util;
+import org.sunbird.notification.utils.JsonUtil;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import scala.concurrent.ExecutionContextExecutor;
 import scala.concurrent.Future;
@@ -59,6 +71,8 @@ public class PageManagementActor extends BaseActor {
   private Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private ObjectMapper mapper = new ObjectMapper();
+  private boolean isCacheEnabled =
+      Boolean.parseBoolean(ProjectUtil.propertiesCache.getProperty(JsonKey.SUNBIRD_CACHE_ENABLE));
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -115,14 +129,13 @@ public class PageManagementActor extends BaseActor {
     Map<String, Object> req = actorMessage.getRequest();
     String sectionId = (String) req.get(JsonKey.ID);
     Map<String, Object> sectionMap =
-        CacheLoaderService.getDataFromCache(
+        PageCacheLoaderService.getDataFromCache(
             ActorOperations.GET_SECTION.getValue(), sectionId, Map.class);
 
     if (sectionMap == null) {
       response =
           cassandraOperation.getRecordById(
               sectionDbInfo.getKeySpace(), sectionDbInfo.getTableName(), sectionId);
-      @SuppressWarnings("unchecked")
       List<Map<String, Object>> result =
           (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
       if (!(result.isEmpty())) {
@@ -130,7 +143,7 @@ public class PageManagementActor extends BaseActor {
         removeUnwantedData(map, "");
         Response section = new Response();
         section.put(JsonKey.SECTION, response.get(JsonKey.RESPONSE));
-        CacheLoaderService.putDataIntoCache(
+        PageCacheLoaderService.putDataIntoCache(
             ActorOperations.GET_SECTION.getValue(), sectionId, response.get(JsonKey.RESPONSE));
         sender().tell(section, self());
         return;
@@ -234,7 +247,7 @@ public class PageManagementActor extends BaseActor {
     new Thread(
             () -> {
               if ((JsonKey.SUCCESS).equalsIgnoreCase((String) response.get(JsonKey.RESPONSE))) {
-                CacheLoaderService.putDataIntoCache(
+                PageCacheLoaderService.putDataIntoCache(
                     ActorOperations.GET_SECTION.getValue(),
                     (String) sectionMap.get(JsonKey.ID),
                     sectionMap);
@@ -266,9 +279,12 @@ public class PageManagementActor extends BaseActor {
     if (StringUtils.isBlank(orgId)) {
       orgId = "NA";
     }
-    Map<String, Object> pageMap =
-        CacheLoaderService.getDataFromCache(
+    ProjectLogger.log("Fetching data from Cache for " + orgId + ":" + pageName, LoggerEnum.INFO);
+    Map<String, Object> pageMapData =
+        PageCacheLoaderService.getDataFromCache(
             ActorOperations.GET_PAGE_DATA.getValue(), orgId + ":" + pageName, Map.class);
+
+    Map<String, Object> pageMap = pageMapData;
 
     if (null == pageMap) {
       throw new ProjectCommonException(
@@ -299,6 +315,24 @@ public class PageManagementActor extends BaseActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
+    long requestHashCode = 0;
+    if (isCacheEnabled) {
+      Map<String, Object> reqMap = new HashMap<>();
+      reqMap.put(JsonKey.SECTION, arr);
+      reqMap.put(JsonKey.FILTERS, reqFilters);
+      reqMap.put(JsonKey.HEADER, headers);
+      reqMap.put(JsonKey.FILTER, filterMap);
+      reqMap.put(JsonKey.URL_QUERY_STRING, urlQueryString);
+      requestHashCode = HashGeneratorUtil.getHashCode(JsonUtil.toJson(reqMap));
+      Response cachedResponse =
+          PageCacheLoaderService.getDataFromCache(
+              JsonKey.SECTIONS, String.valueOf(requestHashCode), Response.class);
+      if (requestHashCode != 0 && cachedResponse != null) {
+        sender().tell(cachedResponse, self());
+        return;
+      }
+    }
+    long reqHashCode = requestHashCode;
     try {
       List<Future<Map<String, Object>>> sectionList = new ArrayList<>();
       if (arr != null) {
@@ -306,8 +340,10 @@ public class PageManagementActor extends BaseActor {
           Map<String, Object> sectionMap = (Map<String, Object>) obj;
 
           if (MapUtils.isNotEmpty(sectionMap)) {
-            Map<String, Object> sectionData =
-                CacheLoaderService.getDataFromCache(
+
+            Map<String, Object> sectionData = null;
+            sectionData =
+                PageCacheLoaderService.getDataFromCache(
                     ActorOperations.GET_SECTION.getValue(),
                     (String) sectionMap.get(JsonKey.ID),
                     Map.class);
@@ -320,7 +356,8 @@ public class PageManagementActor extends BaseActor {
                       filterMap,
                       urlQueryString,
                       sectionMap.get(JsonKey.GROUP),
-                      sectionMap.get(JsonKey.INDEX), context().dispatcher());
+                      sectionMap.get(JsonKey.INDEX),
+                      context().dispatcher());
               sectionList.add(contentFuture);
             }
           }
@@ -341,6 +378,14 @@ public class PageManagementActor extends BaseActor {
                   result.put(JsonKey.SECTIONS, sectionList);
                   Response response = new Response();
                   response.put(JsonKey.RESPONSE, result);
+                  ProjectLogger.log(
+                      "PageManagementActor:getPageData:apply: Response before caching it = "
+                          + response,
+                      LoggerEnum.INFO);
+                  if (reqHashCode != 0) {
+                    PageCacheLoaderService.putDataIntoCache(
+                        JsonKey.SECTIONS, String.valueOf(reqHashCode), response);
+                  }
                   return response;
                 }
               },
@@ -364,7 +409,7 @@ public class PageManagementActor extends BaseActor {
     Map<String, Object> req = actorMessage.getRequest();
     String pageName = (String) req.get(JsonKey.ID);
     Response response =
-        CacheLoaderService.getDataFromCache(
+        PageCacheLoaderService.getDataFromCache(
             ActorOperations.GET_PAGE_SETTING.name(), pageName, Response.class);
     if (response == null) {
       response =
@@ -379,7 +424,7 @@ public class PageManagementActor extends BaseActor {
         response.getResult().remove(JsonKey.RESPONSE);
       }
 
-      CacheLoaderService.putDataIntoCache(
+      PageCacheLoaderService.putDataIntoCache(
           ActorOperations.GET_PAGE_SETTING.name(), pageName, response);
     }
     sender().tell(response, self());
@@ -388,7 +433,7 @@ public class PageManagementActor extends BaseActor {
   @SuppressWarnings("unchecked")
   private void getPageSettings() {
     Response response =
-        CacheLoaderService.getDataFromCache(
+        PageCacheLoaderService.getDataFromCache(
             ActorOperations.GET_PAGE_SETTINGS.name(), JsonKey.PAGE, Response.class);
     List<Map<String, Object>> pageList = new ArrayList<>();
     if (response == null) {
@@ -404,7 +449,7 @@ public class PageManagementActor extends BaseActor {
       response.getResult().remove(JsonKey.RESPONSE);
 
       sender().tell(response, self());
-      CacheLoaderService.putDataIntoCache(
+      PageCacheLoaderService.putDataIntoCache(
           ActorOperations.GET_PAGE_SETTINGS.name(), JsonKey.PAGE, response);
       return;
     }
@@ -545,7 +590,7 @@ public class PageManagementActor extends BaseActor {
                 if (pageMap.containsKey(JsonKey.ORGANISATION_ID)) {
                   orgId = (String) pageMap.get(JsonKey.ORGANISATION_ID);
                 }
-                CacheLoaderService.putDataIntoCache(
+                PageCacheLoaderService.putDataIntoCache(
                     ActorOperations.GET_PAGE_DATA.getValue(),
                     orgId + ":" + (String) pageMap.get(JsonKey.PAGE_NAME),
                     pageMap);
@@ -556,24 +601,26 @@ public class PageManagementActor extends BaseActor {
 
   @SuppressWarnings("unchecked")
   private Future<Map<String, Object>> getContentData(
-          Map<String, Object> section,
-          Map<String, Object> reqFilters,
-          Map<String, String> headers,
-          Map<String, Object> filterMap,
-          String urlQueryString,
-          Object group,
-          Object index, ExecutionContextExecutor ec)
+      Map<String, Object> section,
+      Map<String, Object> reqFilters,
+      Map<String, String> headers,
+      Map<String, Object> filterMap,
+      String urlQueryString,
+      Object group,
+      Object index,
+      ExecutionContextExecutor ec)
       throws Exception {
-    Map<String, Object> searchQueryMap = mapper.readValue((String) section.get(JsonKey.SEARCH_QUERY), HashMap.class);
+    Map<String, Object> searchQueryMap =
+        mapper.readValue((String) section.get(JsonKey.SEARCH_QUERY), HashMap.class);
     if (MapUtils.isEmpty(searchQueryMap)) {
-        searchQueryMap = new HashMap<String, Object>();
-        searchQueryMap.put(JsonKey.REQUEST, new HashMap<String, Object>());
+      searchQueryMap = new HashMap<String, Object>();
+      searchQueryMap.put(JsonKey.REQUEST, new HashMap<String, Object>());
     }
     Map<String, Object> request = (Map<String, Object>) searchQueryMap.get(JsonKey.REQUEST);
 
     for (Entry<String, Object> entry : filterMap.entrySet()) {
       if (!entry.getKey().equalsIgnoreCase(JsonKey.FILTERS)) {
-          request.put(entry.getKey(), entry.getValue());
+        request.put(entry.getKey(), entry.getValue());
       }
     }
     request.put("limit", 10);

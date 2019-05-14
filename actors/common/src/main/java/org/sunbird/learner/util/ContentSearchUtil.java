@@ -66,7 +66,6 @@ String urlQueryString, String queryRequestBody, Map<String, String> headers, Exe
             : contentSearchURL;
     BaseRequest request =
         Unirest.post(urlString).headers(getUpdatedHeaders(headers)).body(queryRequestBody);
-    long startTime = System.currentTimeMillis();
     Future<HttpResponse<JsonNode>> response = RestUtil.executeAsync(request);
 
     return response.map(

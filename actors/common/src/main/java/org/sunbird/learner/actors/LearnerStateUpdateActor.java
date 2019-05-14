@@ -18,7 +18,13 @@ import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.ProjectUtil.ProgressStatus;
+import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -73,9 +79,14 @@ public class LearnerStateUpdateActor extends BaseActor {
       Map<String, Integer> contentStatusHolder = new HashMap<>();
 
       if (!(contentList.isEmpty())) {
+        ProjectLogger.log(
+            "LearnerStateUpdateActor:onReceive content state update method called for user and total content "
+                + userId
+                + " Contnet length="
+                + contentList.size(),
+            LoggerEnum.INFO.name());
         for (Map<String, Object> map : contentList) {
           // replace the course id (equivalent to Ekstep content id) with One way hashing
-          // of
           // userId#courseId , bcoz in cassndra we are saving course id as userId#courseId
 
           String batchId = (String) map.get(JsonKey.BATCH_ID);
@@ -83,6 +94,7 @@ public class LearnerStateUpdateActor extends BaseActor {
 
           // code to validate the whether request for valid batch range(start and end
           // date)
+          int count = 0;
           if (!(StringUtils.isBlank(batchId))) {
             Response batchResponse =
                 cassandraOperation.getRecordById(
@@ -112,6 +124,14 @@ public class LearnerStateUpdateActor extends BaseActor {
           try {
             ProjectLogger.log(
                 "LearnerStateUpdateActor:onReceive: map  " + map, LoggerEnum.INFO.name());
+            if (count == 0
+                && map.get(JsonKey.COURSE_ID) != null
+                && !(JsonKey.NOT_AVAILABLE.equalsIgnoreCase((String) map.get(JsonKey.COURSE_ID)))) {
+              updateUserCourseStatus(
+                  generateUserCoursesPrimaryKey(map),
+                  ProjectUtil.BulkProcessStatus.IN_PROGRESS.name());
+              count++;
+            }
             cassandraOperation.upsertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), map);
             response.getResult().put((String) map.get(JsonKey.CONTENT_ID), JsonKey.SUCCESS);
             // create telemetry for user for each content ...
@@ -134,20 +154,179 @@ public class LearnerStateUpdateActor extends BaseActor {
             TelemetryUtil.telemetryProcessingCall(
                 request.getRequest(), targetObject, correlatedObject);
           } catch (Exception ex) {
+            ProjectLogger.log(
+                "LearnerStateUpdateActor:onReceive Error occured:" + ex, LoggerEnum.ERROR);
             response.getResult().put((String) map.get(JsonKey.CONTENT_ID), JsonKey.FAILED);
             contentList.remove(map);
           }
         }
+      } else {
+        ProjectLogger.log(
+            "LearnerStateUpdateActor:onReceive content state update method called for user and total content "
+                + userId
+                + " Contnet length= 0 ",
+            LoggerEnum.INFO.name());
       }
+      updateUserCourses(request);
       sender().tell(response, self());
-      // call to update the corresponding course
-      ProjectLogger.log("Calling background job to update learner state");
-      request.getRequest().put(CONTENT_STATE_INFO, contentStatusHolder);
-      request.setOperation(ActorOperations.UPDATE_LEARNER_STATE.getValue());
-      tellToAnother(request);
     } else {
       onReceiveUnsupportedOperation(request.getOperation());
     }
+  }
+
+  private void updateUserCourses(Request request) {
+    // get the list of content objects
+    List<Map<String, Object>> contentList =
+        (List<Map<String, Object>>) request.getRequest().get(JsonKey.CONTENTS);
+    // get the content state info
+    Map<String, Integer> contentStateInfo =
+        (Map<String, Integer>) request.get(this.CONTENT_STATE_INFO);
+    Map<String, Object> temp = new HashMap<>();
+    ProjectLogger.log(
+        "LearnerStateUpdateActor:updateUserCourses method call started :" + LoggerEnum.INFO.name());
+    for (Map<String, Object> map : contentList) {
+      String contentid = (String) map.get(JsonKey.ID);
+      if (map.get(JsonKey.COURSE_ID) != null) {
+        // generate course table primary key as hash of userid##courseid##batchId
+        String primary = generateUserCoursesPrimaryKey(map);
+        if (temp.containsKey(primary)) {
+          Map<String, Object> innerMap = (Map<String, Object>) temp.get(primary);
+          innerMap.put(
+              JsonKey.CONTENT,
+              getLatestContent(
+                  (Map<String, Object>)
+                      ((Map<String, Object>) temp.get(primary)).get(JsonKey.CONTENT),
+                  map));
+          if (((int) map.get(JsonKey.COMPLETED_COUNT)) == 1
+              && contentStateInfo.get(contentid) == 2) {
+            innerMap.put(JsonKey.PROGRESS, (Integer) innerMap.get(JsonKey.PROGRESS) + 1);
+          }
+        } else {
+          Map<String, Object> innerMap = new HashMap<>();
+          innerMap.put(JsonKey.CONTENT, map);
+          if (((int) map.get(JsonKey.COMPLETED_COUNT)) == 1
+              && contentStateInfo.get(contentid) == 2) {
+            innerMap.put(JsonKey.PROGRESS, Integer.valueOf(1));
+          } else {
+            innerMap.put(JsonKey.PROGRESS, Integer.valueOf(0));
+          }
+          temp.put(primary, innerMap);
+        }
+      } else {
+        ProjectLogger.log(
+            "LearnerStateUpdateActor:updateUserCourses Courseid is not present in request: "
+                + map.get(JsonKey.BATCH_ID)
+                + " userId "
+                + map.get(JsonKey.USER_ID),
+            LoggerEnum.INFO.name());
+      }
+    }
+    // logic to update the course
+    updateCourse(temp, contentStateInfo);
+  }
+
+  /**
+   * Method to update the course_enrollment with the latest content information
+   *
+   * @param temp Map<String, Object>
+   * @param contentStateInfo Map<String, Integer>
+   */
+  @SuppressWarnings("unchecked")
+  private void updateCourse(Map<String, Object> temp, Map<String, Integer> contentStateInfo) {
+    Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
+    ProjectLogger.log(
+        "LearnerStateUpdateActor:updateCourse method called started:" + LoggerEnum.INFO.name());
+    for (Map.Entry<String, Object> entry : temp.entrySet()) {
+      String key = entry.getKey();
+      Map<String, Object> value = (Map<String, Object>) entry.getValue();
+      Response response =
+          cassandraOperation.getRecordById(dbInfo.getKeySpace(), dbInfo.getTableName(), key);
+      List<Map<String, Object>> courseList =
+          (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
+      Map<String, Object> course = null;
+      if (null != courseList && !courseList.isEmpty()) {
+        Map<String, Object> updateDb = new HashMap<>();
+        course = courseList.get(0);
+        Integer courseProgress = 0;
+        if (ProjectUtil.isNotNull(course.get(JsonKey.COURSE_PROGRESS))) {
+          courseProgress = (Integer) course.get(JsonKey.COURSE_PROGRESS);
+        }
+        courseProgress = courseProgress + (Integer) value.get("progress");
+        // update status on basis of leaf node count and progress ---
+        if (course.containsKey(JsonKey.LEAF_NODE_COUNT)
+            && ProjectUtil.isNotNull(course.get(JsonKey.LEAF_NODE_COUNT))) {
+          Integer leafNodeCount = (Integer) course.get(JsonKey.LEAF_NODE_COUNT);
+          courseProgress = courseProgress > leafNodeCount ? leafNodeCount : courseProgress;
+          if (0 == leafNodeCount || (leafNodeCount > courseProgress)) {
+            updateDb.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.STARTED.getValue());
+          } else {
+            if (ProgressStatus.COMPLETED.getValue() != (Integer) course.get(JsonKey.STATUS)) {
+              updateDb.put(JsonKey.COMPLETED_ON, new Timestamp(new Date().getTime()));
+            }
+            updateDb.put(JsonKey.STATUS, ProgressStatus.COMPLETED.getValue());
+          }
+        } else if (ProjectUtil.isNull(course.get(JsonKey.LEAF_NODE_COUNT))) {
+          updateDb.put(JsonKey.STATUS, ProjectUtil.ProgressStatus.STARTED.getValue());
+        }
+        Timestamp ts = new Timestamp(new Date().getTime());
+        updateDb.put(JsonKey.ID, course.get(JsonKey.ID));
+        updateDb.put(JsonKey.COURSE_PROGRESS, courseProgress);
+        updateDb.put(JsonKey.DATE_TIME, ts);
+        updateDb.put(
+            JsonKey.LAST_READ_CONTENTID,
+            ((Map<String, Object>) value.get("content")).get(JsonKey.CONTENT_ID));
+        updateDb.put(
+            JsonKey.LAST_READ_CONTENT_STATUS,
+            (contentStateInfo.get(((Map<String, Object>) value.get("content")).get(JsonKey.ID))));
+        updateDb.put(JsonKey.PROCESSING_STATUS, ProjectUtil.BulkProcessStatus.COMPLETED.name());
+        try {
+          cassandraOperation.upsertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), updateDb);
+          updateUserCourseStatus(
+              (String) course.get(JsonKey.ID), ProjectUtil.BulkProcessStatus.COMPLETED.name());
+          ProjectLogger.log(
+              "LearnerStateUpdateActor:updateCourse user courses DB updated successfully : "
+                  + LoggerEnum.INFO.name());
+          updateDb.put(JsonKey.BATCH_ID, course.get(JsonKey.BATCH_ID));
+          updateDb.put(JsonKey.USER_ID, course.get(JsonKey.USER_ID));
+          updateDb.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(ts));
+        } catch (Exception ex) {
+          ProjectLogger.log(
+              "LearnerStateUpdateActor:updateCourse exception occured: " + ex,
+              LoggerEnum.ERROR.name());
+        }
+      } else {
+        ProjectLogger.log(
+            "LearnerStateUpdateActor:updateCourse CourseList is empty or null: ",
+            LoggerEnum.ERROR.name());
+      }
+    }
+  }
+
+  private Map<String, Object> getLatestContent(
+      Map<String, Object> current, Map<String, Object> next) {
+    SimpleDateFormat simpleDateFormat = ProjectUtil.getDateFormatter();
+    simpleDateFormat.setLenient(false);
+    if (current.get(JsonKey.LAST_ACCESS_TIME) == null
+        && next.get(JsonKey.LAST_ACCESS_TIME) == null) {
+      return next;
+    } else if (current.get(JsonKey.LAST_ACCESS_TIME) == null) {
+      return next;
+    } else if (next.get(JsonKey.LAST_ACCESS_TIME) == null) {
+      return current;
+    }
+    try {
+      Date currentUpdatedTime =
+          simpleDateFormat.parse((String) current.get(JsonKey.LAST_ACCESS_TIME));
+      Date nextUpdatedTime = simpleDateFormat.parse((String) next.get(JsonKey.LAST_ACCESS_TIME));
+      if (currentUpdatedTime.after(nextUpdatedTime)) {
+        return current;
+      } else {
+        return next;
+      }
+    } catch (ParseException e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
+    return null;
   }
 
   private boolean validateBatchRange(Map<String, Object> batchInfo) {
@@ -187,7 +366,8 @@ public class LearnerStateUpdateActor extends BaseActor {
   private void preOperation(
       Map<String, Object> req, String userId, Map<String, Integer> contentStateHolder)
       throws ParseException {
-
+    ProjectLogger.log(
+        "LearnerStateUpdateActor:preOperation method called.", LoggerEnum.INFO.name());
     SimpleDateFormat simpleDateFormat = ProjectUtil.getDateFormatter();
     simpleDateFormat.setLenient(false);
 
@@ -261,8 +441,15 @@ public class LearnerStateUpdateActor extends BaseActor {
         req.put(JsonKey.LAST_UPDATED_TIME, ProjectUtil.getFormattedDate());
         req.put(JsonKey.COMPLETED_COUNT, completedCount);
       }
-
+      ProjectLogger.log(
+          "LearnerStateUpdateActor:preOperation User already read this content."
+              + req.get(JsonKey.ID),
+          LoggerEnum.INFO.name());
     } else {
+      ProjectLogger.log(
+          "LearnerStateUpdateActor:preOperation User is reading this content first time."
+              + req.get(JsonKey.ID),
+          LoggerEnum.INFO.name());
       // IT IS NEW CONTENT SIMPLY ADD IT
       Date requestCompletedTime = parseDate(req.get(JsonKey.LAST_COMPLETED_TIME), simpleDateFormat);
       if (null != req.get(JsonKey.STATUS)) {
@@ -271,7 +458,6 @@ public class LearnerStateUpdateActor extends BaseActor {
         if (requestedStatus == 2) {
           req.put(JsonKey.COMPLETED_COUNT, 1);
           req.put(JsonKey.LAST_COMPLETED_TIME, compareTime(null, requestCompletedTime));
-          req.put(JsonKey.COMPLETED_COUNT, 1);
         } else {
           req.put(JsonKey.COMPLETED_COUNT, 0);
         }
@@ -298,6 +484,9 @@ public class LearnerStateUpdateActor extends BaseActor {
         req.put(JsonKey.LAST_ACCESS_TIME, ProjectUtil.getFormattedDate());
       }
     }
+    ProjectLogger.log(
+        "LearnerStateUpdateActor:preOperation  end for content ." + req.get(JsonKey.ID),
+        LoggerEnum.INFO.name());
   }
 
   private Date parseDate(Object obj, SimpleDateFormat formatter) throws ParseException {
@@ -349,5 +538,61 @@ public class LearnerStateUpdateActor extends BaseActor {
 
   private boolean isNullCheck(Object obj) {
     return null == obj;
+  }
+
+  /**
+   * This method will combined map values with delimiter and create an encrypted key.
+   *
+   * @param req Map<String , Object>
+   * @return String encrypted value
+   */
+  private String generateUserCoursesPrimaryKey(Map<String, Object> req) {
+    String userId = (String) req.get(JsonKey.USER_ID);
+    String courseId = (String) req.get(JsonKey.COURSE_ID);
+    String batchId = (String) req.get(JsonKey.BATCH_ID);
+    return OneWayHashing.encryptVal(
+        userId
+            + JsonKey.PRIMARY_KEY_DELIMETER
+            + courseId
+            + JsonKey.PRIMARY_KEY_DELIMETER
+            + batchId);
+  }
+
+  private void updateUserCoursesToES(Map<String, Object> courseMap) {
+    Request request = new Request();
+    request.setOperation(ActorOperations.UPDATE_USR_COURSES_INFO_ELASTIC.getValue());
+    request.getRequest().put(JsonKey.USER_COURSES, courseMap);
+    try {
+      tellToAnother(request);
+    } catch (Exception ex) {
+      ProjectLogger.log(
+          "LearnerStateUpdateActor:updateUserCoursesToES Exception occurred during saving user count to Es : "
+              + ex,
+          LoggerEnum.ERROR.name());
+    }
+  }
+
+  private void updateUserCourseStatus(String key, String status) {
+    Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
+    Map<String, Object> request = new HashMap<>();
+    request.put(JsonKey.PROCESSING_STATUS, status);
+    request.put(JsonKey.ID, key);
+    Response response =
+        cassandraOperation.updateRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), request);
+    if (response != null) {
+      ProjectLogger.log(
+          "LearnerStateUpdateActor:updateUserCourseStatus course process status updated :"
+              + "status= "
+              + status
+              + " "
+              + response.get(JsonKey.STATUS),
+          LoggerEnum.INFO.name());
+    } else {
+      ProjectLogger.log(
+          "LearnerStateUpdateActor:updateUserCourseStatus course process status update fail :"
+              + "status= "
+              + status,
+          LoggerEnum.INFO.name());
+    }
   }
 }

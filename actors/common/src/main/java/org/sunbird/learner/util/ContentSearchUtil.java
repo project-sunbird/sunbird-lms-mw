@@ -29,7 +29,7 @@ import scala.concurrent.Future;
 /** @author Mahesh Kumar Gangula */
 public class ContentSearchUtil {
 
-  private static String contentSearchURL = null;
+  public static String contentSearchURL = null;
 
   static {
     String baseUrl = System.getenv(JsonKey.SUNBIRD_API_MGR_BASE_URL);

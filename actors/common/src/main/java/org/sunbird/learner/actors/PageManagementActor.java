@@ -638,27 +638,8 @@ public class PageManagementActor extends BaseActor {
     section.put(JsonKey.GROUP, group);
     section.put(JsonKey.INDEX, index);
     if (StringUtils.isEmpty(dataSource) || JsonKey.CONTENT.equalsIgnoreCase(dataSource)) {
-
-      result = ContentSearchUtil.searchContent(urlQueryString, queryRequestBody, headers, ec);
-      return result.map(
-          new Mapper<Map<String, Object>, Map<String, Object>>() {
-            @Override
-            public Map<String, Object> apply(Map<String, Object> result) {
-              if (MapUtils.isNotEmpty(result)) {
-                section.putAll(result);
-                Map<String, Object> tempMap = (Map<String, Object>) result.get(JsonKey.PARAMS);
-                section.remove(JsonKey.PARAMS);
-                section.put(JsonKey.RES_MSG_ID, tempMap.get(JsonKey.RES_MSG_ID));
-                section.put(JsonKey.API_ID, tempMap.get(JsonKey.API_ID));
-                removeUnwantedData(section, "getPageData");
-                ProjectLogger.log(
-                    "PageManagementActor:getContentData:apply: section = " + section,
-                    LoggerEnum.DEBUG.name());
-              }
-              return section;
-            }
-          },
-          getContext().dispatcher());
+      removeUnwantedData(section, "getPageData");
+      return Futures.successful(section);
     } else {
       Map<String, Object> esResponse =
           searchFromES((Map<String, Object>) searchQueryMap.get(JsonKey.REQUEST), dataSource);

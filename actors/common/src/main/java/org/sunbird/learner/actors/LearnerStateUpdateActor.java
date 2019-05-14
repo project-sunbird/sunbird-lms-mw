@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -77,7 +78,8 @@ public class LearnerStateUpdateActor extends BaseActor {
       request.getRequest().put(JsonKey.CONTENTS, contentList);
       // map to hold the status of requested state of contents
       Map<String, Integer> contentStatusHolder = new HashMap<>();
-
+      List<String> validBatchIds = new ArrayList<>();
+      List<String> invalidBatchIds = new ArrayList<>();
       if (!(contentList.isEmpty())) {
         ProjectLogger.log(
             "LearnerStateUpdateActor:onReceive content state update method called for user and total content "
@@ -85,27 +87,34 @@ public class LearnerStateUpdateActor extends BaseActor {
                 + " Contnet length="
                 + contentList.size(),
             LoggerEnum.INFO.name());
+        int count = 0;
         for (Map<String, Object> map : contentList) {
           // replace the course id (equivalent to Ekstep content id) with One way hashing
           // userId#courseId , bcoz in cassndra we are saving course id as userId#courseId
-
           String batchId = (String) map.get(JsonKey.BATCH_ID);
           boolean flag = true;
 
           // code to validate the whether request for valid batch range(start and end
           // date)
-          int count = 0;
-          if (!(StringUtils.isBlank(batchId))) {
+          if (!(StringUtils.isBlank(batchId)) && ! validBatchIds.contains(batchId)) {
+        	  if(invalidBatchIds.contains(batchId)) {
+        		  contentList.remove(map);
+                  continue;  
+              } 
             Response batchResponse =
                 cassandraOperation.getRecordById(
                     batchdbInfo.getKeySpace(), batchdbInfo.getTableName(), batchId);
             List<Map<String, Object>> batches =
                 (List<Map<String, Object>>) batchResponse.getResult().get(JsonKey.RESPONSE);
             if (batches.isEmpty()) {
+            	invalidBatchIds.add(batchId);	
               flag = false;
             } else {
               Map<String, Object> batchInfo = batches.get(0);
               flag = validateBatchRange(batchInfo);
+              if (flag) {
+            	  validBatchIds.add(batchId);
+              }
             }
 
             if (!flag) {
@@ -167,6 +176,7 @@ public class LearnerStateUpdateActor extends BaseActor {
                 + " Contnet length= 0 ",
             LoggerEnum.INFO.name());
       }
+      request.getRequest().put(CONTENT_STATE_INFO, contentStatusHolder);
       updateUserCourses(request);
       sender().tell(response, self());
     } else {

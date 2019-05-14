@@ -1450,7 +1450,6 @@ public final class Util {
       userDetails.remove(JsonKey.PASSWORD);
       addEmailAndPhone(userDetails);
       userDetails = getUserDetailsFromRegistry(userDetails);
-      ProjectLogger.log("Util:getUserDetails: for userId " + userId, LoggerEnum.INFO.name());
     } else {
       ProjectLogger.log(
           "Util:getUserProfile: User data not available to save in ES for userId : " + userId,

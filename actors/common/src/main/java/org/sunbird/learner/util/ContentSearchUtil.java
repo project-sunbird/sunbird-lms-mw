@@ -36,10 +36,7 @@ public class ContentSearchUtil {
     String searchPath = System.getenv(JsonKey.SUNBIRD_CS_SEARCH_PATH);
     if (StringUtils.isBlank(searchPath))
       searchPath = PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_CS_SEARCH_PATH);
-//    contentSearchURL = baseUrl + searchPath;
-    contentSearchURL = "http://28.0.3.10:9000/v3/search";
-    System.out.println("KP Search-Service URL:" + contentSearchURL);
-
+    contentSearchURL = baseUrl + searchPath;
   }
 
   private static Map<String, String> getUpdatedHeaders(Map<String, String> headers) {
@@ -78,7 +75,6 @@ String urlQueryString, String queryRequestBody, Map<String, String> headers, Exe
           public Map<String, Object> apply(HttpResponse<JsonNode> response) {
             try {
               if (RestUtil.isSuccessful(response)) {
-                System.out.println("content-search API took time: " + (System.currentTimeMillis() - startTime));
                 JSONObject result = response.getBody().getObject().getJSONObject("result");
                 Map<String, Object> resultMap = jsonToMap(result);
                 Object contents = resultMap.get(JsonKey.CONTENT);

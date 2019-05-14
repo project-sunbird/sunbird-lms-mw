@@ -47,11 +47,10 @@ public class SystemSettingsActor extends BaseActor {
                 settingObject -> {
                   Map<String, Object> fieldMap = new HashMap<>();
                   fieldMap.put(
-                      "field",
+                      JsonKey.FIELD,
                       settingObject.getField()); // preparing request and converting into hash.
-                  String fieldMapToStr = HashGeneratorUtil.getHashCodeAsString(fieldMap);
                   savedObjectToCache(
-                      ActorOperations.GET_SYSTEM_SETTING.getValue(), fieldMapToStr, settingObject);
+                      ActorOperations.GET_SYSTEM_SETTING.getValue(), fieldMap, settingObject);
                   return null;
                 })
             .collect(Collectors.toList());
@@ -144,7 +143,7 @@ public class SystemSettingsActor extends BaseActor {
   }
 
   private static boolean savedObjectToCache(
-      String keymapName, Object object, SystemSetting setting) {
+      String keymapName, Map<String, Object> object, SystemSetting setting) {
     if (object != null) {
       Response response = new Response();
       response.put(JsonKey.RESPONSE, setting);

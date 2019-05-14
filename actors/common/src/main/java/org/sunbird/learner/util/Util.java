@@ -1430,9 +1430,7 @@ public final class Util {
     if (!(userList.isEmpty())) {
       userDetails = userList.get(0);
       username = (String) userDetails.get(JsonKey.USERNAME);
-     /* ProjectLogger.log(
-          "Util:getUserDetails: for userId " + userId + " is " + userDetails,
-          LoggerEnum.INFO.name()); */
+      ProjectLogger.log("Util:getUserDetails: for userId " + userId, LoggerEnum.INFO.name());
       userDetails.put(JsonKey.ADDRESS, getAddressDetails(userId, null));
       userDetails.put(JsonKey.EDUCATION, getUserEducationDetails(userId));
       userDetails.put(JsonKey.JOB_PROFILE, getJobProfileDetails(userId));
@@ -1452,9 +1450,7 @@ public final class Util {
       userDetails.remove(JsonKey.PASSWORD);
       addEmailAndPhone(userDetails);
       userDetails = getUserDetailsFromRegistry(userDetails);
-   /*  ProjectLogger.log(
-          "Util:getUserDetails: for userId " + userId + " is " + userDetails,
-          LoggerEnum.INFO.name()); */
+      ProjectLogger.log("Util:getUserDetails: for userId " + userId, LoggerEnum.INFO.name());
     } else {
       ProjectLogger.log(
           "Util:getUserProfile: User data not available to save in ES for userId : " + userId,
@@ -1481,12 +1477,10 @@ public final class Util {
 
   public static void checkUserProfileVisibility(Map<String, Object> userMap, ActorRef actorRef) {
 
-   /*  ProjectLogger.log(
+    ProjectLogger.log(
         "Util:checkUserProfileVisibility: UserMap before removing private fields for userId "
-            + userMap.get(JsonKey.USER_ID)
-            + " is "
-            + userMap,
-        LoggerEnum.INFO.name());*/
+            + userMap.get(JsonKey.USER_ID),
+        LoggerEnum.INFO.name());
     Map<String, String> userProfileVisibilityMap =
         (Map<String, String>) userMap.get(JsonKey.PROFILE_VISIBILITY);
     Map<String, String> completeProfileVisibilityMap =

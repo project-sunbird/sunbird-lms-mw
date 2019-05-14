@@ -92,7 +92,7 @@ public class SystemSettingsActor extends BaseActor {
   private void getSystemSetting(Request actorMessage) {
     ProjectLogger.log("SystemSettingsActor: getSystemSetting called", LoggerEnum.INFO.name());
     ProjectLogger.log(
-        "SystemSettingsActor:getSystemSetting: request is " + actorMessage.getRequest(),
+        "SystemSettingsActor:getSystemSetting: request is:" + actorMessage.getRequest(),
         LoggerEnum.INFO.name());
     SystemSetting setting =
         systemSettingDaoImpl.readByField((String) actorMessage.getContext().get(JsonKey.FIELD));
@@ -100,7 +100,7 @@ public class SystemSettingsActor extends BaseActor {
       boolean isSavedToCache =
           savedObjectToCache(actorMessage.getOperation(), actorMessage.getRequest(), setting);
       ProjectLogger.log(
-          "SystemSettingsActor:getSystemSetting: object saved to cache " + isSavedToCache,
+          "SystemSettingsActor:getSystemSetting: object saved to cache:" + isSavedToCache,
           LoggerEnum.INFO.name());
     }
 
@@ -127,7 +127,6 @@ public class SystemSettingsActor extends BaseActor {
 
   private void setSystemSetting(Request actorMessage) {
     ProjectLogger.log("SystemSettingsActor: setSystemSetting called", LoggerEnum.DEBUG.name());
-
     Map<String, Object> request = actorMessage.getRequest();
     String id = (String) request.get(JsonKey.ID);
     String field = (String) request.get(JsonKey.FIELD);

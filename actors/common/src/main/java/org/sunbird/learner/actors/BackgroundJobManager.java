@@ -554,9 +554,9 @@ public class BackgroundJobManager extends BaseActor {
    */
   private boolean insertDataToElastic(
       String index, String type, String identifier, Map<String, Object> data) {
-    ProjectLogger.log(
+    /* ProjectLogger.log(
         "making call to ES for type ,identifier ,data==" + type + " " + identifier + data,
-        LoggerEnum.INFO.name());
+        LoggerEnum.INFO.name()); */
     /*
      * if (type.equalsIgnoreCase(ProjectUtil.EsType.user.getTypeName())) { // now
      * calculate profile completeness and error filed and store it in ES

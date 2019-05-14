@@ -146,8 +146,10 @@ public class SystemSettingsActor extends BaseActor {
   private static boolean savedObjectToCache(
       String keymapName, Object object, SystemSetting setting) {
     if (object != null) {
+      Response response = new Response();
+      response.put(JsonKey.RESPONSE, setting);
       String field = HashGeneratorUtil.getHashCodeAsString(object);
-      return cache.put(keymapName, field, setting);
+      return cache.put(keymapName, field, response);
     } else {
       return false;
     }

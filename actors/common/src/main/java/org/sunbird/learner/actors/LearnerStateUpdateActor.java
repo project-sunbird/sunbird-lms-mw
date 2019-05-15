@@ -32,7 +32,6 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
-import org.sunbird.telemetry.util.TelemetryUtil;
 
 /**
  * This actor to handle learner's state update operation .
@@ -144,7 +143,7 @@ public class LearnerStateUpdateActor extends BaseActor {
             cassandraOperation.upsertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), map);
             response.getResult().put((String) map.get(JsonKey.CONTENT_ID), JsonKey.SUCCESS);
             // create telemetry for user for each content ...
-            targetObject =
+           /* targetObject =
                 TelemetryUtil.generateTargetObject(
                     (String) map.get(JsonKey.BATCH_ID), JsonKey.BATCH, JsonKey.CREATE, null);
             // since this event will generate multiple times so nedd to recreate correlated
@@ -161,10 +160,10 @@ public class LearnerStateUpdateActor extends BaseActor {
             rollUp.put("l2", (String) map.get(JsonKey.CONTENT_ID));
             TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
             TelemetryUtil.telemetryProcessingCall(
-                request.getRequest(), targetObject, correlatedObject);
+                request.getRequest(), targetObject, correlatedObject);*/
           } catch (Exception ex) {
             ProjectLogger.log(
-                "LearnerStateUpdateActor:onReceive Error occured:" + ex, LoggerEnum.ERROR);
+                "LearnerStateUpdateActor:onReceive Error occured:" + ex, LoggerEnum.ERROR.name());
             response.getResult().put((String) map.get(JsonKey.CONTENT_ID), JsonKey.FAILED);
             contentList.remove(map);
           }
@@ -574,6 +573,8 @@ public class LearnerStateUpdateActor extends BaseActor {
     request.setOperation(ActorOperations.UPDATE_USR_COURSES_INFO_ELASTIC.getValue());
     request.getRequest().put(JsonKey.USER_COURSES, courseMap);
     try {
+    	ProjectLogger.log(
+                "LearnerStateUpdateActor:updateUserCoursesToES call for background to save in ES:", LoggerEnum.INFO.name());	
       tellToAnother(request);
     } catch (Exception ex) {
       ProjectLogger.log(

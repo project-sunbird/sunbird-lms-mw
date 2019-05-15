@@ -299,6 +299,7 @@ public class LearnerStateUpdateActor extends BaseActor {
           updateDb.put(JsonKey.BATCH_ID, course.get(JsonKey.BATCH_ID));
           updateDb.put(JsonKey.USER_ID, course.get(JsonKey.USER_ID));
           updateDb.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(ts));
+          updateUserCoursesToES(updateDb);
         } catch (Exception ex) {
           ProjectLogger.log(
               "LearnerStateUpdateActor:updateCourse exception occured: " + ex,

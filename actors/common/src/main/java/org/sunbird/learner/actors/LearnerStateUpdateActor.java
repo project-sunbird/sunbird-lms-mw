@@ -595,7 +595,7 @@ public class LearnerStateUpdateActor extends BaseActor {
               + "status= "
               + status
               + " "
-              + response.get(JsonKey.STATUS),
+              + response.get(JsonKey.RESPONSE),
           LoggerEnum.INFO.name());
     } else {
       ProjectLogger.log(

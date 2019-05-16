@@ -192,7 +192,7 @@ public class LearnerStateUpdateActor extends BaseActor {
         (Map<String, Integer>) request.get(this.CONTENT_STATE_INFO);
     Map<String, Object> temp = new HashMap<>();
     ProjectLogger.log(
-        "LearnerStateUpdateActor:updateUserCourses method call started :" + LoggerEnum.INFO.name());
+        "LearnerStateUpdateActor:updateUserCourses method call started :" , LoggerEnum.INFO.name());
     for (Map<String, Object> map : contentList) {
       String contentid = (String) map.get(JsonKey.ID);
       if (map.get(JsonKey.COURSE_ID) != null) {
@@ -244,7 +244,7 @@ public class LearnerStateUpdateActor extends BaseActor {
   private void updateCourse(Map<String, Object> temp, Map<String, Integer> contentStateInfo) {
     Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
     ProjectLogger.log(
-        "LearnerStateUpdateActor:updateCourse method called started:" + LoggerEnum.INFO.name());
+        "LearnerStateUpdateActor:updateCourse method called started:" , LoggerEnum.INFO.name());
     for (Map.Entry<String, Object> entry : temp.entrySet()) {
       String key = entry.getKey();
       Map<String, Object> value = (Map<String, Object>) entry.getValue();
@@ -294,7 +294,7 @@ public class LearnerStateUpdateActor extends BaseActor {
               (String) course.get(JsonKey.ID), ProjectUtil.BulkProcessStatus.COMPLETED.name());
           ProjectLogger.log(
               "LearnerStateUpdateActor:updateCourse user courses DB updated successfully : "
-                  + LoggerEnum.INFO.name());
+                  , LoggerEnum.INFO.name());
           updateDb.put(JsonKey.BATCH_ID, course.get(JsonKey.BATCH_ID));
           updateDb.put(JsonKey.USER_ID, course.get(JsonKey.USER_ID));
           updateDb.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(ts));

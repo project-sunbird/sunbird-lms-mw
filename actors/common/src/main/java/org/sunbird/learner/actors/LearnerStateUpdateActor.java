@@ -12,7 +12,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
-
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -32,6 +31,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
+import org.sunbird.telemetry.util.TelemetryUtil;
 
 /**
  * This actor to handle learner's state update operation .
@@ -95,24 +95,24 @@ public class LearnerStateUpdateActor extends BaseActor {
 
           // code to validate the whether request for valid batch range(start and end
           // date)
-          if (!(StringUtils.isBlank(batchId)) && ! validBatchIds.contains(batchId)) {
-        	  if(invalidBatchIds.contains(batchId)) {
-        		  contentList.remove(map);
-                  continue;  
-              } 
+          if (!(StringUtils.isBlank(batchId)) && !validBatchIds.contains(batchId)) {
+            if (invalidBatchIds.contains(batchId)) {
+              contentList.remove(map);
+              continue;
+            }
             Response batchResponse =
                 cassandraOperation.getRecordById(
                     batchdbInfo.getKeySpace(), batchdbInfo.getTableName(), batchId);
             List<Map<String, Object>> batches =
                 (List<Map<String, Object>>) batchResponse.getResult().get(JsonKey.RESPONSE);
             if (batches.isEmpty()) {
-            	invalidBatchIds.add(batchId);	
+              invalidBatchIds.add(batchId);
               flag = false;
             } else {
               Map<String, Object> batchInfo = batches.get(0);
               flag = validateBatchRange(batchInfo);
               if (flag) {
-            	  validBatchIds.add(batchId);
+                validBatchIds.add(batchId);
               }
             }
 
@@ -143,7 +143,7 @@ public class LearnerStateUpdateActor extends BaseActor {
             cassandraOperation.upsertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), map);
             response.getResult().put((String) map.get(JsonKey.CONTENT_ID), JsonKey.SUCCESS);
             // create telemetry for user for each content ...
-           /* targetObject =
+            targetObject =
                 TelemetryUtil.generateTargetObject(
                     (String) map.get(JsonKey.BATCH_ID), JsonKey.BATCH, JsonKey.CREATE, null);
             // since this event will generate multiple times so nedd to recreate correlated
@@ -160,7 +160,7 @@ public class LearnerStateUpdateActor extends BaseActor {
             rollUp.put("l2", (String) map.get(JsonKey.CONTENT_ID));
             TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
             TelemetryUtil.telemetryProcessingCall(
-                request.getRequest(), targetObject, correlatedObject);*/
+                request.getRequest(), targetObject, correlatedObject);
           } catch (Exception ex) {
             ProjectLogger.log(
                 "LearnerStateUpdateActor:onReceive Error occured:" + ex, LoggerEnum.ERROR.name());
@@ -192,7 +192,7 @@ public class LearnerStateUpdateActor extends BaseActor {
         (Map<String, Integer>) request.get(this.CONTENT_STATE_INFO);
     Map<String, Object> temp = new HashMap<>();
     ProjectLogger.log(
-        "LearnerStateUpdateActor:updateUserCourses method call started :" , LoggerEnum.INFO.name());
+        "LearnerStateUpdateActor:updateUserCourses method call started :", LoggerEnum.INFO.name());
     for (Map<String, Object> map : contentList) {
       String contentid = (String) map.get(JsonKey.ID);
       if (map.get(JsonKey.COURSE_ID) != null) {
@@ -244,7 +244,7 @@ public class LearnerStateUpdateActor extends BaseActor {
   private void updateCourse(Map<String, Object> temp, Map<String, Integer> contentStateInfo) {
     Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
     ProjectLogger.log(
-        "LearnerStateUpdateActor:updateCourse method called started:" , LoggerEnum.INFO.name());
+        "LearnerStateUpdateActor:updateCourse method called started:", LoggerEnum.INFO.name());
     for (Map.Entry<String, Object> entry : temp.entrySet()) {
       String key = entry.getKey();
       Map<String, Object> value = (Map<String, Object>) entry.getValue();
@@ -293,11 +293,16 @@ public class LearnerStateUpdateActor extends BaseActor {
           updateUserCourseStatus(
               (String) course.get(JsonKey.ID), ProjectUtil.BulkProcessStatus.COMPLETED.name());
           ProjectLogger.log(
-              "LearnerStateUpdateActor:updateCourse user courses DB updated successfully : "
-                  , LoggerEnum.INFO.name());
+              "LearnerStateUpdateActor:updateCourse user courses DB updated successfully : ",
+              LoggerEnum.INFO.name());
           updateDb.put(JsonKey.BATCH_ID, course.get(JsonKey.BATCH_ID));
           updateDb.put(JsonKey.USER_ID, course.get(JsonKey.USER_ID));
           updateDb.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(ts));
+          if (updateDb.containsKey(JsonKey.COMPLETED_ON)) {
+            updateDb.put(
+                JsonKey.COMPLETED_ON,
+                ProjectUtil.formatDate((Date) updateDb.get(JsonKey.COMPLETED_ON)));
+          }
           updateUserCoursesToES(updateDb);
         } catch (Exception ex) {
           ProjectLogger.log(
@@ -573,8 +578,9 @@ public class LearnerStateUpdateActor extends BaseActor {
     request.setOperation(ActorOperations.UPDATE_USR_COURSES_INFO_ELASTIC.getValue());
     request.getRequest().put(JsonKey.USER_COURSES, courseMap);
     try {
-    	ProjectLogger.log(
-                "LearnerStateUpdateActor:updateUserCoursesToES call for background to save in ES:", LoggerEnum.INFO.name());	
+      ProjectLogger.log(
+          "LearnerStateUpdateActor:updateUserCoursesToES call for background to save in ES:",
+          LoggerEnum.INFO.name());
       tellToAnother(request);
     } catch (Exception ex) {
       ProjectLogger.log(

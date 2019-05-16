@@ -128,7 +128,6 @@ public class LearnerStateUpdateActor extends BaseActor {
           preOperation(map, userId, contentStatusHolder);
           map.put(JsonKey.USER_ID, userId);
           map.put(JsonKey.DATE_TIME, new Timestamp(new Date().getTime()));
-
           try {
             ProjectLogger.log(
                 "LearnerStateUpdateActor:onReceive: map  " + map, LoggerEnum.INFO.name());
@@ -142,7 +141,16 @@ public class LearnerStateUpdateActor extends BaseActor {
             }
             cassandraOperation.upsertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), map);
             response.getResult().put((String) map.get(JsonKey.CONTENT_ID), JsonKey.SUCCESS);
-            // create telemetry for user for each content ...
+          } catch (Exception e) {
+            ProjectLogger.log(
+                "LearnerStateUpdateActor:onReceive Error occured during db update:" + e,
+                LoggerEnum.ERROR.name());
+            response.getResult().put((String) map.get(JsonKey.CONTENT_ID), JsonKey.FAILED);
+            contentList.remove(map);
+            continue;
+          }
+          // create telemetry for user for each content ...
+          try {
             targetObject =
                 TelemetryUtil.generateTargetObject(
                     (String) map.get(JsonKey.BATCH_ID), JsonKey.BATCH, JsonKey.CREATE, null);
@@ -163,9 +171,8 @@ public class LearnerStateUpdateActor extends BaseActor {
                 request.getRequest(), targetObject, correlatedObject);
           } catch (Exception ex) {
             ProjectLogger.log(
-                "LearnerStateUpdateActor:onReceive Error occured:" + ex, LoggerEnum.ERROR.name());
-            response.getResult().put((String) map.get(JsonKey.CONTENT_ID), JsonKey.FAILED);
-            contentList.remove(map);
+                "LearnerStateUpdateActor:onReceive Error occured during telemetry:" + ex,
+                LoggerEnum.ERROR.name());
           }
         }
       } else {

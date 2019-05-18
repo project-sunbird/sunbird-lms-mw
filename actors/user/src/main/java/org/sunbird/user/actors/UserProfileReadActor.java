@@ -157,6 +157,7 @@ public class UserProfileReadActor extends BaseActor {
       ObjectMapper objectMapper = new ObjectMapper();
       objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
       result = objectMapper.convertValue(foundUser, Map.class);
+      result.put(JsonKey.ORGANISATIONS, Util.getUserOrgDetails(userId));
     }
     // check user found or not
     if (result == null || result.size() == 0) {

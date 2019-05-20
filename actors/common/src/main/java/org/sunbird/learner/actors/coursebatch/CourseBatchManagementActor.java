@@ -223,7 +223,7 @@ public class CourseBatchManagementActor extends BaseActor {
     }
     targetObject =
         TelemetryUtil.generateTargetObject(
-            (String) request.get(JsonKey.ID), JsonKey.BATCH, JsonKey.UPDATE, null);
+            (String) request.get(JsonKey.ID), TelemetryEnvKey.BATCH, JsonKey.UPDATE, null);
 
     Map<String, String> rollUp = new HashMap<>();
     rollUp.put("l1", courseBatch.getCourseId());
@@ -320,7 +320,7 @@ public class CourseBatchManagementActor extends BaseActor {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     String batchId = (String) req.get(JsonKey.BATCH_ID);
-    TelemetryUtil.generateCorrelatedObject(batchId, JsonKey.BATCH, null, correlatedObject);
+    TelemetryUtil.generateCorrelatedObject(batchId, TelemetryEnvKey.BATCH, null, correlatedObject);
 
     CourseBatch courseBatch = courseBatchDao.readById(batchId);
     Map<String, Object> courseBatchObject = new ObjectMapper().convertValue(courseBatch, Map.class);
@@ -379,9 +379,11 @@ public class CourseBatchManagementActor extends BaseActor {
       participants.add(userId);
       response.getResult().put(userId, JsonKey.SUCCESS);
 
-      targetObject = TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
+      targetObject =
+          TelemetryUtil.generateTargetObject(userId, TelemetryEnvKey.USER, JsonKey.UPDATE, null);
       correlatedObject = new ArrayList<>();
-      TelemetryUtil.generateCorrelatedObject(batchId, JsonKey.BATCH, null, correlatedObject);
+      TelemetryUtil.generateCorrelatedObject(
+          batchId, TelemetryEnvKey.BATCH, null, correlatedObject);
       TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
     }
 

@@ -45,7 +45,10 @@ public class CacheManagementActor extends BaseActor {
       sender().tell(response, self());
     } catch (Exception e) {
       ProjectLogger.log(
-          "CacheManagementActor:clearCache: Error occurred for mapName = " + mapName + " error = " + e.getMessage(),
+          "CacheManagementActor:clearCache: Error occurred for mapName = "
+              + mapName
+              + " error = "
+              + e.getMessage(),
           LoggerEnum.ERROR);
       sender().tell(e, self());
     }

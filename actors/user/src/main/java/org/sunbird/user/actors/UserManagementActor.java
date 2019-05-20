@@ -187,7 +187,7 @@ public class UserManagementActor extends BaseActor {
     }
     targetObject =
         TelemetryUtil.generateTargetObject(
-            (String) userMap.get(JsonKey.USER_ID), JsonKey.USER, JsonKey.UPDATE, null);
+            (String) userMap.get(JsonKey.USER_ID), TelemetryEnvKey.USER, JsonKey.UPDATE, null);
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
   }
 
@@ -629,9 +629,10 @@ public class UserManagementActor extends BaseActor {
     ExecutionContext.getCurrent().getRequestContext().put(JsonKey.ROLLUP, rollUp);
     targetObject =
         TelemetryUtil.generateTargetObject(
-            (String) userMap.get(JsonKey.ID), JsonKey.USER, JsonKey.CREATE, null);
-    TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
-    TelemetryUtil.generateCorrelatedObject(signupType, JsonKey.signupType, null, correlatedObject);
+            (String) userMap.get(JsonKey.ID), TelemetryEnvKey.USER, JsonKey.CREATE, null);
+    TelemetryUtil.generateCorrelatedObject(userId, TelemetryEnvKey.USER, null, correlatedObject);
+    TelemetryUtil.generateCorrelatedObject(
+        signupType, StringUtils.capitalize(JsonKey.signupType), null, correlatedObject);
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
   }
 

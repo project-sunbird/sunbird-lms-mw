@@ -501,7 +501,7 @@ public class LearnerStateUpdateActor extends BaseActor {
       req.put(JsonKey.LAST_UPDATED_TIME, ProjectUtil.getFormattedDate());
 
       if (requestAccessTime != null) {
-        req.put(JsonKey.LAST_ACCESS_TIME, req.get(JsonKey.LAST_ACCESS_TIME));
+        req.put(JsonKey.LAST_ACCESS_TIME, (String) req.get(JsonKey.LAST_ACCESS_TIME));
       } else {
         req.put(JsonKey.LAST_ACCESS_TIME, ProjectUtil.getFormattedDate());
       }

@@ -180,7 +180,7 @@ public class SearchHandlerActor extends BaseActor {
 
         ProjectLogger.log(
             SearchHandlerActor.class.getName()
-                + ":handelOrgSearchAsyncRequest: Error occured in genrating Telemetry for orgSearch  "
+                + ":handelOrgSearchAsyncRequest: Error occured in generating Telemetry for orgSearch  "
                 + LoggerEnum.ERROR.name());
       }
 

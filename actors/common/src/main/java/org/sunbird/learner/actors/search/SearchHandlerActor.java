@@ -2,7 +2,6 @@ package org.sunbird.learner.actors.search;
 
 import akka.dispatch.Mapper;
 import akka.pattern.Patterns;
-import akka.util.Timeout;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -10,7 +9,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -39,7 +37,6 @@ import org.sunbird.telemetry.util.TelemetryLmaxWriter;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
-import scala.concurrent.duration.Duration;
 
 /**
  * This class will handle search operation for all different type of index and types
@@ -159,9 +156,7 @@ public class SearchHandlerActor extends BaseActor {
     Patterns.pipe(response, getContext().dispatcher()).to(sender());
     Response orgSearchResponse = null;
     try {
-      Timeout t = new Timeout(Duration.create(10, TimeUnit.SECONDS));
-      orgSearchResponse = Await.result(response, t.duration());
-      // create search telemetry event here ...
+      orgSearchResponse = Await.result(response, BaseActor.timeout.duration());
       String[] types = new String[] {indexType};
       Map<String, Object> contentMap = new HashMap<>();
       List<Object> contentList = new ArrayList<>();
@@ -176,16 +171,13 @@ public class SearchHandlerActor extends BaseActor {
           contentMap.put(JsonKey.CONTENT, contentList.get(0));
           generateSearchTelemetryEvent(searchDto, types, contentMap);
         }
-      } else {
-
-        ProjectLogger.log(
-            SearchHandlerActor.class.getName()
-                + ":handelOrgSearchAsyncRequest: Error occured in generating Telemetry for orgSearch  "
-                + LoggerEnum.ERROR.name());
       }
-
     } catch (Exception e) {
-      e.printStackTrace();
+      ProjectLogger.log(
+          SearchHandlerActor.class.getName()
+              + ":handelOrgSearchAsyncRequest: Error occured in generating Telemetry for orgSearch  ",
+          e,
+          LoggerEnum.ERROR.name());
     }
   }
 

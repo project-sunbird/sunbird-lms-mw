@@ -203,7 +203,6 @@ public class CourseEnrollmentActor extends BaseActor {
         TelemetryEnvKey.BATCH,
         "user.batch",
         correlatedObject);
-
     TelemetryUtil.telemetryProcessingCall(request, targetObject, correlatedObject);
   }
 

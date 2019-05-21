@@ -195,7 +195,7 @@ public class CourseEnrollmentActor extends BaseActor {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     targetObject =
         TelemetryUtil.generateTargetObject(
-            (String) request.get(JsonKey.USER_ID), JsonKey.USER, JsonKey.UPDATE, null);
+            (String) request.get(JsonKey.USER_ID), JsonKey.USER, JsonKey.CREATE, null);
     TelemetryUtil.generateCorrelatedObject(
         (String) request.get(JsonKey.COURSE_ID), JsonKey.COURSE, corelation, correlatedObject);
     TelemetryUtil.generateCorrelatedObject(

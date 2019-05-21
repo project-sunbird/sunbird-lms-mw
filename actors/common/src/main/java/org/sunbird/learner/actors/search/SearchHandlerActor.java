@@ -2,6 +2,7 @@ package org.sunbird.learner.actors.search;
 
 import akka.dispatch.Mapper;
 import akka.pattern.Patterns;
+import akka.util.Timeout;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -9,7 +10,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -34,7 +37,9 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
 import org.sunbird.telemetry.util.TelemetryLmaxWriter;
 import org.sunbird.telemetry.util.TelemetryUtil;
+import scala.concurrent.Await;
 import scala.concurrent.Future;
+import scala.concurrent.duration.Duration;
 
 /**
  * This class will handle search operation for all different type of index and types
@@ -152,6 +157,36 @@ public class SearchHandlerActor extends BaseActor {
             },
             getContext().dispatcher());
     Patterns.pipe(response, getContext().dispatcher()).to(sender());
+    Response orgSearchResponse = null;
+    try {
+      Timeout t = new Timeout(Duration.create(10, TimeUnit.SECONDS));
+      orgSearchResponse = Await.result(response, t.duration());
+      // create search telemetry event here ...
+      String[] types = new String[] {indexType};
+      Map<String, Object> contentMap = new HashMap<>();
+      List<Object> contentList = new ArrayList<>();
+      if (orgSearchResponse != null
+          && MapUtils.isNotEmpty(orgSearchResponse.getResult())
+          && MapUtils.isNotEmpty(
+              (Map<String, Object>) orgSearchResponse.getResult().get(JsonKey.RESPONSE))) {
+        HashMap<String, Object> contentListMap =
+            (HashMap<String, Object>) orgSearchResponse.getResult().get(JsonKey.RESPONSE);
+        contentList.add(contentListMap.get(JsonKey.CONTENT));
+        if (CollectionUtils.isNotEmpty(contentList)) {
+          contentMap.put(JsonKey.CONTENT, contentList.get(0));
+          generateSearchTelemetryEvent(searchDto, types, contentMap);
+        }
+      } else {
+
+        ProjectLogger.log(
+            SearchHandlerActor.class.getName()
+                + ":handelOrgSearchAsyncRequest: Error occured in genrating Telemetry for orgSearch  "
+                + LoggerEnum.ERROR.name());
+      }
+
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
   }
 
   private List<String> getParticipantList(String id) {

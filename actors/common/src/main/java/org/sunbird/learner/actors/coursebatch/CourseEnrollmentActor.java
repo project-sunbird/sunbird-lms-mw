@@ -199,7 +199,10 @@ public class CourseEnrollmentActor extends BaseActor {
     TelemetryUtil.generateCorrelatedObject(
         (String) request.get(JsonKey.COURSE_ID), JsonKey.COURSE, corelation, correlatedObject);
     TelemetryUtil.generateCorrelatedObject(
-        (String) request.get(JsonKey.BATCH_ID), JsonKey.BATCH, "user.batch", correlatedObject);
+        (String) request.get(JsonKey.BATCH_ID),
+        TelemetryEnvKey.BATCH,
+        "user.batch",
+        correlatedObject);
 
     TelemetryUtil.telemetryProcessingCall(request, targetObject, correlatedObject);
   }

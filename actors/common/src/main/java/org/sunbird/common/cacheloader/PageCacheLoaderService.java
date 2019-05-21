@@ -20,8 +20,8 @@ import org.sunbird.learner.util.DataCacheHandler;
 public class PageCacheLoaderService implements Runnable {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static final String KEY_SPACE_NAME = "sunbird";
-  private static boolean isCacheEnabled =
-      Boolean.parseBoolean(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_CACHE_ENABLE));
+  private static boolean isCacheEnabled = false;
+//      Boolean.parseBoolean(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_CACHE_ENABLE));
 
   private static Cache cache = CacheFactory.getInstance();
 

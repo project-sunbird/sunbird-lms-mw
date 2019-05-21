@@ -279,7 +279,8 @@ public class PageManagementActor extends BaseActor {
     if (StringUtils.isBlank(orgId)) {
       orgId = "NA";
     }
-    ProjectLogger.log("Fetching data from Cache for " + orgId + ":" + pageName, LoggerEnum.INFO);
+    ProjectLogger.log(
+        "Fetching data from Cache for " + orgId + ":" + pageName, LoggerEnum.INFO.name());
     Map<String, Object> pageMapData =
         PageCacheLoaderService.getDataFromCache(
             ActorOperations.GET_PAGE_DATA.getValue(), orgId + ":" + pageName, Map.class);
@@ -315,7 +316,7 @@ public class PageManagementActor extends BaseActor {
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
 
-    long requestHashCode = 0;
+    String requestHashCode = "";
     if (isCacheEnabled) {
       Map<String, Object> reqMap = new HashMap<>();
       reqMap.put(JsonKey.SECTION, arr);
@@ -326,13 +327,16 @@ public class PageManagementActor extends BaseActor {
       requestHashCode = HashGeneratorUtil.getHashCode(JsonUtil.toJson(reqMap));
       Response cachedResponse =
           PageCacheLoaderService.getDataFromCache(
-              JsonKey.SECTIONS, String.valueOf(requestHashCode), Response.class);
-      if (requestHashCode != 0 && cachedResponse != null) {
+              JsonKey.PAGE_ASSEMBLE, requestHashCode, Response.class);
+      if (StringUtils.isNotBlank(requestHashCode) && cachedResponse != null) {
+        ProjectLogger.log(
+            "PageManagementActor : getPageData : response returned from cache",
+            LoggerEnum.INFO.name());
         sender().tell(cachedResponse, self());
         return;
       }
     }
-    long reqHashCode = requestHashCode;
+    String reqHashCode = requestHashCode;
     try {
       List<Future<Map<String, Object>>> sectionList = new ArrayList<>();
       if (arr != null) {
@@ -382,9 +386,9 @@ public class PageManagementActor extends BaseActor {
                       "PageManagementActor:getPageData:apply: Response before caching it = "
                           + response,
                       LoggerEnum.INFO);
-                  if (reqHashCode != 0) {
+                  if (StringUtils.isNotBlank(reqHashCode)) {
                     PageCacheLoaderService.putDataIntoCache(
-                        JsonKey.SECTIONS, String.valueOf(reqHashCode), response);
+                        JsonKey.PAGE_ASSEMBLE, reqHashCode, response);
                   }
                   return response;
                 }
@@ -610,6 +614,7 @@ public class PageManagementActor extends BaseActor {
       Object index,
       ExecutionContextExecutor ec)
       throws Exception {
+
     Map<String, Object> searchQueryMap =
         mapper.readValue((String) section.get(JsonKey.SEARCH_QUERY), HashMap.class);
     if (MapUtils.isEmpty(searchQueryMap)) {

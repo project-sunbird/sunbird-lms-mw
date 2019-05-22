@@ -169,6 +169,9 @@ public class SearchHandlerActor extends BaseActor {
         contentList.add(contentListMap.get(JsonKey.CONTENT));
         if (CollectionUtils.isNotEmpty(contentList)) {
           contentMap.put(JsonKey.CONTENT, contentList.get(0));
+          contentMap.put(
+              JsonKey.COUNT,
+              contentListMap.get(JsonKey.COUNT) != null ? contentListMap.get(JsonKey.COUNT) : 0);
           generateSearchTelemetryEvent(searchDto, types, contentMap);
         }
       }

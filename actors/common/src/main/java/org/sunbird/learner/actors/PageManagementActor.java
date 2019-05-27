@@ -72,7 +72,7 @@ public class PageManagementActor extends BaseActor {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private ObjectMapper mapper = new ObjectMapper();
   private boolean isCacheEnabled = false;
-      //Boolean.parseBoolean(ProjectUtil.propertiesCache.getProperty(JsonKey.SUNBIRD_CACHE_ENABLE));
+  // Boolean.parseBoolean(ProjectUtil.propertiesCache.getProperty(JsonKey.SUNBIRD_CACHE_ENABLE));
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -150,7 +150,7 @@ public class PageManagementActor extends BaseActor {
       }
     } else {
       response = new Response();
-      response.put(JsonKey.SECTION, OTPActorTest.java);
+      response.put(JsonKey.SECTION, sectionMap);
     }
     sender().tell(response, self());
   }
@@ -345,10 +345,12 @@ public class PageManagementActor extends BaseActor {
 
           if (MapUtils.isNotEmpty(sectionMap)) {
 
-            Map<String, Object> sectionData = new HashMap<String, Object>(PageCacheLoaderService.getDataFromCache(
-                    ActorOperations.GET_SECTION.getValue(),
-                    (String) sectionMap.get(JsonKey.ID),
-                    Map.class));
+            Map<String, Object> sectionData =
+                new HashMap<String, Object>(
+                    PageCacheLoaderService.getDataFromCache(
+                        ActorOperations.GET_SECTION.getValue(),
+                        (String) sectionMap.get(JsonKey.ID),
+                        Map.class));
             if (MapUtils.isNotEmpty(sectionData)) {
               Future<Map<String, Object>> contentFuture =
                   getContentData(

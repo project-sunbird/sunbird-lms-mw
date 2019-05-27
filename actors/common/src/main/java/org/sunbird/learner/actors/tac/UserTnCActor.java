@@ -3,7 +3,11 @@ package org.sunbird.learner.actors.tac;
 import com.fasterxml.jackson.core.type.TypeReference;
 import java.sql.Timestamp;
 import java.text.MessageFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -15,6 +19,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.ExecutionContext;
@@ -23,7 +28,6 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.telemetry.util.TelemetryUtil;
-import org.sunbird.common.models.util.LoggerEnum;
 
 @ActorConfig(
   tasks = {"userTnCAccept"},
@@ -114,17 +118,19 @@ public class UserTnCActor extends BaseActor {
         TelemetryUtil.generateTargetObject(
             (String) userMap.get(JsonKey.USER_ID),
             JsonKey.USER,
-            acceptedTnCVersion,
+            JsonKey.UPDATE,
             lastAcceptedVersion);
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
-    ProjectLogger.log("UserTnCActor:syncUserDetails: Telemetry generation call ended ",LoggerEnum.INFO.name());
+    ProjectLogger.log(
+        "UserTnCActor:syncUserDetails: Telemetry generation call ended ", LoggerEnum.INFO.name());
   }
 
   private void syncUserDetails(Map<String, Object> completeUserMap) {
     Request userRequest = new Request();
     userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
     userRequest.getRequest().put(JsonKey.ID, completeUserMap.get(JsonKey.ID));
-    ProjectLogger.log("UserTnCActor:syncUserDetails: Trigger sync of user details to ES",LoggerEnum.INFO.name());
+    ProjectLogger.log(
+        "UserTnCActor:syncUserDetails: Trigger sync of user details to ES", LoggerEnum.INFO.name());
     tellToAnother(userRequest);
   }
 }

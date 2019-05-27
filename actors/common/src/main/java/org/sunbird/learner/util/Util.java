@@ -878,7 +878,7 @@ public final class Util {
       String actorId = getKeyFromContext(JsonKey.ACTOR_ID, actorMessage);
       String actorType = getKeyFromContext(JsonKey.ACTOR_TYPE, actorMessage);
       String appId = getKeyFromContext(JsonKey.APP_ID, actorMessage);
-      env = StringUtils.isNotBlank(env) ? env : "N/A";
+      env = StringUtils.isNotBlank(env) ? env : "";
       String deviceId = getKeyFromContext(JsonKey.DEVICE_ID, actorMessage);
       String channel = getKeyFromContext(JsonKey.CHANNEL, actorMessage);
       requestContext.put(JsonKey.CHANNEL, channel);
@@ -918,7 +918,7 @@ public final class Util {
   public static String getKeyFromContext(String key, Request actorMessage) {
     return actorMessage.getContext() != null && actorMessage.getContext().containsKey(key)
         ? (String) actorMessage.getContext().get(key)
-        : "N/A";
+        : "";
   }
 
   public static void initializeContextForSchedulerJob(
@@ -1475,7 +1475,9 @@ public final class Util {
   }
 
   public static void checkUserProfileVisibility(Map<String, Object> userMap, ActorRef actorRef) {
-    ProjectLogger.log("Util:checkUserProfileVisibility: userId = " + userMap.get(JsonKey.USER_ID), LoggerEnum.INFO.name());
+    ProjectLogger.log(
+        "Util:checkUserProfileVisibility: userId = " + userMap.get(JsonKey.USER_ID),
+        LoggerEnum.INFO.name());
     Map<String, String> userProfileVisibilityMap =
         (Map<String, String>) userMap.get(JsonKey.PROFILE_VISIBILITY);
     Map<String, String> completeProfileVisibilityMap =

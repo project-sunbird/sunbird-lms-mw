@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -34,6 +35,7 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
 import org.sunbird.telemetry.util.TelemetryLmaxWriter;
 import org.sunbird.telemetry.util.TelemetryUtil;
+import scala.concurrent.Await;
 import scala.concurrent.Future;
 
 /**
@@ -152,6 +154,33 @@ public class SearchHandlerActor extends BaseActor {
             },
             getContext().dispatcher());
     Patterns.pipe(response, getContext().dispatcher()).to(sender());
+    Response orgSearchResponse = null;
+    try {
+      orgSearchResponse = Await.result(response, BaseActor.timeout.duration());
+      String[] types = new String[] {indexType};
+      Map<String, Object> contentMap = new HashMap<>();
+      List<Object> contentList = new ArrayList<>();
+      if (orgSearchResponse != null
+          && MapUtils.isNotEmpty(orgSearchResponse.getResult())
+          && MapUtils.isNotEmpty(
+              (Map<String, Object>) orgSearchResponse.getResult().get(JsonKey.RESPONSE))) {
+        HashMap<String, Object> contentListMap =
+            (HashMap<String, Object>) orgSearchResponse.getResult().get(JsonKey.RESPONSE);
+        contentList.add(contentListMap.get(JsonKey.CONTENT));
+        if (CollectionUtils.isNotEmpty(contentList)) {
+          contentMap.put(JsonKey.CONTENT, contentList.get(0));
+          contentMap.put(
+              JsonKey.COUNT,
+              contentListMap.get(JsonKey.COUNT) != null ? contentListMap.get(JsonKey.COUNT) : 0);
+          generateSearchTelemetryEvent(searchDto, types, contentMap);
+        }
+      }
+    } catch (Exception e) {
+      ProjectLogger.log(
+          "SearchHandlerActor:handelOrgSearchAsyncRequest: Error occured in generating Telemetry for orgSearch  ",
+          e,
+          LoggerEnum.ERROR.name());
+    }
   }
 
   private List<String> getParticipantList(String id) {

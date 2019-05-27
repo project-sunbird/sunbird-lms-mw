@@ -153,19 +153,19 @@ public class LearnerStateUpdateActor extends BaseActor {
           try {
             targetObject =
                 TelemetryUtil.generateTargetObject(
-                    (String) map.get(JsonKey.BATCH_ID), JsonKey.BATCH, JsonKey.CREATE, null);
+                    (String) map.get(JsonKey.CONTENT_ID),
+                    StringUtils.capitalize(JsonKey.CONTENT),
+                    JsonKey.CREATE,
+                    null);
             // since this event will generate multiple times so nedd to recreate correlated
             // objects every time ...
             correlatedObject = new ArrayList<>();
             TelemetryUtil.generateCorrelatedObject(
-                (String) map.get(JsonKey.CONTENT_ID), JsonKey.CONTENT, null, correlatedObject);
-            TelemetryUtil.generateCorrelatedObject(
                 (String) map.get(JsonKey.COURSE_ID), JsonKey.COURSE, null, correlatedObject);
             TelemetryUtil.generateCorrelatedObject(
-                (String) map.get(JsonKey.BATCH_ID), JsonKey.BATCH, null, correlatedObject);
+                (String) map.get(JsonKey.BATCH_ID), TelemetryEnvKey.BATCH, null, correlatedObject);
             Map<String, String> rollUp = new HashMap<>();
             rollUp.put("l1", (String) map.get(JsonKey.COURSE_ID));
-            rollUp.put("l2", (String) map.get(JsonKey.CONTENT_ID));
             TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
             TelemetryUtil.telemetryProcessingCall(
                 request.getRequest(), targetObject, correlatedObject);
@@ -362,7 +362,7 @@ public class LearnerStateUpdateActor extends BaseActor {
     Date endDate = null;
 
     try {
-      todaydate = format.parse((String) format.format(new Date()));
+      todaydate = format.parse(format.format(new Date()));
       startDate = format.parse(start);
       endDate = null;
       if (!(StringUtils.isBlank(end))) {
@@ -501,7 +501,7 @@ public class LearnerStateUpdateActor extends BaseActor {
       req.put(JsonKey.LAST_UPDATED_TIME, ProjectUtil.getFormattedDate());
 
       if (requestAccessTime != null) {
-        req.put(JsonKey.LAST_ACCESS_TIME, (String) req.get(JsonKey.LAST_ACCESS_TIME));
+        req.put(JsonKey.LAST_ACCESS_TIME, req.get(JsonKey.LAST_ACCESS_TIME));
       } else {
         req.put(JsonKey.LAST_ACCESS_TIME, ProjectUtil.getFormattedDate());
       }

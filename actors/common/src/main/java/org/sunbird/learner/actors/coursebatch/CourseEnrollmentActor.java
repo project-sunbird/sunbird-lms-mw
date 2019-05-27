@@ -109,7 +109,7 @@ public class CourseEnrollmentActor extends BaseActor {
     if (courseNotificationActive()) {
       batchOperationNotifier(courseMap, courseBatch, JsonKey.ADD);
     }
-    generateAndProcessTelemetryEvent(courseMap, "user.batch.course");
+    generateAndProcessTelemetryEvent(courseMap, "user.batch.course", JsonKey.CREATE);
   }
 
   private boolean courseNotificationActive() {
@@ -170,7 +170,7 @@ public class CourseEnrollmentActor extends BaseActor {
     UserCoursesService.validateUserUnenroll(userCourseResult);
     Response result = updateUserCourses(userCourseResult);
     sender().tell(result, self());
-    generateAndProcessTelemetryEvent(request, "user.batch.course.unenroll");
+    generateAndProcessTelemetryEvent(request, "user.batch.course.unenroll", JsonKey.UPDATE);
 
     if (courseNotificationActive()) {
       batchOperationNotifier(request, courseBatch, JsonKey.REMOVE);
@@ -190,17 +190,20 @@ public class CourseEnrollmentActor extends BaseActor {
     tellToAnother(batchNotification);
   }
 
-  private void generateAndProcessTelemetryEvent(Map<String, Object> request, String corelation) {
+  private void generateAndProcessTelemetryEvent(
+      Map<String, Object> request, String corelation, String state) {
     Map<String, Object> targetObject = new HashMap<>();
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     targetObject =
         TelemetryUtil.generateTargetObject(
-            (String) request.get(JsonKey.USER_ID), JsonKey.USER, JsonKey.UPDATE, null);
+            (String) request.get(JsonKey.USER_ID), JsonKey.USER, state, null);
     TelemetryUtil.generateCorrelatedObject(
         (String) request.get(JsonKey.COURSE_ID), JsonKey.COURSE, corelation, correlatedObject);
     TelemetryUtil.generateCorrelatedObject(
-        (String) request.get(JsonKey.BATCH_ID), JsonKey.BATCH, "user.batch", correlatedObject);
-
+        (String) request.get(JsonKey.BATCH_ID),
+        TelemetryEnvKey.BATCH,
+        "user.batch",
+        correlatedObject);
     TelemetryUtil.telemetryProcessingCall(request, targetObject, correlatedObject);
   }
 

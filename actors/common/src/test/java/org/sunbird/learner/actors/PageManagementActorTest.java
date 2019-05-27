@@ -15,10 +15,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -26,7 +24,9 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
+import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
+import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.cacheloader.PageCacheLoaderService;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -35,8 +35,6 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.ContentSearchUtil;
-import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 import scala.concurrent.Future;
 
@@ -44,57 +42,43 @@ import scala.concurrent.Future;
 @PrepareForTest({
   ServiceFactory.class,
   Util.class,
-  DataCacheHandler.class,
-  PageManagementActor.class,
-  ContentSearchUtil.class,
-  PageCacheLoaderService.class
+  RequestRouter.class,
+  ElasticSearchUtil.class,
+  PageCacheLoaderService.class,
+  ObjectMapper.class,
+  PageManagementActor.class
 })
-@Ignore
-@PowerMockIgnore({"javax.management.*"})
+@PowerMockIgnore({"javax.management.*", "javax.crypto.*", "javax.net.ssl.*", "javax.security.*"})
 public class PageManagementActorTest {
 
   private static ActorSystem system = ActorSystem.create("system");
   private static final Props props = Props.create(PageManagementActor.class);
   private static CassandraOperationImpl cassandraOperation;
-
+  private static String pageIdWithOrg = null;
   private static String sectionId = null;
+  private static ObjectMapper objectMapper;
   private static String sectionId2 = null;
   private static String pageId = "anyID";
-  private static String pageIdWithOrg = null;
+  private static Object[] arr = new Object[1];
   private static String pageIdWithOrg2 = null;
-  private static Object[] arr = new Object[10];
-  private static ObjectMapper objectMapper;
   private static Future<Map<String, Object>> result;
 
   @BeforeClass
-  public static void beforeClass() {
-    PowerMockito.mockStatic(ServiceFactory.class);
-    cassandraOperation = mock(CassandraOperationImpl.class);
-    PowerMockito.mockStatic(ContentSearchUtil.class);
-    when(ContentSearchUtil.searchContent(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap(), system.dispatcher()))
-        .thenReturn(result);
+  public static void beforeClass() throws Exception {
+    objectMapper = PowerMockito.mock(ObjectMapper.class);
   }
 
   @Before
   public void beforeEachTest() throws Exception {
-
+    ActorRef actorRef = mock(ActorRef.class);
+    PowerMockito.mockStatic(RequestRouter.class);
+    when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
     PowerMockito.mockStatic(ServiceFactory.class);
+    cassandraOperation = mock(CassandraOperationImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+    PowerMockito.mockStatic(ElasticSearchUtil.class);
+    PowerMockito.mockStatic(PageCacheLoaderService.class);
 
-    Map<String, Map<String, Object>> pageMap = new ConcurrentHashMap<>();
-    Map map = new HashMap();
-    map.put(JsonKey.PORTAL_MAP, "anyQuery");
-    pageMap.put("NA:Test Page Name Updated", map);
-    Map sectionMap = new HashMap();
-    sectionMap.put("anyId", getSectionMap());
-
-    PowerMockito.mockStatic(DataCacheHandler.class);
-    PowerMockito.when(DataCacheHandler.getPageMap()).thenReturn(pageMap);
-    PowerMockito.when(DataCacheHandler.getSectionMap()).thenReturn(sectionMap);
-
-    objectMapper = Mockito.mock(ObjectMapper.class);
-    PowerMockito.whenNew(ObjectMapper.class).withNoArguments().thenReturn(objectMapper);
     when(cassandraOperation.updateRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(getSuccessResponse());
@@ -106,6 +90,9 @@ public class PageManagementActorTest {
         .thenReturn(getSuccessResponse());
     when(cassandraOperation.getAllRecords(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(cassandraGetRecordById());
+    when(cassandraOperation.getRecordsByProperties(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(getRecordByPropMap(false));
   }
 
   @Test
@@ -170,11 +157,8 @@ public class PageManagementActorTest {
     innerMap.put(JsonKey.PAGE, pageMap);
     reqObj.setRequest(innerMap);
 
-    when(cassandraOperation.getRecordsByProperties(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(getRecordByPropMap(false));
     subject.tell(reqObj, probe.getRef());
-    Response response = probe.expectMsgClass(duration("10 second"), Response.class);
+    Response response = probe.expectMsgClass(duration("100 second"), Response.class);
     pageIdWithOrg = (String) response.get(JsonKey.PAGE_ID);
     assertTrue(null != pageIdWithOrg);
   }
@@ -384,28 +368,39 @@ public class PageManagementActorTest {
   }
 
   @Test
-  @Ignore
   public void testGetSectionSuccess() {
 
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
-    boolean section = false;
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.GET_SECTION.getValue());
+    reqObj.getRequest().put(JsonKey.ID, sectionId);
+
+    when(PageCacheLoaderService.getDataFromCache(
+            Mockito.anyString(), Mockito.anyString(), Mockito.any()))
+        .thenReturn(getSectionMap());
+    subject.tell(reqObj, probe.getRef());
+    Response response = probe.expectMsgClass(duration("100 second"), Response.class);
+
+    Map<String, Object> result = response.getResult();
+    assertTrue(null != result);
+  }
+
+  @Test
+  public void testGetSectionSuccessWithoutSectionMap() {
+
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.GET_SECTION.getValue());
     reqObj.getRequest().put(JsonKey.ID, sectionId);
     subject.tell(reqObj, probe.getRef());
-    Response response = probe.expectMsgClass(Response.class);
-    Map<String, Object> result = response.getResult();
-    List<Map<String, Object>> sectionList =
-        (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+    Response response = probe.expectMsgClass(duration("100 second"), Response.class);
 
-    for (Map<String, Object> sec : sectionList) {
-      if (null != sec.get(JsonKey.SECTIONS)) {
-        section = true;
-      }
-    }
-    assertTrue(section);
+    Map<String, Object> result = response.getResult();
+    assertTrue(null != result);
   }
 
   @Test
@@ -540,76 +535,6 @@ public class PageManagementActorTest {
     assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
-  @Test
-  public void testGetPageData() throws Exception {
-
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    Map<String, Object> header = new HashMap<>();
-    header.put("Accept", "application/json");
-    header.put("Content-Type", "application/json");
-    Map<String, Object> filterMap = new HashMap<>();
-    List<String> contentList = new ArrayList<>();
-    contentList.add("Story");
-    contentList.add("Worksheet");
-    contentList.add("Collection");
-    contentList.add("Game");
-    contentList.add("Collection");
-    contentList.add("Course");
-    filterMap.put("contentType", contentList);
-
-    List<String> statusList = new ArrayList<>();
-    statusList.add("Live");
-    filterMap.put("language", statusList);
-
-    List<String> objectTypeList = new ArrayList<>();
-    objectTypeList.add("content");
-    filterMap.put("objectType", objectTypeList);
-
-    List<String> languageList = new ArrayList<>();
-    languageList.add("English");
-    languageList.add("Hindi");
-    languageList.add("Gujarati");
-    languageList.add("Bengali");
-    filterMap.put("language", languageList);
-    Map<String, Object> compMap = new HashMap<>();
-    compMap.put("<=", 2);
-    compMap.put(">", 0.5);
-    filterMap.put("size", compMap);
-    filterMap.put("orthographic_complexity", 1);
-    List<String> gradeListist = new ArrayList<>();
-    gradeListist.add("Grade 1");
-    filterMap.put("gradeLevel", gradeListist);
-
-    Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.GET_PAGE_DATA.getValue());
-    reqObj.getRequest().put(JsonKey.SOURCE, "web");
-    reqObj.getRequest().put(JsonKey.PAGE_NAME, "Test Page Name Updated");
-    reqObj.getRequest().put(JsonKey.FILTERS, filterMap);
-    HashMap<String, Object> map = new HashMap<>();
-    map.put(JsonKey.PAGE, reqObj.getRequest());
-    map.put(JsonKey.HEADER, header);
-    reqObj.setRequest(map);
-
-    when(objectMapper.readValue("anyQuery", Object[].class)).thenReturn(arr);
-    when(objectMapper.readValue("searchQuery", HashMap.class))
-        .thenReturn(getObjectMapperResponse());
-
-    subject.tell(reqObj, probe.getRef());
-    probe.expectMsgClass(duration("10 second"), Response.class);
-  }
-
-  private static Response getRecordByPropMap(boolean isValid) {
-    Response response = new Response();
-    List<Map> list = new ArrayList<>();
-    Map<String, Object> map = new HashMap();
-    map.put(JsonKey.ID, "anyID");
-    if (isValid) list.add(map);
-    response.put(JsonKey.RESPONSE, list);
-    return response;
-  }
-
   private Response cassandraGetRecordByProperty(String reqMap) {
     Response response = new Response();
     List list = new ArrayList();
@@ -624,18 +549,10 @@ public class PageManagementActorTest {
     return response;
   }
 
-  private HashMap<String, Object> getObjectMapperResponse() {
-    HashMap<String, Object> objMap = new HashMap<>();
-    Map<String, Object> reqMap = new HashMap<>();
-    Map<String, Object> filterMap = new HashMap<>();
-    reqMap.put(JsonKey.FILTERS, filterMap);
-    objMap.put(JsonKey.REQUEST, reqMap);
-    return objMap;
-  }
-
   private Map<String, Object> getSectionMap() {
     Map<String, Object> sectionMap = new HashMap<>();
     sectionMap.put(JsonKey.SEARCH_QUERY, "searchQuery");
+    sectionMap.put(JsonKey.PORTAL_MAP, "portalMap");
     return sectionMap;
   }
 
@@ -653,6 +570,16 @@ public class PageManagementActorTest {
     map.put(JsonKey.ID, "anyId");
     map.put(JsonKey.SECTIONS, "anySection");
     list.add(map);
+    response.put(JsonKey.RESPONSE, list);
+    return response;
+  }
+
+  private static Response getRecordByPropMap(boolean isValid) {
+    Response response = new Response();
+    List<Map> list = new ArrayList<>();
+    Map<String, Object> map = new HashMap();
+    map.put(JsonKey.ID, "anyID");
+    if (isValid) list.add(map);
     response.put(JsonKey.RESPONSE, list);
     return response;
   }

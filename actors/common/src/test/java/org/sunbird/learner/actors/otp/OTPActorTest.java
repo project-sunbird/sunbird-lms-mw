@@ -33,7 +33,6 @@ import scala.concurrent.duration.FiniteDuration;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({ServiceFactory.class, CassandraOperationImpl.class, OTPService.class})
 @PowerMockIgnore("javax.management.*")
-// @Ignore
 public class OTPActorTest {
 
   private TestKit probe;
@@ -94,6 +93,22 @@ public class OTPActorTest {
     when(mockCassandraOperation.getRecordById(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(getCassandraSuccessResponse());
+    when(mockCassandraOperation.getRecordsByIdsWithSpecifiedColumnsAndTTL(
+            Mockito.anyString(),
+            Mockito.anyString(),
+            Mockito.anyMap(),
+            Mockito.anyList(),
+            Mockito.anyMap()))
+        .thenReturn(getRecordsByIdsWithSpecifiedColumnsAndTTLResponse());
+  }
+
+  private Response getRecordsByIdsWithSpecifiedColumnsAndTTLResponse() {
+    Response response = new Response();
+    List<Map<String, Object>> list = new ArrayList<>();
+    Map<String, Object> map = new HashMap<>();
+    map.put("any", "any");
+    response.put(JsonKey.RESPONSE, list);
+    return response;
   }
 
   private Response getCassandraSuccessResponse() {

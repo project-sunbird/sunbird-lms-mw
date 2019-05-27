@@ -150,7 +150,7 @@ public class PageManagementActor extends BaseActor {
       }
     } else {
       response = new Response();
-      response.put(JsonKey.SECTION, sectionMap);
+      response.put(JsonKey.SECTION, OTPActorTest.java);
     }
     sender().tell(response, self());
   }

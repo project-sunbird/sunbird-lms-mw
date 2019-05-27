@@ -1,9 +1,7 @@
 package org.sunbird.learner.actors.otp;
 
 import static akka.testkit.JavaTestKit.duration;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.when;
-import static org.powermock.api.mockito.PowerMockito.whenNew;
+import static org.powermock.api.mockito.PowerMockito.*;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
@@ -29,15 +27,13 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.otp.service.OTPService;
-import org.sunbird.ratelimit.limiter.OtpRateLimiter;
-import org.sunbird.ratelimit.limiter.RateLimiter;
-import org.sunbird.ratelimit.service.RateLimitService;
+import org.sunbird.ratelimit.service.RateLimitServiceImpl;
 import scala.concurrent.duration.FiniteDuration;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({ServiceFactory.class, CassandraOperationImpl.class})
+@PrepareForTest({ServiceFactory.class, CassandraOperationImpl.class, OTPService.class})
 @PowerMockIgnore("javax.management.*")
-@Ignore
+// @Ignore
 public class OTPActorTest {
 
   private TestKit probe;
@@ -55,23 +51,13 @@ public class OTPActorTest {
   private static final String INVALID_OTP = "111111";
   private FiniteDuration duration = duration("100 second");
   private static OTPService otpService;
-  private static RateLimitService rateLimitService;
+  private static RateLimitServiceImpl rateLimitService;
 
   @BeforeClass
   public static void before() throws Exception {
 
-    otpService = mock(OTPService.class);
-    rateLimitService = mock(RateLimitService.class);
-
     PowerMockito.mockStatic(ServiceFactory.class);
     when(ServiceFactory.getInstance()).thenReturn(mockCassandraOperation);
-    whenNew(RateLimitService.class).withNoArguments().thenReturn(rateLimitService);
-    rateLimitService.throttleByKey(
-        "anyKey", new RateLimiter[] {OtpRateLimiter.HOUR, OtpRateLimiter.DAY});
-
-    whenNew(OTPService.class).withNoArguments().thenReturn(otpService);
-    when(otpService.getOTPDetails(Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(otpServiceReturn());
   }
 
   private static Map<String, Object> otpServiceReturn() {
@@ -88,6 +74,9 @@ public class OTPActorTest {
     //        whenNew(RateLimitServiceImpl.class).withNoArguments().thenReturn(rateLimitService);
     //        rateLimitService.throttleByKey(
     //                "anyKey", new RateLimiter[] {OtpRateLimiter.HOUR, OtpRateLimiter.DAY});
+
+    otpService = Mockito.mock(OTPService.class);
+    whenNew(OTPService.class).withNoArguments().thenReturn(otpService);
 
     PowerMockito.mockStatic(ServiceFactory.class);
     when(ServiceFactory.getInstance()).thenReturn(mockCassandraOperation);

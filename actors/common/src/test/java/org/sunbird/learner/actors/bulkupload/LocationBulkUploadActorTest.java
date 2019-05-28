@@ -1,47 +1,82 @@
 package org.sunbird.learner.actors.bulkupload;
 
 import static akka.testkit.JavaTestKit.duration;
+import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import org.junit.*;
-import org.junit.runners.MethodSorters;
-import org.sunbird.actor.service.SunbirdMWService;
+import org.junit.runner.RunWith;
+import org.mockito.Mockito;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
+import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.cassandraimpl.CassandraOperationImpl;
+import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.cacheloader.PageCacheLoaderService;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.BulkUploadActorOperation;
 import org.sunbird.common.models.util.GeoLocationJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
-/**
- * Test case for Location Bulk upload.
- *
- * @author arvind on 30/4/18.
- */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
-@Ignore
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({
+  ServiceFactory.class,
+  Util.class,
+  RequestRouter.class,
+  ElasticSearchUtil.class,
+  PageCacheLoaderService.class,
+})
+@PowerMockIgnore({"javax.management.*", "javax.crypto.*", "javax.net.ssl.*", "javax.security.*"})
 public class LocationBulkUploadActorTest {
 
-  private static ActorSystem system;
+  private static ActorSystem system = ActorSystem.create("system");;
   private static final Props props = Props.create(LocationBulkUploadActor.class);
   private static final String USER_ID = "user123";
   private static final String LOCATION_TYPE = "State";
-  private ObjectMapper mapper = new ObjectMapper();
+  private static CassandraOperationImpl cassandraOperation;
 
-  @BeforeClass
-  public static void setUp() {
-    SunbirdMWService.init();
-    system = ActorSystem.create("system");
-    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
+  @Before
+  public void beforeTest() {
+
+    PowerMockito.mockStatic(ServiceFactory.class);
+    cassandraOperation = mock(CassandraOperationImpl.class);
+    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+    when(cassandraOperation.getRecordById(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(cassandraGetRecordById());
+    when(cassandraOperation.insertRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(getInsertResponse());
+  }
+
+  private Response getInsertResponse() {
+    Response response = new Response();
+    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    return response;
+  }
+
+  private static Response cassandraGetRecordById() {
+    Response response = new Response();
+    List list = new ArrayList();
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.NAME, "anyName");
+    map.put(JsonKey.ID, "anyId");
+    map.put(JsonKey.SECTIONS, "anySection");
+    list.add(map);
+    response.put(JsonKey.RESPONSE, list);
+    return response;
   }
 
   @Test
@@ -58,9 +93,8 @@ public class LocationBulkUploadActorTest {
     String jsonString = createLines(headerLine, firstDataLine);
     Request reqObj = getRequestObjectForLocationBulkUpload(LOCATION_TYPE, jsonString.getBytes());
     subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("100 second"), Response.class);
-    String processId = (String) res.get(JsonKey.ID);
-    Assert.assertTrue(null != processId);
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+    Assert.assertTrue(null != res);
   }
 
   @Test

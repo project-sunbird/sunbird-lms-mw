@@ -604,9 +604,11 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       Map<String, Integer> csvHeadersMap = csvFileParser.getHeaderMap();
       // trim Headers
       HashMap<String, Integer> csvHeaders = new HashMap<>();
-      if (MapUtils.isNotEmpty(csvHeadersMap))
-        csvHeadersMap.keySet().forEach(key -> csvHeaders.put(key.trim(), csvHeadersMap.get(key)));
-
+      if (MapUtils.isNotEmpty(csvHeadersMap)) {
+        csvHeadersMap
+            .entrySet()
+            .forEach(entry -> csvHeaders.put(entry.getKey().trim(), entry.getValue()));
+      }
       String mode = csvHeaders.containsKey(id) ? JsonKey.UPDATE : JsonKey.CREATE;
       result.put(JsonKey.MODE, mode);
 
@@ -647,8 +649,8 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         Map<String, String> mappingValues = record.toMap();
         Map<String, String> trimMapping = new HashMap<>();
         mappingValues
-            .keySet()
-            .forEach(key -> trimMapping.put(key.trim(), mappingValues.get(key).trim()));
+            .entrySet()
+            .forEach(entry -> trimMapping.put(entry.getKey().trim(), entry.getValue().trim()));
         HashMap<String, Object> recordMap = new HashMap<>();
         HashMap<String, Object> hierarchyMap = new HashMap<>();
         for (Map.Entry<String, String> entry : metadata.entrySet()) {

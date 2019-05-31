@@ -601,10 +601,10 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     }
     try (InputStreamReader reader = new InputStreamReader(bomInputStream, character); ) {
       csvFileParser = csvFileFormat.parse(reader);
-       Map<String, Integer> csvHeadersMap = csvFileParser.getHeaderMap();
-      //trim Headers
+      Map<String, Integer> csvHeadersMap = csvFileParser.getHeaderMap();
+      // trim Headers
       HashMap<String, Integer> csvHeaders = new HashMap<>();
-      if(MapUtils.isNotEmpty(csvHeadersMap))
+      if (MapUtils.isNotEmpty(csvHeadersMap))
         csvHeadersMap.keySet().forEach(key -> csvHeaders.put(key.trim(), csvHeadersMap.get(key)));
 
       String mode = csvHeaders.containsKey(id) ? JsonKey.UPDATE : JsonKey.CREATE;
@@ -644,9 +644,11 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       StringBuilder exceptionMsgs = new StringBuilder();
       for (int i = 0; i < csvRecords.size(); i++) {
         CSVRecord record = csvRecords.get(i);
-        Map<String,String> mappingValues=record.toMap();
-        Map<String,String> trimMapping=new HashMap<>();
-        mappingValues.keySet().forEach(key -> trimMapping.put(key.trim(), mappingValues.get(key).trim()));
+        Map<String, String> mappingValues = record.toMap();
+        Map<String, String> trimMapping = new HashMap<>();
+        mappingValues
+            .keySet()
+            .forEach(key -> trimMapping.put(key.trim(), mappingValues.get(key).trim()));
         HashMap<String, Object> recordMap = new HashMap<>();
         HashMap<String, Object> hierarchyMap = new HashMap<>();
         for (Map.Entry<String, String> entry : metadata.entrySet()) {
@@ -681,8 +683,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
                 });
           }
           Map<String, Object> map = new HashMap<>();
-          if (JsonKey.UPDATE.equalsIgnoreCase(mode) && StringUtils.isNotBlank(trimMapping.get(id))) {
-            String identifier = trimMapping.get(id).trim();
+          if (JsonKey.UPDATE.equalsIgnoreCase(mode)
+              && StringUtils.isNotBlank(trimMapping.get(id))) {
+            String identifier = trimMapping.get(id);
             map.put(JsonKey.IDENTIFIER, identifier);
             if (CollectionUtils.isNotEmpty(dialCodeList)) {
               dialCodeIdentifierMap.put(identifier, dialCodeList);

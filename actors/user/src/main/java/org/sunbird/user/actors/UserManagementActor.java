@@ -404,8 +404,8 @@ public class UserManagementActor extends BaseActor {
             ? (String) actorMessage.getContext().get(JsonKey.SIGNUP_TYPE)
             : "";
     String source =
-        (String) actorMessage.getContext().get(JsonKey.TELEMETRY_SOURCE) != null
-            ? (String) actorMessage.getContext().get(JsonKey.TELEMETRY_SOURCE)
+        (String) actorMessage.getContext().get(JsonKey.REQUEST_SOURCE) != null
+            ? (String) actorMessage.getContext().get(JsonKey.REQUEST_SOURCE)
             : "";
     if (StringUtils.isNotBlank(version) && JsonKey.VERSION_2.equalsIgnoreCase(version)) {
       userRequestValidator.validateCreateUserV2Request(actorMessage);
@@ -644,7 +644,7 @@ public class UserManagementActor extends BaseActor {
     }
     if (StringUtils.isNotBlank(source)) {
       TelemetryUtil.generateCorrelatedObject(
-          source, StringUtils.capitalize(JsonKey.TELEMETRY_SOURCE), null, correlatedObject);
+          source, StringUtils.capitalize(JsonKey.REQUEST_SOURCE), null, correlatedObject);
     } else {
       ProjectLogger.log("UserManagementActor:processUserRequest: No source found");
     }

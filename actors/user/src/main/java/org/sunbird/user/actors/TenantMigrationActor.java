@@ -17,6 +17,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
@@ -34,6 +35,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import akka.actor.ActorRef;
 
+/**
+ * This class contains method and business logic to migrate user from custodian
+ * org to some other root org.
+ * 
+ * @author Amit Kumar
+ *
+ */
 @ActorConfig(tasks = { "userTenantMigrate" }, asyncTasks = {})
 public class TenantMigrationActor extends BaseActor {
 	private UserService userService = UserServiceImpl.getInstance();
@@ -47,10 +55,11 @@ public class TenantMigrationActor extends BaseActor {
 
 	@Override
 	public void onReceive(Request request) throws Throwable {
+		ProjectLogger.log("TenantMigrationActor:onReceive called.", LoggerEnum.INFO.name());
 		String operation = request.getOperation();
 		if (systemSettingActorRef == null) {
-		      systemSettingActorRef = getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
-		    }
+			systemSettingActorRef = getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
+		}
 		switch (operation) {
 		case "userTenantMigrate":
 			migrateUser(request);
@@ -62,9 +71,10 @@ public class TenantMigrationActor extends BaseActor {
 
 	@SuppressWarnings("unchecked")
 	private void migrateUser(Request request) {
+		ProjectLogger.log("TenantMigrationActor:migrateUser called.", LoggerEnum.INFO.name());
 		Map<String, Object> userDetails = userService
 				.esGetPublicUserProfileById((String) request.getRequest().get(JsonKey.USER_ID));
-		validateUserCustodianOrgId((String)userDetails.get(JsonKey.ROOT_ORG_ID));
+		validateUserCustodianOrgId((String) userDetails.get(JsonKey.ROOT_ORG_ID));
 		validateChannelAndGetRootOrgId(request);
 		Map<String, Object> userUpdateRequest = createUserUpdateRequest(request);
 		// Update user channel and rootOrgId
@@ -76,6 +86,7 @@ public class TenantMigrationActor extends BaseActor {
 			// throw exception for migration failed
 			ProjectCommonException.throwServerErrorException(ResponseCode.errorUserMigrationFailed);
 		}
+		ProjectLogger.log("TenantMigrationActor:migrateUser user record got updated.", LoggerEnum.INFO.name());
 		// Update user org details
 		Response userOrgResponse = updateUserOrg(request,
 				(List<Map<String, Object>>) userDetails.get(JsonKey.ORGANISATIONS));
@@ -102,8 +113,9 @@ public class TenantMigrationActor extends BaseActor {
 
 	private void validateUserCustodianOrgId(String rootOrgId) {
 		String custodianOrgId = userService.getCustodianOrgId(systemSettingActorRef);
-		if(!rootOrgId.equalsIgnoreCase(custodianOrgId)){
-			ProjectCommonException.throwClientErrorException(ResponseCode.parameterMismatch,"user rootOrgId and custodianOrgId");
+		if (!rootOrgId.equalsIgnoreCase(custodianOrgId)) {
+			ProjectCommonException.throwClientErrorException(ResponseCode.parameterMismatch,
+					"user rootOrgId and custodianOrgId");
 		}
 	}
 
@@ -116,6 +128,7 @@ public class TenantMigrationActor extends BaseActor {
 	}
 
 	private Response updateUserExternalIds(Request request) {
+		ProjectLogger.log("TenantMigrationActor:updateUserExternalIds called.", LoggerEnum.INFO.name());
 		Response response = new Response();
 		Map<String, Object> userExtIdsReq = new HashMap<>();
 		userExtIdsReq.put(JsonKey.ID, request.getRequest().get(JsonKey.USER_ID));
@@ -129,8 +142,10 @@ public class TenantMigrationActor extends BaseActor {
 			userequest.setOperation(UserActorOperations.UPSERT_USER_EXTERNAL_IDENTITY_DETAILS.getValue());
 			userExtIdsReq.put(JsonKey.OPERATION_TYPE, JsonKey.CREATE);
 			userequest.getRequest().putAll(userExtIdsReq);
-			response = (Response) interServiceCommunication
-					.getResponse(getActorRef(UserActorOperations.UPSERT_USER_EXTERNAL_IDENTITY_DETAILS.getValue()), userequest);
+			response = (Response) interServiceCommunication.getResponse(
+					getActorRef(UserActorOperations.UPSERT_USER_EXTERNAL_IDENTITY_DETAILS.getValue()), userequest);
+			ProjectLogger.log("TenantMigrationActor:updateUserExternalIds user externalIds got updated.",
+					LoggerEnum.INFO.name());
 		} catch (Exception ex) {
 			ProjectLogger.log(
 					"TenantMigrationActor:updateUserExternalIds:Exception occurred while updating user externalIds,",
@@ -145,6 +160,7 @@ public class TenantMigrationActor extends BaseActor {
 	}
 
 	private Response updateUserOrg(Request request, List<Map<String, Object>> userOrgList) {
+		ProjectLogger.log("TenantMigrationActor:updateUserOrg called.", LoggerEnum.INFO.name());
 		Response response = new Response();
 		deleteOldUserOrgMapping(userOrgList);
 		Map<String, Object> userDetails = request.getRequest();
@@ -162,6 +178,8 @@ public class TenantMigrationActor extends BaseActor {
 			}
 			try {
 				createUserOrgRequestAndUpdate((String) userDetails.get(JsonKey.USER_ID), orgId);
+				ProjectLogger.log("TenantMigrationActor:updateUserOrg user org data got updated.",
+						LoggerEnum.INFO.name());
 			} catch (Exception ex) {
 				ProjectLogger.log(
 						"TenantMigrationActor:updateUserOrg:Exception occurred while updating user externalIds.", ex);

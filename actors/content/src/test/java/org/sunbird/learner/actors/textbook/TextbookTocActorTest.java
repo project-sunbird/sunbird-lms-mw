@@ -46,6 +46,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.content.util.TextBookTocUtil;
 
+@Ignore
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({TextBookTocUtil.class, ProjectUtil.class, Unirest.class})
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*"})

@@ -1,4 +1,4 @@
-package org.sunbird.learner.actors.bulkupload;
+package org.sunbird.learner.actors.textbook;
 
 import static akka.testkit.JavaTestKit.duration;
 import static org.powermock.api.mockito.PowerMockito.when;
@@ -53,7 +53,7 @@ public class TextbookTocActorTest {
 
   private static ActorSystem system;
   private static final Props props =
-      Props.create(org.sunbird.learner.actors.bulkupload.TextbookTocActor.class);
+      Props.create(org.sunbird.learner.actors.textbook.TextbookTocActor.class);
 
   private static final String VALID_HEADER =
       "Identifier,Medium,Grade,Subject,Textbook Name,Level 1 Textbook Unit,Description,QR Code Required?,QR Code,Purpose of Content to be linked,Mapped Topics,Keywords\n";

@@ -149,7 +149,7 @@ public class TenantMigrationActor extends BaseActor {
 					LoggerEnum.INFO.name());
 		} catch (Exception ex) {
 			ProjectLogger.log(
-					"TenantMigrationActor:updateUserExternalIds:Exception occurred while updating user externalIds,",
+					"TenantMigrationActor:updateUserExternalIds:Exception occurred while updating user externalIds.",
 					ex);
 			List<Map<String, Object>> errMsgList = new ArrayList<>();
 			Map<String, Object> map = new HashMap<>();
@@ -208,6 +208,8 @@ public class TenantMigrationActor extends BaseActor {
 	}
 
 	private void deleteOldUserOrgMapping(List<Map<String, Object>> userOrgList) {
+		ProjectLogger.log(
+				"TenantMigrationActor:deleteOldUserOrgMapping: delete old user org association started.", LoggerEnum.INFO.name());
 		for (Map<String, Object> userOrg : userOrgList) {
 			cassandraOperation.deleteRecord(usrOrgDbInfo.getKeySpace(), usrOrgDbInfo.getTableName(),
 					(String) userOrg.get(JsonKey.ID));

@@ -1,4 +1,4 @@
-package org.sunbird.learner.actors.bulkupload;
+package org.sunbird.learner.actors.textbook;
 
 import static java.io.File.separator;
 import static java.util.Arrays.asList;
@@ -71,6 +71,7 @@ import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -91,11 +92,12 @@ import org.sunbird.services.sso.SSOServiceFactory;
   tasks = {"textbookTocUpload", "textbookTocUrl", "textbookTocUpdate"},
   asyncTasks = {}
 )
-public class TextbookTocActor extends BaseBulkUploadActor {
+public class TextbookTocActor extends BaseActor {
 
   private SSOManager ssoManager = SSOServiceFactory.getInstance();
   private Instant startTime = null;
   private Map<String, Object> frameCategories = null;
+  private ObjectMapper mapper = new ObjectMapper();
 
   @Override
   public void onReceive(Request request) throws Throwable {

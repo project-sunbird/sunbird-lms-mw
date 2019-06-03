@@ -647,10 +647,9 @@ public class TextbookTocActor extends BaseBulkUploadActor {
         Map<String, String> trimMappingRecord = new HashMap<>();
         record.toMap()
             .entrySet()
-            .forEach(entry -> {
-              if(entry.getValue()!=null){
-              trimMappingRecord.put(entry.getKey().trim(), entry.getValue().trim());}
-            });
+                .forEach(entry ->
+              trimMappingRecord.put(entry.getKey().trim(), entry.getValue()!=null?entry.getValue().trim():entry.getValue())
+            );
         HashMap<String, Object> recordMap = new HashMap<>();
         HashMap<String, Object> hierarchyMap = new HashMap<>();
         for (Map.Entry<String, String> entry : metadata.entrySet()) {

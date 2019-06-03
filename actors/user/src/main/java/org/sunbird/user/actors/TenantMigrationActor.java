@@ -1,5 +1,6 @@
 package org.sunbird.user.actors;
 
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -114,8 +115,8 @@ public class TenantMigrationActor extends BaseActor {
 	private void validateUserCustodianOrgId(String rootOrgId) {
 		String custodianOrgId = userService.getCustodianOrgId(systemSettingActorRef);
 		if (!rootOrgId.equalsIgnoreCase(custodianOrgId)) {
-			ProjectCommonException.throwClientErrorException(ResponseCode.parameterMismatch,
-					"user rootOrgId and custodianOrgId");
+			ProjectCommonException.throwClientErrorException(ResponseCode.parameterMismatch, MessageFormat
+					.format(ResponseCode.parameterMismatch.getErrorMessage(), "user rootOrgId and custodianOrgId"));
 		}
 	}
 
@@ -208,8 +209,8 @@ public class TenantMigrationActor extends BaseActor {
 	}
 
 	private void deleteOldUserOrgMapping(List<Map<String, Object>> userOrgList) {
-		ProjectLogger.log(
-				"TenantMigrationActor:deleteOldUserOrgMapping: delete old user org association started.", LoggerEnum.INFO.name());
+		ProjectLogger.log("TenantMigrationActor:deleteOldUserOrgMapping: delete old user org association started.",
+				LoggerEnum.INFO.name());
 		for (Map<String, Object> userOrg : userOrgList) {
 			cassandraOperation.deleteRecord(usrOrgDbInfo.getKeySpace(), usrOrgDbInfo.getTableName(),
 					(String) userOrg.get(JsonKey.ID));

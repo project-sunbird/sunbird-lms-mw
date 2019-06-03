@@ -417,4 +417,27 @@ public class UserServiceImpl implements UserService {
     }
     return true;
   }
+
+@Override
+public String getCustodianOrgId(ActorRef actorRef) {
+	String custodianOrgId = "";
+    try {
+        SystemSettingClient client = SystemSettingClientImpl.getInstance();
+        SystemSetting systemSetting =
+            client.getSystemSettingByField(actorRef, JsonKey.CUSTODIAN_ORG_ID);
+        if (null != systemSetting && StringUtils.isNotBlank(systemSetting.getValue())) {
+          custodianOrgId = systemSetting.getValue();
+        }
+      } catch (Exception ex) {
+        ProjectLogger.log(
+            "UserServiceImpl:getCustodianOrgId: Exception occurred with error message = "
+                + ex.getMessage(),
+            ex);
+        ProjectCommonException.throwServerErrorException(
+            ResponseCode.errorSystemSettingNotFound,
+            ProjectUtil.formatMessage(
+                ResponseCode.errorSystemSettingNotFound.getErrorMessage(), JsonKey.CUSTODIAN_ORG_ID));
+      }
+	return custodianOrgId;
+}
 }

@@ -22,6 +22,7 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.StringFormatter;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
@@ -131,6 +132,14 @@ public class TenantMigrationActor extends BaseActor {
 							"TenantMigrationActor:validateOrgExternalIdOrOrgIdAndGetOrgId called. OrgId is Invalid",
 							LoggerEnum.INFO.name());
 					ProjectCommonException.throwClientErrorException(ResponseCode.invalidOrgId);
+				} else {
+					String reqOrgRootOrgId = (String) result.get(JsonKey.ROOT_ORG_ID);
+					if (StringUtils.isNotBlank(reqOrgRootOrgId)
+							&& !reqOrgRootOrgId.equalsIgnoreCase((String) userDetails.get(JsonKey.ROOT_ORG_ID))) {
+						ProjectCommonException.throwClientErrorException(ResponseCode.parameterMismatch,
+								MessageFormat.format(ResponseCode.parameterMismatch.getErrorMessage(),
+										StringFormatter.joinByComma(JsonKey.CHANNEL, JsonKey.ORG_ID)));
+					}
 				}
 			} else if (StringUtils.isNotBlank((String) userDetails.get(JsonKey.ORG_EXTERNAL_ID))) {
 				orgId = orgExternalService.getOrgIdFromOrgExternalIdAndProvider(
@@ -204,16 +213,14 @@ public class TenantMigrationActor extends BaseActor {
 		// add mapping root org
 		createUserOrgRequestAndUpdate((String) userDetails.get(JsonKey.USER_ID),
 				(String) userDetails.get(JsonKey.ROOT_ORG_ID));
-		if (StringUtils.isNotBlank((String) userDetails.get(JsonKey.ORG_ID))) {
-			String orgId = (String) userDetails.get(JsonKey.ORG_ID);
-			;
+		String orgId = (String) userDetails.get(JsonKey.ORG_ID);
+		if (StringUtils.isNotBlank(orgId) && !((String) userDetails.get(JsonKey.ROOT_ORG_ID)).equalsIgnoreCase(orgId)) {
 			try {
 				createUserOrgRequestAndUpdate((String) userDetails.get(JsonKey.USER_ID), orgId);
 				ProjectLogger.log("TenantMigrationActor:updateUserOrg user org data got updated.",
 						LoggerEnum.INFO.name());
 			} catch (Exception ex) {
-				ProjectLogger.log(
-						"TenantMigrationActor:updateUserOrg:Exception occurred while updating user Org.", ex);
+				ProjectLogger.log("TenantMigrationActor:updateUserOrg:Exception occurred while updating user Org.", ex);
 				List<Map<String, Object>> errMsgList = new ArrayList<>();
 				Map<String, Object> map = new HashMap<>();
 				map.put(JsonKey.ERROR_MSG, ex.getMessage());

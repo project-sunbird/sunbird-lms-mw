@@ -123,7 +123,8 @@ public class TenantMigrationActor extends BaseActor {
 		Request userRequest = new Request();
 		userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
 		userRequest.getRequest().put(JsonKey.ID, userId);
-		ProjectLogger.log("TenantMigrationActor:saveUserDetailsToEs: Trigger sync of user details to ES");
+		ProjectLogger.log("TenantMigrationActor:saveUserDetailsToEs: Trigger sync of user details to ES",
+				LoggerEnum.INFO.name());
 		tellToAnother(userRequest);
 	}
 

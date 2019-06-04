@@ -24,12 +24,15 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.StringFormatter;
+import org.sunbird.common.models.util.TelemetryEnvKey;
+import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.organisation.external.identity.service.OrgExternalService;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
+import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.UserActorOperations;
@@ -46,6 +49,7 @@ import org.sunbird.user.util.UserUtil;
   asyncTasks = {}
 )
 public class TenantMigrationActor extends BaseActor {
+  public static final String MIGRATE = "migrate";
   private UserService userService = UserServiceImpl.getInstance();
   private OrgExternalService orgExternalService = new OrgExternalService();
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -59,6 +63,8 @@ public class TenantMigrationActor extends BaseActor {
   @Override
   public void onReceive(Request request) throws Throwable {
     ProjectLogger.log("TenantMigrationActor:onReceive called.", LoggerEnum.INFO.name());
+    Util.initializeContext(request, StringUtils.capitalize(JsonKey.CONSUMER));
+    ExecutionContext.setRequestId(request.getRequestId());
     String operation = request.getOperation();
     if (systemSettingActorRef == null) {
       systemSettingActorRef = getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
@@ -75,6 +81,9 @@ public class TenantMigrationActor extends BaseActor {
   @SuppressWarnings("unchecked")
   private void migrateUser(Request request) {
     ProjectLogger.log("TenantMigrationActor:migrateUser called.", LoggerEnum.INFO.name());
+    Map<String, Object> reqMap = new HashMap<>(request.getRequest());
+    Map<String, Object> targetObject = null;
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
     Map<String, Object> userDetails =
         userService.esGetPublicUserProfileById((String) request.getRequest().get(JsonKey.USER_ID));
     validateUserCustodianOrgId((String) userDetails.get(JsonKey.ROOT_ORG_ID));
@@ -121,6 +130,10 @@ public class TenantMigrationActor extends BaseActor {
     sender().tell(response, self());
     // save user data to ES
     saveUserDetailsToEs((String) request.getRequest().get(JsonKey.USER_ID));
+    targetObject =
+        TelemetryUtil.generateTargetObject(
+            (String) reqMap.get(JsonKey.USER_ID), TelemetryEnvKey.USER, MIGRATE, null);
+    TelemetryUtil.telemetryProcessingCall(reqMap, targetObject, correlatedObject);
   }
 
   private String validateOrgExternalIdOrOrgIdAndGetOrgId(Map<String, Object> migrateReq) {
@@ -166,8 +179,8 @@ public class TenantMigrationActor extends BaseActor {
               ResponseCode.invalidParameterValue,
               MessageFormat.format(
                   ResponseCode.invalidParameterValue.getErrorMessage(),
-                  JsonKey.ORG_EXTERNAL_ID,
-                  (String) migrateReq.get(JsonKey.ORG_EXTERNAL_ID)));
+                  (String) migrateReq.get(JsonKey.ORG_EXTERNAL_ID),
+                  JsonKey.ORG_EXTERNAL_ID));
         }
       }
     }

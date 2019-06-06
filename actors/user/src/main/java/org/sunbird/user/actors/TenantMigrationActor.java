@@ -88,6 +88,11 @@ public class TenantMigrationActor extends BaseActor {
         userService.esGetPublicUserProfileById((String) request.getRequest().get(JsonKey.USER_ID));
     validateUserCustodianOrgId((String) userDetails.get(JsonKey.ROOT_ORG_ID));
     validateChannelAndGetRootOrgId(request);
+    // Add rollup for telemetry event
+    ExecutionContext context = ExecutionContext.getCurrent();
+    Map<String, String> rollup = new HashMap<>();
+    rollup.put("l1", (String) request.getRequest().get(JsonKey.ROOT_ORG_ID));
+    context.getRequestContext().put(JsonKey.ROLLUP, rollup);
     String orgId = validateOrgExternalIdOrOrgIdAndGetOrgId(request.getRequest());
     request.getRequest().put(JsonKey.ORG_ID, orgId);
     Map<String, Object> userUpdateRequest = createUserUpdateRequest(request);

@@ -13,7 +13,12 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -51,10 +56,12 @@ public class DbOperationActor extends BaseActor {
   private static final String ES_INDEX_NAME = "sunbirdplugin";
   private static List<String> tableList = null;
   private static final String RAW_QUERY = "rawQuery";
+  private static final String USER_DEVICE_TABLE_NAME = "user_device";
 
   public static void createtableList() {
     try {
       tableList = manager.getTableList(JsonKey.SUNBIRD_PLUGIN);
+      tableList.add(USER_DEVICE_TABLE_NAME);
     } catch (Exception e) {
       ProjectLogger.log("Error occurred" + e.getMessage(), e);
     }
@@ -308,9 +315,15 @@ public class DbOperationActor extends BaseActor {
       validateTableName(reqObj);
       Map<String, Object> payload = (Map<String, Object>) reqObj.getRequest().get(PAYLOAD);
       validateRequestData(payload);
-      Response response =
-          cassandraOperation.insertRecord(
-              JsonKey.SUNBIRD_PLUGIN, (String) reqObj.getRequest().get(ENTITY_NAME), payload);
+      Response response = null;
+      if (USER_DEVICE_TABLE_NAME.equalsIgnoreCase((String) reqObj.getRequest().get(ENTITY_NAME))) {
+        response =
+            cassandraOperation.insertRecord(JsonKey.SUNBIRD, USER_DEVICE_TABLE_NAME, payload);
+      } else {
+        response =
+            cassandraOperation.insertRecord(
+                JsonKey.SUNBIRD_PLUGIN, (String) reqObj.getRequest().get(ENTITY_NAME), payload);
+      }
       if (((String) response.get(JsonKey.RESPONSE)).equals(JsonKey.SUCCESS)
           && ((boolean) reqObj.getRequest().get(INDEXED))) {
         boolean esResult = false;

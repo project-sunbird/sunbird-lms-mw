@@ -149,7 +149,7 @@ public class PageManagementActor extends BaseActor {
         return;
       }
        else {
-        ProjectCommonException.throwClientErrorException(ResponseCode.pageDoesNotExist);
+        ProjectCommonException.throwClientErrorException(ResponseCode.sectionDoesNotExist);
       }
     } else {
       response = new Response();

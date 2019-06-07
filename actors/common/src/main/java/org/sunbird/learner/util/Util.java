@@ -60,8 +60,6 @@ import org.sunbird.common.services.impl.ProfileCompletenessFactory;
 import org.sunbird.common.util.ConfigUtil;
 import org.sunbird.common.util.KeycloakRequiredActionLinkUtil;
 import org.sunbird.dto.SearchDTO;
-import org.sunbird.extension.user.UserExtension;
-import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
 import org.sunbird.helper.CassandraConnectionManager;
 import org.sunbird.helper.CassandraConnectionMngrFactory;
 import org.sunbird.helper.ServiceFactory;
@@ -1449,7 +1447,6 @@ public final class Util {
       checkUserProfileVisibility(userDetails, actorRef);
       userDetails.remove(JsonKey.PASSWORD);
       addEmailAndPhone(userDetails);
-      userDetails = getUserDetailsFromRegistry(userDetails);
     } else {
       ProjectLogger.log(
           "Util:getUserProfile: User data not available to save in ES for userId : " + userId,
@@ -1735,31 +1732,6 @@ public final class Util {
     ProjectLogger.log(
         "unbale to save the data inside ES with identifier " + identifier, LoggerEnum.INFO.name());
     return false;
-  }
-
-  public static Map<String, Object> getUserDetailsFromRegistry(Map<String, Object> userMap) {
-    String registryId = (String) userMap.get(JsonKey.REGISTRY_ID);
-    if (StringUtils.isNotBlank(registryId)
-        && "true"
-            .equalsIgnoreCase(
-                ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE))) {
-      Map<String, Object> reqMap = new HashMap<>();
-      try {
-        UserExtension userExtension = new UserProviderRegistryImpl();
-        reqMap.put(JsonKey.REGISTRY_ID, registryId);
-        reqMap = userExtension.read(reqMap);
-        reqMap.putAll(userMap);
-      } catch (Exception ex) {
-        ProjectLogger.log(
-            "getUserDetailsFromRegistry: Failed to fetch registry details for registryId : "
-                + registryId,
-            ex);
-        reqMap.clear();
-      }
-      return MapUtils.isNotEmpty(reqMap) ? reqMap : userMap;
-    } else {
-      return userMap;
-    }
   }
 
   public static void checkPhoneUniqueness(Map<String, Object> userMap, String opType) {

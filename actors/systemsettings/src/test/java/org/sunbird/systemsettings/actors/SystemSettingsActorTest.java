@@ -1,6 +1,7 @@
 package org.sunbird.systemsettings.actors;
 
 import static akka.testkit.JavaTestKit.duration;
+import static org.mockito.Mockito.mock;
 import static org.powermock.api.mockito.PowerMockito.when;
 
 import akka.actor.ActorRef;
@@ -10,7 +11,6 @@ import akka.testkit.javadsl.TestKit;
 import java.util.*;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -18,7 +18,6 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
-import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -38,13 +37,13 @@ import scala.concurrent.duration.FiniteDuration;
 })
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*", "javax.security.*"})
 public class SystemSettingsActorTest {
-  private static final FiniteDuration ACTOR_MAX_WAIT_DURATION = duration("10 second");
+  private static final FiniteDuration ACTOR_MAX_WAIT_DURATION = duration("100 second");
   private ActorSystem system;
   private Props props;
   private TestKit probe;
   private ActorRef subject;
   private Request actorMessage;
-  private CassandraOperation cassandraOperation;
+  private static CassandraOperationImpl cassandraOperation;
   private static String ROOT_ORG_ID = "defaultRootOrgId";
   private static String FIELD = "someField";
   private static String VALUE = "someValue";
@@ -54,19 +53,22 @@ public class SystemSettingsActorTest {
     system = ActorSystem.create("system");
     probe = new TestKit(system);
     PowerMockito.mockStatic(ServiceFactory.class);
-    cassandraOperation = PowerMockito.mock(CassandraOperationImpl.class);
+    cassandraOperation = mock(CassandraOperationImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+    when(cassandraOperation.upsertRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(getUpsertResponse());
+    when(cassandraOperation.getRecordsByIndexedProperty(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.any()))
+        .thenReturn(getSystemSettingResponse());
     props = Props.create(SystemSettingsActor.class);
     subject = system.actorOf(props);
     actorMessage = new Request();
   }
 
   @Test
-  @Ignore
   public void testSetSystemSettingSuccess() {
-    when(cassandraOperation.upsertRecord(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(new Response());
+
     actorMessage.setOperation(ActorOperations.SET_SYSTEM_SETTING.getValue());
     actorMessage.getRequest().putAll(getSystemSettingMap());
     subject.tell(actorMessage, probe.getRef());
@@ -75,13 +77,10 @@ public class SystemSettingsActorTest {
   }
 
   @Test
-  @Ignore
   public void testGetSystemSettingSuccess() {
     Map<String, Object> orgData = new HashMap<String, Object>();
     orgData.put(JsonKey.FIELD, ROOT_ORG_ID);
-    when(cassandraOperation.getRecordsByIndexedProperty(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.any()))
-        .thenReturn(getSystemSettingResponse());
+
     actorMessage.setOperation(ActorOperations.GET_SYSTEM_SETTING.getValue());
     actorMessage.getRequest().putAll(orgData);
     subject.tell(actorMessage, probe.getRef());
@@ -90,7 +89,6 @@ public class SystemSettingsActorTest {
   }
 
   @Test
-  @Ignore
   public void testGetSystemSettingFailure() {
     Map<String, Object> orgData = new HashMap<String, Object>();
     orgData.put(JsonKey.ID, ROOT_ORG_ID);
@@ -108,7 +106,6 @@ public class SystemSettingsActorTest {
   }
 
   @Test
-  @Ignore
   public void testGetAllSystemSettingsSuccess() {
     when(cassandraOperation.getAllRecords(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(getSystemSettingResponse());
@@ -119,7 +116,6 @@ public class SystemSettingsActorTest {
   }
 
   @Test
-  @Ignore
   public void testGetAllSystemSettingsSuccessWithEmptyResponse() {
     when(cassandraOperation.getAllRecords(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(getSystemSettingEmptyResponse());
@@ -142,6 +138,11 @@ public class SystemSettingsActorTest {
     List<Map<String, Object>> list = new ArrayList<>();
     list.add(getSystemSettingMap());
     response.put(JsonKey.RESPONSE, list);
+    return response;
+  }
+
+  private Response getUpsertResponse() {
+    Response response = new Response();
     return response;
   }
 

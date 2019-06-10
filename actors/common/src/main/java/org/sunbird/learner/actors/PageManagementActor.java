@@ -148,6 +148,9 @@ public class PageManagementActor extends BaseActor {
         sender().tell(section, self());
         return;
       }
+       else {
+        ProjectCommonException.throwClientErrorException(ResponseCode.sectionDoesNotExist);
+      }
     } else {
       response = new Response();
       response.put(JsonKey.SECTION, sectionMap);

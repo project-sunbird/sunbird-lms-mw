@@ -602,8 +602,12 @@ public class TextbookTocActor extends BaseActor {
     }
     try (InputStreamReader reader = new InputStreamReader(bomInputStream, character); ) {
       csvFileParser = csvFileFormat.parse(reader);
-      Map<String, Integer> csvHeaders = csvFileParser.getHeaderMap();
-
+      HashMap<String, Integer> csvHeaders = new HashMap<>();
+      if (MapUtils.isNotEmpty(csvFileParser.getHeaderMap())) {
+        csvFileParser.getHeaderMap()
+            .entrySet()
+            .forEach(entry -> csvHeaders.put(entry.getKey().trim(), entry.getValue()));
+      }
       String mode = csvHeaders.containsKey(id) ? JsonKey.UPDATE : JsonKey.CREATE;
       result.put(JsonKey.MODE, mode);
 
@@ -641,15 +645,21 @@ public class TextbookTocActor extends BaseActor {
       StringBuilder exceptionMsgs = new StringBuilder();
       for (int i = 0; i < csvRecords.size(); i++) {
         CSVRecord record = csvRecords.get(i);
+        Map<String, String> trimMappingRecord = new HashMap<>();
+        record.toMap()
+            .entrySet()
+                .forEach(entry ->
+              trimMappingRecord.put(entry.getKey().trim(), entry.getValue()!=null?entry.getValue().trim():entry.getValue())
+            );
         HashMap<String, Object> recordMap = new HashMap<>();
         HashMap<String, Object> hierarchyMap = new HashMap<>();
         for (Map.Entry<String, String> entry : metadata.entrySet()) {
-          if (StringUtils.isNotBlank(record.get(entry.getValue())))
-            recordMap.put(entry.getKey(), record.get(entry.getValue()));
+          if (StringUtils.isNotBlank(trimMappingRecord.get(entry.getValue())))
+            recordMap.put(entry.getKey(), trimMappingRecord.get(entry.getValue()));
         }
         for (Map.Entry<String, String> entry : hierarchy.entrySet()) {
-          if (StringUtils.isNotBlank(record.get(entry.getValue())))
-            hierarchyMap.put(entry.getKey(), record.get(entry.getValue()));
+          if (StringUtils.isNotBlank(trimMappingRecord.get(entry.getValue())))
+            hierarchyMap.put(entry.getKey(), trimMappingRecord.get(entry.getValue()));
         }
         validateBGMS(i, bgms, recordMap, metadata);
 
@@ -675,8 +685,9 @@ public class TextbookTocActor extends BaseActor {
                 });
           }
           Map<String, Object> map = new HashMap<>();
-          if (JsonKey.UPDATE.equalsIgnoreCase(mode) && StringUtils.isNotBlank(record.get(id))) {
-            String identifier = record.get(id).trim();
+          if (JsonKey.UPDATE.equalsIgnoreCase(mode)
+              && StringUtils.isNotBlank(trimMappingRecord.get(id))) {
+            String identifier = trimMappingRecord.get(id);
             map.put(JsonKey.IDENTIFIER, identifier);
             if (CollectionUtils.isNotEmpty(dialCodeList)) {
               dialCodeIdentifierMap.put(identifier, dialCodeList);

@@ -6,6 +6,7 @@
 	path = actors/sunbird-open-saber-bridge
 	url = https://github.com/project-sunbird/sunbird-open-saber-bridge.git
 	branch = release-2.1.0
+
 [submodule "actors/open-saber-client"]
 	path = actors/open-saber-client
 	url = https://github.com/project-sunbird/open-saber-client.git

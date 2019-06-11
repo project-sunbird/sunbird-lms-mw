@@ -38,6 +38,6 @@ public interface UserService {
   List<String> getEncryptedList(List<String> dataList);
 
   boolean checkUsernameUniqueness(String username, boolean isEncrypted);
-  
+
   String getCustodianOrgId(ActorRef actorRef);
 }

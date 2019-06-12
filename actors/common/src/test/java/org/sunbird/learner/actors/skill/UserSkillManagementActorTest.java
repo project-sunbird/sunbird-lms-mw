@@ -32,7 +32,6 @@ import scala.concurrent.duration.FiniteDuration;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({ServiceFactory.class, ElasticSearchUtil.class})
 @PowerMockIgnore("javax.management.*")
-@Ignore
 public class UserSkillManagementActorTest {
 
   private static ActorSystem system;
@@ -200,6 +199,7 @@ public class UserSkillManagementActorTest {
             && exception.getResponseCode() == ResponseCode.CLIENT_ERROR.getResponseCode());
   }
 
+  @Ignore
   @Test
   public void testAddSkillEndorsementSuccess() {
 
@@ -297,7 +297,7 @@ public class UserSkillManagementActorTest {
     List<Map<String, Object>> result = new ArrayList<>();
     Map<String, Object> skill = new HashMap<>();
     skill.put(JsonKey.SKILL_NAME, ENDORSED_SKILL_NAME);
-    skill.put(JsonKey.SKILL_NAME_TO_LOWERCASE, ENDORSED_SKILL_NAME.toLowerCase());
+    skill.put(JsonKey.SKILL_NAME_TO_LOWERCASE, ENDORSED_SKILL_NAME);
     skill.put(JsonKey.ENDORSERS_LIST, new ArrayList<>());
     result.add(skill);
     response.put(JsonKey.RESPONSE, result);

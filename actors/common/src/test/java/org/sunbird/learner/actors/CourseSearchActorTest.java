@@ -11,35 +11,32 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
-import org.sunbird.actor.service.SunbirdMWService;
+import org.junit.runner.RunWith;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
+import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
+import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.search.CourseSearchActor;
-import org.sunbird.learner.util.Util;
 
-/** @author Manzarul */
-@Ignore
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({ServiceFactory.class, ElasticSearchUtil.class, ProjectUtil.class})
+@PowerMockIgnore("javax.management.*")
 public class CourseSearchActorTest {
-  private static ActorSystem system;
+  private ActorSystem system = ActorSystem.create("system");
   private static final Props props = Props.create(CourseSearchActor.class);
   private String courseId = "";
 
-  @BeforeClass
-  public static void setUp() {
-    SunbirdMWService.init();
-    system = ActorSystem.create("system");
-
-    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
-  }
-
   @Test
   public void searchCourseOnReceiveTest() {
+
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -64,7 +61,7 @@ public class CourseSearchActorTest {
     map.put(JsonKey.SEARCH, innerMap);
     reqObj.setRequest(map);
     subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(Response.class);
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
     Object[] objects = ((Object[]) res.getResult().get(JsonKey.RESPONSE));
 
     if (null != objects && objects.length > 0) {
@@ -73,26 +70,11 @@ public class CourseSearchActorTest {
       System.out.println(courseId);
       Assert.assertTrue(null != courseId);
     }
-    getCourseByIdOnReceiveTest();
-  }
-
-  public void getCourseByIdOnReceiveTest() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.GET_COURSE_BY_ID.getValue());
-    HashMap<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.ID, courseId);
-    innerMap.put(JsonKey.REQUESTED_BY, "user-001");
-    reqObj.setRequest(innerMap);
-    subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
-    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
   @Test
   public void testInvalidOperation() {
+
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
@@ -105,14 +87,19 @@ public class CourseSearchActorTest {
   }
 
   @Test
-  public void testAAAInvalidRequest() {
+  public void getCourseByIdOnReceiveTest() {
+
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
 
-    Response resObj = new Response();
-
-    subject.tell(resObj, probe.getRef());
-    ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
-    Assert.assertTrue(null != exc);
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.GET_COURSE_BY_ID.getValue());
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.ID, courseId);
+    innerMap.put(JsonKey.REQUESTED_BY, "user-001");
+    reqObj.setRequest(innerMap);
+    subject.tell(reqObj, probe.getRef());
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 }

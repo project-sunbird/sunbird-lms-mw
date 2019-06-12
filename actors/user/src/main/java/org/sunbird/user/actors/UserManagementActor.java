@@ -187,7 +187,7 @@ public class UserManagementActor extends BaseActor {
     }
     targetObject =
         TelemetryUtil.generateTargetObject(
-            (String) userMap.get(JsonKey.USER_ID), JsonKey.USER, JsonKey.UPDATE, null);
+            (String) userMap.get(JsonKey.USER_ID), TelemetryEnvKey.USER, JsonKey.UPDATE, null);
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
   }
 
@@ -399,6 +399,14 @@ public class UserManagementActor extends BaseActor {
     Map<String, Object> userMap = actorMessage.getRequest();
     String callerId = (String) actorMessage.getContext().get(JsonKey.CALLER_ID);
     String version = (String) actorMessage.getContext().get(JsonKey.VERSION);
+    String signupType =
+        (String) actorMessage.getContext().get(JsonKey.SIGNUP_TYPE) != null
+            ? (String) actorMessage.getContext().get(JsonKey.SIGNUP_TYPE)
+            : "";
+    String source =
+        (String) actorMessage.getContext().get(JsonKey.REQUEST_SOURCE) != null
+            ? (String) actorMessage.getContext().get(JsonKey.REQUEST_SOURCE)
+            : "";
     if (StringUtils.isNotBlank(version) && JsonKey.VERSION_2.equalsIgnoreCase(version)) {
       userRequestValidator.validateCreateUserV2Request(actorMessage);
       if (StringUtils.isNotBlank(callerId)) {
@@ -468,7 +476,7 @@ public class UserManagementActor extends BaseActor {
       userMap.remove(JsonKey.ORG_EXTERNAL_ID);
       userMap.put(JsonKey.ORGANISATION_ID, orgId);
     }
-    processUserRequest(userMap, callerId);
+    processUserRequest(userMap, callerId, signupType, source);
   }
 
   private void validateUserType(Map<String, Object> userMap, boolean isCustodianOrg) {
@@ -551,7 +559,8 @@ public class UserManagementActor extends BaseActor {
   }
 
   @SuppressWarnings("unchecked")
-  private void processUserRequest(Map<String, Object> userMap, String callerId) {
+  private void processUserRequest(
+      Map<String, Object> userMap, String callerId, String signupType, String source) {
     Map<String, Object> requestMap = null;
     UserUtil.setUserDefaultValue(userMap, callerId);
     User user = mapper.convertValue(userMap, User.class);
@@ -620,10 +629,26 @@ public class UserManagementActor extends BaseActor {
     }
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
-
+    Map<String, String> rollUp = new HashMap<>();
+    rollUp.put("l1", (String) userMap.get(JsonKey.ROOT_ORG_ID));
+    ExecutionContext.getCurrent().getRequestContext().put(JsonKey.ROLLUP, rollUp);
     targetObject =
         TelemetryUtil.generateTargetObject(
-            (String) userMap.get(JsonKey.ID), JsonKey.USER, JsonKey.CREATE, null);
+            (String) userMap.get(JsonKey.ID), TelemetryEnvKey.USER, JsonKey.CREATE, null);
+    TelemetryUtil.generateCorrelatedObject(userId, TelemetryEnvKey.USER, null, correlatedObject);
+    if (StringUtils.isNotBlank(signupType)) {
+      TelemetryUtil.generateCorrelatedObject(
+          signupType, StringUtils.capitalize(JsonKey.SIGNUP_TYPE), null, correlatedObject);
+    } else {
+      ProjectLogger.log("UserManagementActor:processUserRequest: No signupType found");
+    }
+    if (StringUtils.isNotBlank(source)) {
+      TelemetryUtil.generateCorrelatedObject(
+          source, StringUtils.capitalize(JsonKey.REQUEST_SOURCE), null, correlatedObject);
+    } else {
+      ProjectLogger.log("UserManagementActor:processUserRequest: No source found");
+    }
+
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
   }
 

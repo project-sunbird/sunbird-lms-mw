@@ -878,7 +878,7 @@ public final class Util {
       String actorId = getKeyFromContext(JsonKey.ACTOR_ID, actorMessage);
       String actorType = getKeyFromContext(JsonKey.ACTOR_TYPE, actorMessage);
       String appId = getKeyFromContext(JsonKey.APP_ID, actorMessage);
-      env = StringUtils.isNotBlank(env) ? env : "N/A";
+      env = StringUtils.isNotBlank(env) ? env : "";
       String deviceId = getKeyFromContext(JsonKey.DEVICE_ID, actorMessage);
       String channel = getKeyFromContext(JsonKey.CHANNEL, actorMessage);
       requestContext.put(JsonKey.CHANNEL, channel);
@@ -918,7 +918,7 @@ public final class Util {
   public static String getKeyFromContext(String key, Request actorMessage) {
     return actorMessage.getContext() != null && actorMessage.getContext().containsKey(key)
         ? (String) actorMessage.getContext().get(key)
-        : "N/A";
+        : "";
   }
 
   public static void initializeContextForSchedulerJob(
@@ -1430,16 +1430,13 @@ public final class Util {
     if (!(userList.isEmpty())) {
       userDetails = userList.get(0);
       username = (String) userDetails.get(JsonKey.USERNAME);
-      ProjectLogger.log(
-          "Util:getUserDetails: for userId " + userId + " is " + userDetails,
-          LoggerEnum.INFO.name());
+      ProjectLogger.log("Util:getUserDetails: userId = " + userId, LoggerEnum.INFO.name());
       userDetails.put(JsonKey.ADDRESS, getAddressDetails(userId, null));
       userDetails.put(JsonKey.EDUCATION, getUserEducationDetails(userId));
       userDetails.put(JsonKey.JOB_PROFILE, getJobProfileDetails(userId));
       userDetails.put(JsonKey.ORGANISATIONS, getUserOrgDetails(userId));
       userDetails.put(JsonKey.BADGE_ASSERTIONS, getUserBadge(userId));
       userDetails.put(JsonKey.SKILLS, getUserSkills(userId));
-      userDetails.put(JsonKey.BATCHES, getUserCourseBatch(userId));
       Map<String, Object> orgMap = getOrgDetails((String) userDetails.get(JsonKey.ROOT_ORG_ID));
       if (!MapUtils.isEmpty(orgMap)) {
         userDetails.put(JsonKey.ROOT_ORG_NAME, orgMap.get(JsonKey.ORG_NAME));
@@ -1453,9 +1450,6 @@ public final class Util {
       userDetails.remove(JsonKey.PASSWORD);
       addEmailAndPhone(userDetails);
       userDetails = getUserDetailsFromRegistry(userDetails);
-      ProjectLogger.log(
-          "Util:getUserDetails: for userId " + userId + " is " + userDetails,
-          LoggerEnum.INFO.name());
     } else {
       ProjectLogger.log(
           "Util:getUserProfile: User data not available to save in ES for userId : " + userId,
@@ -1481,12 +1475,8 @@ public final class Util {
   }
 
   public static void checkUserProfileVisibility(Map<String, Object> userMap, ActorRef actorRef) {
-
     ProjectLogger.log(
-        "Util:checkUserProfileVisibility: UserMap before removing private fields for userId "
-            + userMap.get(JsonKey.USER_ID)
-            + " is "
-            + userMap,
+        "Util:checkUserProfileVisibility: userId = " + userMap.get(JsonKey.USER_ID),
         LoggerEnum.INFO.name());
     Map<String, String> userProfileVisibilityMap =
         (Map<String, String>) userMap.get(JsonKey.PROFILE_VISIBILITY);
@@ -1607,36 +1597,6 @@ public final class Util {
       ProjectLogger.log(e.getMessage(), e);
     }
     return badges;
-  }
-
-  public static List<Map<String, Object>> getUserCourseBatch(String userId) {
-    ProjectLogger.log("Util: getUserCourseBatch called", LoggerEnum.INFO);
-    DbInfo userCourseDb = Util.dbInfoMap.get(JsonKey.LEARNER_COURSE_DB);
-    List<Map<String, Object>> userCourses = new ArrayList<>();
-    try {
-      Response result =
-          cassandraOperation.getRecordsByIndexedProperty(
-              userCourseDb.getKeySpace(), userCourseDb.getTableName(), JsonKey.USER_ID, userId);
-      List<Map<String, Object>> courseBatch =
-          (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-      if (!CollectionUtils.isEmpty(courseBatch)) {
-        for (Map<String, Object> userCourseBatch : courseBatch) {
-          ProjectLogger.log("Util: getUserCourseBatch has course", LoggerEnum.INFO);
-          Map<String, Object> tempMap = new HashMap<>();
-          tempMap.put(JsonKey.ENROLLED_ON, userCourseBatch.get(JsonKey.COURSE_ENROLL_DATE));
-          tempMap.put(JsonKey.COURSE_ID, userCourseBatch.get(JsonKey.COURSE_ID));
-          tempMap.put(JsonKey.BATCH_ID, userCourseBatch.get(JsonKey.BATCH_ID));
-          tempMap.put(JsonKey.PROGRESS, userCourseBatch.get(JsonKey.PROGRESS));
-          tempMap.put(JsonKey.LAST_ACCESSED_ON, userCourseBatch.get(JsonKey.DATE_TIME));
-          userCourses.add(tempMap);
-        }
-      }
-
-    } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(), e);
-    }
-    ProjectLogger.log("Util: getUserCourseBatch completed", LoggerEnum.INFO);
-    return userCourses;
   }
 
   public static List<Map<String, Object>> getUserOrgDetails(String userId) {

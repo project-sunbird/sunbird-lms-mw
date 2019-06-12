@@ -203,10 +203,6 @@ public class BackgroundJobManager extends BaseActor {
         ProjectUtil.EsType.usercourses.getTypeName(),
         (String) batch.get(JsonKey.ID),
         batch);
-    syncUserCourseBatchProgress(
-        (String) batch.get(JsonKey.BATCH_ID),
-        (String) batch.get(JsonKey.USER_ID),
-        (int) batch.get(JsonKey.PROGRESS));
   }
 
   @SuppressWarnings("unchecked")
@@ -316,19 +312,7 @@ public class BackgroundJobManager extends BaseActor {
       Map<String, Object> esMap = new HashMap<>();
       if (!(orgList.isEmpty())) {
         esMap = orgList.get(0);
-        String contactDetails = (String) esMap.get(JsonKey.CONTACT_DETAILS);
-        if (StringUtils.isNotBlank(contactDetails)) {
-          Object[] arr;
-          try {
-            arr = mapper.readValue(contactDetails, Object[].class);
-            esMap.put(JsonKey.CONTACT_DETAILS, arr);
-          } catch (IOException e) {
-            esMap.put(JsonKey.CONTACT_DETAILS, new Object[] {});
-            ProjectLogger.log(e.getMessage(), e);
-          }
-        } else {
-          esMap.put(JsonKey.CONTACT_DETAILS, new Object[] {});
-        }
+        esMap.remove(JsonKey.CONTACT_DETAILS);
 
         if (MapUtils.isNotEmpty((Map<String, Object>) orgMap.get(JsonKey.ADDRESS))) {
           esMap.put(JsonKey.ADDRESS, orgMap.get(JsonKey.ADDRESS));
@@ -555,7 +539,7 @@ public class BackgroundJobManager extends BaseActor {
   private boolean insertDataToElastic(
       String index, String type, String identifier, Map<String, Object> data) {
     ProjectLogger.log(
-        "making call to ES for type ,identifier ,data==" + type + " " + identifier + data,
+        "BackgroundJobManager:insertDataToElastic: type = " + type + " identifier = " + identifier,
         LoggerEnum.INFO.name());
     /*
      * if (type.equalsIgnoreCase(ProjectUtil.EsType.user.getTypeName())) { // now
@@ -636,46 +620,5 @@ public class BackgroundJobManager extends BaseActor {
         ProjectUtil.EsType.usernotes.getTypeName(),
         (String) noteMap.get(JsonKey.ID),
         noteMap);
-  }
-
-  public void syncUserCourseBatchProgress(String batchId, String userId, Integer progress) {
-    ProjectLogger.log(
-        "BackgroundJobManager:syncUserCourseBatchProgress: data"
-            + userId
-            + "=="
-            + progress
-            + "  timeStamp ==",
-        LoggerEnum.INFO.name());
-    Map<String, Object> userMap =
-        ElasticSearchUtil.getDataByIdentifier(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.user.getTypeName(),
-            userId);
-    if (userMap != null) {
-      List<Map<String, Object>> batches;
-      if (userMap.get(JsonKey.BATCHES) != null) {
-        batches = (List<Map<String, Object>>) userMap.get(JsonKey.BATCHES);
-        for (Map<String, Object> map : batches) {
-          if (batchId.equalsIgnoreCase((String) map.get(JsonKey.BATCH_ID))) {
-            map.put(JsonKey.PROGRESS, progress);
-            map.put(JsonKey.LAST_ACCESSED_ON, new Date());
-            break;
-          }
-        }
-        userMap.put(JsonKey.BATCHES, batches);
-      }
-    }
-    boolean response =
-        ElasticSearchUtil.upsertData(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.user.getTypeName(),
-            userId,
-            userMap);
-    ProjectLogger.log(
-        "BackgroundJobManager:syncUserCourseBatchProgress: sync user courses batch and  response  "
-            + userId
-            + "=="
-            + response,
-        LoggerEnum.INFO.name());
   }
 }

@@ -54,6 +54,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.csv.CSVPrinter;
+import org.apache.commons.io.ByteOrderMark;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.JsonKey;
@@ -160,7 +161,7 @@ public class TextBookTocUploader {
                 .filter(Objects::nonNull)
                 .toArray(String[]::new);
         out = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8);
-
+        out.write(ByteOrderMark.UTF_BOM);
         log(
             "Writing Headers to Output Stream for Textbook | Id " + content.get(IDENTIFIER),
             INFO.name());
@@ -196,6 +197,7 @@ public class TextBookTocUploader {
         processHierarchy(content);
 
         out = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8);
+        out.write(ByteOrderMark.UTF_BOM);
 
         log(
             "Writing Headers to Output Stream for Textbook | Id " + content.get(IDENTIFIER),

@@ -4,6 +4,7 @@ import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.collections.CollectionUtils;
@@ -32,6 +33,8 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.notificationservice.dao.EmailTemplateDao;
 import org.sunbird.learner.actors.notificationservice.dao.impl.EmailTemplateDaoImpl;
 import org.sunbird.learner.util.Util;
+import org.sunbird.notification.sms.provider.ISmsProvider;
+import org.sunbird.notification.utils.SMSFactory;
 
 @ActorConfig(
   tasks = {"emailService"},
@@ -46,6 +49,7 @@ public class EmailServiceActor extends BaseActor {
   private EncryptionService encryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
           null);
+  private static final String NOTIFICATION_MODE = "sms";
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -71,12 +75,32 @@ public class EmailServiceActor extends BaseActor {
     if (CollectionUtils.isEmpty(userIds)) {
       userIds = new ArrayList<>();
     }
+
+    if (request.get(JsonKey.MODE) != null
+        && NOTIFICATION_MODE.equalsIgnoreCase((String) request.get(JsonKey.MODE))) {
+      List<String> phones = (List<String>) request.get(JsonKey.RECIPIENT_PHONES);
+      if (CollectionUtils.isNotEmpty(phones)) {
+        Iterator<String> itr = phones.iterator();
+        while (itr.hasNext()) {
+          String phone = itr.next();
+          if (!ProjectUtil.validatePhone(phone, "")) {
+            ProjectLogger.log(
+                "EmailServiceActor:sendMail: Removing invalid phone number =" + phone,
+                LoggerEnum.INFO.name());
+            itr.remove();
+          }
+        }
+      }
+      sendSMS(phones, userIds, (String) request.get(JsonKey.BODY));
+      return;
+    }
+
     // Fetch public user emails from Elastic Search based on recipient search query given in
     // request.
     getUserEmailsFromSearchQuery(request, emails, userIds);
 
     validateUserIds(userIds, emails);
-    validateEmailRecipientsLimit(emails);
+    validateRecipientsLimit(emails);
 
     Map<String, Object> user = null;
     if (CollectionUtils.isNotEmpty(emails)) {
@@ -116,8 +140,54 @@ public class EmailServiceActor extends BaseActor {
     }
   }
 
-  private void validateEmailRecipientsLimit(List<String> emails) {
-    if (CollectionUtils.isEmpty(emails)) {
+  /**
+   * This method will send sms to targeted user.
+   *
+   * @param phones list of phone numbers
+   * @param userIds list of userIds
+   * @param smsText message
+   */
+  private void sendSMS(List<String> phones, List<String> userIds, String smsText) {
+    ProjectLogger.log(
+        "EmailServiceActor:sendSMS: method started  = " + smsText, LoggerEnum.INFO.name());
+    if (CollectionUtils.isEmpty(phones)) {
+      phones = new ArrayList<String>();
+    }
+    if (CollectionUtils.isNotEmpty(userIds)) {
+      List<Map<String, Object>> userList = getUsersFromDB(userIds);
+      if (userIds.size() != userList.size()) {
+        findMissingUserIds(userIds, userList);
+      } else {
+        for (Map<String, Object> userMap : userList) {
+          String phone = (String) userMap.get(JsonKey.PHONE);
+          if (StringUtils.isNotBlank(phone)) {
+            String decryptedPhone = decryptionService.decryptData(phone);
+            if (!phones.contains(decryptedPhone)) {
+              phones.add(decryptedPhone);
+            }
+          }
+        }
+      }
+    }
+
+    validateRecipientsLimit(phones);
+    Response res = new Response();
+    res.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    sender().tell(res, self());
+    ProjectLogger.log(
+        "EmailServiceActor:sendSMS: Sending sendSMS to = " + phones.size() + " phones",
+        LoggerEnum.INFO.name());
+    try {
+      ISmsProvider smsProvider = SMSFactory.getInstance("91SMS");
+      smsProvider.send(phones, smsText);
+    } catch (Exception e) {
+      ProjectLogger.log(
+          "EmailServiceActor:sendSMS: Exception occurred with message = " + e.getMessage(), e);
+    }
+  }
+
+  private void validateRecipientsLimit(List<String> recipients) {
+    if (CollectionUtils.isEmpty(recipients)) {
       ProjectCommonException.throwClientErrorException(
           ResponseCode.emailNotSentRecipientsZero,
           ResponseCode.emailNotSentRecipientsZero.getErrorMessage());
@@ -133,7 +203,7 @@ public class EmailServiceActor extends BaseActor {
           LoggerEnum.INFO);
       maxLimit = 100;
     }
-    if (emails.size() > maxLimit) {
+    if (recipients.size() > maxLimit) {
       ProjectCommonException.throwClientErrorException(
           ResponseCode.emailNotSentRecipientsExceededMaxLimit,
           MessageFormat.format(
@@ -145,27 +215,8 @@ public class EmailServiceActor extends BaseActor {
     // Fetch private (masked in Elastic Search) user emails from Cassandra DB
     if (CollectionUtils.isNotEmpty(userIds)) {
       List<Map<String, Object>> userList = getUsersFromDB(userIds);
-      // if requested userId list and cassandra user list size not same , means requested userId
-      // list
-      // contains some invalid userId
-      List<String> userIdFromDBList = new ArrayList<>();
       if (userIds.size() != userList.size()) {
-        userList.forEach(
-            user -> {
-              userIdFromDBList.add((String) user.get(JsonKey.ID));
-            });
-        userIds.forEach(
-            userId -> {
-              if (!userIdFromDBList.contains(userId)) {
-                ProjectCommonException.throwClientErrorException(
-                    ResponseCode.invalidParameterValue,
-                    MessageFormat.format(
-                        ResponseCode.invalidParameterValue.getErrorMessage(),
-                        userId,
-                        JsonKey.RECIPIENT_USERIDS));
-                return;
-              }
-            });
+        findMissingUserIds(userIds, userList);
       } else {
         for (Map<String, Object> userMap : userList) {
           String email = (String) userMap.get(JsonKey.EMAIL);
@@ -176,6 +227,31 @@ public class EmailServiceActor extends BaseActor {
         }
       }
     }
+  }
+
+  private void findMissingUserIds(
+      List<String> requestedUserIds, List<Map<String, Object>> userListInDB) {
+    // if requested userId list and cassandra user list size not same , means
+    // requested userId
+    // list
+    // contains some invalid userId
+    List<String> userIdFromDBList = new ArrayList<>();
+    userListInDB.forEach(
+        user -> {
+          userIdFromDBList.add((String) user.get(JsonKey.ID));
+        });
+    requestedUserIds.forEach(
+        userId -> {
+          if (!userIdFromDBList.contains(userId)) {
+            ProjectCommonException.throwClientErrorException(
+                ResponseCode.invalidParameterValue,
+                MessageFormat.format(
+                    ResponseCode.invalidParameterValue.getErrorMessage(),
+                    userId,
+                    JsonKey.RECIPIENT_USERIDS));
+            return;
+          }
+        });
   }
 
   private String getEmailTemplateFile(String templateName) {

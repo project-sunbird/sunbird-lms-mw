@@ -937,7 +937,7 @@ public class TextbookTocActor extends BaseActor {
     String mandatoryFields = getConfigValue(JsonKey.TEXTBOOK_TOC_MANDATORY_FIELDS);
     Map<String, String> mandatoryFieldsMap =
         mapper.readValue(mandatoryFields, new TypeReference<Map<String, String>>() {});
-    String textbookName = ((String) textbook.get(JsonKey.NAME)).trim();
+    String textbookName = textbook.get(JsonKey.NAME)!=null?((String) textbook.get(JsonKey.NAME)).trim():(String) textbook.get(JsonKey.NAME);
 
     validateTextBook(textbook, mode);
 

@@ -937,7 +937,7 @@ public class TextbookTocActor extends BaseActor {
     String mandatoryFields = getConfigValue(JsonKey.TEXTBOOK_TOC_MANDATORY_FIELDS);
     Map<String, String> mandatoryFieldsMap =
         mapper.readValue(mandatoryFields, new TypeReference<Map<String, String>>() {});
-    String textbookName = (String) textbook.get(JsonKey.NAME);
+    String textbookName = ((String) textbook.get(JsonKey.NAME)).trim();
 
     validateTextBook(textbook, mode);
 
@@ -956,7 +956,7 @@ public class TextbookTocActor extends BaseActor {
       }
       Map<String, Object> hierarchy = (Map<String, Object>) row.get(JsonKey.HIERARCHY);
 
-      String name = (String) hierarchy.getOrDefault(StringUtils.capitalize(JsonKey.TEXTBOOK), "");
+      String name = ((String) hierarchy.getOrDefault(StringUtils.capitalize(JsonKey.TEXTBOOK), "")).trim();
       if (isBlank(name) || !StringUtils.equalsIgnoreCase(name, textbookName)) {
         log(
             "Name mismatch. Content has: " + name + " but, file has: " + textbookName,

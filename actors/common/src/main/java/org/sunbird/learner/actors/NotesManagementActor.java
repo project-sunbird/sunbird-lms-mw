@@ -10,8 +10,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
@@ -23,6 +25,7 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.SearchTelemetryUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.telemetry.util.TelemetryUtil;
+import scala.concurrent.Future;
 
 /** This class provides API's to create, update, get and delete user note */
 @ActorConfig(
@@ -33,6 +36,7 @@ public class NotesManagementActor extends BaseActor {
 
   private Util.DbInfo userNotesDbInfo = Util.dbInfoMap.get(JsonKey.USER_NOTES_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private ElasticSearchUtil esUtil = EsClientFactory.getTcpClient();
 
   /** Receives the actor message and perform the operation for user note */
   @Override
@@ -285,9 +289,11 @@ public class NotesManagementActor extends BaseActor {
     }
     excludedFields.add(JsonKey.IS_DELETED);
     searchDto.setExcludedFields(excludedFields);
-    Map<String, Object> result =
-        ElasticSearchUtil.complexSearch(
+    Future<Map<String, Object>> resultF =
+        esUtil.complexSearch(
             searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.usernotes.getTypeName());
+    Map<String, Object> result =
+        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
     if (result != null) {
       Object count = result.get(JsonKey.COUNT);
       Object note = result.get(JsonKey.CONTENT);
@@ -371,9 +377,11 @@ public class NotesManagementActor extends BaseActor {
     Boolean result = false;
 
     if (!StringUtils.isBlank(userId)) {
-      Map<String, Object> data =
-          ElasticSearchUtil.getDataByIdentifier(
+      Future<Map<String, Object>> dataF =
+          esUtil.getDataByIdentifier(
               ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), userId);
+      Map<String, Object> data =
+          (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(dataF);
       if (null != data && !data.isEmpty()) {
         result = true;
       }
@@ -403,8 +411,12 @@ public class NotesManagementActor extends BaseActor {
    * @return Note data as List<Map<String, Object>>
    */
   private Map<String, Object> getNoteRecordById(String noteId) {
-    return ElasticSearchUtil.getDataByIdentifier(
-        ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.usernotes.getTypeName(), noteId);
+    Future<Map<String, Object>> resultF =
+        esUtil.getDataByIdentifier(
+            ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.usernotes.getTypeName(), noteId);
+    Map<String, Object> result =
+        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+    return result;
   }
 
   private Boolean validateUserForNoteUpdation(String userId, String noteId) {

@@ -3,6 +3,7 @@ package org.sunbird.learner.actors.coursebatch.service;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import akka.dispatch.Futures;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.Assert;
@@ -17,8 +18,10 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
@@ -26,25 +29,36 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.coursebatch.dao.UserCoursesDao;
 import org.sunbird.models.user.courses.UserCourses;
+import scala.concurrent.Promise;
 
 /** Created by rajatgupta on 09/04/19. */
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({ProjectUtil.class, ElasticSearchUtil.class, ServiceFactory.class})
+@PrepareForTest({
+  ProjectUtil.class,
+  ElasticSearchTcpImpl.class,
+  CassandraOperationImpl.class,
+  EsClientFactory.class,
+  ServiceFactory.class
+})
 @PowerMockIgnore("javax.management.*")
 public class UserCourseServiceTest {
 
   private CassandraOperationImpl cassandraOperation;
   @Mock private UserCoursesDao userCoursesDao;
   private UserCoursesService userCoursesService;
+  private static ElasticSearchUtil esUtil;
 
   @BeforeClass
-  public static void setup() {}
+  public static void setup() {
+    PowerMockito.mockStatic(EsClientFactory.class);
+    esUtil = mock(ElasticSearchTcpImpl.class);
+    when(EsClientFactory.getTcpClient()).thenReturn(esUtil);
+  }
 
   @Before
   public void beforeEachTest() throws Exception {
 
     PowerMockito.mockStatic(ProjectUtil.class);
-    PowerMockito.mockStatic(ElasticSearchUtil.class);
     PowerMockito.mockStatic(ServiceFactory.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
@@ -131,17 +145,20 @@ public class UserCourseServiceTest {
 
   @Test
   public void getActiveUserCourseTestSuccess() {
-    when(ElasticSearchUtil.complexSearch(
-            Mockito.anyObject(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(new HashMap<>());
+    Map<String, Object> map = new HashMap<>();
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.trySuccess(map);
+    when(esUtil.complexSearch(Mockito.anyObject(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(promise.future());
     Assert.assertNotEquals(null, userCoursesService.getActiveUserCourses(JsonKey.USER_ID));
   }
 
   @Test
   public void getActiveUserCourseFailure() {
-    when(ElasticSearchUtil.complexSearch(
-            Mockito.anyObject(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(null);
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(null);
+    when(esUtil.complexSearch(Mockito.anyObject(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(promise.future());
     Assert.assertEquals(null, userCoursesService.getActiveUserCourses(JsonKey.USER_ID));
   }
 }

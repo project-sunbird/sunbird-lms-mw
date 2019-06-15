@@ -8,6 +8,7 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
+import akka.dispatch.Futures;
 import akka.testkit.javadsl.TestKit;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,8 +24,9 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.GeoLocationJsonKey;
 import org.sunbird.common.models.util.JsonKey;
@@ -33,22 +35,27 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
+import scala.concurrent.Promise;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({ServiceFactory.class, ElasticSearchUtil.class})
+@PrepareForTest({ServiceFactory.class, ElasticSearchTcpImpl.class, EsClientFactory.class})
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*", "javax.security.*"})
 public class LocationActorTest {
 
   private static final ActorSystem system = ActorSystem.create("system");
   private static final Props props = Props.create(LocationActor.class);
   private static Map<String, Object> data;
+  private static ElasticSearchTcpImpl esUtil;
 
   @BeforeClass
   public static void init() {
 
+    PowerMockito.mockStatic(EsClientFactory.class);
     PowerMockito.mockStatic(ServiceFactory.class);
     CassandraOperationImpl cassandraOperation = mock(CassandraOperationImpl.class);
+    esUtil = mock(ElasticSearchTcpImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+    when(EsClientFactory.getTcpClient()).thenReturn(esUtil);
     when(cassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(getSuccessResponse());
@@ -66,14 +73,14 @@ public class LocationActorTest {
     Map<String, Object> esRespone = new HashMap<>();
     esRespone.put(JsonKey.CONTENT, new ArrayList<>());
     esRespone.put(GeoLocationJsonKey.LOCATION_TYPE, "STATE");
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(esRespone);
 
-    PowerMockito.mockStatic(ElasticSearchUtil.class);
-    when(ElasticSearchUtil.complexSearch(
+    when(esUtil.complexSearch(
             Mockito.any(SearchDTO.class), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(esRespone);
-    when(ElasticSearchUtil.getDataByIdentifier(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(esRespone);
+        .thenReturn(promise.future());
+    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(promise.future());
     data = getDataMap();
   }
 
@@ -142,10 +149,11 @@ public class LocationActorTest {
 
   @Test
   public void testDeleteLocationFailureWithInvalidLocationDeleteRequest() {
-
-    when(ElasticSearchUtil.complexSearch(
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(getContentMapFromES());
+    when(esUtil.complexSearch(
             Mockito.any(SearchDTO.class), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getContentMapFromES());
+        .thenReturn(promise.future());
     boolean result =
         testScenario(
             LocationActorOperation.DELETE_LOCATION,

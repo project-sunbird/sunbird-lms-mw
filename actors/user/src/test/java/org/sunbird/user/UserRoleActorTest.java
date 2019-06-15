@@ -9,6 +9,7 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSelection;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
+import akka.dispatch.Futures;
 import akka.testkit.javadsl.TestKit;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,8 +30,9 @@ import org.sunbird.actor.service.BaseMWService;
 import org.sunbird.actorutil.InterServiceCommunication;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -45,6 +47,7 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.user.actors.UserRoleActor;
 import org.sunbird.user.dao.UserOrgDao;
 import org.sunbird.user.dao.impl.UserOrgDaoImpl;
+import scala.concurrent.Promise;
 import scala.concurrent.duration.Duration;
 
 @RunWith(PowerMockRunner.class)
@@ -54,7 +57,8 @@ import scala.concurrent.duration.Duration;
   BaseMWService.class,
   RequestRouter.class,
   InterServiceCommunicationFactory.class,
-  ElasticSearchUtil.class,
+  EsClientFactory.class,
+  ElasticSearchTcpImpl.class,
   Util.class,
   UserOrgDaoImpl.class,
   DecryptionService.class
@@ -68,6 +72,7 @@ public class UserRoleActorTest {
       Mockito.mock(InterServiceCommunication.class);
   private static final Response response = Mockito.mock(Response.class);
   private static CassandraOperationImpl cassandraOperation;
+  private static ElasticSearchTcpImpl esUtil;
 
   @BeforeClass
   public static void beforeClass() {
@@ -95,9 +100,9 @@ public class UserRoleActorTest {
     PowerMockito.mockStatic(RequestRouter.class);
     PowerMockito.mockStatic(InterServiceCommunicationFactory.class);
     PowerMockito.mockStatic(RoleDaoImpl.class);
-    PowerMockito.mockStatic(ElasticSearchUtil.class);
     PowerMockito.mockStatic(Util.class);
     PowerMockito.mockStatic(UserOrgDaoImpl.class);
+    PowerMockito.mockStatic(EsClientFactory.class);
 
     when(InterServiceCommunicationFactory.getInstance()).thenReturn(interServiceCommunication);
     RoleDaoImpl roleDao = Mockito.mock(RoleDaoImpl.class);
@@ -121,6 +126,8 @@ public class UserRoleActorTest {
     when(cassandraOperation.getRecordsByProperties(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(getRecordByPropertyResponse());
+    esUtil = mock(ElasticSearchTcpImpl.class);
+    when(EsClientFactory.getTcpClient()).thenReturn(esUtil);
   }
 
   @Test
@@ -233,12 +240,13 @@ public class UserRoleActorTest {
   }
 
   private void mockGetOrgResponse(boolean isResponseRequired) {
-
-    when(ElasticSearchUtil.complexSearch(
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(createResponseGet(isResponseRequired));
+    when(esUtil.complexSearch(
             Mockito.any(SearchDTO.class),
             Mockito.eq(ProjectUtil.EsIndex.sunbird.getIndexName()),
             Mockito.anyVararg()))
-        .thenReturn(createResponseGet(isResponseRequired));
+        .thenReturn(promise.future());
   }
 
   private static Response getCassandraResponse() {

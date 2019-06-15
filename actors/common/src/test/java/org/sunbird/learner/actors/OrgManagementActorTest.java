@@ -8,6 +8,7 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
+import akka.dispatch.Futures;
 import akka.testkit.javadsl.TestKit;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,8 +24,10 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.GeoLocationJsonKey;
@@ -35,16 +38,18 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.validator.location.LocationRequestValidator;
+import scala.concurrent.Promise;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
   ServiceFactory.class,
   OrganisationManagementActor.class,
   Util.class,
-  ElasticSearchUtil.class,
+  ElasticSearchTcpImpl.class,
   RequestRouter.class,
   ProjectUtil.class,
-  LocationRequestValidator.class
+  LocationRequestValidator.class,
+  EsClientFactory.class
 })
 @PowerMockIgnore("javax.management.*")
 public class OrgManagementActorTest {
@@ -55,19 +60,24 @@ public class OrgManagementActorTest {
   private static Map<String, Object> basicRequestData;
   private static final String ADD_MEMBER_TO_ORG =
       ActorOperations.ADD_MEMBER_ORGANISATION.getValue();
+  private static ElasticSearchUtil esUtil;
 
   @Before
   public void beforeEachTest() {
     PowerMockito.mockStatic(ServiceFactory.class);
-    PowerMockito.mockStatic(ElasticSearchUtil.class);
     PowerMockito.mockStatic(Util.class);
     PowerMockito.mockStatic(ProjectUtil.class);
+    PowerMockito.mockStatic(EsClientFactory.class);
 
     cassandraOperation = mock(CassandraOperationImpl.class);
+    esUtil = mock(ElasticSearchTcpImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+    when(EsClientFactory.getTcpClient()).thenReturn(esUtil);
     basicRequestData = getBasicData();
-    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getEsResponse(false));
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(getEsResponse(false));
+    when(esUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(promise.future());
     when(cassandraOperation.getRecordsByProperty(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(getRecordsByProperty(false));
@@ -160,8 +170,10 @@ public class OrgManagementActorTest {
 
   @Test
   public void testAddUserToOrgFailureWithOrgNotFoundWithOrgId() {
-    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getEsResponse(true));
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(getEsResponse(true));
+    when(esUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(promise.future());
     boolean result =
         testScenario(
             getRequest(
@@ -186,8 +198,10 @@ public class OrgManagementActorTest {
 
   @Test
   public void testAddUserToOrgFailureWithOrgNotFoundWithOrgExtId() {
-    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getEsResponse(true));
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(getEsResponse(true));
+    when(esUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(promise.future());
     boolean result =
         testScenario(
             getRequest(
@@ -207,8 +221,11 @@ public class OrgManagementActorTest {
     when(cassandraOperation.getRecordsByProperties(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(getRecordsByProperty(true));
-    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getValidateChannelEsResponse(true));
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(getValidateChannelEsResponse(true));
+
+    when(esUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(promise.future());
     boolean result =
         testScenario(
             getRequest(
@@ -229,8 +246,11 @@ public class OrgManagementActorTest {
     when(cassandraOperation.getRecordsByProperties(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(getRecordsByProperty(true));
-    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getValidateChannelEsResponse(true));
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(getValidateChannelEsResponse(true));
+
+    when(esUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(promise.future());
     Map<String, Object> map = getRequestDataForOrgCreate(basicRequestData);
     map.remove(JsonKey.EXTERNAL_ID);
     boolean result = testScenario(getRequest(map, ActorOperations.CREATE_ORG.getValue()), null);

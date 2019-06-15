@@ -10,7 +10,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchTcpImpl;
+import org.sunbird.common.inf.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -35,6 +36,7 @@ public class KeyCloakSyncActor extends BaseActor {
   private boolean isSSOEnabled =
       Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
   private SSOManager ssoManager = SSOServiceFactory.getInstance();
+  private ElasticSearchUtil esUtil = new ElasticSearchTcpImpl();
 
   @Override
   public void onReceive(Request actorMessage) throws Throwable {
@@ -126,7 +128,7 @@ public class KeyCloakSyncActor extends BaseActor {
               map.put(JsonKey.ID, userId);
             }
             cassandraOperation.updateRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), map);
-            ElasticSearchUtil.updateData(
+            esUtil.updateData(
                 ProjectUtil.EsIndex.sunbird.getIndexName(),
                 ProjectUtil.EsType.user.getTypeName(),
                 userId,

@@ -8,6 +8,7 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
+import akka.dispatch.Futures;
 import akka.testkit.javadsl.TestKit;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -24,8 +25,11 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchHelper;
+import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectUtil;
@@ -39,6 +43,7 @@ import org.sunbird.learner.actors.notificationservice.dao.impl.EmailTemplateDaoI
 import org.sunbird.learner.util.ContentSearchUtil;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
+import scala.concurrent.Promise;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
@@ -48,8 +53,10 @@ import org.sunbird.learner.util.Util;
   PageManagementActor.class,
   ContentSearchUtil.class,
   org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.class,
-  ElasticSearchUtil.class,
-  EmailTemplateDaoImpl.class
+  ElasticSearchTcpImpl.class,
+  EmailTemplateDaoImpl.class,
+  EsClientFactory.class,
+  ElasticSearchHelper.class
 })
 @PowerMockIgnore({"javax.management.*"})
 public class EmailServiceActorTest {
@@ -60,6 +67,7 @@ public class EmailServiceActorTest {
   private static DefaultDecryptionServiceImpl defaultDecryptionService;
   private static DefaultEncryptionServivceImpl defaultEncryptionServivce;
   private static EmailTemplateDaoImpl emailTemplateDao;
+  private ElasticSearchUtil esUtil;
 
   @BeforeClass
   public static void setUp() {
@@ -77,8 +85,10 @@ public class EmailServiceActorTest {
   public void beforeTest() {
 
     PowerMockito.mockStatic(ServiceFactory.class);
-    PowerMockito.mockStatic(ElasticSearchUtil.class);
-
+    PowerMockito.mockStatic(ElasticSearchHelper.class);
+    esUtil = mock(ElasticSearchTcpImpl.class);
+    PowerMockito.mockStatic(EsClientFactory.class);
+    when(EsClientFactory.getTcpClient()).thenReturn(esUtil);
     PowerMockito.mockStatic(org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.class);
     PowerMockito.mockStatic(EmailTemplateDaoImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
@@ -101,24 +111,29 @@ public class EmailServiceActorTest {
     recipientSearchQuery.put(JsonKey.ROOT_ORG_ID, "anyRootId");
     Map<String, Object> esOrgResult = new HashMap<>();
     esOrgResult.put(JsonKey.ORGANISATION_NAME, "anyOrgName");
-
-    when(ElasticSearchUtil.complexSearch(
-            Mockito.eq(ElasticSearchUtil.createSearchDTO(recipientSearchQuery)),
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(createGetSkillResponse());
+    when(esUtil.complexSearch(
+            Mockito.eq(ElasticSearchHelper.createSearchDTO(recipientSearchQuery)),
             Mockito.eq(ProjectUtil.EsIndex.sunbird.getIndexName()),
             Mockito.eq(ProjectUtil.EsType.user.getTypeName())))
-        .thenReturn(createGetSkillResponse());
+        .thenReturn(promise.future());
+    Promise<Map<String, Object>> promise_recipientSearchQuery = Futures.promise();
 
-    when(ElasticSearchUtil.getDataByIdentifier(
+    promise_recipientSearchQuery.trySuccess(recipientSearchQuery);
+    when(esUtil.getDataByIdentifier(
             Mockito.eq(ProjectUtil.EsIndex.sunbird.getIndexName()),
             Mockito.eq(ProjectUtil.EsType.user.getTypeName()),
             Mockito.eq("001")))
-        .thenReturn(recipientSearchQuery);
+        .thenReturn(promise_recipientSearchQuery.future());
 
-    when(ElasticSearchUtil.getDataByIdentifier(
+    Promise<Map<String, Object>> promise_esOrgResult = Futures.promise();
+    promise_esOrgResult.trySuccess(esOrgResult);
+    when(esUtil.getDataByIdentifier(
             Mockito.eq(ProjectUtil.EsIndex.sunbird.getIndexName()),
             Mockito.eq(ProjectUtil.EsType.organisation.getTypeName()),
             Mockito.eq("anyRootId")))
-        .thenReturn(esOrgResult);
+        .thenReturn(promise_esOrgResult.future());
   }
 
   private static Response cassandraGetRecordById() {
@@ -258,12 +273,14 @@ public class EmailServiceActorTest {
     innerMap.put(JsonKey.RECIPIENT_USERIDS, userIdList);
     innerMap.put(JsonKey.RECIPIENT_SEARCH_QUERY, queryMap);
     reqObj.setRequest(innerMap);
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(createGetSkillResponse());
 
-    when(ElasticSearchUtil.complexSearch(
-            Mockito.eq(ElasticSearchUtil.createSearchDTO(new HashMap<>())),
+    when(esUtil.complexSearch(
+            Mockito.eq(ElasticSearchHelper.createSearchDTO(new HashMap<>())),
             Mockito.eq(ProjectUtil.EsIndex.sunbird.getIndexName()),
             Mockito.eq(ProjectUtil.EsType.user.getTypeName())))
-        .thenReturn(createGetSkillResponse());
+        .thenReturn(promise.future());
 
     subject.tell(reqObj, probe.getRef());
     ProjectCommonException exc =
@@ -296,13 +313,6 @@ public class EmailServiceActorTest {
     innerMap.put(JsonKey.RECIPIENT_USERIDS, userIdList);
     innerMap.put(JsonKey.RECIPIENT_SEARCH_QUERY, queryMap);
     reqObj.setRequest(innerMap);
-
-    when(ElasticSearchUtil.complexSearch(
-            Mockito.eq(ElasticSearchUtil.createSearchDTO(new HashMap<>())),
-            Mockito.eq(ProjectUtil.EsIndex.sunbird.getIndexName()),
-            Mockito.eq(ProjectUtil.EsType.user.getTypeName())))
-        .thenReturn(createGetSkillResponse());
-
     when(emailTemplateDao.getTemplate(Mockito.anyString())).thenReturn("");
     subject.tell(reqObj, probe.getRef());
     ProjectCommonException exc =
@@ -338,13 +348,6 @@ public class EmailServiceActorTest {
 
     innerMap.put(JsonKey.RECIPIENT_SEARCH_QUERY, queryMap);
     reqObj.setRequest(innerMap);
-
-    when(ElasticSearchUtil.complexSearch(
-            Mockito.eq(ElasticSearchUtil.createSearchDTO(new HashMap<>())),
-            Mockito.eq(ProjectUtil.EsIndex.sunbird.getIndexName()),
-            Mockito.eq(ProjectUtil.EsType.user.getTypeName())))
-        .thenReturn(createGetSkillResponse());
-
     subject.tell(reqObj, probe.getRef());
     ProjectCommonException exc =
         probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
@@ -375,11 +378,12 @@ public class EmailServiceActorTest {
     innerMap.put(JsonKey.RECIPIENT_USERIDS, userIdList);
     innerMap.put(JsonKey.RECIPIENT_SEARCH_QUERY, queryMap);
     reqObj.setRequest(innerMap);
-
-    when(ElasticSearchUtil.complexSearch(
-            Mockito.eq(ElasticSearchUtil.createSearchDTO(new HashMap<>())),
+    when(esUtil.complexSearch(
+            Mockito.eq(ElasticSearchHelper.createSearchDTO(new HashMap<>())),
             Mockito.eq(ProjectUtil.EsIndex.sunbird.getIndexName()),
             Mockito.eq(ProjectUtil.EsType.user.getTypeName())))
+        .thenThrow(new ProjectCommonException("", "", 0));
+    when(ElasticSearchHelper.getObjectFromFuture(Mockito.any()))
         .thenThrow(new ProjectCommonException("", "", 0));
 
     subject.tell(reqObj, probe.getRef());

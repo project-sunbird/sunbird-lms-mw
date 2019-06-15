@@ -2,7 +2,8 @@ package org.sunbird.location.actors;
 
 import java.util.Map;
 import org.sunbird.actor.router.ActorConfig;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
@@ -18,6 +19,7 @@ import org.sunbird.common.request.Request;
   asyncTasks = {"upsertLocationDataToES", "deleteLocationDataFromES"}
 )
 public class LocationBackgroundActor extends BaseLocationActor {
+  private ElasticSearchUtil esUtil = EsClientFactory.getTcpClient();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -38,7 +40,7 @@ public class LocationBackgroundActor extends BaseLocationActor {
 
   private void deleteLocationDataFromES(Request request) {
     String locationId = (String) request.get(JsonKey.LOCATION_ID);
-    ElasticSearchUtil.removeData(
+    esUtil.removeData(
         ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.location.getTypeName(),
         locationId);
@@ -46,7 +48,7 @@ public class LocationBackgroundActor extends BaseLocationActor {
 
   private void upsertLocationDataToES(Request request) {
     Map<String, Object> location = (Map<String, Object>) request.getRequest().get(JsonKey.LOCATION);
-    ElasticSearchUtil.upsertData(
+    esUtil.upsertData(
         ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.location.getTypeName(),
         (String) location.get(JsonKey.ID),

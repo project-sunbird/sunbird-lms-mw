@@ -10,20 +10,25 @@ import java.util.stream.Collectors;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchHelper;
+import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.inf.ElasticSearchUtil;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.util.Util;
+import scala.concurrent.Future;
 
 @ActorConfig(
-    tasks = {"orgBulkUpload"},
-    asyncTasks = {})
+  tasks = {"orgBulkUpload"},
+  asyncTasks = {}
+)
 public class OrgBulkUploadActor extends BaseBulkUploadActor {
   private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
+  private ElasticSearchUtil esUtil = new ElasticSearchTcpImpl();
   private String[] bulkOrgAllowedFields = {
     JsonKey.ORGANISATION_ID,
     JsonKey.ORGANISATION_NAME,
@@ -49,6 +54,7 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
     Util.initializeContext(request, TelemetryEnvKey.ORGANISATION);
     ExecutionContext.setRequestId(request.getRequestId());
     String operation = request.getOperation();
+
     if (operation.equalsIgnoreCase("orgBulkUpload")) {
       upload(request);
     } else {
@@ -148,11 +154,13 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
   }
 
   Map<String, Object> getUser(String userId) {
-    Map<String, Object> result =
-        ElasticSearchUtil.getDataByIdentifier(
+    Future<Map<String, Object>> resultF =
+        esUtil.getDataByIdentifier(
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.user.getTypeName(),
             userId);
+    Map<String, Object> result =
+        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
     if (result != null || result.size() > 0) {
       return result;
     }
@@ -160,11 +168,13 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
   }
 
   Map<String, Object> getOrg(String orgId) {
-    Map<String, Object> result =
-        ElasticSearchUtil.getDataByIdentifier(
+    Future<Map<String, Object>> resultF =
+        esUtil.getDataByIdentifier(
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.organisation.getTypeName(),
             orgId);
+    Map<String, Object> result =
+        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
     if (result != null && result.size() > 0) {
       return result;
     }

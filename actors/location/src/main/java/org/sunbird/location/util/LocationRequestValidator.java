@@ -12,8 +12,10 @@ import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.GeoLocationJsonKey;
 import org.sunbird.common.models.util.JsonKey;
@@ -24,6 +26,7 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.location.dao.LocationDao;
 import org.sunbird.location.dao.impl.LocationDaoImpl;
 import org.sunbird.models.location.apirequest.UpsertLocationRequest;
+import scala.concurrent.Future;
 
 /** @author Amit Kumar */
 public class LocationRequestValidator {
@@ -34,6 +37,7 @@ public class LocationRequestValidator {
   protected static List<List<String>> locationTypeGroupList = new ArrayList<>();
   protected static List<String> typeList = new ArrayList<>();
   private static ObjectMapper mapper = new ObjectMapper();
+  private static ElasticSearchUtil esUtil = EsClientFactory.getTcpClient();
 
   static {
     List<String> subTypeList =
@@ -223,11 +227,13 @@ public class LocationRequestValidator {
    * @return Map<String, Object> location details
    */
   private static Map<String, Object> getLocationById(String id, String parameter) {
-    Map<String, Object> location =
-        ElasticSearchUtil.getDataByIdentifier(
+    Future<Map<String, Object>> locationF =
+        esUtil.getDataByIdentifier(
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.location.getTypeName(),
             id);
+    Map<String, Object> location =
+        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(locationF);
     if (MapUtils.isEmpty(location)) {
       throw new ProjectCommonException(
           ResponseCode.invalidParameter.getErrorCode(),
@@ -304,7 +310,9 @@ public class LocationRequestValidator {
   public static List<Map<String, Object>> getESSearchResult(
       Map<String, Object> searchQueryMap, String esIndex, String esType) {
     SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
-    Map<String, Object> result = ElasticSearchUtil.complexSearch(searchDto, esIndex, esType);
+    Future<Map<String, Object>> resultF = esUtil.complexSearch(searchDto, esIndex, esType);
+    Map<String, Object> result =
+        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
     return (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
   }
 

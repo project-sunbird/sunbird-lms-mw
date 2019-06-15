@@ -23,8 +23,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -44,6 +46,7 @@ import org.sunbird.learner.actors.skill.dao.impl.UserSkillDaoImpl;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.skill.Skill;
 import org.sunbird.telemetry.util.TelemetryUtil;
+import scala.concurrent.Future;
 
 /**
  * Class to provide functionality for Add and Endorse the user skills . Created by arvind on
@@ -61,6 +64,7 @@ public class UserSkillManagementActor extends BaseActor {
   private Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
   private static final String REF_SKILLS_DB_ID = "001";
   private UserSkillDao userSkillDao = UserSkillDaoImpl.getInstance();
+  private ElasticSearchUtil esUtil = EsClientFactory.getTcpClient();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -212,10 +216,12 @@ public class UserSkillManagementActor extends BaseActor {
     List<String> fields = new ArrayList<>();
     fields.add(JsonKey.SKILLS);
     esDtoMap.put(JsonKey.FIELDS, fields);
-    return ElasticSearchUtil.complexSearch(
-        ElasticSearchUtil.createSearchDTO(esDtoMap),
-        ProjectUtil.EsIndex.sunbird.getIndexName(),
-        EsType.user.getTypeName());
+    Future<Map<String, Object>> resultF =
+        esUtil.complexSearch(
+            ElasticSearchHelper.createSearchDTO(esDtoMap),
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            EsType.user.getTypeName());
+    return (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
   }
 
   /** Method will return all the list of skills , it is type of reference data ... */
@@ -575,9 +581,11 @@ public class UserSkillManagementActor extends BaseActor {
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     Map<String, Object> esMap = new HashMap<>();
     esMap.put(JsonKey.SKILLS, responseList);
-    Map<String, Object> profile =
-        ElasticSearchUtil.getDataByIdentifier(
+    Future<Map<String, Object>> profileF =
+        esUtil.getDataByIdentifier(
             ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), userId);
+    Map<String, Object> profile =
+        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(profileF);
     if (MapUtils.isNotEmpty(profile)) {
       Map<String, String> visibility =
           (Map<String, String>) profile.get(JsonKey.PROFILE_VISIBILITY);
@@ -587,21 +595,23 @@ public class UserSkillManagementActor extends BaseActor {
               visibility, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
       if (MapUtils.isNotEmpty(privateVisibilityMap)
           && privateVisibilityMap.containsKey(JsonKey.SKILLS)) {
-        Map<String, Object> visibilityMap =
-            ElasticSearchUtil.getDataByIdentifier(
+        Future<Map<String, Object>> visibilityMapF =
+            esUtil.getDataByIdentifier(
                 ProjectUtil.EsIndex.sunbird.getIndexName(),
                 EsType.userprofilevisibility.getTypeName(),
                 userId);
+        Map<String, Object> visibilityMap =
+            (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(visibilityMapF);
         if (MapUtils.isNotEmpty(visibilityMap)) {
           visibilityMap.putAll(esMap);
-          ElasticSearchUtil.createData(
+          esUtil.createData(
               ProjectUtil.EsIndex.sunbird.getIndexName(),
               EsType.userprofilevisibility.getTypeName(),
               userId,
               visibilityMap);
         }
       } else {
-        ElasticSearchUtil.updateData(
+        esUtil.updateData(
             ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), userId, esMap);
       }
     }

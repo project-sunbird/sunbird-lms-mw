@@ -13,8 +13,10 @@ import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchHelper;
+import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.inf.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -30,6 +32,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.metrics.actors.OrganisationMetricsUtil.ContentStatus;
+import scala.concurrent.Future;
 
 @ActorConfig(
   tasks = {},
@@ -44,6 +47,7 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
   private DecryptionService decryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
           null);
+  private ElasticSearchUtil esUtil = new ElasticSearchTcpImpl();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -93,9 +97,10 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
       csvRecords.add(headers);
       for (String operation : OrganisationMetricsUtil.operationList) {
         String requestStr = getRequestObject(operation, requestId);
-        
+
         String baseSearchUrl = ProjectUtil.getConfigValue(JsonKey.SEARCH_SERVICE_API_BASE_URL);
-        String ekStepResponse = makePostRequest(baseSearchUrl, JsonKey.EKSTEP_CONTENT_SEARCH_URL, requestStr);
+        String ekStepResponse =
+            makePostRequest(baseSearchUrl, JsonKey.EKSTEP_CONTENT_SEARCH_URL, requestStr);
         List<Map<String, Object>> ekstepData = getDataFromResponse(ekStepResponse, headers, orgId);
         List<Map<String, Object>> userData = getUserDetailsFromES(ekstepData);
         csvRecords.addAll(generateDataList(userData, headers));
@@ -165,7 +170,8 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
             OrganisationMetricsUtil.getOrgMetricsRequest(
                 actorMessage, periodStr, orgHashId, (String) userData.get(JsonKey.ID), channel);
         String analyticsBaseUrl = ProjectUtil.getConfigValue(JsonKey.ANALYTICS_API_BASE_URL);
-        String esResponse = makePostRequest(analyticsBaseUrl, JsonKey.EKSTEP_METRICS_API_URL, request);
+        String esResponse =
+            makePostRequest(analyticsBaseUrl, JsonKey.EKSTEP_METRICS_API_URL, request);
         Map<String, Object> ekstepData =
             getConsumptionDataFromResponse(esResponse, userData, (List<String>) (Object) headers);
         consumptionData.add(ekstepData);
@@ -234,11 +240,13 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
       Map<String, Object> filter = new HashMap<>();
       filter.put(JsonKey.IDENTIFIER, userId);
       try {
-        Map<String, Object> result =
-            ElasticSearchUtil.complexSearch(
+        Future<Map<String, Object>> resultF =
+            esUtil.complexSearch(
                 createESRequest(filter, null, coursefields),
                 ProjectUtil.EsIndex.sunbird.getIndexName(),
                 EsType.user.getTypeName());
+        Map<String, Object> result =
+            (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
         if (null != result && !result.isEmpty()) {
           List<Map<String, Object>> resultList =
               (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
@@ -453,11 +461,14 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
     Map<String, Object> filter = new HashMap<>();
     filter.put("organisations.organisationId", orgId);
     try {
-      Map<String, Object> result =
-          ElasticSearchUtil.complexSearch(
+      Future<Map<String, Object>> resultF =
+          esUtil.complexSearch(
               createESRequest(filter, null, coursefields),
               ProjectUtil.EsIndex.sunbird.getIndexName(),
               EsType.user.getTypeName());
+      Map<String, Object> result =
+          (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+
       if (null != result && !result.isEmpty()) {
         List<Map<String, Object>> resultList =
             (List<Map<String, Object>>) result.get(JsonKey.CONTENT);

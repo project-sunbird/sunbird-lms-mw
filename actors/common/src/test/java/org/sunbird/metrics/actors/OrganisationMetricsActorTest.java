@@ -7,6 +7,7 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
+import akka.dispatch.Futures;
 import akka.testkit.javadsl.TestKit;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,14 +33,17 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
+import scala.concurrent.Promise;
 
 /**
  * Junit test cases for Org creation and consumption metrics.
@@ -47,9 +51,13 @@ import org.sunbird.helper.ServiceFactory;
  * @author arvind.
  */
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({ElasticSearchUtil.class, HttpClientBuilder.class, ServiceFactory.class})
+@PrepareForTest({
+  ElasticSearchTcpImpl.class,
+  HttpClientBuilder.class,
+  ServiceFactory.class,
+  EsClientFactory.class
+})
 @PowerMockIgnore("javax.management.*")
-// @Ignore
 public class OrganisationMetricsActorTest {
 
   private ActorSystem system = ActorSystem.create("system");
@@ -63,6 +71,7 @@ public class OrganisationMetricsActorTest {
   private static Map<String, Object> userOrgMap = new HashMap<>();
   private static CassandraOperationImpl cassandraOperation;
   private static final String HTTP_POST = "POST";
+  private ElasticSearchUtil esUtil;
 
   @BeforeClass
   public static void setUp() {
@@ -78,30 +87,30 @@ public class OrganisationMetricsActorTest {
     userOrgMap.put(JsonKey.FIRST_NAME, "user_first_name");
 
     PowerMockito.mockStatic(ServiceFactory.class);
+
     cassandraOperation = mock(CassandraOperationImpl.class);
+
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
-
-    PowerMockito.mockStatic(ElasticSearchUtil.class);
     PowerMockito.mockStatic(HttpClientBuilder.class);
-    when(ElasticSearchUtil.getDataByIdentifier(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(userOrgMap);
-
-    //    SunbirdMWService.init();
-    //    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
   }
 
   @Before
   public void before() {
-    PowerMockito.mockStatic(ElasticSearchUtil.class);
     PowerMockito.mockStatic(HttpClientBuilder.class);
     PowerMockito.mockStatic(ServiceFactory.class);
+    PowerMockito.mockStatic(EsClientFactory.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
+    esUtil = mock(ElasticSearchTcpImpl.class);
+    when(EsClientFactory.getTcpClient()).thenReturn(esUtil);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     Response response = createCassandraInsertSuccessResponse();
     when(cassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(response);
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(userOrgMap);
+    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(promise.future());
   }
 
   @SuppressWarnings({"deprecation", "unchecked"})
@@ -109,10 +118,10 @@ public class OrganisationMetricsActorTest {
   public void testOrgCreationMetricsSuccess() throws JsonProcessingException {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(prop);
-
-    when(ElasticSearchUtil.getDataByIdentifier(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(userOrgMap);
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(userOrgMap);
+    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(promise.future());
     mockHttpPostSuccess(
         HTTP_POST,
         new ByteArrayInputStream((mapper.writeValueAsString(orgCreationSuccessMap())).getBytes()));
@@ -150,10 +159,10 @@ public class OrganisationMetricsActorTest {
   public void testOrgConsumptionMetricsSuccess() throws JsonProcessingException {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(prop);
-
-    when(ElasticSearchUtil.getDataByIdentifier(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(userOrgMap);
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(userOrgMap);
+    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(promise.future());
     mockHttpPostSuccess(
         HTTP_POST,
         new ByteArrayInputStream(
@@ -188,9 +197,10 @@ public class OrganisationMetricsActorTest {
   public void testOrgCreationMetricsWithInvalidOrgId() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(prop);
-    when(ElasticSearchUtil.getDataByIdentifier(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(null);
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(null);
+    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(promise.future());
 
     Request actorMessage = new Request();
     actorMessage.put(JsonKey.ORG_ID, "ORG_001_INVALID");
@@ -208,9 +218,10 @@ public class OrganisationMetricsActorTest {
   public void testOrgConsumptionMetricsWithInvalidOrgId() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(prop);
-    when(ElasticSearchUtil.getDataByIdentifier(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(null);
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(null);
+    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(promise.future());
 
     Request actorMessage = new Request();
     actorMessage.put(JsonKey.ORG_ID, "ORG_001_INVALID");
@@ -228,9 +239,10 @@ public class OrganisationMetricsActorTest {
   public void testOrgCreationMetricsInvalidPeriod() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(prop);
-    when(ElasticSearchUtil.getDataByIdentifier(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(userOrgMap);
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(userOrgMap);
+    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(promise.future());
 
     Request actorMessage = new Request();
     actorMessage.put(JsonKey.ORG_ID, orgId);
@@ -248,9 +260,10 @@ public class OrganisationMetricsActorTest {
   public void testOrgConsumptionMetricsWithInvalidPeriod() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(prop);
-    when(ElasticSearchUtil.getDataByIdentifier(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(userOrgMap);
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(userOrgMap);
+    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(promise.future());
 
     Request actorMessage = new Request();
     actorMessage.put(JsonKey.ORG_ID, orgId);
@@ -269,9 +282,10 @@ public class OrganisationMetricsActorTest {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(prop);
 
-    when(ElasticSearchUtil.getDataByIdentifier(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(userOrgMap);
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(userOrgMap);
+    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(promise.future());
 
     Request actorMessage = new Request();
     actorMessage.put(JsonKey.ORG_ID, orgId);
@@ -292,10 +306,10 @@ public class OrganisationMetricsActorTest {
   public void testOrgConsumptionMetricsReportDataSuccess() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(prop);
-
-    when(ElasticSearchUtil.getDataByIdentifier(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(userOrgMap);
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(userOrgMap);
+    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(promise.future());
 
     Request actorMessage = new Request();
     actorMessage.put(JsonKey.ORG_ID, orgId);

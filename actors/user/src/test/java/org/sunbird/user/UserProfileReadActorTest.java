@@ -8,6 +8,7 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
+import akka.dispatch.Futures;
 import akka.testkit.javadsl.TestKit;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,8 +26,10 @@ import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.actorutil.location.impl.LocationClientImpl;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -42,13 +45,15 @@ import org.sunbird.services.sso.impl.KeyCloakServiceImpl;
 import org.sunbird.user.actors.UserProfileReadActor;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.UserUtil;
+import scala.concurrent.Promise;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
   ServiceFactory.class,
   org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.class,
   SSOServiceFactory.class,
-  ElasticSearchUtil.class,
+  ElasticSearchTcpImpl.class,
+  EsClientFactory.class,
   Util.class,
   RequestRouter.class,
   SystemSettingClientImpl.class,
@@ -75,6 +80,7 @@ public class UserProfileReadActorTest {
   private static final String VALID_PHONE = "000000000";
   private static final String INVALID_PHONE = "000";
   private static final String VALID_USERNAME = "USERNAME";
+  private static ElasticSearchUtil esUtil;
 
   @Before
   public void beforeEachTest() {
@@ -116,8 +122,7 @@ public class UserProfileReadActorTest {
         .thenReturn("anyChannel");
     when(userService.getRootOrgIdFromChannel(Mockito.anyString())).thenReturn("rootOrgId");
 
-    PowerMockito.mockStatic(ElasticSearchUtil.class);
-
+    PowerMockito.mockStatic(EsClientFactory.class);
     PowerMockito.mockStatic(Util.class);
     Util.getUserProfileConfig(Mockito.any(ActorRef.class));
 
@@ -129,6 +134,8 @@ public class UserProfileReadActorTest {
     when(UserUtil.encryptUserData(Mockito.anyMap())).thenReturn(requestMap);
     PowerMockito.mockStatic(DataCacheHandler.class);
     when(ssoManager.getUsernameById(Mockito.anyString())).thenReturn(VALID_USERNAME);
+    esUtil = mock(ElasticSearchTcpImpl.class);
+    when(EsClientFactory.getTcpClient()).thenReturn(esUtil);
   }
 
   @Test
@@ -250,8 +257,9 @@ public class UserProfileReadActorTest {
   }
 
   public void setEsResponse(Map<String, Object> esResponse) {
-    when(ElasticSearchUtil.getDataByIdentifier(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(esResponse);
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(esResponse);
+    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(promise.future());
   }
 }

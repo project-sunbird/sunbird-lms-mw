@@ -2,8 +2,10 @@ package org.sunbird.learner.actors.coursebatch.service;
 
 import java.util.*;
 import org.apache.commons.lang3.StringUtils;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -14,9 +16,11 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.actors.coursebatch.dao.UserCoursesDao;
 import org.sunbird.learner.actors.coursebatch.dao.impl.UserCoursesDaoImpl;
 import org.sunbird.models.user.courses.UserCourses;
+import scala.concurrent.Future;
 
 public class UserCoursesService {
   private UserCoursesDao userCourseDao = UserCoursesDaoImpl.getInstance();
+  private static ElasticSearchUtil esUtil = EsClientFactory.getTcpClient();
 
   protected Integer CASSANDRA_BATCH_SIZE = getBatchSize(JsonKey.CASSANDRA_WRITE_BATCH_SIZE);
 
@@ -157,19 +161,24 @@ public class UserCoursesService {
     filter.put(JsonKey.ACTIVE, ProjectUtil.ActiveStatus.ACTIVE.getValue());
     SearchDTO searchDto = new SearchDTO();
     searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
-    return ElasticSearchUtil.complexSearch(
-        searchDto,
-        ProjectUtil.EsIndex.sunbird.getIndexName(),
-        ProjectUtil.EsType.usercourses.getTypeName());
+    Future<Map<String, Object>> resultF =
+        esUtil.complexSearch(
+            searchDto,
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.usercourses.getTypeName());
+    Map<String, Object> result =
+        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+    return result;
   }
 
   public static void sync(Map<String, Object> courseMap, String id) {
-    boolean response =
-        ElasticSearchUtil.upsertData(
+    Future<Boolean> responseF =
+        esUtil.upsertData(
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.usercourses.getTypeName(),
             id,
             courseMap);
+    boolean response = (boolean) ElasticSearchHelper.getObjectFromFuture(responseF);
     ProjectLogger.log(
         "UserCoursesService:sync: Sync user courses for ID = " + id + " response = " + response,
         LoggerEnum.INFO.name());

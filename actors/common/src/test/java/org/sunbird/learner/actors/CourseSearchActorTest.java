@@ -16,7 +16,7 @@ import org.junit.runner.RunWith;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -27,7 +27,7 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.search.CourseSearchActor;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({ServiceFactory.class, ElasticSearchUtil.class, ProjectUtil.class})
+@PrepareForTest({ServiceFactory.class, ElasticSearchHelper.class, ProjectUtil.class})
 @PowerMockIgnore("javax.management.*")
 public class CourseSearchActorTest {
   private ActorSystem system = ActorSystem.create("system");

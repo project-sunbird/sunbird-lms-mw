@@ -6,13 +6,17 @@ import static org.junit.Assert.assertTrue;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
+import akka.dispatch.Futures;
 import akka.testkit.javadsl.TestKit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.junit.*;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.FixMethodOrder;
+import org.junit.Ignore;
 import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
 import org.mockito.Mockito;
@@ -24,8 +28,10 @@ import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.Constants;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -33,13 +39,15 @@ import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.user.actors.UserManagementActor;
+import scala.concurrent.Promise;
 import scala.concurrent.duration.FiniteDuration;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
   ServiceFactory.class,
-  ElasticSearchUtil.class,
+  ElasticSearchTcpImpl.class,
+  EsClientFactory.class,
   CassandraOperationImpl.class,
   DataCacheHandler.class,
   org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.class
@@ -74,6 +82,7 @@ public class UserAssignRoleTest {
   private static CassandraOperation cassandraOperation = null;
   private static Response response = null;
   private static Map<String, Object> esRespone = new HashMap<>();
+  private static ElasticSearchUtil esUtil;
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -104,20 +113,23 @@ public class UserAssignRoleTest {
   public void mockClasses() throws Exception {
 
     PowerMockito.mockStatic(ServiceFactory.class);
+    PowerMockito.mockStatic(EsClientFactory.class);
     cassandraOperation = PowerMockito.mock(CassandraOperationImpl.class);
     PowerMockito.when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
-
+    esUtil = PowerMockito.mock(ElasticSearchTcpImpl.class);
+    PowerMockito.when(EsClientFactory.getTcpClient()).thenReturn(esUtil);
     Map<String, Object> roleMap = new HashMap<>();
     for (String role : ALL_ROLES) roleMap.put(role, role);
     PowerMockito.mockStatic(DataCacheHandler.class);
     PowerMockito.when(DataCacheHandler.getRoleMap()).thenReturn(roleMap);
-
-    PowerMockito.mockStatic(ElasticSearchUtil.class);
-    PowerMockito.when(
-            ElasticSearchUtil.getDataByIdentifier(Mockito.any(), Mockito.any(), Mockito.any()))
-        .thenReturn(userOrg);
-    PowerMockito.when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.any(), Mockito.any()))
-        .thenReturn(esRespone);
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(userOrg);
+    Promise<Map<String, Object>> promise_es = Futures.promise();
+    promise_es.success(esRespone);
+    PowerMockito.when(esUtil.getDataByIdentifier(Mockito.any(), Mockito.any(), Mockito.any()))
+        .thenReturn(promise.future());
+    PowerMockito.when(esUtil.complexSearch(Mockito.any(), Mockito.any(), Mockito.any()))
+        .thenReturn(promise_es.future());
   }
 
   private static void initCassandraForSuccess() {

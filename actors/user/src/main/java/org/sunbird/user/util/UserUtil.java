@@ -13,8 +13,10 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -42,6 +44,7 @@ import org.sunbird.user.dao.UserExternalIdentityDao;
 import org.sunbird.user.dao.impl.UserExternalIdentityDaoImpl;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
+import scala.concurrent.Future;
 
 public class UserUtil {
 
@@ -62,6 +65,7 @@ public class UserUtil {
   private static UserService userService = UserServiceImpl.getInstance();
   private static UserExternalIdentityDao userExternalIdentityDao =
       new UserExternalIdentityDaoImpl();
+  private static ElasticSearchUtil esUtil = EsClientFactory.getTcpClient();
 
   private UserUtil() {}
 
@@ -121,11 +125,12 @@ public class UserUtil {
           (StringUtils.isNotBlank((String) userMap.get(JsonKey.USER_ID)))
               ? ((String) userMap.get(JsonKey.USER_ID))
               : ((String) userMap.get(JsonKey.ID));
-      user =
-          ElasticSearchUtil.getDataByIdentifier(
+      Future<Map<String, Object>> userF =
+          esUtil.getDataByIdentifier(
               ProjectUtil.EsIndex.sunbird.getIndexName(),
               ProjectUtil.EsType.user.getTypeName(),
               userId);
+      user = (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(userF);
       if (MapUtils.isEmpty(user)) {
         ProjectCommonException.throwClientErrorException(ResponseCode.userNotFound, null);
       }
@@ -151,11 +156,12 @@ public class UserUtil {
     Map<String, Object> user = null;
     String userId = getUserIdFromExternalId(userMap);
     if (!StringUtils.isEmpty(userId)) {
-      user =
-          ElasticSearchUtil.getDataByIdentifier(
+      Future<Map<String, Object>> userF =
+          esUtil.getDataByIdentifier(
               ProjectUtil.EsIndex.sunbird.getIndexName(),
               ProjectUtil.EsType.user.getTypeName(),
               userId);
+      user = (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(userF);
     }
     return user;
   }
@@ -186,11 +192,13 @@ public class UserUtil {
         Map<String, Object> map = new HashMap<>();
         map.put(JsonKey.FILTERS, filters);
         SearchDTO searchDto = Util.createSearchDto(map);
-        Map<String, Object> result =
-            ElasticSearchUtil.complexSearch(
+        Future<Map<String, Object>> resultF =
+            esUtil.complexSearch(
                 searchDto,
                 ProjectUtil.EsIndex.sunbird.getIndexName(),
                 ProjectUtil.EsType.user.getTypeName());
+        Map<String, Object> result =
+            (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
         List<Map<String, Object>> userMapList =
             (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
         if (!userMapList.isEmpty()) {

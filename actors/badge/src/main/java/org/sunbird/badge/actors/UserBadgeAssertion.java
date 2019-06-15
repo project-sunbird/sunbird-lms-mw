@@ -10,7 +10,9 @@ import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.badge.BadgeOperations;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchHelper;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
@@ -19,6 +21,7 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.telemetry.util.TelemetryUtil;
+import scala.concurrent.Future;
 
 @ActorConfig(
   tasks = {},
@@ -28,6 +31,7 @@ public class UserBadgeAssertion extends BaseActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private DbInfo dbInfo = Util.dbInfoMap.get(BadgingJsonKey.USER_BADGE_ASSERTION_DB);
+  private ElasticSearchUtil esUtil = EsClientFactory.getTcpClient();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -62,11 +66,13 @@ public class UserBadgeAssertion extends BaseActor {
 
   @SuppressWarnings("unchecked")
   private void updateUserBadgeDataToES(Map<String, Object> map) {
-    Map<String, Object> result =
-        ElasticSearchUtil.getDataByIdentifier(
+    Future<Map<String, Object>> resultF =
+        esUtil.getDataByIdentifier(
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.user.getTypeName(),
             (String) map.get(JsonKey.USER_ID));
+    Map<String, Object> result =
+        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
     if (MapUtils.isEmpty(result)) {
       ProjectLogger.log(
           "UserBadgeAssertion:updateUserBadgeDataToES user with userId "
@@ -108,7 +114,8 @@ public class UserBadgeAssertion extends BaseActor {
   private boolean updateDataToElastic(
       String indexName, String typeName, String identifier, Map<String, Object> data) {
 
-    boolean response = ElasticSearchUtil.updateData(indexName, typeName, identifier, data);
+    Future<Boolean> responseF = esUtil.updateData(indexName, typeName, identifier, data);
+    boolean response = (boolean) ElasticSearchHelper.getObjectFromFuture(responseF);
     if (!response) {
       ProjectLogger.log(
           "unbale to save the data inside ES for user badge " + identifier, LoggerEnum.INFO.name());

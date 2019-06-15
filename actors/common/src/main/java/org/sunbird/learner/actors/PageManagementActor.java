@@ -19,10 +19,12 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchHelper;
+import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.cacheloader.PageCacheLoaderService;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.hash.HashGeneratorUtil;
+import org.sunbird.common.inf.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -687,8 +689,11 @@ public class PageManagementActor extends BaseActor {
     } else {
       return null;
     }
+    ElasticSearchUtil esUtil = new ElasticSearchTcpImpl();
+    Future<Map<String, Object>> resultF =
+        esUtil.complexSearch(searcDto, ProjectUtil.EsIndex.sunbird.getIndexName(), type);
     Map<String, Object> result =
-        ElasticSearchUtil.complexSearch(searcDto, ProjectUtil.EsIndex.sunbird.getIndexName(), type);
+        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
     return result;
   }
 

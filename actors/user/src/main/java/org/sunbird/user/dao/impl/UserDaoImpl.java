@@ -9,7 +9,9 @@ import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchHelper;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectUtil;
@@ -18,6 +20,7 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
 import org.sunbird.user.dao.UserDao;
+import scala.concurrent.Future;
 
 /**
  * Implementation class of UserDao interface.
@@ -30,6 +33,7 @@ public class UserDaoImpl implements UserDao {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private ObjectMapper mapper = new ObjectMapper();
   private static UserDao userDao = null;
+  private ElasticSearchUtil esUtil = EsClientFactory.getTcpClient();
 
   public static UserDao getInstance() {
     if (userDao == null) {
@@ -58,9 +62,11 @@ public class UserDaoImpl implements UserDao {
     SearchDTO searchDto = Util.createSearchDto(searchRequestMap);
     searchRequestMap.put(JsonKey.FILTERS, searchQueryMap);
     String[] types = {ProjectUtil.EsType.user.getTypeName()};
+    Future<Map<String, Object>> resultF =
+        esUtil.complexSearch(searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), types);
     Map<String, Object> result =
-        ElasticSearchUtil.complexSearch(
-            searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), types);
+        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+
     if (MapUtils.isNotEmpty(result)) {
       List<Map<String, Object>> searchResult =
           (List<Map<String, Object>>) result.get(JsonKey.CONTENT);

@@ -17,8 +17,10 @@ import org.slf4j.helpers.MessageFormatter;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -33,6 +35,7 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.coursebatch.service.UserCoursesService;
 import org.sunbird.learner.util.ContentSearchUtil;
 import org.sunbird.learner.util.Util;
+import scala.concurrent.Future;
 
 /**
  * This actor will handle leaner's state operation like get course , get content etc.
@@ -48,6 +51,7 @@ public class LearnerStateActor extends BaseActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private UserCoursesService userCoursesService = new UserCoursesService();
+  private ElasticSearchUtil esUtil = EsClientFactory.getTcpClient();
 
   /**
    * Receives the actor message and perform the operation like get course , get content etc.
@@ -162,8 +166,14 @@ public class LearnerStateActor extends BaseActor {
     dto.setFields(requestedFields);
     dto.getAdditionalProperties().put(JsonKey.FILTERS, esQueryMap);
 
-    return ElasticSearchUtil.complexSearch(
-        dto, ProjectUtil.EsIndex.sunbird.getIndexName(), ProjectUtil.EsType.course.getTypeName());
+    Future<Map<String, Object>> responseF =
+        esUtil.complexSearch(
+            dto,
+            ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.course.getTypeName());
+    Map<String, Object> response =
+        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(responseF);
+    return response;
   }
 
   public void mergeDetailsAndSendCourses(

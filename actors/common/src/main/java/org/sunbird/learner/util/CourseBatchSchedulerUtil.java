@@ -10,7 +10,9 @@ import java.util.List;
 import java.util.Map;
 import org.apache.commons.collections.MapUtils;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchHelper;
+import org.sunbird.common.ElasticSearchTcpImpl;
+import org.sunbird.common.inf.ElasticSearchUtil;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -21,6 +23,7 @@ import org.sunbird.common.request.HeaderParam;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.coursebatch.CourseEnrollmentActor;
+import scala.concurrent.Future;
 
 /**
  * This class will update course batch count to EKStep. First it will get batch details from ES ,
@@ -31,6 +34,7 @@ import org.sunbird.learner.actors.coursebatch.CourseEnrollmentActor;
  */
 public final class CourseBatchSchedulerUtil {
   public static Map<String, String> headerMap = new HashMap<>();
+  private static ElasticSearchUtil esUtil = new ElasticSearchTcpImpl();
 
   static {
     String header = ProjectUtil.getConfigValue(JsonKey.EKSTEP_AUTHORIZATION);
@@ -113,14 +117,15 @@ public final class CourseBatchSchedulerUtil {
 
   /** @param map */
   public static boolean updateDataIntoES(Map<String, Object> map) {
-    Boolean flag = true;
+    boolean flag = true;
     try {
-      flag =
-          ElasticSearchUtil.updateData(
+      Future<Boolean> flagF =
+          esUtil.updateData(
               ProjectUtil.EsIndex.sunbird.getIndexName(),
               ProjectUtil.EsType.course.getTypeName(),
               (String) map.get(JsonKey.ID),
               map);
+      flag = (boolean) ElasticSearchHelper.getObjectFromFuture(flagF);
     } catch (Exception e) {
       ProjectLogger.log(
           "CourseBatchSchedulerUtil:updateDataIntoES: Exception occurred while saving course batch data to ES",
@@ -278,11 +283,13 @@ public final class CourseBatchSchedulerUtil {
   @SuppressWarnings("unchecked")
   private static List<Map<String, Object>> searchContent(SearchDTO dto) {
     List<Map<String, Object>> listOfMap = new ArrayList<>();
-    Map<String, Object> responseMap =
-        ElasticSearchUtil.complexSearch(
+    Future<Map<String, Object>> responseMapF =
+        esUtil.complexSearch(
             dto,
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.course.getTypeName());
+    Map<String, Object> responseMap =
+        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(responseMapF);
     if (responseMap != null && responseMap.size() > 0) {
       Object val = responseMap.get(JsonKey.CONTENT);
       if (val != null) {

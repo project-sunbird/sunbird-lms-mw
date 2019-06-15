@@ -9,8 +9,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchHelper;
+import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.inf.ElasticSearchUtil;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
@@ -18,6 +20,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
+import scala.concurrent.Future;
 
 /** @author Manzarul */
 @ActorConfig(
@@ -28,6 +31,7 @@ public class HealthActor extends BaseActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo badgesDbInfo = Util.dbInfoMap.get(JsonKey.BADGES_DB);
+  private ElasticSearchUtil esUtil = new ElasticSearchTcpImpl();
 
   @Override
   public void onReceive(Request message) throws Throwable {
@@ -81,7 +85,9 @@ public class HealthActor extends BaseActor {
     List<Map<String, Object>> responseList = new ArrayList<>();
     responseList.add(ProjectUtil.createCheckResponse(JsonKey.ACTOR_SERVICE, false, null));
     try {
-      boolean esResponse = ElasticSearchUtil.healthCheck();
+      Future<Boolean> esResponseF = esUtil.healthCheck();
+      boolean esResponse = (boolean) ElasticSearchHelper.getObjectFromFuture(esResponseF);
+
       responseList.add(ProjectUtil.createCheckResponse(JsonKey.ES_SERVICE, esResponse, null));
       isallHealthy = esResponse;
     } catch (Exception e) {
@@ -157,7 +163,8 @@ public class HealthActor extends BaseActor {
     }
     // check the elastic search
     try {
-      boolean response = ElasticSearchUtil.healthCheck();
+      Future<Boolean> responseF = esUtil.healthCheck();
+      boolean response = (boolean) ElasticSearchHelper.getObjectFromFuture(responseF);
       responseList.add(ProjectUtil.createCheckResponse(JsonKey.ES_SERVICE, !response, null));
       isallHealthy = response;
     } catch (Exception e) {

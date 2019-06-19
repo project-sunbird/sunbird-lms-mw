@@ -604,7 +604,8 @@ public class TextbookTocActor extends BaseActor {
       csvFileParser = csvFileFormat.parse(reader);
       HashMap<String, Integer> csvHeaders = new HashMap<>();
       if (MapUtils.isNotEmpty(csvFileParser.getHeaderMap())) {
-        csvFileParser.getHeaderMap()
+        csvFileParser
+            .getHeaderMap()
             .entrySet()
             .forEach(entry -> csvHeaders.put(entry.getKey().trim(), entry.getValue()));
       }
@@ -646,11 +647,14 @@ public class TextbookTocActor extends BaseActor {
       for (int i = 0; i < csvRecords.size(); i++) {
         CSVRecord record = csvRecords.get(i);
         Map<String, String> trimMappingRecord = new HashMap<>();
-        record.toMap()
+        record
+            .toMap()
             .entrySet()
-                .forEach(entry ->
-              trimMappingRecord.put(entry.getKey().trim(), entry.getValue()!=null?entry.getValue().trim():entry.getValue())
-            );
+            .forEach(
+                entry ->
+                    trimMappingRecord.put(
+                        entry.getKey().trim(),
+                        entry.getValue() != null ? entry.getValue().trim() : entry.getValue()));
         HashMap<String, Object> recordMap = new HashMap<>();
         HashMap<String, Object> hierarchyMap = new HashMap<>();
         for (Map.Entry<String, String> entry : metadata.entrySet()) {
@@ -937,7 +941,10 @@ public class TextbookTocActor extends BaseActor {
     String mandatoryFields = getConfigValue(JsonKey.TEXTBOOK_TOC_MANDATORY_FIELDS);
     Map<String, String> mandatoryFieldsMap =
         mapper.readValue(mandatoryFields, new TypeReference<Map<String, String>>() {});
-    String textbookName = (String) textbook.get(JsonKey.NAME);
+    String textbookName =
+        textbook.get(JsonKey.NAME) != null
+            ? ((String) textbook.get(JsonKey.NAME)).trim()
+            : (String) textbook.get(JsonKey.NAME);
 
     validateTextBook(textbook, mode);
 
@@ -956,7 +963,8 @@ public class TextbookTocActor extends BaseActor {
       }
       Map<String, Object> hierarchy = (Map<String, Object>) row.get(JsonKey.HIERARCHY);
 
-      String name = (String) hierarchy.getOrDefault(StringUtils.capitalize(JsonKey.TEXTBOOK), "");
+      String name =
+          ((String) hierarchy.getOrDefault(StringUtils.capitalize(JsonKey.TEXTBOOK), "")).trim();
       if (isBlank(name) || !StringUtils.equalsIgnoreCase(name, textbookName)) {
         log(
             "Name mismatch. Content has: " + name + " but, file has: " + textbookName,

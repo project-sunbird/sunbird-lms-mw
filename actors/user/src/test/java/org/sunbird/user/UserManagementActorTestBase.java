@@ -9,7 +9,11 @@ import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.dispatch.Futures;
 import akka.testkit.javadsl.TestKit;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -24,10 +28,10 @@ import org.sunbird.actorutil.impl.InterServiceCommunicationImpl;
 import org.sunbird.actorutil.location.impl.LocationClientImpl;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchTcpImpl;
+import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -54,7 +58,7 @@ import scala.concurrent.Promise;
   InterServiceCommunicationFactory.class,
   LocationClientImpl.class,
   DataCacheHandler.class,
-  ElasticSearchTcpImpl.class
+  ElasticSearchRestHighImpl.class
 })
 @PowerMockIgnore({"javax.management.*"})
 public abstract class UserManagementActorTestBase {
@@ -66,7 +70,7 @@ public abstract class UserManagementActorTestBase {
       mock(InterServiceCommunicationImpl.class);;
   public static UserServiceImpl userService;
   public static CassandraOperationImpl cassandraOperation;
-  public static ElasticSearchUtil esUtil;
+  public static ElasticService esUtil;
 
   @Before
   public void beforeEachTest() {
@@ -78,8 +82,8 @@ public abstract class UserManagementActorTestBase {
     PowerMockito.mockStatic(ServiceFactory.class);
     PowerMockito.mockStatic(EsClientFactory.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
-    esUtil = mock(ElasticSearchTcpImpl.class);
-    when(EsClientFactory.getTcpClient()).thenReturn(esUtil);
+    esUtil = mock(ElasticSearchRestHighImpl.class);
+    when(EsClientFactory.getRestClient()).thenReturn(esUtil);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     when(cassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
@@ -135,7 +139,7 @@ public abstract class UserManagementActorTestBase {
   public void mockForUserOrgUpdate() {
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(getListOrgResponse());
-    when(esUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+    when(esUtil.search(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
     when(userService.getUserById(Mockito.anyString())).thenReturn(getUser(false));
     when(cassandraOperation.insertRecord(

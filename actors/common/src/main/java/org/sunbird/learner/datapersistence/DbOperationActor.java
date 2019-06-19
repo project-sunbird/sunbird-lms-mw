@@ -13,7 +13,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
@@ -54,7 +54,7 @@ public class DbOperationActor extends BaseActor {
   private static final String ES_INDEX_NAME = "sunbirdplugin";
   private static List<String> tableList = null;
   private static final String RAW_QUERY = "rawQuery";
-  private ElasticSearchUtil esUtil = new ElasticSearchTcpImpl();
+  private ElasticService esUtil = new ElasticSearchTcpImpl();
 
   public static void createtableList() {
     try {
@@ -139,10 +139,9 @@ public class DbOperationActor extends BaseActor {
           validateRequestData((Map<String, Object>) reqObj.getRequest().get(JsonKey.FILTERS));
         }
         searchDto = Util.createSearchDto(reqObj.getRequest());
-        Future<Map<String, Object>> resultF =
-            esUtil.complexSearch(searchDto, ES_INDEX_NAME, esType);
+        Future<Map<String, Object>> resultF = esUtil.search(searchDto, ES_INDEX_NAME, esType);
         Map<String, Object> result =
-            (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+            (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
         Map<String, Object> finalResult = new HashMap<>();
         if (!result.isEmpty()) {
           // filter the required fields like content or facet etc...
@@ -292,7 +291,7 @@ public class DbOperationActor extends BaseActor {
                 (String) payload.get(JsonKey.ID));
 
         Map<String, Object> data =
-            (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(dataF);
+            (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(dataF);
         if (data.isEmpty() || ((boolean) reqObj.getRequest().get(INDEXED))) {
           response =
               cassandraOperation.updateRecord(
@@ -381,8 +380,8 @@ public class DbOperationActor extends BaseActor {
       String index, String type, String identifier, Map<String, Object> data) {
     ProjectLogger.log(
         "making call to ES for type ,identifier ,data==" + type + " " + identifier + data);
-    Future<String> responseF = esUtil.createData(index, type, identifier, data);
-    String response = (String) ElasticSearchHelper.getObjectFromFuture(responseF);
+    Future<String> responseF = esUtil.save(index, type, identifier, data);
+    String response = (String) ElasticSearchHelper.getResponseFromFuture(responseF);
     ProjectLogger.log(
         "Getting ES save response for type , identiofier=="
             + type
@@ -410,8 +409,8 @@ public class DbOperationActor extends BaseActor {
    */
   private boolean updateDataToElastic(
       String indexName, String typeName, String identifier, Map<String, Object> data) {
-    Future<Boolean> responseF = esUtil.updateData(indexName, typeName, identifier, data);
-    boolean response = (boolean) ElasticSearchHelper.getObjectFromFuture(responseF);
+    Future<Boolean> responseF = esUtil.update(indexName, typeName, identifier, data);
+    boolean response = (boolean) ElasticSearchHelper.getResponseFromFuture(responseF);
     if (response) {
       return true;
     }
@@ -430,8 +429,8 @@ public class DbOperationActor extends BaseActor {
    * @return
    */
   private boolean deleteDataFromElastic(String indexName, String typeName, String identifier) {
-    Future<Boolean> responseF = esUtil.removeData(indexName, typeName, identifier);
-    boolean response = (boolean) ElasticSearchHelper.getObjectFromFuture(responseF);
+    Future<Boolean> responseF = esUtil.delete(indexName, typeName, identifier);
+    boolean response = (boolean) ElasticSearchHelper.getResponseFromFuture(responseF);
     if (response) {
       return true;
     }

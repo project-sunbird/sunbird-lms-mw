@@ -24,10 +24,10 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchHelper;
-import org.sunbird.common.ElasticSearchTcpImpl;
+import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -43,7 +43,7 @@ import scala.concurrent.Promise;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
   ServiceFactory.class,
-  ElasticSearchTcpImpl.class,
+  ElasticSearchRestHighImpl.class,
   EsClientFactory.class,
   ElasticSearchHelper.class,
   Util.class,
@@ -55,7 +55,7 @@ public class UserProfileActorTest {
 
   private final Props props = Props.create(UserProfileActor.class);
   private CassandraOperationImpl cassandraOperation;
-  private ElasticSearchUtil esUtil;
+  private ElasticService esUtil;
 
   @Before
   public void beforeEachTest() {
@@ -68,8 +68,8 @@ public class UserProfileActorTest {
     when(Util.createSearchDto(Mockito.anyMap())).thenReturn(searchDTO);
     cassandraOperation = mock(CassandraOperationImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
-    esUtil = mock(ElasticSearchTcpImpl.class);
-    when(EsClientFactory.getTcpClient()).thenReturn(esUtil);
+    esUtil = mock(ElasticSearchRestHighImpl.class);
+    when(EsClientFactory.getRestClient()).thenReturn(esUtil);
   }
 
   @Test
@@ -100,7 +100,7 @@ public class UserProfileActorTest {
             ProjectUtil.EsType.user.getTypeName(),
             userId))
         .thenReturn(promise.future());
-    when(ElasticSearchHelper.getObjectFromFuture(Mockito.any()))
+    when(ElasticSearchHelper.getResponseFromFuture(Mockito.any()))
         .thenReturn(createGetResponse(true));
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.PROFILE_VISIBILITY.getValue());
@@ -122,7 +122,7 @@ public class UserProfileActorTest {
             ProjectUtil.EsType.user.getTypeName(),
             userId))
         .thenReturn(promise.future());
-    when(ElasticSearchHelper.getObjectFromFuture(Mockito.any())).thenReturn(null);
+    when(ElasticSearchHelper.getResponseFromFuture(Mockito.any())).thenReturn(null);
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.PROFILE_VISIBILITY.getValue());
     reqObj.put(JsonKey.USER_ID, userId);

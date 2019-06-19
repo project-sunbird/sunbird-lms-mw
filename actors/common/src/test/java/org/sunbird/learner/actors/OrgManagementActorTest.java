@@ -24,10 +24,10 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchTcpImpl;
+import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.GeoLocationJsonKey;
@@ -45,7 +45,7 @@ import scala.concurrent.Promise;
   ServiceFactory.class,
   OrganisationManagementActor.class,
   Util.class,
-  ElasticSearchTcpImpl.class,
+  ElasticSearchRestHighImpl.class,
   RequestRouter.class,
   ProjectUtil.class,
   LocationRequestValidator.class,
@@ -60,7 +60,7 @@ public class OrgManagementActorTest {
   private static Map<String, Object> basicRequestData;
   private static final String ADD_MEMBER_TO_ORG =
       ActorOperations.ADD_MEMBER_ORGANISATION.getValue();
-  private static ElasticSearchUtil esUtil;
+  private static ElasticService esUtil;
 
   @Before
   public void beforeEachTest() {
@@ -70,13 +70,13 @@ public class OrgManagementActorTest {
     PowerMockito.mockStatic(EsClientFactory.class);
 
     cassandraOperation = mock(CassandraOperationImpl.class);
-    esUtil = mock(ElasticSearchTcpImpl.class);
+    esUtil = mock(ElasticSearchRestHighImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
-    when(EsClientFactory.getTcpClient()).thenReturn(esUtil);
+    when(EsClientFactory.getRestClient()).thenReturn(esUtil);
     basicRequestData = getBasicData();
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(getEsResponse(false));
-    when(esUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+    when(esUtil.search(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
     when(cassandraOperation.getRecordsByProperty(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
@@ -172,7 +172,7 @@ public class OrgManagementActorTest {
   public void testAddUserToOrgFailureWithOrgNotFoundWithOrgId() {
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(getEsResponse(true));
-    when(esUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+    when(esUtil.search(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
     boolean result =
         testScenario(
@@ -200,7 +200,7 @@ public class OrgManagementActorTest {
   public void testAddUserToOrgFailureWithOrgNotFoundWithOrgExtId() {
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(getEsResponse(true));
-    when(esUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+    when(esUtil.search(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
     boolean result =
         testScenario(
@@ -224,7 +224,7 @@ public class OrgManagementActorTest {
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(getValidateChannelEsResponse(true));
 
-    when(esUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+    when(esUtil.search(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
     boolean result =
         testScenario(
@@ -249,7 +249,7 @@ public class OrgManagementActorTest {
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(getValidateChannelEsResponse(true));
 
-    when(esUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+    when(esUtil.search(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
     Map<String, Object> map = getRequestDataForOrgCreate(basicRequestData);
     map.remove(JsonKey.EXTERNAL_ID);

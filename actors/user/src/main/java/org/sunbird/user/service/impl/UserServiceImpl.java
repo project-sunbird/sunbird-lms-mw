@@ -16,7 +16,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -54,7 +54,7 @@ public class UserServiceImpl implements UserService {
   private UserExternalIdentityDao userExtIdentityDao = new UserExternalIdentityDaoImpl();
   private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
   private static final int GENERATE_USERNAME_COUNT = 10;
-  private ElasticSearchUtil esUtil = EsClientFactory.getTcpClient();
+  private ElasticService esUtil = EsClientFactory.getRestClient();
 
   public static UserService getInstance() {
     if (userService == null) {
@@ -73,12 +73,12 @@ public class UserServiceImpl implements UserService {
     map.put(JsonKey.FILTERS, filters);
     SearchDTO searchDto = Util.createSearchDto(map);
     Future<Map<String, Object>> resultF =
-        esUtil.complexSearch(
+        esUtil.search(
             searchDto,
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.user.getTypeName());
     Map<String, Object> result =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     List<Map<String, Object>> userMapList = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
     if (CollectionUtils.isNotEmpty(userMapList)) {
       Map<String, Object> userMap = userMapList.get(0);
@@ -116,12 +116,12 @@ public class UserServiceImpl implements UserService {
   @Override
   public void syncUserProfile(
       String userId, Map<String, Object> userDataMap, Map<String, Object> userPrivateDataMap) {
-    esUtil.createData(
+    esUtil.save(
         ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.userprofilevisibility.getTypeName(),
         userId,
         userPrivateDataMap);
-    esUtil.createData(
+    esUtil.save(
         ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.user.getTypeName(),
         userId,
@@ -136,7 +136,7 @@ public class UserServiceImpl implements UserService {
             ProjectUtil.EsType.user.getTypeName(),
             userId);
     Map<String, Object> esResult =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(esResultF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(esResultF);
     if (esResult == null || esResult.size() == 0) {
       throw new ProjectCommonException(
           ResponseCode.userNotFound.getErrorCode(),
@@ -153,7 +153,7 @@ public class UserServiceImpl implements UserService {
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.userprofilevisibility.getTypeName(),
             userId);
-    return (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+    return (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
   }
 
   @Override
@@ -183,7 +183,7 @@ public class UserServiceImpl implements UserService {
               ProjectUtil.EsIndex.sunbird.getIndexName(),
               ProjectUtil.EsType.organisation.getTypeName(),
               custodianOrgId);
-      custodianOrg = (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(custodianOrgF);
+      custodianOrg = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(custodianOrgF);
       if (MapUtils.isNotEmpty(custodianOrg)) {
 
         if (null != custodianOrg.get(JsonKey.STATUS)) {
@@ -236,10 +236,9 @@ public class UserServiceImpl implements UserService {
     SearchDTO searchDTO = new SearchDTO();
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
     Future<Map<String, Object>> esResultF =
-        esUtil.complexSearch(
-            searchDTO, EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
+        esUtil.search(searchDTO, EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName());
     Map<String, Object> esResult =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(esResultF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(esResultF);
     if (MapUtils.isNotEmpty(esResult)
         && CollectionUtils.isNotEmpty((List) esResult.get(JsonKey.CONTENT))) {
       Map<String, Object> esContent =
@@ -399,9 +398,9 @@ public class UserServiceImpl implements UserService {
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
 
     Future<Map<String, Object>> esResultF =
-        esUtil.complexSearch(searchDTO, EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
+        esUtil.search(searchDTO, EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
     Map<String, Object> esResult =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(esResultF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(esResultF);
 
     return (List<Map<String, Object>>) esResult.get(JsonKey.CONTENT);
   }

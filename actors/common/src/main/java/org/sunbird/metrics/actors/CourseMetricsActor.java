@@ -16,7 +16,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
@@ -50,7 +50,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
   private DecryptionService decryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
           null);
-  private ElasticSearchUtil esUtil = EsClientFactory.getTcpClient();
+  private ElasticService esUtil = EsClientFactory.getRestClient();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -110,12 +110,12 @@ public class CourseMetricsActor extends BaseMetricsActor {
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filter);
 
     Future<Map<String, Object>> resultF =
-        esUtil.complexSearch(
+        esUtil.search(
             searchDTO,
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             EsType.cbatchstats.getTypeName());
     Map<String, Object> result =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     if (isNull(result) || result.size() == 0) {
       ProjectLogger.log(
           "CourseMetricsActor:courseProgressMetricsV2: No search results found.",
@@ -181,7 +181,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
         esUtil.getDataByIdentifier(
             EsIndex.sunbird.getIndexName(), EsType.course.getTypeName(), batchId);
     Map<String, Object> courseBatchResult =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(courseBatchResultF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(courseBatchResultF);
     if (isNull(courseBatchResult) || courseBatchResult.size() == 0) {
       ProjectLogger.log(
           "CourseMetricsActor:validateAndGetCourseBatch: batchId not found.",
@@ -197,7 +197,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
         esUtil.getDataByIdentifier(
             EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), requestedBy);
     Map<String, Object> requestedByInfo =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(requestedByInfoF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(requestedByInfoF);
     if (isNull(requestedByInfo)
         || StringUtils.isBlank((String) requestedByInfo.get(JsonKey.FIRST_NAME))) {
       throw new ProjectCommonException(
@@ -220,7 +220,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
         esUtil.getDataByIdentifier(
             EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), requestedBy);
     Map<String, Object> requestedByInfo =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(requestedByInfoF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(requestedByInfoF);
     if (isNull(requestedByInfo)
         || StringUtils.isBlank((String) requestedByInfo.get(JsonKey.FIRST_NAME))) {
       throw new ProjectCommonException(
@@ -248,7 +248,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
         esUtil.getDataByIdentifier(
             EsIndex.sunbird.getIndexName(), EsType.course.getTypeName(), batchId);
     Map<String, Object> courseBatchResult =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(courseBatchResultF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(courseBatchResultF);
     if (isNull(courseBatchResult) || courseBatchResult.size() == 0) {
       ProjectLogger.log(
           "CourseMetricsActor:courseProgressMetricsReport: batchId not found.",
@@ -309,7 +309,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
         esUtil.getDataByIdentifier(
             EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), requestedBy);
     Map<String, Object> requestedByInfo =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(requestedByInfoF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(requestedByInfoF);
 
     if (isNull(requestedByInfo)
         || StringUtils.isBlank((String) requestedByInfo.get(JsonKey.FIRST_NAME))) {
@@ -337,7 +337,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
         esUtil.getDataByIdentifier(
             EsIndex.sunbird.getIndexName(), EsType.course.getTypeName(), batchId);
     Map<String, Object> courseBatchResult =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(courseBatchResultF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(courseBatchResultF);
     if (isNull(courseBatchResult) || courseBatchResult.size() == 0) {
       ProjectLogger.log(
           "CourseMetricsActor:courseProgressMetrics: batchId not found.", LoggerEnum.INFO.name());
@@ -378,12 +378,12 @@ public class CourseMetricsActor extends BaseMetricsActor {
     coursefields.add(JsonKey.DATE_TIME);
     coursefields.add(JsonKey.LEAF_NODE_COUNT);
     Future<Map<String, Object>> resultF =
-        esUtil.complexSearch(
+        esUtil.search(
             createESRequest(filter, null, coursefields),
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             EsType.usercourses.getTypeName());
     Map<String, Object> result =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     List<Map<String, Object>> esContent = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
 
     if (CollectionUtils.isNotEmpty(esContent)) {
@@ -403,12 +403,12 @@ public class CourseMetricsActor extends BaseMetricsActor {
       userfields.add(JsonKey.FIRST_NAME);
       userfields.add(JsonKey.LAST_NAME);
       Future<Map<String, Object>> userresultF =
-          esUtil.complexSearch(
+          esUtil.search(
               createESRequest(userfilter, null, userfields),
               ProjectUtil.EsIndex.sunbird.getIndexName(),
               EsType.user.getTypeName());
       Map<String, Object> userresult =
-          (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(userresultF);
+          (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(userresultF);
       List<Map<String, Object>> useresContent =
           (List<Map<String, Object>>) userresult.get(JsonKey.CONTENT);
 
@@ -436,12 +436,12 @@ public class CourseMetricsActor extends BaseMetricsActor {
       orgfields.add(JsonKey.ID);
       orgfields.add(JsonKey.ORGANISATION_NAME);
       Future<Map<String, Object>> orgresultF =
-          esUtil.complexSearch(
+          esUtil.search(
               createESRequest(orgfilter, null, orgfields),
               ProjectUtil.EsIndex.sunbird.getIndexName(),
               EsType.organisation.getTypeName());
       Map<String, Object> orgresult =
-          (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(orgresultF);
+          (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(orgresultF);
       List<Map<String, Object>> orgContent =
           (List<Map<String, Object>>) orgresult.get(JsonKey.CONTENT);
 
@@ -456,12 +456,12 @@ public class CourseMetricsActor extends BaseMetricsActor {
       Map<String, Object> batchFilter = new HashMap<>();
       batchFilter.put(JsonKey.ID, batchId);
       Future<Map<String, Object>> batchresultF =
-          esUtil.complexSearch(
+          esUtil.search(
               createESRequest(batchFilter, null, null),
               ProjectUtil.EsIndex.sunbird.getIndexName(),
               EsType.course.getTypeName());
       Map<String, Object> batchresult =
-          (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(batchresultF);
+          (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(batchresultF);
       List<Map<String, Object>> batchContent =
           (List<Map<String, Object>>) batchresult.get(JsonKey.CONTENT);
 
@@ -569,7 +569,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
           esUtil.getDataByIdentifier(
               EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), requestedBy);
       Map<String, Object> result =
-          (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+          (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
       if (null == result || result.isEmpty()) {
         ProjectCommonException exception =
             new ProjectCommonException(
@@ -595,7 +595,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
               ProjectUtil.EsType.organisation.getTypeName(),
               rootOrgId);
       Map<String, Object> rootOrgData =
-          (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(rootOrgDataF);
+          (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(rootOrgDataF);
 
       if (null == rootOrgData || rootOrgData.isEmpty()) {
         ProjectCommonException exception =
@@ -683,12 +683,12 @@ public class CourseMetricsActor extends BaseMetricsActor {
     coursefields.add(JsonKey.STATUS);
 
     Future<Map<String, Object>> resultF =
-        esUtil.complexSearch(
+        esUtil.search(
             createESRequest(filter, null, coursefields),
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             EsType.usercourses.getTypeName());
     Map<String, Object> result =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     if (null == result || result.isEmpty()) {
       throw new ProjectCommonException(
           ResponseCode.noDataForConsumption.getErrorCode(),

@@ -26,10 +26,10 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
-import org.sunbird.common.ElasticSearchTcpImpl;
+import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -50,7 +50,7 @@ import scala.concurrent.Promise;
   ElasticSearchHelper.class,
   EsClientFactory.class,
   ContentSearchUtil.class,
-  ElasticSearchTcpImpl.class
+  ElasticSearchRestHighImpl.class
 })
 @PowerMockIgnore({"javax.management.*", "javax.crypto.*", "javax.net.ssl.*", "javax.security.*"})
 public class LearnerStateActorTest {
@@ -63,7 +63,7 @@ public class LearnerStateActorTest {
   private static String courseId2 = "alpha01crs15";
   private static String batchId = "115";
   private static final String contentId = "cont3544TeBuk";
-  private static ElasticSearchUtil esUtil;
+  private static ElasticService esUtil;
 
   @BeforeClass
   public static void setUp() {
@@ -78,13 +78,13 @@ public class LearnerStateActorTest {
     PowerMockito.mockStatic(ContentSearchUtil.class);
     PowerMockito.mockStatic(ElasticSearchHelper.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
-    esUtil = mock(ElasticSearchTcpImpl.class);
-    when(EsClientFactory.getTcpClient()).thenReturn(esUtil);
+    esUtil = mock(ElasticSearchRestHighImpl.class);
+    when(EsClientFactory.getRestClient()).thenReturn(esUtil);
     Promise<Map<String, Object>> promise = Futures.promise();
 
     Map<String, Object> esResult = new HashMap<>();
     promise.success(esResult);
-    when(esUtil.complexSearch(Mockito.anyObject(), Mockito.anyObject(), Mockito.anyObject()))
+    when(esUtil.search(Mockito.anyObject(), Mockito.anyObject(), Mockito.anyObject()))
         .thenReturn(promise.future());
 
     Response dbResponse = new Response();
@@ -109,7 +109,7 @@ public class LearnerStateActorTest {
     map.put(JsonKey.USER_ID, userId);
     request.setRequest(map);
     request.setOperation(ActorOperations.GET_COURSE.getValue());
-    when(ElasticSearchHelper.getObjectFromFuture(Mockito.any())).thenReturn(new HashMap<>());
+    when(ElasticSearchHelper.getResponseFromFuture(Mockito.any())).thenReturn(new HashMap<>());
     subject.tell(request, probe.getRef());
     Response res = probe.expectMsgClass(duration("10 second"), Response.class);
     Assert.assertNotNull(res);
@@ -316,10 +316,10 @@ public class LearnerStateActorTest {
     Promise<Map<String, Object>> promiseCourseBatch = Futures.promise();
     promiseCourseBatch.success(courseBatches);
 
-    when(esUtil.complexSearch(Mockito.any(), Mockito.any(), Mockito.any()))
+    when(esUtil.search(Mockito.any(), Mockito.any(), Mockito.any()))
         .thenReturn(promiseResultUser.future())
         .thenReturn(promiseCourseBatch.future());
-    when(ElasticSearchHelper.getObjectFromFuture(Mockito.any()))
+    when(ElasticSearchHelper.getResponseFromFuture(Mockito.any()))
         .thenReturn(resultUser)
         .thenReturn(courseBatches);
   }

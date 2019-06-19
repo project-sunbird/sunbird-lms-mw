@@ -22,10 +22,10 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchTcpImpl;
+import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -40,7 +40,7 @@ import scala.concurrent.Promise;
   ServiceFactory.class,
   Util.class,
   RequestRouter.class,
-  ElasticSearchTcpImpl.class,
+  ElasticSearchRestHighImpl.class,
   EsClientFactory.class
 })
 @PowerMockIgnore({"javax.management.*", "javax.crypto.*", "javax.net.ssl.*", "javax.security.*"})
@@ -51,7 +51,7 @@ public class NotesManagementActorTest {
   private ActorSystem system = ActorSystem.create("system");
   private static final Props props = Props.create(NotesManagementActor.class);
   private static CassandraOperationImpl cassandraOperation;
-  private ElasticSearchUtil esUtil;
+  private ElasticService esUtil;
 
   @Before
   public void beforeEachTest() {
@@ -61,9 +61,9 @@ public class NotesManagementActorTest {
     PowerMockito.mockStatic(ServiceFactory.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
-    esUtil = mock(ElasticSearchTcpImpl.class);
+    esUtil = mock(ElasticSearchRestHighImpl.class);
     PowerMockito.mockStatic(EsClientFactory.class);
-    when(EsClientFactory.getTcpClient()).thenReturn(esUtil);
+    when(EsClientFactory.getRestClient()).thenReturn(esUtil);
   }
 
   @Test
@@ -193,7 +193,7 @@ public class NotesManagementActorTest {
     req.setOperation(ActorOperations.SEARCH_NOTE.getValue());
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(reqMap);
-    when(esUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+    when(esUtil.search(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
     boolean result = testScenario(req, null);
     assertTrue(result);
@@ -244,7 +244,7 @@ public class NotesManagementActorTest {
     promise.success(reqMap);
     when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
-    when(esUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+    when(esUtil.search(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
     req.setOperation(ActorOperations.GET_NOTE.getValue());
     boolean result = testScenario(req, ResponseCode.invalidNoteId);
@@ -264,7 +264,7 @@ public class NotesManagementActorTest {
     promise.success(reqMap);
     when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
-    when(esUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+    when(esUtil.search(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
     req.setOperation(ActorOperations.GET_NOTE.getValue());
     boolean result = testScenario(req, null);

@@ -18,7 +18,7 @@ import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -59,7 +59,7 @@ public class CourseBatchManagementActor extends BaseActor {
 
   private CourseBatchDao courseBatchDao = new CourseBatchDaoImpl();
   private UserCoursesService userCoursesService = new UserCoursesService();
-  private ElasticSearchUtil esUtil = new ElasticSearchTcpImpl();
+  private ElasticService esUtil = new ElasticSearchTcpImpl();
   private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
 
   static {
@@ -440,7 +440,7 @@ public class CourseBatchManagementActor extends BaseActor {
             ProjectUtil.EsType.course.getTypeName(),
             (String) actorMessage.getContext().get(JsonKey.BATCH_ID));
     Map<String, Object> result =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     Response response = new Response();
     if (null != result) {
       if (JsonKey.INVITE_ONLY.equalsIgnoreCase((String) result.get(JsonKey.ENROLLMENT_TYPE))) {
@@ -506,7 +506,7 @@ public class CourseBatchManagementActor extends BaseActor {
                 ProjectUtil.EsType.user.getTypeName(),
                 userId);
         Map<String, Object> result =
-            (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+            (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
 
         String mentorRootOrgId = getRootOrg(userId);
         if (!batchCreatorRootOrgId.equals(mentorRootOrgId)) {
@@ -708,10 +708,10 @@ public class CourseBatchManagementActor extends BaseActor {
     searchDTO.setFields(fields);
 
     Future<Map<String, Object>> resultF =
-        esUtil.complexSearch(
+        esUtil.search(
             searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
     Map<String, Object> result =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
 
     List<Map<String, Object>> esContent = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
     for (Map<String, Object> user : esContent) {
@@ -726,7 +726,7 @@ public class CourseBatchManagementActor extends BaseActor {
         esUtil.getDataByIdentifier(
             EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), batchCreator);
     Map<String, Object> userInfo =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(userInfoF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(userInfoF);
     return getRootOrgFromUserMap(userInfo);
   }
 
@@ -756,12 +756,12 @@ public class CourseBatchManagementActor extends BaseActor {
     SearchDTO searchDto = new SearchDTO();
     searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filters);
     Future<Map<String, Object>> resultF =
-        esUtil.complexSearch(
+        esUtil.search(
             searchDto,
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.course.getTypeName());
     Map<String, Object> result =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     List<Map<String, Object>> dataMapList = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
     if (opType.equalsIgnoreCase(JsonKey.CREATE)) {
       if (!dataMapList.isEmpty()) {
@@ -878,7 +878,8 @@ public class CourseBatchManagementActor extends BaseActor {
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.organisation.getTypeName(),
             orgId);
-    Map<String, Object> resp = (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(respF);
+    Map<String, Object> resp =
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(respF);
     if (resp != null && resp.size() > 0) {
       ProjectLogger.log(
           "CourseBatchManagementActor:isOrgValid: Organisation found in ES with id = " + orgId);

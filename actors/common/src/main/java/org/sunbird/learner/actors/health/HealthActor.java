@@ -12,7 +12,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
@@ -31,7 +31,7 @@ public class HealthActor extends BaseActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo badgesDbInfo = Util.dbInfoMap.get(JsonKey.BADGES_DB);
-  private ElasticSearchUtil esUtil = new ElasticSearchTcpImpl();
+  private ElasticService esUtil = new ElasticSearchTcpImpl();
 
   @Override
   public void onReceive(Request message) throws Throwable {
@@ -86,7 +86,7 @@ public class HealthActor extends BaseActor {
     responseList.add(ProjectUtil.createCheckResponse(JsonKey.ACTOR_SERVICE, false, null));
     try {
       Future<Boolean> esResponseF = esUtil.healthCheck();
-      boolean esResponse = (boolean) ElasticSearchHelper.getObjectFromFuture(esResponseF);
+      boolean esResponse = (boolean) ElasticSearchHelper.getResponseFromFuture(esResponseF);
 
       responseList.add(ProjectUtil.createCheckResponse(JsonKey.ES_SERVICE, esResponse, null));
       isallHealthy = esResponse;
@@ -164,7 +164,7 @@ public class HealthActor extends BaseActor {
     // check the elastic search
     try {
       Future<Boolean> responseF = esUtil.healthCheck();
-      boolean response = (boolean) ElasticSearchHelper.getObjectFromFuture(responseF);
+      boolean response = (boolean) ElasticSearchHelper.getResponseFromFuture(responseF);
       responseList.add(ProjectUtil.createCheckResponse(JsonKey.ES_SERVICE, !response, null));
       isallHealthy = response;
     } catch (Exception e) {

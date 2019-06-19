@@ -18,7 +18,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -62,7 +62,7 @@ public class TenantMigrationActor extends BaseActor {
       InterServiceCommunicationFactory.getInstance();
   private ObjectMapper mapper = new ObjectMapper();
   private ActorRef systemSettingActorRef = null;
-  private ElasticSearchUtil esUtil = EsClientFactory.getTcpClient();
+  private ElasticService esUtil = EsClientFactory.getRestClient();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -160,7 +160,7 @@ public class TenantMigrationActor extends BaseActor {
                 ProjectUtil.EsType.organisation.getTypeName(),
                 orgId);
         Map<String, Object> result =
-            (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+            (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
         if (MapUtils.isEmpty(result)) {
           ProjectLogger.log(
               "TenantMigrationActor:validateOrgExternalIdOrOrgIdAndGetOrgId called. OrgId is Invalid",

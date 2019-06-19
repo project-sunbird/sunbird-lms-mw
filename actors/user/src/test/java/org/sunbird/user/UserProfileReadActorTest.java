@@ -26,10 +26,10 @@ import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.actorutil.location.impl.LocationClientImpl;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchTcpImpl;
+import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -52,7 +52,7 @@ import scala.concurrent.Promise;
   ServiceFactory.class,
   org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.class,
   SSOServiceFactory.class,
-  ElasticSearchTcpImpl.class,
+  ElasticSearchRestHighImpl.class,
   EsClientFactory.class,
   Util.class,
   RequestRouter.class,
@@ -80,7 +80,7 @@ public class UserProfileReadActorTest {
   private static final String VALID_PHONE = "000000000";
   private static final String INVALID_PHONE = "000";
   private static final String VALID_USERNAME = "USERNAME";
-  private static ElasticSearchUtil esUtil;
+  private static ElasticService esUtil;
 
   @Before
   public void beforeEachTest() {
@@ -134,8 +134,8 @@ public class UserProfileReadActorTest {
     when(UserUtil.encryptUserData(Mockito.anyMap())).thenReturn(requestMap);
     PowerMockito.mockStatic(DataCacheHandler.class);
     when(ssoManager.getUsernameById(Mockito.anyString())).thenReturn(VALID_USERNAME);
-    esUtil = mock(ElasticSearchTcpImpl.class);
-    when(EsClientFactory.getTcpClient()).thenReturn(esUtil);
+    esUtil = mock(ElasticSearchRestHighImpl.class);
+    when(EsClientFactory.getRestClient()).thenReturn(esUtil);
   }
 
   @Test

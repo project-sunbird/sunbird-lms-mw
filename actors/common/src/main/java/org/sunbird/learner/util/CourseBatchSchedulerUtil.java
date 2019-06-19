@@ -12,7 +12,7 @@ import org.apache.commons.collections.MapUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.ElasticSearchTcpImpl;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -34,7 +34,7 @@ import scala.concurrent.Future;
  */
 public final class CourseBatchSchedulerUtil {
   public static Map<String, String> headerMap = new HashMap<>();
-  private static ElasticSearchUtil esUtil = new ElasticSearchTcpImpl();
+  private static ElasticService esUtil = new ElasticSearchTcpImpl();
 
   static {
     String header = ProjectUtil.getConfigValue(JsonKey.EKSTEP_AUTHORIZATION);
@@ -120,12 +120,12 @@ public final class CourseBatchSchedulerUtil {
     boolean flag = true;
     try {
       Future<Boolean> flagF =
-          esUtil.updateData(
+          esUtil.update(
               ProjectUtil.EsIndex.sunbird.getIndexName(),
               ProjectUtil.EsType.course.getTypeName(),
               (String) map.get(JsonKey.ID),
               map);
-      flag = (boolean) ElasticSearchHelper.getObjectFromFuture(flagF);
+      flag = (boolean) ElasticSearchHelper.getResponseFromFuture(flagF);
     } catch (Exception e) {
       ProjectLogger.log(
           "CourseBatchSchedulerUtil:updateDataIntoES: Exception occurred while saving course batch data to ES",
@@ -284,12 +284,12 @@ public final class CourseBatchSchedulerUtil {
   private static List<Map<String, Object>> searchContent(SearchDTO dto) {
     List<Map<String, Object>> listOfMap = new ArrayList<>();
     Future<Map<String, Object>> responseMapF =
-        esUtil.complexSearch(
+        esUtil.search(
             dto,
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.course.getTypeName());
     Map<String, Object> responseMap =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(responseMapF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(responseMapF);
     if (responseMap != null && responseMap.size() > 0) {
       Object val = responseMap.get(JsonKey.CONTENT);
       if (val != null) {

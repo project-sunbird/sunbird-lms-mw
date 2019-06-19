@@ -27,10 +27,10 @@ import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchTcpImpl;
+import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -46,7 +46,7 @@ import scala.concurrent.Promise;
   SystemSettingClientImpl.class,
   RequestRouter.class,
   EsClientFactory.class,
-  ElasticSearchTcpImpl.class,
+  ElasticSearchRestHighImpl.class,
   SunbirdMWService.class
 })
 @PowerMockIgnore({"javax.management.*", "javax.crypto.*", "javax.net.ssl.*", "javax.security.*"})
@@ -59,7 +59,7 @@ public class UserTnCActorTest {
   private static final String LATEST_VERSION = "latestVersion";
   private static final String ACCEPTED_CORRECT_VERSION = "latestVersion";
   private static final String ACCEPTED_INVALID_VERSION = "invalid";
-  private static ElasticSearchUtil esUtil;
+  private static ElasticService esUtil;
 
   @BeforeClass
   public static void setUp() {
@@ -81,8 +81,8 @@ public class UserTnCActorTest {
 
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     PowerMockito.mockStatic(EsClientFactory.class);
-    esUtil = mock(ElasticSearchTcpImpl.class);
-    when(EsClientFactory.getTcpClient()).thenReturn(esUtil);
+    esUtil = mock(ElasticSearchRestHighImpl.class);
+    when(EsClientFactory.getRestClient()).thenReturn(esUtil);
   }
 
   @Test

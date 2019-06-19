@@ -13,7 +13,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
@@ -36,7 +36,7 @@ public class NotesManagementActor extends BaseActor {
 
   private Util.DbInfo userNotesDbInfo = Util.dbInfoMap.get(JsonKey.USER_NOTES_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private ElasticSearchUtil esUtil = EsClientFactory.getTcpClient();
+  private ElasticService esUtil = EsClientFactory.getRestClient();
 
   /** Receives the actor message and perform the operation for user note */
   @Override
@@ -290,10 +290,10 @@ public class NotesManagementActor extends BaseActor {
     excludedFields.add(JsonKey.IS_DELETED);
     searchDto.setExcludedFields(excludedFields);
     Future<Map<String, Object>> resultF =
-        esUtil.complexSearch(
+        esUtil.search(
             searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.usernotes.getTypeName());
     Map<String, Object> result =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     if (result != null) {
       Object count = result.get(JsonKey.COUNT);
       Object note = result.get(JsonKey.CONTENT);
@@ -381,7 +381,7 @@ public class NotesManagementActor extends BaseActor {
           esUtil.getDataByIdentifier(
               ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), userId);
       Map<String, Object> data =
-          (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(dataF);
+          (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(dataF);
       if (null != data && !data.isEmpty()) {
         result = true;
       }
@@ -415,7 +415,7 @@ public class NotesManagementActor extends BaseActor {
         esUtil.getDataByIdentifier(
             ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.usernotes.getTypeName(), noteId);
     Map<String, Object> result =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     return result;
   }
 

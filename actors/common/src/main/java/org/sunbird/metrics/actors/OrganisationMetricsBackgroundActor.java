@@ -16,7 +16,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -47,7 +47,7 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
   private DecryptionService decryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
           null);
-  private ElasticSearchUtil esUtil = new ElasticSearchTcpImpl();
+  private ElasticService esUtil = new ElasticSearchTcpImpl();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -241,12 +241,12 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
       filter.put(JsonKey.IDENTIFIER, userId);
       try {
         Future<Map<String, Object>> resultF =
-            esUtil.complexSearch(
+            esUtil.search(
                 createESRequest(filter, null, coursefields),
                 ProjectUtil.EsIndex.sunbird.getIndexName(),
                 EsType.user.getTypeName());
         Map<String, Object> result =
-            (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+            (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
         if (null != result && !result.isEmpty()) {
           List<Map<String, Object>> resultList =
               (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
@@ -462,12 +462,12 @@ public class OrganisationMetricsBackgroundActor extends BaseMetricsActor {
     filter.put("organisations.organisationId", orgId);
     try {
       Future<Map<String, Object>> resultF =
-          esUtil.complexSearch(
+          esUtil.search(
               createESRequest(filter, null, coursefields),
               ProjectUtil.EsIndex.sunbird.getIndexName(),
               EsType.user.getTypeName());
       Map<String, Object> result =
-          (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+          (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
 
       if (null != result && !result.isEmpty()) {
         List<Map<String, Object>> resultList =

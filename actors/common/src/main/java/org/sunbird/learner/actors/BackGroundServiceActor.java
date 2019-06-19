@@ -11,7 +11,7 @@ import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.ElasticSearchTcpImpl;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -29,7 +29,7 @@ import scala.concurrent.Future;
 public class BackGroundServiceActor extends BaseActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private static ElasticSearchUtil esUtil = new ElasticSearchTcpImpl();
+  private static ElasticService esUtil = new ElasticSearchTcpImpl();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -115,12 +115,12 @@ public class BackGroundServiceActor extends BaseActor {
     filter.put(JsonKey.LOCATION_ID, locationId);
     searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
     Future<Map<String, Object>> esResponseF =
-        esUtil.complexSearch(
+        esUtil.search(
             searchDto,
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.organisation.getTypeName());
     Map<String, Object> esResponse =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(esResponseF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(esResponseF);
     List<Map<String, Object>> orgList = (List<Map<String, Object>>) esResponse.get(JsonKey.CONTENT);
 
     List<String> orgIdList = new ArrayList<>();
@@ -140,12 +140,12 @@ public class BackGroundServiceActor extends BaseActor {
       ProjectLogger.log("filter2.get(JsonKey.ORGANISATIONS.JsonKey.ORGANISATION_ID) " + orgIdList);
       searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter2);
       Future<Map<String, Object>> esResponse2F =
-          esUtil.complexSearch(
+          esUtil.search(
               searchDto,
               ProjectUtil.EsIndex.sunbird.getIndexName(),
               ProjectUtil.EsType.user.getTypeName());
       Map<String, Object> esResponse2 =
-          (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(esResponse2F);
+          (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(esResponse2F);
       long userCount = (long) esResponse2.get(JsonKey.COUNT);
       ProjectLogger.log("Total No of User for Location Id " + locationId + " , " + userCount);
       return (int) userCount;

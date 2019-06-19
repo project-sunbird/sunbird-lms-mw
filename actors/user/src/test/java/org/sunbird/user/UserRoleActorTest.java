@@ -30,7 +30,7 @@ import org.sunbird.actor.service.BaseMWService;
 import org.sunbird.actorutil.InterServiceCommunication;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchTcpImpl;
+import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.models.response.Response;
@@ -58,7 +58,7 @@ import scala.concurrent.duration.Duration;
   RequestRouter.class,
   InterServiceCommunicationFactory.class,
   EsClientFactory.class,
-  ElasticSearchTcpImpl.class,
+  ElasticSearchRestHighImpl.class,
   Util.class,
   UserOrgDaoImpl.class,
   DecryptionService.class
@@ -72,7 +72,7 @@ public class UserRoleActorTest {
       Mockito.mock(InterServiceCommunication.class);
   private static final Response response = Mockito.mock(Response.class);
   private static CassandraOperationImpl cassandraOperation;
-  private static ElasticSearchTcpImpl esUtil;
+  private static ElasticSearchRestHighImpl esUtil;
 
   @BeforeClass
   public static void beforeClass() {
@@ -126,8 +126,8 @@ public class UserRoleActorTest {
     when(cassandraOperation.getRecordsByProperties(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(getRecordByPropertyResponse());
-    esUtil = mock(ElasticSearchTcpImpl.class);
-    when(EsClientFactory.getTcpClient()).thenReturn(esUtil);
+    esUtil = mock(ElasticSearchRestHighImpl.class);
+    when(EsClientFactory.getRestClient()).thenReturn(esUtil);
   }
 
   @Test
@@ -242,7 +242,7 @@ public class UserRoleActorTest {
   private void mockGetOrgResponse(boolean isResponseRequired) {
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(createResponseGet(isResponseRequired));
-    when(esUtil.complexSearch(
+    when(esUtil.search(
             Mockito.any(SearchDTO.class),
             Mockito.eq(ProjectUtil.EsIndex.sunbird.getIndexName()),
             Mockito.anyVararg()))

@@ -9,8 +9,16 @@ import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.dispatch.Futures;
 import akka.testkit.javadsl.TestKit;
-import java.util.*;
-import org.junit.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
@@ -20,10 +28,10 @@ import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchHelper;
-import org.sunbird.common.ElasticSearchTcpImpl;
+import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -39,7 +47,7 @@ import scala.concurrent.duration.FiniteDuration;
   ServiceFactory.class,
   EsClientFactory.class,
   ElasticSearchHelper.class,
-  ElasticSearchTcpImpl.class
+  ElasticSearchRestHighImpl.class
 })
 @PowerMockIgnore("javax.management.*")
 public class UserSkillManagementActorTest {
@@ -52,7 +60,7 @@ public class UserSkillManagementActorTest {
   private static final String ENDORSED_USER_ID = "someEndorsedUserId";
   private static final String ENDORSED_SKILL_NAME = "someEndorsedSkillName";
   private FiniteDuration duration = duration("10 second");
-  private ElasticSearchUtil esUtil;
+  private ElasticService esUtil;
 
   @BeforeClass
   public static void setUp() {
@@ -67,8 +75,8 @@ public class UserSkillManagementActorTest {
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     PowerMockito.mockStatic(EsClientFactory.class);
     PowerMockito.mockStatic(ElasticSearchHelper.class);
-    esUtil = mock(ElasticSearchTcpImpl.class);
-    when(EsClientFactory.getTcpClient()).thenReturn(esUtil);
+    esUtil = mock(ElasticSearchRestHighImpl.class);
+    when(EsClientFactory.getRestClient()).thenReturn(esUtil);
   }
 
   @Test
@@ -354,7 +362,7 @@ public class UserSkillManagementActorTest {
     esDtoMap.put(JsonKey.FIELDS, fields);
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(createGetSkillResponse());
-    when(esUtil.complexSearch(
+    when(esUtil.search(
             Mockito.eq(ElasticSearchHelper.createSearchDTO(esDtoMap)),
             Mockito.eq(ProjectUtil.EsIndex.sunbird.getIndexName()),
             Mockito.eq(ProjectUtil.EsType.user.getTypeName())))
@@ -367,8 +375,8 @@ public class UserSkillManagementActorTest {
             Mockito.eq(ProjectUtil.EsType.user.getTypeName()),
             Mockito.eq(userId)))
         .thenReturn(promise_esDtoMap.future());
-    when(ElasticSearchHelper.getObjectFromFuture(promise_esDtoMap.future())).thenReturn(esDtoMap);
-    when(ElasticSearchHelper.getObjectFromFuture(promise.future()))
+    when(ElasticSearchHelper.getResponseFromFuture(promise_esDtoMap.future())).thenReturn(esDtoMap);
+    when(ElasticSearchHelper.getResponseFromFuture(promise.future()))
         .thenReturn(createGetSkillResponse());
   }
 

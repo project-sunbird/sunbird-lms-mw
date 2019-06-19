@@ -10,7 +10,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
@@ -22,7 +22,7 @@ public final class OrganisationMetricsUtil {
 
   public static List<String> operationList = new ArrayList<>();
   private static ObjectMapper mapper = new ObjectMapper();
-  private static ElasticSearchUtil esUtil = new ElasticSearchTcpImpl();
+  private static ElasticService esUtil = new ElasticSearchTcpImpl();
 
   private OrganisationMetricsUtil() {}
 
@@ -56,7 +56,7 @@ public final class OrganisationMetricsUtil {
               ProjectUtil.EsType.organisation.getTypeName(),
               orgId);
       Map<String, Object> result =
-          (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+          (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
       if (null == result || result.isEmpty()) {
         return null;
       }

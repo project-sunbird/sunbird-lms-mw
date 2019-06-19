@@ -20,7 +20,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -51,7 +51,7 @@ public class LearnerStateActor extends BaseActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private UserCoursesService userCoursesService = new UserCoursesService();
-  private ElasticSearchUtil esUtil = EsClientFactory.getTcpClient();
+  private ElasticService esUtil = EsClientFactory.getRestClient();
 
   /**
    * Receives the actor message and perform the operation like get course , get content etc.
@@ -167,12 +167,12 @@ public class LearnerStateActor extends BaseActor {
     dto.getAdditionalProperties().put(JsonKey.FILTERS, esQueryMap);
 
     Future<Map<String, Object>> responseF =
-        esUtil.complexSearch(
+        esUtil.search(
             dto,
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.course.getTypeName());
     Map<String, Object> response =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(responseF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(responseF);
     return response;
   }
 

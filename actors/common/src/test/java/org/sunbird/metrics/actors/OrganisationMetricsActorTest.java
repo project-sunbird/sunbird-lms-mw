@@ -25,7 +25,10 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.junit.*;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
@@ -33,10 +36,10 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchTcpImpl;
+import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -52,7 +55,7 @@ import scala.concurrent.Promise;
  */
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
-  ElasticSearchTcpImpl.class,
+  ElasticSearchRestHighImpl.class,
   HttpClientBuilder.class,
   ServiceFactory.class,
   EsClientFactory.class
@@ -71,7 +74,7 @@ public class OrganisationMetricsActorTest {
   private static Map<String, Object> userOrgMap = new HashMap<>();
   private static CassandraOperationImpl cassandraOperation;
   private static final String HTTP_POST = "POST";
-  private ElasticSearchUtil esUtil;
+  private ElasticService esUtil;
 
   @BeforeClass
   public static void setUp() {
@@ -100,8 +103,8 @@ public class OrganisationMetricsActorTest {
     PowerMockito.mockStatic(ServiceFactory.class);
     PowerMockito.mockStatic(EsClientFactory.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
-    esUtil = mock(ElasticSearchTcpImpl.class);
-    when(EsClientFactory.getTcpClient()).thenReturn(esUtil);
+    esUtil = mock(ElasticSearchRestHighImpl.class);
+    when(EsClientFactory.getRestClient()).thenReturn(esUtil);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     Response response = createCassandraInsertSuccessResponse();
     when(cassandraOperation.insertRecord(

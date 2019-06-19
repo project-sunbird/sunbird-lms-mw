@@ -13,7 +13,7 @@ import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.ElasticSearchTcpImpl;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
@@ -96,14 +96,14 @@ public class ChannelRegistrationActor extends BaseActor {
     Map<String, Object> filter = new HashMap<>();
     filter.put(JsonKey.IS_ROOT_ORG, true);
     searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
-    ElasticSearchUtil esUtil = new ElasticSearchTcpImpl();
+    ElasticService esUtil = new ElasticSearchTcpImpl();
     Future<Map<String, Object>> esResponseF =
-        esUtil.complexSearch(
+        esUtil.search(
             searchDto,
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.organisation.getTypeName());
     Map<String, Object> esResponse =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(esResponseF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(esResponseF);
     List<Map<String, Object>> orgList = (List<Map<String, Object>>) esResponse.get(JsonKey.CONTENT);
     ProjectLogger.log("End call for getting List of channel from sunbird ES");
     return orgList;

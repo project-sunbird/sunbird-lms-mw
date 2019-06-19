@@ -13,7 +13,7 @@ import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -28,7 +28,7 @@ import scala.concurrent.Future;
 )
 public class OrgBulkUploadActor extends BaseBulkUploadActor {
   private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
-  private ElasticSearchUtil esUtil = new ElasticSearchTcpImpl();
+  private ElasticService esUtil = new ElasticSearchTcpImpl();
   private String[] bulkOrgAllowedFields = {
     JsonKey.ORGANISATION_ID,
     JsonKey.ORGANISATION_NAME,
@@ -160,7 +160,7 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
             ProjectUtil.EsType.user.getTypeName(),
             userId);
     Map<String, Object> result =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     if (result != null || result.size() > 0) {
       return result;
     }
@@ -174,7 +174,7 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
             ProjectUtil.EsType.organisation.getTypeName(),
             orgId);
     Map<String, Object> result =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     if (result != null && result.size() > 0) {
       return result;
     }

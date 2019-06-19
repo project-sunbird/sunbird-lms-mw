@@ -9,7 +9,7 @@ import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -62,14 +62,14 @@ public class CourseSearchActor extends BaseActor {
         .equalsIgnoreCase(ActorOperations.GET_COURSE_BY_ID.getValue())) {
       Map<String, Object> req = request.getRequest();
       String courseId = (String) req.get(JsonKey.ID);
-      ElasticSearchUtil esUtil = new ElasticSearchTcpImpl();
+      ElasticService esUtil = new ElasticSearchTcpImpl();
       Future<Map<String, Object>> resultF =
           esUtil.getDataByIdentifier(
               ProjectUtil.EsIndex.sunbird.getIndexName(),
               ProjectUtil.EsType.course.getTypeName(),
               courseId);
       Map<String, Object> result =
-          (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+          (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
       Response response = new Response();
       if (result != null) {
         response.put(JsonKey.RESPONSE, result);

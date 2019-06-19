@@ -24,7 +24,7 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchTcpImpl;
+import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.models.response.Response;
@@ -38,14 +38,14 @@ import org.sunbird.helper.ServiceFactory;
 import scala.concurrent.Promise;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({ServiceFactory.class, ElasticSearchTcpImpl.class, EsClientFactory.class})
+@PrepareForTest({ServiceFactory.class, ElasticSearchRestHighImpl.class, EsClientFactory.class})
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*", "javax.security.*"})
 public class LocationActorTest {
 
   private static final ActorSystem system = ActorSystem.create("system");
   private static final Props props = Props.create(LocationActor.class);
   private static Map<String, Object> data;
-  private static ElasticSearchTcpImpl esUtil;
+  private static ElasticSearchRestHighImpl esUtil;
 
   @BeforeClass
   public static void init() {
@@ -53,9 +53,9 @@ public class LocationActorTest {
     PowerMockito.mockStatic(EsClientFactory.class);
     PowerMockito.mockStatic(ServiceFactory.class);
     CassandraOperationImpl cassandraOperation = mock(CassandraOperationImpl.class);
-    esUtil = mock(ElasticSearchTcpImpl.class);
+    esUtil = mock(ElasticSearchRestHighImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
-    when(EsClientFactory.getTcpClient()).thenReturn(esUtil);
+    when(EsClientFactory.getRestClient()).thenReturn(esUtil);
     when(cassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(getSuccessResponse());
@@ -76,8 +76,7 @@ public class LocationActorTest {
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(esRespone);
 
-    when(esUtil.complexSearch(
-            Mockito.any(SearchDTO.class), Mockito.anyString(), Mockito.anyString()))
+    when(esUtil.search(Mockito.any(SearchDTO.class), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
     when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
@@ -151,8 +150,7 @@ public class LocationActorTest {
   public void testDeleteLocationFailureWithInvalidLocationDeleteRequest() {
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(getContentMapFromES());
-    when(esUtil.complexSearch(
-            Mockito.any(SearchDTO.class), Mockito.anyString(), Mockito.anyString()))
+    when(esUtil.search(Mockito.any(SearchDTO.class), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
     boolean result =
         testScenario(

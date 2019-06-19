@@ -18,7 +18,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -49,7 +49,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   private static ObjectMapper mapper = new ObjectMapper();
   private static final String view = "org";
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private ElasticSearchUtil esUtil = EsClientFactory.getTcpClient();
+  private ElasticService esUtil = EsClientFactory.getRestClient();
   private Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
   private DecryptionService decryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
@@ -109,7 +109,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
         esUtil.getDataByIdentifier(
             EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), requestedBy);
     Map<String, Object> requestedByInfo =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(requestedByInfoF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(requestedByInfoF);
     if (ProjectUtil.isNull(requestedByInfo)
         || StringUtils.isBlank((String) requestedByInfo.get(JsonKey.FIRST_NAME))) {
       throw new ProjectCommonException(
@@ -709,7 +709,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
               ProjectUtil.EsType.organisation.getTypeName(),
               orgId);
       Map<String, Object> result =
-          (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+          (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
       if (null == result || result.isEmpty()) {
         return null;
       }

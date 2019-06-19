@@ -3,14 +3,14 @@ package org.sunbird.learner.util;
 import java.util.Map;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.ElasticSearchTcpImpl;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import scala.concurrent.Future;
 
 public class CourseBatchUtil {
-  private static ElasticSearchUtil esUtil = new ElasticSearchTcpImpl();
+  private static ElasticService esUtil = new ElasticSearchTcpImpl();
 
   private CourseBatchUtil() {}
 
@@ -20,12 +20,12 @@ public class CourseBatchUtil {
             + uniqueId,
         LoggerEnum.INFO.name());
     Future<String> esResponseF =
-        esUtil.createData(
+        esUtil.save(
             ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.course.getTypeName(),
             uniqueId,
             req);
-    String esResponse = (String) ElasticSearchHelper.getObjectFromFuture(esResponseF);
+    String esResponse = (String) ElasticSearchHelper.getResponseFromFuture(esResponseF);
 
     ProjectLogger.log(
         "CourseBatchManagementActor::syncCourseBatchForeground: Sync response for course batch ID = "

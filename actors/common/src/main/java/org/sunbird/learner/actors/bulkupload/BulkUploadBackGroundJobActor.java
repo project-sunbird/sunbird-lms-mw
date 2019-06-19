@@ -24,7 +24,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.BulkProcessStatus;
@@ -77,7 +77,7 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
   private final SSOManager ssoManager = SSOServiceFactory.getInstance();
   private ObjectMapper mapper = new ObjectMapper();
   private static final LocationRequestValidator validator = new LocationRequestValidator();
-  private static ElasticSearchUtil esUtil = new ElasticSearchTcpImpl();
+  private static ElasticService esUtil = new ElasticSearchTcpImpl();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -935,8 +935,8 @@ public class BulkUploadBackGroundJobActor extends BaseActor {
     SearchDTO searchDTO = new SearchDTO();
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
 
-    Future<Map<String, Object>> resultF = esUtil.complexSearch(searchDTO, index, type);
-    return (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+    Future<Map<String, Object>> resultF = esUtil.search(searchDTO, index, type);
+    return (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
   }
 
   private void processUserInfo(

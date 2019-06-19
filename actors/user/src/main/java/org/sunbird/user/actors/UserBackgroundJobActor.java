@@ -7,7 +7,7 @@ import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -127,8 +127,8 @@ public class UserBackgroundJobActor extends BaseActor {
 
   private void upsertDataToElastic(
       String indexName, String typeName, String id, Map<String, Object> userDetails) {
-    ElasticSearchUtil esUtil = EsClientFactory.getTcpClient();
-    Future<Boolean> bool = esUtil.upsertData(indexName, typeName, id, userDetails);
+    ElasticService esUtil = EsClientFactory.getRestClient();
+    Future<Boolean> bool = esUtil.upsert(indexName, typeName, id, userDetails);
 
     ProjectLogger.log(
         "Getting ES save response for type , identifier=="
@@ -136,7 +136,7 @@ public class UserBackgroundJobActor extends BaseActor {
             + "  "
             + id
             + "  "
-            + ElasticSearchHelper.getObjectFromFuture(bool),
+            + ElasticSearchHelper.getResponseFromFuture(bool),
         LoggerEnum.INFO.name());
   }
 }

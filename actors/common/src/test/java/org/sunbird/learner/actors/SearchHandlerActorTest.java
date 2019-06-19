@@ -10,7 +10,10 @@ import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.dispatch.Futures;
 import akka.testkit.javadsl.TestKit;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -22,10 +25,10 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchTcpImpl;
+import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -41,7 +44,7 @@ import scala.concurrent.Promise;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
   ServiceFactory.class,
-  ElasticSearchTcpImpl.class,
+  ElasticSearchRestHighImpl.class,
   UserCoursesDaoImpl.class,
   EsClientFactory.class
 })
@@ -52,7 +55,7 @@ public class SearchHandlerActorTest {
   private static final Props props = Props.create(SearchHandlerActor.class);
   private static UserCoursesDao userCoursesDao;
   private static CassandraOperationImpl cassandraOperation;
-  private static ElasticSearchUtil esUtil;
+  private static ElasticService esUtil;
 
   @BeforeClass
   public static void setUp() {
@@ -67,11 +70,11 @@ public class SearchHandlerActorTest {
   @Before
   public void beforeTest() {
     PowerMockito.mockStatic(EsClientFactory.class);
-    esUtil = mock(ElasticSearchTcpImpl.class);
-    when(EsClientFactory.getTcpClient()).thenReturn(esUtil);
+    esUtil = mock(ElasticSearchRestHighImpl.class);
+    when(EsClientFactory.getRestClient()).thenReturn(esUtil);
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(createResponseGet(true));
-    when(esUtil.complexSearch(
+    when(esUtil.search(
             Mockito.any(SearchDTO.class),
             Mockito.eq(ProjectUtil.EsIndex.sunbird.getIndexName()),
             Mockito.anyVararg()))

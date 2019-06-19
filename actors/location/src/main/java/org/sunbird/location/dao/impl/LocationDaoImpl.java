@@ -7,7 +7,7 @@ import java.util.Map;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.GeoLocationJsonKey;
 import org.sunbird.common.models.util.JsonKey;
@@ -26,7 +26,7 @@ public class LocationDaoImpl implements LocationDao {
   private ObjectMapper mapper = new ObjectMapper();
   private static final String KEYSPACE_NAME = "sunbird";
   private static final String LOCATION_TABLE_NAME = "location";
-  private ElasticSearchUtil esUtil = EsClientFactory.getTcpClient();
+  private ElasticService esUtil = EsClientFactory.getRestClient();
 
   @Override
   public Response create(Location location) {
@@ -53,9 +53,9 @@ public class LocationDaoImpl implements LocationDao {
     SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
     String[] types = {ProjectUtil.EsType.location.getTypeName()};
     Future<Map<String, Object>> resultF =
-        esUtil.complexSearch(searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), types);
+        esUtil.search(searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), types);
     Map<String, Object> result =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     Response response = new Response();
     if (result != null) {
       response.put(JsonKey.RESPONSE, result.get(JsonKey.CONTENT));

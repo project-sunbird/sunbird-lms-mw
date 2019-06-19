@@ -28,10 +28,10 @@ import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.Constants;
-import org.sunbird.common.ElasticSearchTcpImpl;
+import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -46,7 +46,7 @@ import scala.concurrent.duration.FiniteDuration;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
   ServiceFactory.class,
-  ElasticSearchTcpImpl.class,
+  ElasticSearchRestHighImpl.class,
   EsClientFactory.class,
   CassandraOperationImpl.class,
   DataCacheHandler.class,
@@ -82,7 +82,7 @@ public class UserAssignRoleTest {
   private static CassandraOperation cassandraOperation = null;
   private static Response response = null;
   private static Map<String, Object> esRespone = new HashMap<>();
-  private static ElasticSearchUtil esUtil;
+  private static ElasticService esUtil;
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -116,8 +116,8 @@ public class UserAssignRoleTest {
     PowerMockito.mockStatic(EsClientFactory.class);
     cassandraOperation = PowerMockito.mock(CassandraOperationImpl.class);
     PowerMockito.when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
-    esUtil = PowerMockito.mock(ElasticSearchTcpImpl.class);
-    PowerMockito.when(EsClientFactory.getTcpClient()).thenReturn(esUtil);
+    esUtil = PowerMockito.mock(ElasticSearchRestHighImpl.class);
+    PowerMockito.when(EsClientFactory.getRestClient()).thenReturn(esUtil);
     Map<String, Object> roleMap = new HashMap<>();
     for (String role : ALL_ROLES) roleMap.put(role, role);
     PowerMockito.mockStatic(DataCacheHandler.class);
@@ -128,7 +128,7 @@ public class UserAssignRoleTest {
     promise_es.success(esRespone);
     PowerMockito.when(esUtil.getDataByIdentifier(Mockito.any(), Mockito.any(), Mockito.any()))
         .thenReturn(promise.future());
-    PowerMockito.when(esUtil.complexSearch(Mockito.any(), Mockito.any(), Mockito.any()))
+    PowerMockito.when(esUtil.search(Mockito.any(), Mockito.any(), Mockito.any()))
         .thenReturn(promise_es.future());
   }
 

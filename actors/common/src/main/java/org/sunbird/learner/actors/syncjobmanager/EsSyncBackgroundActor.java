@@ -16,7 +16,7 @@ import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -145,8 +145,8 @@ public class EsSyncBackgroundActor extends BaseActor {
         result.add((Map<String, Object>) (itr.next().getValue()));
       }
     }
-    ElasticSearchUtil esUtil = new ElasticSearchTcpImpl();
-    esUtil.bulkInsertData(ProjectUtil.EsIndex.sunbird.getIndexName(), getType(objectType), result);
+    ElasticService esUtil = new ElasticSearchTcpImpl();
+    esUtil.bulkInsert(ProjectUtil.EsIndex.sunbird.getIndexName(), getType(objectType), result);
     long stopTime = System.currentTimeMillis();
     long elapsedTime = stopTime - startTime;
 

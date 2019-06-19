@@ -18,10 +18,10 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchTcpImpl;
+import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
@@ -35,7 +35,7 @@ import scala.concurrent.Promise;
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
   ProjectUtil.class,
-  ElasticSearchTcpImpl.class,
+  ElasticSearchRestHighImpl.class,
   CassandraOperationImpl.class,
   EsClientFactory.class,
   ServiceFactory.class
@@ -46,13 +46,13 @@ public class UserCourseServiceTest {
   private CassandraOperationImpl cassandraOperation;
   @Mock private UserCoursesDao userCoursesDao;
   private UserCoursesService userCoursesService;
-  private static ElasticSearchUtil esUtil;
+  private static ElasticService esUtil;
 
   @BeforeClass
   public static void setup() {
     PowerMockito.mockStatic(EsClientFactory.class);
-    esUtil = mock(ElasticSearchTcpImpl.class);
-    when(EsClientFactory.getTcpClient()).thenReturn(esUtil);
+    esUtil = mock(ElasticSearchRestHighImpl.class);
+    when(EsClientFactory.getRestClient()).thenReturn(esUtil);
   }
 
   @Before
@@ -148,7 +148,7 @@ public class UserCourseServiceTest {
     Map<String, Object> map = new HashMap<>();
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.trySuccess(map);
-    when(esUtil.complexSearch(Mockito.anyObject(), Mockito.anyString(), Mockito.anyString()))
+    when(esUtil.search(Mockito.anyObject(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
     Assert.assertNotEquals(null, userCoursesService.getActiveUserCourses(JsonKey.USER_ID));
   }
@@ -157,7 +157,7 @@ public class UserCourseServiceTest {
   public void getActiveUserCourseFailure() {
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(null);
-    when(esUtil.complexSearch(Mockito.anyObject(), Mockito.anyString(), Mockito.anyString()))
+    when(esUtil.search(Mockito.anyObject(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
     Assert.assertEquals(null, userCoursesService.getActiveUserCourses(JsonKey.USER_ID));
   }

@@ -25,7 +25,11 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.junit.*;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
@@ -33,10 +37,10 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchTcpImpl;
+import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -55,7 +59,7 @@ import scala.concurrent.Promise;
  */
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
-  ElasticSearchTcpImpl.class,
+  ElasticSearchRestHighImpl.class,
   HttpClientBuilder.class,
   ServiceFactory.class,
   CloudStorageUtil.class,
@@ -77,7 +81,7 @@ public class CourseMetricsActorTest {
   private static final String HTTP_POST = "POST";
   private static ObjectMapper mapper = new ObjectMapper();
   private static CassandraOperationImpl cassandraOperation = mock(CassandraOperationImpl.class);
-  private static ElasticSearchUtil esUtil;
+  private static ElasticService esUtil;
   private static final String SIGNED_URL = "SIGNED_URL";
 
   @BeforeClass
@@ -89,9 +93,9 @@ public class CourseMetricsActorTest {
 
   @Before
   public void before() {
-    esUtil = mock(ElasticSearchTcpImpl.class);
+    esUtil = mock(ElasticSearchRestHighImpl.class);
     PowerMockito.mockStatic(EsClientFactory.class);
-    when(EsClientFactory.getTcpClient()).thenReturn(esUtil);
+    when(EsClientFactory.getRestClient()).thenReturn(esUtil);
     mockESComplexSearch();
     mockESGetDataByIdentifier();
     PowerMockito.mockStatic(ServiceFactory.class);
@@ -456,8 +460,7 @@ public class CourseMetricsActorTest {
     PowerMockito.mockStatic(HttpClientBuilder.class);
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(esMap);
-    when(esUtil.complexSearch(Mockito.any(), Mockito.any(), Mockito.any()))
-        .thenReturn(promise.future());
+    when(esUtil.search(Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(promise.future());
   }
 
   private void mockESGetDataByIdentifier() {
@@ -556,14 +559,14 @@ public class CourseMetricsActorTest {
     if (isUserMock && !isGetCompltetedCount) {
       Promise<Map<String, Object>> promise = Futures.promise();
       promise.success(mockUserData());
-      when(esUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+      when(esUtil.search(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
           .thenReturn(promise.future());
     } else {
       Promise<Map<String, Object>> promise = Futures.promise();
       promise.success(mockUserData());
       Promise<Map<String, Object>> promise_ = Futures.promise();
       promise_.success(getCompleteUserCount());
-      when(esUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+      when(esUtil.search(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
           .thenReturn(promise.future())
           .thenReturn(promise_.future());
     }

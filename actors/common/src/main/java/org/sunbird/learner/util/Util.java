@@ -35,7 +35,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.HttpUtil;
@@ -98,7 +98,7 @@ public final class Util {
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance(
           null);
   private static ObjectMapper mapper = new ObjectMapper();
-  private static ElasticSearchUtil esUtil = new ElasticSearchTcpImpl();
+  private static ElasticService esUtil = new ElasticSearchTcpImpl();
 
   static {
     loadPropertiesFile();
@@ -743,8 +743,8 @@ public final class Util {
     SearchDTO searchDTO = new SearchDTO();
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
 
-    Future<Map<String, Object>> mapF = esUtil.complexSearch(searchDTO, index, type);
-    return (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(mapF);
+    Future<Map<String, Object>> mapF = esUtil.search(searchDTO, index, type);
+    return (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(mapF);
   }
 
   public static String validateRoles(List<String> roleList) {
@@ -902,7 +902,7 @@ public final class Util {
                 EsType.user.getTypeName(),
                 (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY));
         Map<String, Object> result =
-            (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+            (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
 
         if (result != null) {
           String rootOrgId = (String) result.get(JsonKey.ROOT_ORG_ID);
@@ -1108,9 +1108,9 @@ public final class Util {
     SearchDTO searchDto = Util.createSearchDto(searchRequestMap);
     String[] types = {ProjectUtil.EsType.user.getTypeName()};
     Future<Map<String, Object>> resultf =
-        esUtil.complexSearch(searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), types);
+        esUtil.search(searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), types);
     Map<String, Object> result =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultf);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultf);
     if (MapUtils.isNotEmpty(result)) {
       List<Map<String, Object>> searchResult =
           (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
@@ -1510,7 +1510,7 @@ public final class Util {
           "Util:checkUserProfileVisibility: userMap contains username and the encrypted value after removing"
               + userMap.get(JsonKey.USER_NAME),
           LoggerEnum.INFO.name());
-      esUtil.upsertData(
+      esUtil.upsert(
           ProjectUtil.EsIndex.sunbird.getIndexName(),
           ProjectUtil.EsType.userprofilevisibility.getTypeName(),
           (String) userMap.get(JsonKey.USER_ID),
@@ -1629,7 +1629,8 @@ public final class Util {
         Future<Map<String, Map<String, Object>>> orgInfoMapF =
             esUtil.getEsResultByListOfIds(organisationIds, fields, EsType.organisation);
         Map<String, Map<String, Object>> orgInfoMap =
-            (Map<String, Map<String, Object>>) ElasticSearchHelper.getObjectFromFuture(orgInfoMapF);
+            (Map<String, Map<String, Object>>)
+                ElasticSearchHelper.getResponseFromFuture(orgInfoMapF);
 
         for (Map<String, Object> userOrg : userOrgList) {
           Map<String, Object> esOrgMap = orgInfoMap.get(userOrg.get(JsonKey.ORGANISATION_ID));
@@ -1735,8 +1736,8 @@ public final class Util {
 
   private static boolean insertDataToElastic(
       String index, String type, String identifier, Map<String, Object> data) {
-    Future<String> responseF = esUtil.createData(index, type, identifier, data);
-    String response = (String) ElasticSearchHelper.getObjectFromFuture(responseF);
+    Future<String> responseF = esUtil.save(index, type, identifier, data);
+    String response = (String) ElasticSearchHelper.getResponseFromFuture(responseF);
     if (!StringUtils.isBlank(response)) {
       ProjectLogger.log("User Data is saved successfully ES ." + type + "  " + identifier);
       return true;
@@ -1804,12 +1805,12 @@ public final class Util {
         map.put(JsonKey.FILTERS, filters);
         SearchDTO searchDto = Util.createSearchDto(map);
         Future<Map<String, Object>> resultF =
-            esUtil.complexSearch(
+            esUtil.search(
                 searchDto,
                 ProjectUtil.EsIndex.sunbird.getIndexName(),
                 ProjectUtil.EsType.user.getTypeName());
         Map<String, Object> result =
-            (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+            (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
         List<Map<String, Object>> userMapList =
             (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
         if (!userMapList.isEmpty()) {

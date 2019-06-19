@@ -24,7 +24,7 @@ import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.cacheloader.PageCacheLoaderService;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.hash.HashGeneratorUtil;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -689,11 +689,11 @@ public class PageManagementActor extends BaseActor {
     } else {
       return null;
     }
-    ElasticSearchUtil esUtil = new ElasticSearchTcpImpl();
+    ElasticService esUtil = new ElasticSearchTcpImpl();
     Future<Map<String, Object>> resultF =
-        esUtil.complexSearch(searcDto, ProjectUtil.EsIndex.sunbird.getIndexName(), type);
+        esUtil.search(searcDto, ProjectUtil.EsIndex.sunbird.getIndexName(), type);
     Map<String, Object> result =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     return result;
   }
 

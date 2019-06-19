@@ -17,7 +17,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -39,7 +39,7 @@ import scala.concurrent.Future;
 public class UserTnCActor extends BaseActor {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-  private ElasticSearchUtil esUtil = EsClientFactory.getTcpClient();
+  private ElasticService esUtil = EsClientFactory.getRestClient();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -77,7 +77,7 @@ public class UserTnCActor extends BaseActor {
             ProjectUtil.EsType.user.getTypeName(),
             userId);
     Map<String, Object> result =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     if (result == null || result.size() == 0) {
       throw new ProjectCommonException(
           ResponseCode.userNotFound.getErrorCode(),

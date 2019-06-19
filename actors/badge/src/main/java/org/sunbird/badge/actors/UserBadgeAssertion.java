@@ -12,7 +12,7 @@ import org.sunbird.badge.BadgeOperations;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticSearchUtil;
+import org.sunbird.common.inf.ElasticService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
@@ -31,7 +31,7 @@ public class UserBadgeAssertion extends BaseActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private DbInfo dbInfo = Util.dbInfoMap.get(BadgingJsonKey.USER_BADGE_ASSERTION_DB);
-  private ElasticSearchUtil esUtil = EsClientFactory.getTcpClient();
+  private ElasticService esUtil = EsClientFactory.getRestClient();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -72,7 +72,7 @@ public class UserBadgeAssertion extends BaseActor {
             ProjectUtil.EsType.user.getTypeName(),
             (String) map.get(JsonKey.USER_ID));
     Map<String, Object> result =
-        (Map<String, Object>) ElasticSearchHelper.getObjectFromFuture(resultF);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     if (MapUtils.isEmpty(result)) {
       ProjectLogger.log(
           "UserBadgeAssertion:updateUserBadgeDataToES user with userId "
@@ -114,8 +114,8 @@ public class UserBadgeAssertion extends BaseActor {
   private boolean updateDataToElastic(
       String indexName, String typeName, String identifier, Map<String, Object> data) {
 
-    Future<Boolean> responseF = esUtil.updateData(indexName, typeName, identifier, data);
-    boolean response = (boolean) ElasticSearchHelper.getObjectFromFuture(responseF);
+    Future<Boolean> responseF = esUtil.update(indexName, typeName, identifier, data);
+    boolean response = (boolean) ElasticSearchHelper.getResponseFromFuture(responseF);
     if (!response) {
       ProjectLogger.log(
           "unbale to save the data inside ES for user badge " + identifier, LoggerEnum.INFO.name());

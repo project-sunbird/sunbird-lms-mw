@@ -39,7 +39,7 @@ import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticService;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -74,7 +74,7 @@ public class OrganisationMetricsActorTest {
   private static Map<String, Object> userOrgMap = new HashMap<>();
   private static CassandraOperationImpl cassandraOperation;
   private static final String HTTP_POST = "POST";
-  private ElasticService esUtil;
+  private ElasticSearchService esService;
 
   @BeforeClass
   public static void setUp() {
@@ -103,8 +103,8 @@ public class OrganisationMetricsActorTest {
     PowerMockito.mockStatic(ServiceFactory.class);
     PowerMockito.mockStatic(EsClientFactory.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
-    esUtil = mock(ElasticSearchRestHighImpl.class);
-    when(EsClientFactory.getRestClient()).thenReturn(esUtil);
+    esService = mock(ElasticSearchRestHighImpl.class);
+    when(EsClientFactory.getInstance(Mockito.anyString())).thenReturn(esService);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     Response response = createCassandraInsertSuccessResponse();
     when(cassandraOperation.insertRecord(
@@ -112,7 +112,7 @@ public class OrganisationMetricsActorTest {
         .thenReturn(response);
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(userOrgMap);
-    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(esService.getDataByIdentifier(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
   }
 
@@ -123,7 +123,7 @@ public class OrganisationMetricsActorTest {
     ActorRef subject = system.actorOf(prop);
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(userOrgMap);
-    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(esService.getDataByIdentifier(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
     mockHttpPostSuccess(
         HTTP_POST,
@@ -164,7 +164,7 @@ public class OrganisationMetricsActorTest {
     ActorRef subject = system.actorOf(prop);
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(userOrgMap);
-    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(esService.getDataByIdentifier(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
     mockHttpPostSuccess(
         HTTP_POST,
@@ -202,7 +202,7 @@ public class OrganisationMetricsActorTest {
     ActorRef subject = system.actorOf(prop);
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(null);
-    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(esService.getDataByIdentifier(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
 
     Request actorMessage = new Request();
@@ -223,7 +223,7 @@ public class OrganisationMetricsActorTest {
     ActorRef subject = system.actorOf(prop);
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(null);
-    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(esService.getDataByIdentifier(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
 
     Request actorMessage = new Request();
@@ -244,7 +244,7 @@ public class OrganisationMetricsActorTest {
     ActorRef subject = system.actorOf(prop);
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(userOrgMap);
-    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(esService.getDataByIdentifier(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
 
     Request actorMessage = new Request();
@@ -265,7 +265,7 @@ public class OrganisationMetricsActorTest {
     ActorRef subject = system.actorOf(prop);
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(userOrgMap);
-    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(esService.getDataByIdentifier(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
 
     Request actorMessage = new Request();
@@ -287,7 +287,7 @@ public class OrganisationMetricsActorTest {
 
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(userOrgMap);
-    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(esService.getDataByIdentifier(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
 
     Request actorMessage = new Request();
@@ -311,7 +311,7 @@ public class OrganisationMetricsActorTest {
     ActorRef subject = system.actorOf(prop);
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(userOrgMap);
-    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(esService.getDataByIdentifier(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
 
     Request actorMessage = new Request();

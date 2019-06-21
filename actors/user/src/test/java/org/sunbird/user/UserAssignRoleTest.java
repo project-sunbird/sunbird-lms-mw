@@ -31,7 +31,7 @@ import org.sunbird.common.Constants;
 import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticService;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -82,7 +82,7 @@ public class UserAssignRoleTest {
   private static CassandraOperation cassandraOperation = null;
   private static Response response = null;
   private static Map<String, Object> esRespone = new HashMap<>();
-  private static ElasticService esUtil;
+  private static ElasticSearchService esService;
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -116,8 +116,8 @@ public class UserAssignRoleTest {
     PowerMockito.mockStatic(EsClientFactory.class);
     cassandraOperation = PowerMockito.mock(CassandraOperationImpl.class);
     PowerMockito.when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
-    esUtil = PowerMockito.mock(ElasticSearchRestHighImpl.class);
-    PowerMockito.when(EsClientFactory.getRestClient()).thenReturn(esUtil);
+    esService = PowerMockito.mock(ElasticSearchRestHighImpl.class);
+    PowerMockito.when(EsClientFactory.getInstance(Mockito.anyString())).thenReturn(esService);
     Map<String, Object> roleMap = new HashMap<>();
     for (String role : ALL_ROLES) roleMap.put(role, role);
     PowerMockito.mockStatic(DataCacheHandler.class);
@@ -126,9 +126,9 @@ public class UserAssignRoleTest {
     promise.success(userOrg);
     Promise<Map<String, Object>> promise_es = Futures.promise();
     promise_es.success(esRespone);
-    PowerMockito.when(esUtil.getDataByIdentifier(Mockito.any(), Mockito.any(), Mockito.any()))
+    PowerMockito.when(esService.getDataByIdentifier(Mockito.any(), Mockito.any()))
         .thenReturn(promise.future());
-    PowerMockito.when(esUtil.search(Mockito.any(), Mockito.any(), Mockito.any()))
+    PowerMockito.when(esService.search(Mockito.any(), Mockito.any()))
         .thenReturn(promise_es.future());
   }
 

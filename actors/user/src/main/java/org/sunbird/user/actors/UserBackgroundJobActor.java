@@ -7,7 +7,7 @@ import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticService;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -36,6 +36,7 @@ import scala.concurrent.Future;
 public class UserBackgroundJobActor extends BaseActor {
 
   private static ObjectMapper mapper = new ObjectMapper();
+  private ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -127,8 +128,8 @@ public class UserBackgroundJobActor extends BaseActor {
 
   private void upsertDataToElastic(
       String indexName, String typeName, String id, Map<String, Object> userDetails) {
-    ElasticService esUtil = EsClientFactory.getRestClient();
-    Future<Boolean> bool = esUtil.upsert(indexName, typeName, id, userDetails);
+
+    Future<Boolean> bool = esUtil.upsert(typeName, id, userDetails);
 
     ProjectLogger.log(
         "Getting ES save response for type , identifier=="

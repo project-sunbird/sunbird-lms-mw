@@ -25,7 +25,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticService;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.BadgingJsonKey;
 import org.sunbird.common.models.util.JsonKey;
@@ -60,7 +60,7 @@ public class UserBadgeAssertionTest {
   private HashMap<String, Object> tempMap;
   private Map<String, Object> result;
   private Map<String, Object> badge;
-  private ElasticService esUtil;
+  private ElasticSearchService esService;
 
   @Before
   public void setUp() {
@@ -83,12 +83,12 @@ public class UserBadgeAssertionTest {
     actorMessage.setRequest(req);
     tempMap = new HashMap<>();
     cassandraOperation = PowerMockito.mock(CassandraOperation.class);
-    esUtil = PowerMockito.mock(ElasticSearchRestHighImpl.class);
+    esService = PowerMockito.mock(ElasticSearchRestHighImpl.class);
     PowerMockito.mockStatic(ServiceFactory.class);
     PowerMockito.mockStatic(ElasticSearchHelper.class);
     PowerMockito.when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     PowerMockito.mockStatic(EsClientFactory.class);
-    PowerMockito.when(EsClientFactory.getRestClient()).thenReturn(esUtil);
+    PowerMockito.when(EsClientFactory.getInstance(Mockito.anyString())).thenReturn(esService);
     Props props = Props.create(UserBadgeAssertion.class);
     subject = system.actorOf(props);
   }
@@ -100,11 +100,7 @@ public class UserBadgeAssertionTest {
     Promise<Boolean> promise = Futures.promise();
     promise.success(true);
     PowerMockito.when(
-            esUtil.update(
-                ProjectUtil.EsIndex.sunbird.getIndexName(),
-                ProjectUtil.EsType.user.getTypeName(),
-                "userId-123",
-                tempMap))
+            esService.update(ProjectUtil.EsType.user.getTypeName(), "userId-123", tempMap))
         .thenReturn(promise.future());
 
     PowerMockito.mockStatic(Util.class);
@@ -122,10 +118,7 @@ public class UserBadgeAssertionTest {
     Promise<Map<String, Object>> promise1 = Futures.promise();
     promise1.success(result);
     PowerMockito.when(
-            esUtil.getDataByIdentifier(
-                ProjectUtil.EsIndex.sunbird.getIndexName(),
-                ProjectUtil.EsType.user.getTypeName(),
-                "userId-123"))
+            esService.getDataByIdentifier(ProjectUtil.EsType.user.getTypeName(), "userId-123"))
         .thenReturn(promise1.future());
     PowerMockito.when(
             cassandraOperation.insertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), tempMap))
@@ -145,11 +138,7 @@ public class UserBadgeAssertionTest {
     Promise<Boolean> promise = Futures.promise();
     promise.success(false);
     PowerMockito.when(
-            esUtil.update(
-                ProjectUtil.EsIndex.sunbird.getIndexName(),
-                ProjectUtil.EsType.user.getTypeName(),
-                "userId-123",
-                tempMap))
+            esService.update(ProjectUtil.EsType.user.getTypeName(), "userId-123", tempMap))
         .thenReturn(promise.future());
     List<Map<String, Object>> badgeAssertionsList = new ArrayList<>();
     Map<String, Object> tempMap = new HashMap<>();
@@ -159,10 +148,7 @@ public class UserBadgeAssertionTest {
     Promise<Map<String, Object>> promise1 = Futures.promise();
     promise1.success(result);
     PowerMockito.when(
-            esUtil.getDataByIdentifier(
-                ProjectUtil.EsIndex.sunbird.getIndexName(),
-                ProjectUtil.EsType.user.getTypeName(),
-                "userId-123"))
+            esService.getDataByIdentifier(ProjectUtil.EsType.user.getTypeName(), "userId-123"))
         .thenReturn(promise1.future());
     PowerMockito.when(
             cassandraOperation.insertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), tempMap))
@@ -181,11 +167,7 @@ public class UserBadgeAssertionTest {
     Promise<Boolean> promise = Futures.promise();
     promise.success(false);
     PowerMockito.when(
-            esUtil.update(
-                ProjectUtil.EsIndex.sunbird.getIndexName(),
-                ProjectUtil.EsType.user.getTypeName(),
-                "userId-123",
-                tempMap))
+            esService.update(ProjectUtil.EsType.user.getTypeName(), "userId-123", tempMap))
         .thenReturn(promise.future());
     result = new HashMap<>();
     List<Map<String, Object>> badgeAssertionsList = new ArrayList<>();
@@ -195,9 +177,7 @@ public class UserBadgeAssertionTest {
     result.put(BadgingJsonKey.BADGE_ASSERTIONS, badgeAssertionsList);
     Promise<Map<String, Object>> promise1 = Futures.promise();
     promise1.success(result);
-    PowerMockito.when(
-            esUtil.getDataByIdentifier(
-                Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    PowerMockito.when(esService.getDataByIdentifier(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise1.future());
 
     PowerMockito.when(
@@ -217,11 +197,7 @@ public class UserBadgeAssertionTest {
     Promise<Boolean> promise = Futures.promise();
     promise.success(true);
     PowerMockito.when(
-            esUtil.update(
-                ProjectUtil.EsIndex.sunbird.getIndexName(),
-                ProjectUtil.EsType.user.getTypeName(),
-                "userId-123",
-                tempMap))
+            esService.update(ProjectUtil.EsType.user.getTypeName(), "userId-123", tempMap))
         .thenReturn(promise.future());
 
     PowerMockito.when(

@@ -29,7 +29,7 @@ import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticService;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -80,7 +80,7 @@ public class UserProfileReadActorTest {
   private static final String VALID_PHONE = "000000000";
   private static final String INVALID_PHONE = "000";
   private static final String VALID_USERNAME = "USERNAME";
-  private static ElasticService esUtil;
+  private static ElasticSearchService esService;
 
   @Before
   public void beforeEachTest() {
@@ -134,8 +134,8 @@ public class UserProfileReadActorTest {
     when(UserUtil.encryptUserData(Mockito.anyMap())).thenReturn(requestMap);
     PowerMockito.mockStatic(DataCacheHandler.class);
     when(ssoManager.getUsernameById(Mockito.anyString())).thenReturn(VALID_USERNAME);
-    esUtil = mock(ElasticSearchRestHighImpl.class);
-    when(EsClientFactory.getRestClient()).thenReturn(esUtil);
+    esService = mock(ElasticSearchRestHighImpl.class);
+    when(EsClientFactory.getInstance(Mockito.anyString())).thenReturn(esService);
   }
 
   @Test
@@ -259,7 +259,7 @@ public class UserProfileReadActorTest {
   public void setEsResponse(Map<String, Object> esResponse) {
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(esResponse);
-    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(esService.getDataByIdentifier(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
   }
 }

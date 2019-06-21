@@ -18,14 +18,13 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticService;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.ReportTrackingStatus;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
@@ -49,7 +48,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   private static ObjectMapper mapper = new ObjectMapper();
   private static final String view = "org";
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private ElasticService esUtil = EsClientFactory.getRestClient();
+  private ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
   private Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
   private DecryptionService decryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
@@ -106,8 +105,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     String period = (String) actorMessage.get(JsonKey.PERIOD);
 
     Future<Map<String, Object>> requestedByInfoF =
-        esUtil.getDataByIdentifier(
-            EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), requestedBy);
+        esUtil.getDataByIdentifier(EsType.user.getTypeName(), requestedBy);
     Map<String, Object> requestedByInfo =
         (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(requestedByInfoF);
     if (ProjectUtil.isNull(requestedByInfo)
@@ -704,10 +702,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   private Map<String, Object> validateOrg(String orgId) {
     try {
       Future<Map<String, Object>> resultF =
-          esUtil.getDataByIdentifier(
-              ProjectUtil.EsIndex.sunbird.getIndexName(),
-              ProjectUtil.EsType.organisation.getTypeName(),
-              orgId);
+          esUtil.getDataByIdentifier(ProjectUtil.EsType.organisation.getTypeName(), orgId);
       Map<String, Object> result =
           (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
       if (null == result || result.isEmpty()) {

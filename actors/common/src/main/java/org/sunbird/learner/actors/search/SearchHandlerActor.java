@@ -18,7 +18,7 @@ import org.sunbird.actorutil.org.OrganisationClient;
 import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticService;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -54,7 +54,7 @@ public class SearchHandlerActor extends BaseActor {
   private List<String> supportedFields = Arrays.asList(JsonKey.ID, JsonKey.ORG_NAME);
   private String topn = PropertiesCache.getInstance().getProperty(JsonKey.SEARCH_TOP_N);
   private OrganisationClient orgClient = new OrganisationClientImpl();
-  private ElasticService esUtil = EsClientFactory.getRestClient();
+  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
 
   @SuppressWarnings({"unchecked", "rawtypes"})
   @Override
@@ -97,8 +97,7 @@ public class SearchHandlerActor extends BaseActor {
             EsType.organisation.getTypeName(),
             searchDto);
       } else {
-        Future<Map<String, Object>> resultF =
-            esUtil.search(searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), types);
+        Future<Map<String, Object>> resultF = esService.search(searchDto, types[0]);
         result = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
         // Decrypt the data
         if (EsType.user.getTypeName().equalsIgnoreCase(filterObjectType)) {
@@ -140,7 +139,7 @@ public class SearchHandlerActor extends BaseActor {
 
   private void handleOrgSearchAsyncRequest(
       String indexName, String indexType, SearchDTO searchDto) {
-    Future<Map<String, Object>> futureResponse = esUtil.search(searchDto, indexName, indexType);
+    Future<Map<String, Object>> futureResponse = esService.search(searchDto, indexType);
     Future<Response> response =
         futureResponse.map(
             new Mapper<Map<String, Object>, Response>() {

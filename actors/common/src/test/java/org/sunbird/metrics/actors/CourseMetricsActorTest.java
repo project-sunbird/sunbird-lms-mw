@@ -40,11 +40,10 @@ import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticService;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -81,7 +80,7 @@ public class CourseMetricsActorTest {
   private static final String HTTP_POST = "POST";
   private static ObjectMapper mapper = new ObjectMapper();
   private static CassandraOperationImpl cassandraOperation = mock(CassandraOperationImpl.class);
-  private static ElasticService esUtil;
+  private static ElasticSearchService esService;
   private static final String SIGNED_URL = "SIGNED_URL";
 
   @BeforeClass
@@ -93,9 +92,9 @@ public class CourseMetricsActorTest {
 
   @Before
   public void before() {
-    esUtil = mock(ElasticSearchRestHighImpl.class);
+    esService = mock(ElasticSearchRestHighImpl.class);
     PowerMockito.mockStatic(EsClientFactory.class);
-    when(EsClientFactory.getRestClient()).thenReturn(esUtil);
+    when(EsClientFactory.getInstance(Mockito.anyString())).thenReturn(esService);
     mockESComplexSearch();
     mockESGetDataByIdentifier();
     PowerMockito.mockStatic(ServiceFactory.class);
@@ -182,13 +181,11 @@ public class CourseMetricsActorTest {
     ActorRef subject = system.actorOf(props);
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(userOrgMap);
-    when(esUtil.getDataByIdentifier(
-            EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), userId))
+    when(esService.getDataByIdentifier(EsType.user.getTypeName(), userId))
         .thenReturn(promise.future());
     Promise<Map<String, Object>> promise_null = Futures.promise();
     promise_null.success(null);
-    when(esUtil.getDataByIdentifier(
-            EsIndex.sunbird.getIndexName(), EsType.course.getTypeName(), batchId))
+    when(esService.getDataByIdentifier(EsType.course.getTypeName(), batchId))
         .thenReturn(promise_null.future());
 
     Request actorMessage = new Request();
@@ -269,13 +266,11 @@ public class CourseMetricsActorTest {
     Promise<Map<String, Object>> promise_null = Futures.promise();
     promise.success(userOrgMap);
 
-    when(esUtil.getDataByIdentifier(
-            EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), userId))
+    when(esService.getDataByIdentifier(EsType.user.getTypeName(), userId))
         .thenReturn(promise.future());
 
     promise_null.success(null);
-    when(esUtil.getDataByIdentifier(
-            EsIndex.sunbird.getIndexName(), EsType.course.getTypeName(), batchId))
+    when(esService.getDataByIdentifier(EsType.course.getTypeName(), batchId))
         .thenReturn(promise_null.future());
 
     Request actorMessage = new Request();
@@ -355,7 +350,7 @@ public class CourseMetricsActorTest {
     ActorRef subject = system.actorOf(props);
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(null);
-    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(esService.getDataByIdentifier(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
 
     Request actorMessage = new Request();
@@ -460,7 +455,7 @@ public class CourseMetricsActorTest {
     PowerMockito.mockStatic(HttpClientBuilder.class);
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(esMap);
-    when(esUtil.search(Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(promise.future());
+    when(esService.search(Mockito.any(), Mockito.any())).thenReturn(promise.future());
   }
 
   private void mockESGetDataByIdentifier() {
@@ -475,7 +470,7 @@ public class CourseMetricsActorTest {
     userOrgMap.put(JsonKey.HASHTAGID, "hash123");
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(userOrgMap);
-    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(esService.getDataByIdentifier(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
   }
 
@@ -537,14 +532,14 @@ public class CourseMetricsActorTest {
     if (!isUserValid) {
       Promise<Map<String, Object>> promise = Futures.promise();
       promise.success(null);
-      when(esUtil.getDataByIdentifier(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+      when(esService.getDataByIdentifier(Mockito.anyString(), Mockito.anyString()))
           .thenReturn(promise.future());
     } else if (isUserValid && !isBatchValid) {
       Promise<Map<String, Object>> promise = Futures.promise();
       Promise<Map<String, Object>> promise_null = Futures.promise();
       promise.success(getMockUser());
       promise_null.success(null);
-      when(esUtil.getDataByIdentifier(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+      when(esService.getDataByIdentifier(Mockito.anyString(), Mockito.anyString()))
           .thenReturn(promise.future())
           .thenReturn(promise_null.future());
     } else {
@@ -552,21 +547,20 @@ public class CourseMetricsActorTest {
       promise.success(getMockUser());
       Promise<Map<String, Object>> promise_ = Futures.promise();
       promise_.success(getBatchData());
-      when(esUtil.getDataByIdentifier(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+      when(esService.getDataByIdentifier(Mockito.anyString(), Mockito.anyString()))
           .thenReturn(promise.future())
           .thenReturn(promise_.future());
     }
     if (isUserMock && !isGetCompltetedCount) {
       Promise<Map<String, Object>> promise = Futures.promise();
       promise.success(mockUserData());
-      when(esUtil.search(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
-          .thenReturn(promise.future());
+      when(esService.search(Mockito.any(), Mockito.anyString())).thenReturn(promise.future());
     } else {
       Promise<Map<String, Object>> promise = Futures.promise();
       promise.success(mockUserData());
       Promise<Map<String, Object>> promise_ = Futures.promise();
       promise_.success(getCompleteUserCount());
-      when(esUtil.search(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
+      when(esService.search(Mockito.any(), Mockito.anyString()))
           .thenReturn(promise.future())
           .thenReturn(promise_.future());
     }

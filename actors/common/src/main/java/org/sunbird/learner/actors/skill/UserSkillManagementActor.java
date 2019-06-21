@@ -26,7 +26,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticService;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -64,7 +64,7 @@ public class UserSkillManagementActor extends BaseActor {
   private Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
   private static final String REF_SKILLS_DB_ID = "001";
   private UserSkillDao userSkillDao = UserSkillDaoImpl.getInstance();
-  private ElasticService esUtil = EsClientFactory.getRestClient();
+  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -217,10 +217,7 @@ public class UserSkillManagementActor extends BaseActor {
     fields.add(JsonKey.SKILLS);
     esDtoMap.put(JsonKey.FIELDS, fields);
     Future<Map<String, Object>> resultF =
-        esUtil.search(
-            ElasticSearchHelper.createSearchDTO(esDtoMap),
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            EsType.user.getTypeName());
+        esService.search(ElasticSearchHelper.createSearchDTO(esDtoMap), EsType.user.getTypeName());
     return (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
   }
 
@@ -582,8 +579,7 @@ public class UserSkillManagementActor extends BaseActor {
     Map<String, Object> esMap = new HashMap<>();
     esMap.put(JsonKey.SKILLS, responseList);
     Future<Map<String, Object>> profileF =
-        esUtil.getDataByIdentifier(
-            ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), userId);
+        esService.getDataByIdentifier(EsType.user.getTypeName(), userId);
     Map<String, Object> profile =
         (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(profileF);
     if (MapUtils.isNotEmpty(profile)) {
@@ -596,23 +592,15 @@ public class UserSkillManagementActor extends BaseActor {
       if (MapUtils.isNotEmpty(privateVisibilityMap)
           && privateVisibilityMap.containsKey(JsonKey.SKILLS)) {
         Future<Map<String, Object>> visibilityMapF =
-            esUtil.getDataByIdentifier(
-                ProjectUtil.EsIndex.sunbird.getIndexName(),
-                EsType.userprofilevisibility.getTypeName(),
-                userId);
+            esService.getDataByIdentifier(EsType.userprofilevisibility.getTypeName(), userId);
         Map<String, Object> visibilityMap =
             (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(visibilityMapF);
         if (MapUtils.isNotEmpty(visibilityMap)) {
           visibilityMap.putAll(esMap);
-          esUtil.save(
-              ProjectUtil.EsIndex.sunbird.getIndexName(),
-              EsType.userprofilevisibility.getTypeName(),
-              userId,
-              visibilityMap);
+          esService.save(EsType.userprofilevisibility.getTypeName(), userId, visibilityMap);
         }
       } else {
-        esUtil.update(
-            ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), userId, esMap);
+        esService.update(EsType.user.getTypeName(), userId, esMap);
       }
     }
   }

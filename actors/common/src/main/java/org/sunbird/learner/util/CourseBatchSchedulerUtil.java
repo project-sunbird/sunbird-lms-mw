@@ -12,7 +12,7 @@ import org.apache.commons.collections.MapUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.ElasticSearchTcpImpl;
-import org.sunbird.common.inf.ElasticService;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -34,7 +34,7 @@ import scala.concurrent.Future;
  */
 public final class CourseBatchSchedulerUtil {
   public static Map<String, String> headerMap = new HashMap<>();
-  private static ElasticService esUtil = new ElasticSearchTcpImpl();
+  private static ElasticSearchService esService = new ElasticSearchTcpImpl();
 
   static {
     String header = ProjectUtil.getConfigValue(JsonKey.EKSTEP_AUTHORIZATION);
@@ -120,11 +120,8 @@ public final class CourseBatchSchedulerUtil {
     boolean flag = true;
     try {
       Future<Boolean> flagF =
-          esUtil.update(
-              ProjectUtil.EsIndex.sunbird.getIndexName(),
-              ProjectUtil.EsType.course.getTypeName(),
-              (String) map.get(JsonKey.ID),
-              map);
+          esService.update(
+              ProjectUtil.EsType.course.getTypeName(), (String) map.get(JsonKey.ID), map);
       flag = (boolean) ElasticSearchHelper.getResponseFromFuture(flagF);
     } catch (Exception e) {
       ProjectLogger.log(
@@ -288,10 +285,7 @@ public final class CourseBatchSchedulerUtil {
   private static List<Map<String, Object>> searchContent(SearchDTO dto) {
     List<Map<String, Object>> listOfMap = new ArrayList<>();
     Future<Map<String, Object>> responseMapF =
-        esUtil.search(
-            dto,
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.course.getTypeName());
+        esService.search(dto, ProjectUtil.EsType.course.getTypeName());
     Map<String, Object> responseMap =
         (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(responseMapF);
     if (responseMap != null && responseMap.size() > 0) {

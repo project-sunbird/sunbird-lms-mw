@@ -31,7 +31,7 @@ import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticService;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -70,7 +70,7 @@ public abstract class UserManagementActorTestBase {
       mock(InterServiceCommunicationImpl.class);;
   public static UserServiceImpl userService;
   public static CassandraOperationImpl cassandraOperation;
-  public static ElasticService esUtil;
+  public static ElasticSearchService esService;
 
   @Before
   public void beforeEachTest() {
@@ -82,8 +82,8 @@ public abstract class UserManagementActorTestBase {
     PowerMockito.mockStatic(ServiceFactory.class);
     PowerMockito.mockStatic(EsClientFactory.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
-    esUtil = mock(ElasticSearchRestHighImpl.class);
-    when(EsClientFactory.getRestClient()).thenReturn(esUtil);
+    esService = mock(ElasticSearchRestHighImpl.class);
+    when(EsClientFactory.getInstance(Mockito.anyString())).thenReturn(esService);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     when(cassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
@@ -118,7 +118,7 @@ public abstract class UserManagementActorTestBase {
 
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(getEsResponseMap());
-    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(esService.getDataByIdentifier(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
 
     PowerMockito.mockStatic(Util.class);
@@ -139,8 +139,7 @@ public abstract class UserManagementActorTestBase {
   public void mockForUserOrgUpdate() {
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(getListOrgResponse());
-    when(esUtil.search(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(promise.future());
+    when(esService.search(Mockito.any(), Mockito.anyString())).thenReturn(promise.future());
     when(userService.getUserById(Mockito.anyString())).thenReturn(getUser(false));
     when(cassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))

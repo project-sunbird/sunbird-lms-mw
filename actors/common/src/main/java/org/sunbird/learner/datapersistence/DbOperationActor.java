@@ -11,9 +11,9 @@ import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
-import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.inf.ElasticService;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
@@ -54,7 +54,7 @@ public class DbOperationActor extends BaseActor {
   private static final String ES_INDEX_NAME = "sunbirdplugin";
   private static List<String> tableList = null;
   private static final String RAW_QUERY = "rawQuery";
-  private ElasticService esUtil = new ElasticSearchTcpImpl();
+  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
 
   public static void createtableList() {
     try {
@@ -112,9 +112,7 @@ public class DbOperationActor extends BaseActor {
       rawQueryMap.put(JsonKey.SIZE, 0);
       ObjectMapper mapper = new ObjectMapper();
       String rawQuery = mapper.writeValueAsString(rawQueryMap);
-      Response response =
-          esUtil.searchMetricsData(
-              ES_INDEX_NAME, (String) actorMessage.getRequest().get(ENTITY_NAME), rawQuery);
+      Response response = esService.searchMetricsData(ES_INDEX_NAME, rawQuery);
       sender().tell(response, self());
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);
@@ -139,7 +137,7 @@ public class DbOperationActor extends BaseActor {
           validateRequestData((Map<String, Object>) reqObj.getRequest().get(JsonKey.FILTERS));
         }
         searchDto = Util.createSearchDto(reqObj.getRequest());
-        Future<Map<String, Object>> resultF = esUtil.search(searchDto, ES_INDEX_NAME, esType);
+        Future<Map<String, Object>> resultF = esService.search(searchDto, ES_INDEX_NAME);
         Map<String, Object> result =
             (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
         Map<String, Object> finalResult = new HashMap<>();
@@ -285,10 +283,7 @@ public class DbOperationActor extends BaseActor {
         }
       } else {
         Future<Map<String, Object>> dataF =
-            esUtil.getDataByIdentifier(
-                ES_INDEX_NAME,
-                (String) reqObj.getRequest().get(ENTITY_NAME),
-                (String) payload.get(JsonKey.ID));
+            esService.getDataByIdentifier(ES_INDEX_NAME, (String) payload.get(JsonKey.ID));
 
         Map<String, Object> data =
             (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(dataF);
@@ -379,11 +374,11 @@ public class DbOperationActor extends BaseActor {
   private boolean insertDataToElastic(
       String index, String type, String identifier, Map<String, Object> data) {
     ProjectLogger.log(
-        "making call to ES for type ,identifier ,data==" + type + " " + identifier + data);
-    Future<String> responseF = esUtil.save(index, type, identifier, data);
+        "making call to ES for index ,identifier ,data==" + type + " " + identifier + data);
+    Future<String> responseF = esService.save(index, identifier, data);
     String response = (String) ElasticSearchHelper.getResponseFromFuture(responseF);
     ProjectLogger.log(
-        "Getting ES save response for type , identiofier=="
+        "Getting ES save response for type , identifier=="
             + type
             + "  "
             + identifier
@@ -409,7 +404,7 @@ public class DbOperationActor extends BaseActor {
    */
   private boolean updateDataToElastic(
       String indexName, String typeName, String identifier, Map<String, Object> data) {
-    Future<Boolean> responseF = esUtil.update(indexName, typeName, identifier, data);
+    Future<Boolean> responseF = esService.update(indexName, identifier, data);
     boolean response = (boolean) ElasticSearchHelper.getResponseFromFuture(responseF);
     if (response) {
       return true;
@@ -429,7 +424,7 @@ public class DbOperationActor extends BaseActor {
    * @return
    */
   private boolean deleteDataFromElastic(String indexName, String typeName, String identifier) {
-    Future<Boolean> responseF = esUtil.delete(indexName, typeName, identifier);
+    Future<Boolean> responseF = esService.delete(indexName, identifier);
     boolean response = (boolean) ElasticSearchHelper.getResponseFromFuture(responseF);
     if (response) {
       return true;

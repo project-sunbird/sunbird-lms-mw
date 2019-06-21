@@ -139,7 +139,7 @@ public class UserManagementActorTest extends UserManagementActorTestBase {
   public void testCreateUserFailureWithInvalidOrg() {
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(null);
-    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(esService.getDataByIdentifier(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
     boolean result =
         testScenario(

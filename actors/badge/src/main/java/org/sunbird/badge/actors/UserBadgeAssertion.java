@@ -12,7 +12,7 @@ import org.sunbird.badge.BadgeOperations;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticService;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
@@ -31,7 +31,7 @@ public class UserBadgeAssertion extends BaseActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private DbInfo dbInfo = Util.dbInfoMap.get(BadgingJsonKey.USER_BADGE_ASSERTION_DB);
-  private ElasticService esUtil = EsClientFactory.getRestClient();
+  private ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -68,9 +68,7 @@ public class UserBadgeAssertion extends BaseActor {
   private void updateUserBadgeDataToES(Map<String, Object> map) {
     Future<Map<String, Object>> resultF =
         esUtil.getDataByIdentifier(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.user.getTypeName(),
-            (String) map.get(JsonKey.USER_ID));
+            ProjectUtil.EsType.user.getTypeName(), (String) map.get(JsonKey.USER_ID));
     Map<String, Object> result =
         (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     if (MapUtils.isEmpty(result)) {
@@ -114,7 +112,7 @@ public class UserBadgeAssertion extends BaseActor {
   private boolean updateDataToElastic(
       String indexName, String typeName, String identifier, Map<String, Object> data) {
 
-    Future<Boolean> responseF = esUtil.update(indexName, typeName, identifier, data);
+    Future<Boolean> responseF = esUtil.update(typeName, identifier, data);
     boolean response = (boolean) ElasticSearchHelper.getResponseFromFuture(responseF);
     if (!response) {
       ProjectLogger.log(

@@ -16,16 +16,15 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.ElasticSearchHelper;
-import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.inf.ElasticService;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.ProgressStatus;
 import org.sunbird.common.models.util.PropertiesCache;
@@ -59,7 +58,7 @@ public class CourseBatchManagementActor extends BaseActor {
 
   private CourseBatchDao courseBatchDao = new CourseBatchDaoImpl();
   private UserCoursesService userCoursesService = new UserCoursesService();
-  private ElasticService esUtil = new ElasticSearchTcpImpl();
+  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
   private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
 
   static {
@@ -435,8 +434,7 @@ public class CourseBatchManagementActor extends BaseActor {
 
   private void getCourseBatch(Request actorMessage) {
     Future<Map<String, Object>> resultF =
-        esUtil.getDataByIdentifier(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
+        esService.getDataByIdentifier(
             ProjectUtil.EsType.course.getTypeName(),
             (String) actorMessage.getContext().get(JsonKey.BATCH_ID));
     Map<String, Object> result =
@@ -501,10 +499,7 @@ public class CourseBatchManagementActor extends BaseActor {
 
       for (String userId : mentors) {
         Future<Map<String, Object>> resultF =
-            esUtil.getDataByIdentifier(
-                ProjectUtil.EsIndex.sunbird.getIndexName(),
-                ProjectUtil.EsType.user.getTypeName(),
-                userId);
+            esService.getDataByIdentifier(ProjectUtil.EsType.user.getTypeName(), userId);
         Map<String, Object> result =
             (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
 
@@ -707,9 +702,7 @@ public class CourseBatchManagementActor extends BaseActor {
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
     searchDTO.setFields(fields);
 
-    Future<Map<String, Object>> resultF =
-        esUtil.search(
-            searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
+    Future<Map<String, Object>> resultF = esService.search(searchDTO, EsType.user.getTypeName());
     Map<String, Object> result =
         (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
 
@@ -723,8 +716,7 @@ public class CourseBatchManagementActor extends BaseActor {
 
   private String getRootOrg(String batchCreator) {
     Future<Map<String, Object>> userInfoF =
-        esUtil.getDataByIdentifier(
-            EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), batchCreator);
+        esService.getDataByIdentifier(EsType.user.getTypeName(), batchCreator);
     Map<String, Object> userInfo =
         (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(userInfoF);
     return getRootOrgFromUserMap(userInfo);
@@ -756,10 +748,7 @@ public class CourseBatchManagementActor extends BaseActor {
     SearchDTO searchDto = new SearchDTO();
     searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filters);
     Future<Map<String, Object>> resultF =
-        esUtil.search(
-            searchDto,
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.course.getTypeName());
+        esService.search(searchDto, ProjectUtil.EsType.course.getTypeName());
     Map<String, Object> result =
         (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     List<Map<String, Object>> dataMapList = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
@@ -874,10 +863,7 @@ public class CourseBatchManagementActor extends BaseActor {
 
   private boolean isOrgValid(String orgId) {
     Future<Map<String, Object>> respF =
-        esUtil.getDataByIdentifier(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.organisation.getTypeName(),
-            orgId);
+        esService.getDataByIdentifier(ProjectUtil.EsType.organisation.getTypeName(), orgId);
     Map<String, Object> resp =
         (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(respF);
     if (resp != null && resp.size() > 0) {

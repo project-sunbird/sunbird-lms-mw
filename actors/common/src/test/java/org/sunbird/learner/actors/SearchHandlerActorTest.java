@@ -28,11 +28,10 @@ import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticService;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
@@ -55,7 +54,7 @@ public class SearchHandlerActorTest {
   private static final Props props = Props.create(SearchHandlerActor.class);
   private static UserCoursesDao userCoursesDao;
   private static CassandraOperationImpl cassandraOperation;
-  private static ElasticService esUtil;
+  private static ElasticSearchService esService;
 
   @BeforeClass
   public static void setUp() {
@@ -70,14 +69,11 @@ public class SearchHandlerActorTest {
   @Before
   public void beforeTest() {
     PowerMockito.mockStatic(EsClientFactory.class);
-    esUtil = mock(ElasticSearchRestHighImpl.class);
-    when(EsClientFactory.getRestClient()).thenReturn(esUtil);
+    esService = mock(ElasticSearchRestHighImpl.class);
+    when(EsClientFactory.getInstance(Mockito.anyString())).thenReturn(esService);
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(createResponseGet(true));
-    when(esUtil.search(
-            Mockito.any(SearchDTO.class),
-            Mockito.eq(ProjectUtil.EsIndex.sunbird.getIndexName()),
-            Mockito.anyVararg()))
+    when(esService.search(Mockito.any(SearchDTO.class), Mockito.anyVararg()))
         .thenReturn(promise.future());
 
     PowerMockito.mockStatic(ServiceFactory.class);

@@ -5,7 +5,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticService;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -20,7 +20,7 @@ import scala.concurrent.Future;
 
 public class UserCoursesService {
   private UserCoursesDao userCourseDao = UserCoursesDaoImpl.getInstance();
-  private static ElasticService esUtil = EsClientFactory.getRestClient();
+  private static ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
 
   protected Integer CASSANDRA_BATCH_SIZE = getBatchSize(JsonKey.CASSANDRA_WRITE_BATCH_SIZE);
 
@@ -162,10 +162,7 @@ public class UserCoursesService {
     SearchDTO searchDto = new SearchDTO();
     searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
     Future<Map<String, Object>> resultF =
-        esUtil.search(
-            searchDto,
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.usercourses.getTypeName());
+        esService.search(searchDto, ProjectUtil.EsType.usercourses.getTypeName());
     Map<String, Object> result =
         (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     return result;
@@ -173,11 +170,7 @@ public class UserCoursesService {
 
   public static void sync(Map<String, Object> courseMap, String id) {
     Future<Boolean> responseF =
-        esUtil.upsert(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.usercourses.getTypeName(),
-            id,
-            courseMap);
+        esService.upsert(ProjectUtil.EsType.usercourses.getTypeName(), id, courseMap);
     boolean response = (boolean) ElasticSearchHelper.getResponseFromFuture(responseF);
     ProjectLogger.log(
         "UserCoursesService:sync: Sync user courses for ID = " + id + " response = " + response,

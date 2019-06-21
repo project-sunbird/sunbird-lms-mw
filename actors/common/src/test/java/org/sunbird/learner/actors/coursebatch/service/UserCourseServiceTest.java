@@ -21,7 +21,7 @@ import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticService;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
@@ -46,13 +46,13 @@ public class UserCourseServiceTest {
   private CassandraOperationImpl cassandraOperation;
   @Mock private UserCoursesDao userCoursesDao;
   private UserCoursesService userCoursesService;
-  private static ElasticService esUtil;
+  private static ElasticSearchService esUtil;
 
   @BeforeClass
   public static void setup() {
     PowerMockito.mockStatic(EsClientFactory.class);
     esUtil = mock(ElasticSearchRestHighImpl.class);
-    when(EsClientFactory.getRestClient()).thenReturn(esUtil);
+    when(EsClientFactory.getInstance(Mockito.anyString())).thenReturn(esUtil);
   }
 
   @Before
@@ -148,8 +148,7 @@ public class UserCourseServiceTest {
     Map<String, Object> map = new HashMap<>();
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.trySuccess(map);
-    when(esUtil.search(Mockito.anyObject(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(promise.future());
+    when(esUtil.search(Mockito.anyObject(), Mockito.anyString())).thenReturn(promise.future());
     Assert.assertNotEquals(null, userCoursesService.getActiveUserCourses(JsonKey.USER_ID));
   }
 
@@ -157,8 +156,7 @@ public class UserCourseServiceTest {
   public void getActiveUserCourseFailure() {
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(null);
-    when(esUtil.search(Mockito.anyObject(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(promise.future());
+    when(esUtil.search(Mockito.anyObject(), Mockito.anyString())).thenReturn(promise.future());
     Assert.assertEquals(null, userCoursesService.getActiveUserCourses(JsonKey.USER_ID));
   }
 }

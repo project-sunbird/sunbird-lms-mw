@@ -27,7 +27,7 @@ import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticService;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.GeoLocationJsonKey;
@@ -60,7 +60,7 @@ public class OrgManagementActorTest {
   private static Map<String, Object> basicRequestData;
   private static final String ADD_MEMBER_TO_ORG =
       ActorOperations.ADD_MEMBER_ORGANISATION.getValue();
-  private static ElasticService esUtil;
+  private static ElasticSearchService esService;
 
   @Before
   public void beforeEachTest() {
@@ -70,14 +70,13 @@ public class OrgManagementActorTest {
     PowerMockito.mockStatic(EsClientFactory.class);
 
     cassandraOperation = mock(CassandraOperationImpl.class);
-    esUtil = mock(ElasticSearchRestHighImpl.class);
+    esService = mock(ElasticSearchRestHighImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
-    when(EsClientFactory.getRestClient()).thenReturn(esUtil);
+    when(EsClientFactory.getInstance(Mockito.anyString())).thenReturn(esService);
     basicRequestData = getBasicData();
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(getEsResponse(false));
-    when(esUtil.search(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(promise.future());
+    when(esService.search(Mockito.any(), Mockito.anyString())).thenReturn(promise.future());
     when(cassandraOperation.getRecordsByProperty(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
         .thenReturn(getRecordsByProperty(false));
@@ -172,8 +171,7 @@ public class OrgManagementActorTest {
   public void testAddUserToOrgFailureWithOrgNotFoundWithOrgId() {
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(getEsResponse(true));
-    when(esUtil.search(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(promise.future());
+    when(esService.search(Mockito.any(), Mockito.anyString())).thenReturn(promise.future());
     boolean result =
         testScenario(
             getRequest(
@@ -200,8 +198,7 @@ public class OrgManagementActorTest {
   public void testAddUserToOrgFailureWithOrgNotFoundWithOrgExtId() {
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(getEsResponse(true));
-    when(esUtil.search(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(promise.future());
+    when(esService.search(Mockito.any(), Mockito.anyString())).thenReturn(promise.future());
     boolean result =
         testScenario(
             getRequest(
@@ -224,8 +221,7 @@ public class OrgManagementActorTest {
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(getValidateChannelEsResponse(true));
 
-    when(esUtil.search(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(promise.future());
+    when(esService.search(Mockito.any(), Mockito.anyString())).thenReturn(promise.future());
     boolean result =
         testScenario(
             getRequest(
@@ -249,8 +245,7 @@ public class OrgManagementActorTest {
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(getValidateChannelEsResponse(true));
 
-    when(esUtil.search(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(promise.future());
+    when(esService.search(Mockito.any(), Mockito.anyString())).thenReturn(promise.future());
     Map<String, Object> map = getRequestDataForOrgCreate(basicRequestData);
     map.remove(JsonKey.EXTERNAL_ID);
     boolean result = testScenario(getRequest(map, ActorOperations.CREATE_ORG.getValue()), null);

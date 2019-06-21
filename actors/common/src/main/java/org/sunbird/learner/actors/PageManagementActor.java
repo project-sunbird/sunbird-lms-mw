@@ -20,11 +20,11 @@ import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
-import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.cacheloader.PageCacheLoaderService;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.hash.HashGeneratorUtil;
-import org.sunbird.common.inf.ElasticService;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -74,6 +74,7 @@ public class PageManagementActor extends BaseActor {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private ObjectMapper mapper = new ObjectMapper();
   private boolean isCacheEnabled = false;
+  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
   // Boolean.parseBoolean(ProjectUtil.propertiesCache.getProperty(JsonKey.SUNBIRD_CACHE_ENABLE));
 
   @Override
@@ -689,9 +690,8 @@ public class PageManagementActor extends BaseActor {
     } else {
       return null;
     }
-    ElasticService esUtil = new ElasticSearchTcpImpl();
-    Future<Map<String, Object>> resultF =
-        esUtil.search(searcDto, ProjectUtil.EsIndex.sunbird.getIndexName(), type);
+
+    Future<Map<String, Object>> resultF = esService.search(searcDto, type);
     Map<String, Object> result =
         (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     return result;

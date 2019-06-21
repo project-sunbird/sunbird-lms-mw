@@ -11,9 +11,9 @@ import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.common.ElasticSearchHelper;
-import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.inf.ElasticService;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -28,7 +28,7 @@ import scala.concurrent.Future;
 )
 public class OrgBulkUploadActor extends BaseBulkUploadActor {
   private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
-  private ElasticService esUtil = new ElasticSearchTcpImpl();
+  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
   private String[] bulkOrgAllowedFields = {
     JsonKey.ORGANISATION_ID,
     JsonKey.ORGANISATION_NAME,
@@ -155,10 +155,7 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
 
   Map<String, Object> getUser(String userId) {
     Future<Map<String, Object>> resultF =
-        esUtil.getDataByIdentifier(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.user.getTypeName(),
-            userId);
+        esService.getDataByIdentifier(ProjectUtil.EsType.user.getTypeName(), userId);
     Map<String, Object> result =
         (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     if (result != null || result.size() > 0) {
@@ -169,10 +166,7 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
 
   Map<String, Object> getOrg(String orgId) {
     Future<Map<String, Object>> resultF =
-        esUtil.getDataByIdentifier(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.organisation.getTypeName(),
-            orgId);
+        esService.getDataByIdentifier(ProjectUtil.EsType.organisation.getTypeName(), orgId);
     Map<String, Object> result =
         (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     if (result != null && result.size() > 0) {

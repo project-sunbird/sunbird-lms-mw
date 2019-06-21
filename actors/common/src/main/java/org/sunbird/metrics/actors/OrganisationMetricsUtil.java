@@ -8,9 +8,9 @@ import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.common.ElasticSearchHelper;
-import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.inf.ElasticService;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
@@ -22,7 +22,7 @@ public final class OrganisationMetricsUtil {
 
   public static List<String> operationList = new ArrayList<>();
   private static ObjectMapper mapper = new ObjectMapper();
-  private static ElasticService esUtil = new ElasticSearchTcpImpl();
+  private static ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
 
   private OrganisationMetricsUtil() {}
 
@@ -51,10 +51,7 @@ public final class OrganisationMetricsUtil {
   public static Map<String, Object> validateOrg(String orgId) {
     try {
       Future<Map<String, Object>> resultF =
-          esUtil.getDataByIdentifier(
-              ProjectUtil.EsIndex.sunbird.getIndexName(),
-              ProjectUtil.EsType.organisation.getTypeName(),
-              orgId);
+          esService.getDataByIdentifier(ProjectUtil.EsType.organisation.getTypeName(), orgId);
       Map<String, Object> result =
           (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
       if (null == result || result.isEmpty()) {

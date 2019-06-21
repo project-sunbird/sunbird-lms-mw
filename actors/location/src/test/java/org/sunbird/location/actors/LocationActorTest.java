@@ -45,7 +45,7 @@ public class LocationActorTest {
   private static final ActorSystem system = ActorSystem.create("system");
   private static final Props props = Props.create(LocationActor.class);
   private static Map<String, Object> data;
-  private static ElasticSearchRestHighImpl esUtil;
+  private static ElasticSearchRestHighImpl esSearch;
 
   @BeforeClass
   public static void init() {
@@ -53,9 +53,9 @@ public class LocationActorTest {
     PowerMockito.mockStatic(EsClientFactory.class);
     PowerMockito.mockStatic(ServiceFactory.class);
     CassandraOperationImpl cassandraOperation = mock(CassandraOperationImpl.class);
-    esUtil = mock(ElasticSearchRestHighImpl.class);
+    esSearch = mock(ElasticSearchRestHighImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
-    when(EsClientFactory.getRestClient()).thenReturn(esUtil);
+    when(EsClientFactory.getInstance(Mockito.anyString())).thenReturn(esSearch);
     when(cassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(getSuccessResponse());
@@ -76,9 +76,9 @@ public class LocationActorTest {
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(esRespone);
 
-    when(esUtil.search(Mockito.any(SearchDTO.class), Mockito.anyString(), Mockito.anyString()))
+    when(esSearch.search(Mockito.any(SearchDTO.class), Mockito.anyString()))
         .thenReturn(promise.future());
-    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(esSearch.getDataByIdentifier(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
     data = getDataMap();
   }
@@ -150,7 +150,7 @@ public class LocationActorTest {
   public void testDeleteLocationFailureWithInvalidLocationDeleteRequest() {
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(getContentMapFromES());
-    when(esUtil.search(Mockito.any(SearchDTO.class), Mockito.anyString(), Mockito.anyString()))
+    when(esSearch.search(Mockito.any(SearchDTO.class), Mockito.anyString()))
         .thenReturn(promise.future());
     boolean result =
         testScenario(

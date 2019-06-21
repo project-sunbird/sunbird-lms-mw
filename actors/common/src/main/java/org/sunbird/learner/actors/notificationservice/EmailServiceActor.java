@@ -17,13 +17,12 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticService;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
@@ -52,7 +51,7 @@ public class EmailServiceActor extends BaseActor {
   private EncryptionService encryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
           null);
-  private ElasticService esUtil = EsClientFactory.getRestClient();
+  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
   private static final String NOTIFICATION_MODE = "sms";
 
   @Override
@@ -310,9 +309,8 @@ public class EmailServiceActor extends BaseActor {
       Map<String, Object> esResult = Collections.emptyMap();
       try {
         Future<Map<String, Object>> esResultF =
-            esUtil.search(
+            esService.search(
                 ElasticSearchHelper.createSearchDTO(recipientSearchQuery),
-                EsIndex.sunbird.getIndexName(),
                 EsType.user.getTypeName());
         esResult = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(esResultF);
       } catch (Exception ex) {
@@ -358,8 +356,7 @@ public class EmailServiceActor extends BaseActor {
       return orgName;
     }
     Future<Map<String, Object>> esUserResultF =
-        esUtil.getDataByIdentifier(
-            EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), usrId);
+        esService.getDataByIdentifier(EsType.user.getTypeName(), usrId);
     Map<String, Object> esUserResult =
         (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(esUserResultF);
     if (null != esUserResult) {
@@ -367,8 +364,7 @@ public class EmailServiceActor extends BaseActor {
       if (!(StringUtils.isBlank(rootOrgId))) {
 
         Future<Map<String, Object>> esOrgResultF =
-            esUtil.getDataByIdentifier(
-                EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName(), rootOrgId);
+            esService.getDataByIdentifier(EsType.organisation.getTypeName(), rootOrgId);
         Map<String, Object> esOrgResult =
             (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(esOrgResultF);
         if (null != esOrgResult) {
@@ -394,8 +390,7 @@ public class EmailServiceActor extends BaseActor {
     Map<String, Object> additionalProperties = new HashMap<>();
     additionalProperties.put(JsonKey.EMAIL, encryptedMail);
     searchDTO.addAdditionalProperty(JsonKey.FILTERS, additionalProperties);
-    Future<Map<String, Object>> esResultF =
-        esUtil.search(searchDTO, EsIndex.sunbird.getIndexName(), EsType.user.getTypeName());
+    Future<Map<String, Object>> esResultF = esService.search(searchDTO, EsType.user.getTypeName());
     Map<String, Object> esResult =
         (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(esResultF);
     if (MapUtils.isNotEmpty(esResult)

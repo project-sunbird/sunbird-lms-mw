@@ -15,7 +15,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticService;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.GeoLocationJsonKey;
 import org.sunbird.common.models.util.JsonKey;
@@ -37,7 +37,7 @@ public class LocationRequestValidator {
   protected static List<List<String>> locationTypeGroupList = new ArrayList<>();
   protected static List<String> typeList = new ArrayList<>();
   private static ObjectMapper mapper = new ObjectMapper();
-  private static ElasticService esUtil = EsClientFactory.getRestClient();
+  private static ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
 
   static {
     List<String> subTypeList =
@@ -228,10 +228,7 @@ public class LocationRequestValidator {
    */
   private static Map<String, Object> getLocationById(String id, String parameter) {
     Future<Map<String, Object>> locationF =
-        esUtil.getDataByIdentifier(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.location.getTypeName(),
-            id);
+        esUtil.getDataByIdentifier(ProjectUtil.EsType.location.getTypeName(), id);
     Map<String, Object> location =
         (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(locationF);
     if (MapUtils.isEmpty(location)) {
@@ -310,7 +307,7 @@ public class LocationRequestValidator {
   public static List<Map<String, Object>> getESSearchResult(
       Map<String, Object> searchQueryMap, String esIndex, String esType) {
     SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
-    Future<Map<String, Object>> resultF = esUtil.search(searchDto, esIndex, esType);
+    Future<Map<String, Object>> resultF = esUtil.search(searchDto, esType);
     Map<String, Object> result =
         (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     return (List<Map<String, Object>>) result.get(JsonKey.CONTENT);

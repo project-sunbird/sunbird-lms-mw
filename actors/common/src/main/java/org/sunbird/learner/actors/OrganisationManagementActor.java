@@ -20,7 +20,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticService;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
@@ -66,7 +66,7 @@ public class OrganisationManagementActor extends BaseActor {
   private final EncryptionService encryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
           null);
-  private ElasticService esUtil = EsClientFactory.getRestClient();
+  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -487,10 +487,7 @@ public class OrganisationManagementActor extends BaseActor {
     SearchDTO searchDto = new SearchDTO();
     searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filters);
     Future<Map<String, Object>> resultF =
-        esUtil.search(
-            searchDto,
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.organisation.getTypeName());
+        esService.search(searchDto, ProjectUtil.EsType.organisation.getTypeName());
     Map<String, Object> result =
         (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     List<Map<String, Object>> dataMapList = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
@@ -1251,10 +1248,7 @@ public class OrganisationManagementActor extends BaseActor {
     }
     String orgId = (String) request.get(JsonKey.ORGANISATION_ID);
     Future<Map<String, Object>> resultF =
-        esUtil.getDataByIdentifier(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.organisation.getTypeName(),
-            orgId);
+        esService.getDataByIdentifier(ProjectUtil.EsType.organisation.getTypeName(), orgId);
     Map<String, Object> result =
         (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
 
@@ -1486,10 +1480,7 @@ public class OrganisationManagementActor extends BaseActor {
     SearchDTO searchDTO = new SearchDTO();
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, requestDbMap);
     Future<Map<String, Object>> esResponseF =
-        esUtil.search(
-            searchDTO,
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.organisation.getTypeName());
+        esService.search(searchDTO, ProjectUtil.EsType.organisation.getTypeName());
     Map<String, Object> esResponse =
         (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(esResponseF);
     List<Map<String, Object>> list = (List<Map<String, Object>>) esResponse.get(JsonKey.CONTENT);
@@ -1701,7 +1692,7 @@ public class OrganisationManagementActor extends BaseActor {
     SearchDTO searchDTO = new SearchDTO();
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
 
-    Future<Map<String, Object>> resultF = esUtil.search(searchDTO, index, type);
+    Future<Map<String, Object>> resultF = esService.search(searchDTO, type);
     Map<String, Object> esResponse =
         (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     return esResponse;
@@ -1843,10 +1834,7 @@ public class OrganisationManagementActor extends BaseActor {
       SearchDTO searchDTO = new SearchDTO();
       searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filterMap);
       Future<Map<String, Object>> esResponseF =
-          esUtil.search(
-              searchDTO,
-              ProjectUtil.EsIndex.sunbird.getIndexName(),
-              ProjectUtil.EsType.organisation.getTypeName());
+          esService.search(searchDTO, ProjectUtil.EsType.organisation.getTypeName());
       Map<String, Object> esResponse =
           (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(esResponseF);
 

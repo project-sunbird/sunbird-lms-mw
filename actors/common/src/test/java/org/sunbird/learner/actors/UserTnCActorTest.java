@@ -30,7 +30,7 @@ import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticService;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -59,7 +59,7 @@ public class UserTnCActorTest {
   private static final String LATEST_VERSION = "latestVersion";
   private static final String ACCEPTED_CORRECT_VERSION = "latestVersion";
   private static final String ACCEPTED_INVALID_VERSION = "invalid";
-  private static ElasticService esUtil;
+  private static ElasticSearchService esService;
 
   @BeforeClass
   public static void setUp() {
@@ -81,15 +81,15 @@ public class UserTnCActorTest {
 
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     PowerMockito.mockStatic(EsClientFactory.class);
-    esUtil = mock(ElasticSearchRestHighImpl.class);
-    when(EsClientFactory.getRestClient()).thenReturn(esUtil);
+    esService = mock(ElasticSearchRestHighImpl.class);
+    when(EsClientFactory.getInstance(Mockito.anyString())).thenReturn(esService);
   }
 
   @Test
   public void testAcceptUserTcnSuccessWithAcceptFirstTime() {
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(getUser(null));
-    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(esService.getDataByIdentifier(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
     Response response =
         setRequest(ACCEPTED_CORRECT_VERSION).expectMsgClass(duration("10 second"), Response.class);
@@ -101,7 +101,7 @@ public class UserTnCActorTest {
   public void testAcceptUserTncSuccessAlreadyAccepted() {
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(getUser(LATEST_VERSION));
-    when(esUtil.getDataByIdentifier(Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+    when(esService.getDataByIdentifier(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
     Response response =
         setRequest(ACCEPTED_CORRECT_VERSION).expectMsgClass(duration("10 second"), Response.class);

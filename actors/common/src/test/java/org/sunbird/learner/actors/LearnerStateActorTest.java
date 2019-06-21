@@ -29,7 +29,7 @@ import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
-import org.sunbird.common.inf.ElasticService;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -63,7 +63,7 @@ public class LearnerStateActorTest {
   private static String courseId2 = "alpha01crs15";
   private static String batchId = "115";
   private static final String contentId = "cont3544TeBuk";
-  private static ElasticService esUtil;
+  private static ElasticSearchService esService;
 
   @BeforeClass
   public static void setUp() {
@@ -78,14 +78,13 @@ public class LearnerStateActorTest {
     PowerMockito.mockStatic(ContentSearchUtil.class);
     PowerMockito.mockStatic(ElasticSearchHelper.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
-    esUtil = mock(ElasticSearchRestHighImpl.class);
-    when(EsClientFactory.getRestClient()).thenReturn(esUtil);
+    esService = mock(ElasticSearchRestHighImpl.class);
+    when(EsClientFactory.getInstance(Mockito.anyString())).thenReturn(esService);
     Promise<Map<String, Object>> promise = Futures.promise();
 
     Map<String, Object> esResult = new HashMap<>();
     promise.success(esResult);
-    when(esUtil.search(Mockito.anyObject(), Mockito.anyObject(), Mockito.anyObject()))
-        .thenReturn(promise.future());
+    when(esService.search(Mockito.anyObject(), Mockito.anyObject())).thenReturn(promise.future());
 
     Response dbResponse = new Response();
     List<Map<String, Object>> dbResponseList = new ArrayList<>();
@@ -316,7 +315,7 @@ public class LearnerStateActorTest {
     Promise<Map<String, Object>> promiseCourseBatch = Futures.promise();
     promiseCourseBatch.success(courseBatches);
 
-    when(esUtil.search(Mockito.any(), Mockito.any(), Mockito.any()))
+    when(esService.search(Mockito.any(), Mockito.any()))
         .thenReturn(promiseResultUser.future())
         .thenReturn(promiseCourseBatch.future());
     when(ElasticSearchHelper.getResponseFromFuture(Mockito.any()))

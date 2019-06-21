@@ -36,7 +36,6 @@ import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -72,7 +71,7 @@ public class UserRoleActorTest {
       Mockito.mock(InterServiceCommunication.class);
   private static final Response response = Mockito.mock(Response.class);
   private static CassandraOperationImpl cassandraOperation;
-  private static ElasticSearchRestHighImpl esUtil;
+  private static ElasticSearchRestHighImpl esService;
 
   @BeforeClass
   public static void beforeClass() {
@@ -126,8 +125,8 @@ public class UserRoleActorTest {
     when(cassandraOperation.getRecordsByProperties(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(getRecordByPropertyResponse());
-    esUtil = mock(ElasticSearchRestHighImpl.class);
-    when(EsClientFactory.getRestClient()).thenReturn(esUtil);
+    esService = mock(ElasticSearchRestHighImpl.class);
+    when(EsClientFactory.getInstance(Mockito.anyString())).thenReturn(esService);
   }
 
   @Test
@@ -242,10 +241,7 @@ public class UserRoleActorTest {
   private void mockGetOrgResponse(boolean isResponseRequired) {
     Promise<Map<String, Object>> promise = Futures.promise();
     promise.success(createResponseGet(isResponseRequired));
-    when(esUtil.search(
-            Mockito.any(SearchDTO.class),
-            Mockito.eq(ProjectUtil.EsIndex.sunbird.getIndexName()),
-            Mockito.anyVararg()))
+    when(esService.search(Mockito.any(SearchDTO.class), Mockito.anyVararg()))
         .thenReturn(promise.future());
   }
 

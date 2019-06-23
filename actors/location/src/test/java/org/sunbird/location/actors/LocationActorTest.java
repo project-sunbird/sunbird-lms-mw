@@ -24,6 +24,7 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
+import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
@@ -38,7 +39,12 @@ import org.sunbird.helper.ServiceFactory;
 import scala.concurrent.Promise;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({ServiceFactory.class, ElasticSearchRestHighImpl.class, EsClientFactory.class})
+@PrepareForTest({
+  ServiceFactory.class,
+  ElasticSearchRestHighImpl.class,
+  EsClientFactory.class,
+  ElasticSearchHelper.class
+})
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*", "javax.security.*"})
 public class LocationActorTest {
 

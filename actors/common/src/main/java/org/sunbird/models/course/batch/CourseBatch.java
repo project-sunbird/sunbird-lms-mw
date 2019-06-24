@@ -27,6 +27,7 @@ public class CourseBatch implements Serializable {
   private List<String> createdFor;
   private String description;
   private String endDate;
+  private String enrollmentEndDate;
   private String enrollmentType;
   private String hashTagId;
   private List<String> mentors;
@@ -146,6 +147,14 @@ public class CourseBatch implements Serializable {
 
   public void setEnrollmentType(String enrollmentType) {
     this.enrollmentType = enrollmentType;
+  }
+
+  public String getEnrollmentEndDate() {
+    return enrollmentEndDate;
+  }
+
+  public void setEnrollmentEndDate(String enrollmentEndDate) {
+    this.enrollmentEndDate = enrollmentEndDate;
   }
 
   public String getHashTagId() {

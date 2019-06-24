@@ -647,8 +647,10 @@ public class CourseBatchManagementActor extends BaseActor {
     Date todayDate = getDate(null, DATE_FORMAT, null);
     Date dbBatchStartDate = getDate(JsonKey.START_DATE, DATE_FORMAT, courseBatchMap);
     Date dbBatchEndDate = getDate(JsonKey.END_DATE, DATE_FORMAT, courseBatchMap);
+    Date dbEnrollmentEndDate = getDate(JsonKey.ENROLLMENT_END_DATE, DATE_FORMAT, courseBatchMap);
     Date requestedStartDate = getDate(JsonKey.START_DATE, DATE_FORMAT, req);
     Date requestedEndDate = getDate(JsonKey.END_DATE, DATE_FORMAT, req);
+    Date requestedEnrollmentEndDate = getDate(JsonKey.ENROLLMENT_END_DATE, DATE_FORMAT, req);
 
     validateUpdateBatchStartDate(requestedStartDate);
     validateBatchStartAndEndDate(
@@ -657,12 +659,15 @@ public class CourseBatchManagementActor extends BaseActor {
       courseBatch.setStatus(ProgressStatus.STARTED.getValue());
       CourseBatchSchedulerUtil.updateCourseBatchDbStatus(req, true);
     }
+    validateBatchEnrollmentEndDate(dbBatchStartDate, dbBatchEndDate ,dbEnrollmentEndDate, requestedEnrollmentEndDate, todayDate);
     courseBatch.setStartDate(
         requestedStartDate != null
             ? (String) req.get(JsonKey.START_DATE)
             : courseBatch.getStartDate());
     courseBatch.setEndDate(
         requestedEndDate != null ? (String) req.get(JsonKey.END_DATE) : courseBatch.getEndDate());
+    courseBatch.setEnrollmentEndDate(
+            requestedEnrollmentEndDate != null ? (String) req.get(JsonKey.ENROLLMENT_END_DATE) : courseBatch.getEnrollmentEndDate());
   }
 
   private void validateUserPermission(CourseBatch courseBatch, String requestedBy) {
@@ -836,6 +841,40 @@ public class CourseBatchManagementActor extends BaseActor {
           ResponseCode.courseBatchEndDateError.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
+  }
+  private void validateBatchEnrollmentEndDate(Date existingStartDate, Date existingEndDate, Date existingEnrollmentEndDate, Date requestedEnrollmentEndDate, Date todayDate)
+  {
+    ProjectLogger.log(
+            "existingStartDate, existingEndDate, existingEnrollmentEndDate, requestedEnrollmentEndDate, todayDate"
+                    + existingStartDate
+                    + ","
+                    + existingEndDate
+                    + ","
+                    + existingEnrollmentEndDate
+                    + ","
+                    + requestedEnrollmentEndDate
+                    +","
+                    +todayDate,
+            LoggerEnum.INFO.name());
+    if (requestedEnrollmentEndDate!=null && requestedEnrollmentEndDate.before(existingStartDate)) {
+      throw new ProjectCommonException(
+              ResponseCode.enrollmentEndDateStartError.getErrorCode(),
+              ResponseCode.enrollmentEndDateStartError.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+    if (requestedEnrollmentEndDate!=null && existingEndDate!=null  && requestedEnrollmentEndDate.after(existingEndDate)) {
+      throw new ProjectCommonException(
+              ResponseCode.enrollmentEndDateEndError.getErrorCode(),
+              ResponseCode.enrollmentEndDateEndError.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+    if (requestedEnrollmentEndDate!=null && requestedEnrollmentEndDate.before(todayDate)) {
+      throw new ProjectCommonException(
+              ResponseCode.enrollmentEndDateUpdateError.getErrorCode(),
+              ResponseCode.enrollmentEndDateUpdateError.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+
   }
 
   private Date getDate(String key, SimpleDateFormat format, Map<String, Object> map) {

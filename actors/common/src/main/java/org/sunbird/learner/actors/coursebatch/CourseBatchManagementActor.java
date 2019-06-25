@@ -41,7 +41,14 @@ import org.sunbird.learner.util.CourseBatchUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.course.batch.CourseBatch;
 import org.sunbird.telemetry.util.TelemetryUtil;
+import org.sunbird.userorg.UserOrg;
+import org.sunbird.userorg.UserOrgService;
 import scala.concurrent.Future;
+
+import static org.sunbird.common.models.util.JsonKey.CONTENT;
+import static org.sunbird.common.models.util.JsonKey.SUNBIRD_CONTENT_GET_HIERARCHY_API;
+import static org.sunbird.common.models.util.LoggerEnum.ERROR;
+import static org.sunbird.common.models.util.ProjectLogger.log;
 
 @ActorConfig(
   tasks = {
@@ -57,6 +64,7 @@ import scala.concurrent.Future;
 public class CourseBatchManagementActor extends BaseActor {
 
   private CourseBatchDao courseBatchDao = new CourseBatchDaoImpl();
+  private UserOrg userOrg = new UserOrgService();
   private UserCoursesService userCoursesService = new UserCoursesService();
   private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
   private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
@@ -118,7 +126,7 @@ public class CourseBatchManagementActor extends BaseActor {
     Map<String, Object> contentDetails = getContentDetails(courseId, headers);
     courseBatch.setContentDetails(contentDetails, requestedBy);
 
-    validateContentOrg(courseBatch.getCreatedFor());
+   // validateContentOrg(courseBatch.getCreatedFor());
     validateMentors(courseBatch);
     Map<String, Object> participantsMap = null;
     if (participants != null) {
@@ -862,18 +870,24 @@ public class CourseBatchManagementActor extends BaseActor {
   }
 
   private boolean isOrgValid(String orgId) {
-    Future<Map<String, Object>> respF =
-        esService.getDataByIdentifier(ProjectUtil.EsType.organisation.getTypeName(), orgId);
-    Map<String, Object> resp =
-        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(respF);
-    if (resp != null && resp.size() > 0) {
+    Response response = null;
+    boolean orgFound=false;
+    try {
+      response = userOrg.getOragnisationDetails(orgId);
+      if (response.get(CONTENT)!=null) {
+        ProjectLogger.log(
+                "CourseBatchManagementActor:isOrgValid: Organisation found with id = " + orgId);
+        orgFound = true;
+      }
       ProjectLogger.log(
-          "CourseBatchManagementActor:isOrgValid: Organisation found in ES with id = " + orgId);
-      return true;
+              "CourseBatchManagementActor:isOrgValid: Organisation NOT found with id = " + orgId);
+      orgFound =  false;
+    } catch (Exception e) {
+      log(
+              "Error while fetching textbook : " + orgId,
+              ERROR.name());
     }
-    ProjectLogger.log(
-        "CourseBatchManagementActor:isOrgValid: Organisation NOT found in ES with id = " + orgId);
-    return false;
+    return orgFound;
   }
 
   private Map<String, Object> getContentDetails(String courseId, Map<String, String> headers) {

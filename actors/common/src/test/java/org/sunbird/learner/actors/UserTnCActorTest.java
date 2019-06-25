@@ -7,6 +7,7 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
+import akka.dispatch.Futures;
 import akka.testkit.javadsl.TestKit;
 import java.util.HashMap;
 import java.util.Map;
@@ -26,8 +27,10 @@ import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -35,13 +38,15 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.tac.UserTnCActor;
+import scala.concurrent.Promise;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
   ServiceFactory.class,
   SystemSettingClientImpl.class,
   RequestRouter.class,
-  ElasticSearchUtil.class,
+  EsClientFactory.class,
+  ElasticSearchRestHighImpl.class,
   SunbirdMWService.class
 })
 @PowerMockIgnore({"javax.management.*", "javax.crypto.*", "javax.net.ssl.*", "javax.security.*"})
@@ -54,6 +59,7 @@ public class UserTnCActorTest {
   private static final String LATEST_VERSION = "latestVersion";
   private static final String ACCEPTED_CORRECT_VERSION = "latestVersion";
   private static final String ACCEPTED_INVALID_VERSION = "invalid";
+  private static ElasticSearchService esService;
 
   @BeforeClass
   public static void setUp() {
@@ -68,19 +74,23 @@ public class UserTnCActorTest {
     systemSettingClient = mock(SystemSettingClientImpl.class);
     when(SystemSettingClientImpl.getInstance()).thenReturn(systemSettingClient);
     ActorRef actorRef = mock(ActorRef.class);
-    PowerMockito.mockStatic(ElasticSearchUtil.class);
+
     PowerMockito.mockStatic(SunbirdMWService.class);
     SunbirdMWService.tellToBGRouter(Mockito.any(), Mockito.any());
     when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
 
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+    PowerMockito.mockStatic(EsClientFactory.class);
+    esService = mock(ElasticSearchRestHighImpl.class);
+    when(EsClientFactory.getInstance(Mockito.anyString())).thenReturn(esService);
   }
 
   @Test
   public void testAcceptUserTcnSuccessWithAcceptFirstTime() {
-    when(ElasticSearchUtil.getDataByIdentifier(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getUser(null));
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(getUser(null));
+    when(esService.getDataByIdentifier(Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(promise.future());
     Response response =
         setRequest(ACCEPTED_CORRECT_VERSION).expectMsgClass(duration("10 second"), Response.class);
     Assert.assertTrue(
@@ -89,9 +99,10 @@ public class UserTnCActorTest {
 
   @Test
   public void testAcceptUserTncSuccessAlreadyAccepted() {
-    when(ElasticSearchUtil.getDataByIdentifier(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getUser(LATEST_VERSION));
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(getUser(LATEST_VERSION));
+    when(esService.getDataByIdentifier(Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(promise.future());
     Response response =
         setRequest(ACCEPTED_CORRECT_VERSION).expectMsgClass(duration("10 second"), Response.class);
     Assert.assertTrue(
@@ -147,6 +158,7 @@ public class UserTnCActorTest {
     if (lastAcceptedVersion != null) {
       user.put(JsonKey.TNC_ACCEPTED_VERSION, lastAcceptedVersion);
     }
+
     return user;
   }
 }

@@ -7,6 +7,7 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
+import akka.dispatch.Futures;
 import akka.testkit.javadsl.TestKit;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,8 +23,11 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchHelper;
+import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -34,11 +38,14 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.user.actors.UserProfileActor;
+import scala.concurrent.Promise;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
   ServiceFactory.class,
-  ElasticSearchUtil.class,
+  ElasticSearchRestHighImpl.class,
+  EsClientFactory.class,
+  ElasticSearchHelper.class,
   Util.class,
 })
 @PowerMockIgnore({"javax.management.*"})
@@ -48,17 +55,21 @@ public class UserProfileActorTest {
 
   private final Props props = Props.create(UserProfileActor.class);
   private CassandraOperationImpl cassandraOperation;
+  private ElasticSearchService esUtil;
 
   @Before
   public void beforeEachTest() {
 
     PowerMockito.mockStatic(ServiceFactory.class);
-    PowerMockito.mockStatic(ElasticSearchUtil.class);
+    PowerMockito.mockStatic(EsClientFactory.class);
+    PowerMockito.mockStatic(ElasticSearchHelper.class);
     PowerMockito.mockStatic(Util.class);
     SearchDTO searchDTO = Mockito.mock(SearchDTO.class);
     when(Util.createSearchDto(Mockito.anyMap())).thenReturn(searchDTO);
     cassandraOperation = mock(CassandraOperationImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+    esUtil = mock(ElasticSearchRestHighImpl.class);
+    when(EsClientFactory.getInstance(Mockito.anyString())).thenReturn(esUtil);
   }
 
   @Test
@@ -82,11 +93,11 @@ public class UserProfileActorTest {
     final String userId = "USER-ID";
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
-
-    when(ElasticSearchUtil.getDataByIdentifier(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.user.getTypeName(),
-            userId))
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(createGetResponse(true));
+    when(esUtil.getDataByIdentifier(ProjectUtil.EsType.user.getTypeName(), userId))
+        .thenReturn(promise.future());
+    when(ElasticSearchHelper.getResponseFromFuture(Mockito.any()))
         .thenReturn(createGetResponse(true));
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.PROFILE_VISIBILITY.getValue());
@@ -101,12 +112,11 @@ public class UserProfileActorTest {
     final String userId = "USER-ID";
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
-
-    when(ElasticSearchUtil.getDataByIdentifier(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.user.getTypeName(),
-            userId))
-        .thenReturn(createGetResponse(false));
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(null);
+    when(esUtil.getDataByIdentifier(ProjectUtil.EsType.user.getTypeName(), userId))
+        .thenReturn(promise.future());
+    when(ElasticSearchHelper.getResponseFromFuture(Mockito.any())).thenReturn(null);
     Request reqObj = new Request();
     reqObj.setOperation(ActorOperations.PROFILE_VISIBILITY.getValue());
     reqObj.put(JsonKey.USER_ID, userId);

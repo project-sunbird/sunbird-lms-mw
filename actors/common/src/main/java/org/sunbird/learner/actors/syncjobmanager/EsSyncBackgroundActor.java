@@ -14,8 +14,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -36,6 +37,7 @@ import org.sunbird.learner.util.Util.DbInfo;
 public class EsSyncBackgroundActor extends BaseActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -145,8 +147,7 @@ public class EsSyncBackgroundActor extends BaseActor {
       }
     }
 
-    ElasticSearchUtil.bulkInsertData(
-        ProjectUtil.EsIndex.sunbird.getIndexName(), getType(objectType), result);
+    esService.bulkInsert(getType(objectType), result);
     long stopTime = System.currentTimeMillis();
     long elapsedTime = stopTime - startTime;
 

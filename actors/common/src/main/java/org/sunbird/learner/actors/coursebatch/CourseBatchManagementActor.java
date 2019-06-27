@@ -45,8 +45,7 @@ import org.sunbird.userorg.UserOrg;
 import org.sunbird.userorg.UserOrgService;
 import scala.concurrent.Future;
 
-import static org.sunbird.common.models.util.JsonKey.CONTENT;
-import static org.sunbird.common.models.util.JsonKey.SUNBIRD_CONTENT_GET_HIERARCHY_API;
+import static org.sunbird.common.models.util.JsonKey.*;
 import static org.sunbird.common.models.util.LoggerEnum.ERROR;
 import static org.sunbird.common.models.util.ProjectLogger.log;
 
@@ -125,9 +124,8 @@ public class CourseBatchManagementActor extends BaseActor {
     String courseId = (String) request.get(JsonKey.COURSE_ID);
     Map<String, Object> contentDetails = getContentDetails(courseId, headers);
     courseBatch.setContentDetails(contentDetails, requestedBy);
-
-   // validateContentOrg(courseBatch.getCreatedFor());
-    validateMentors(courseBatch);
+   validateContentOrg(courseBatch.getCreatedFor());
+   validateMentors(courseBatch);
     Map<String, Object> participantsMap = null;
     if (participants != null) {
       validateParticipants(participants, courseBatch);
@@ -506,11 +504,9 @@ public class CourseBatchManagementActor extends BaseActor {
       String batchCreatorRootOrgId = getRootOrg(courseBatch.getCreatedBy());
 
       for (String userId : mentors) {
-        Future<Map<String, Object>> resultF =
-            esService.getDataByIdentifier(ProjectUtil.EsType.user.getTypeName(), userId);
-        Map<String, Object> result =
-            (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
-
+        Response response = userOrg.getUserDetailsForSingleUserID(userId);
+        Map<String,Object> result=(Map<String,Object>)new ObjectMapper().convertValue(response.get(RESPONSE), Map.class);
+        String check=(String) result.get(IS_DELETED);
         String mentorRootOrgId = getRootOrg(userId);
         if (!batchCreatorRootOrgId.equals(mentorRootOrgId)) {
           throw new ProjectCommonException(
@@ -693,29 +689,12 @@ public class CourseBatchManagementActor extends BaseActor {
   @SuppressWarnings("unchecked")
   private Map<String, String> getRootOrgForMultipleUsers(List<String> userIds) {
 
+    Response response = userOrg.getUserDetailsForMultipleUserIDs(userIds);
+    Map<String,Object> userContent=(Map<String,Object>)new ObjectMapper().convertValue(response.get(RESPONSE), Map.class);
+    List<Map<String, Object>> userlist = (List<Map<String, Object>>) userContent.get(CONTENT);
     Map<String, String> userWithRootOrgs = new HashMap<>();
-    Map<String, Object> filters = new HashMap<>();
-    filters.put(JsonKey.ID, userIds);
 
-    List<String> fields = new ArrayList<>();
-    fields.add(JsonKey.ROOT_ORG_ID);
-    fields.add(JsonKey.ID);
-    fields.add(JsonKey.REGISTERED_ORG);
-
-    SearchDTO searchDTO = new SearchDTO();
-    if (CollectionUtils.isNotEmpty(userIds)) {
-      searchDTO.setLimit(userIds.size());
-      searchDTO.setOffset(0);
-    }
-    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
-    searchDTO.setFields(fields);
-
-    Future<Map<String, Object>> resultF = esService.search(searchDTO, EsType.user.getTypeName());
-    Map<String, Object> result =
-        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
-
-    List<Map<String, Object>> esContent = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-    for (Map<String, Object> user : esContent) {
+    for (Map<String, Object> user : userlist) {
       String rootOrg = getRootOrgFromUserMap(user);
       userWithRootOrgs.put((String) user.get(JsonKey.ID), rootOrg);
     }
@@ -723,10 +702,9 @@ public class CourseBatchManagementActor extends BaseActor {
   }
 
   private String getRootOrg(String batchCreator) {
-    Future<Map<String, Object>> userInfoF =
-        esService.getDataByIdentifier(EsType.user.getTypeName(), batchCreator);
-    Map<String, Object> userInfo =
-        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(userInfoF);
+
+    Response response = userOrg.getUserDetailsForSingleUserID(batchCreator);
+    Map<String,Object> userInfo=(Map<String,Object>)new ObjectMapper().convertValue(response.get(RESPONSE), Map.class);
     return getRootOrgFromUserMap(userInfo);
   }
 
@@ -870,21 +848,26 @@ public class CourseBatchManagementActor extends BaseActor {
   }
 
   private boolean isOrgValid(String orgId) {
-    Response response = null;
+    Response response;
+
     boolean orgFound=false;
     try {
-      response = userOrg.getOragnisationDetails(orgId);
-      if (response.get(CONTENT)!=null) {
+      response = userOrg.getOrganisationDetails(orgId);
+      Map<String,Object> orgDetails=(Map<String,Object>)new ObjectMapper().convertValue(response.get(RESPONSE), Map.class);
+      List<Map<String, Object>> list = (List<Map<String, Object>>) orgDetails.get(CONTENT);
+      if (CollectionUtils.isNotEmpty(list)) {
         ProjectLogger.log(
                 "CourseBatchManagementActor:isOrgValid: Organisation found with id = " + orgId);
         orgFound = true;
       }
-      ProjectLogger.log(
-              "CourseBatchManagementActor:isOrgValid: Organisation NOT found with id = " + orgId);
-      orgFound =  false;
+      else {
+        ProjectLogger.log(
+                "CourseBatchManagementActor:isOrgValid: Organisation NOT found with id = " + orgId);
+        orgFound = false;
+      }
     } catch (Exception e) {
       log(
-              "Error while fetching textbook : " + orgId,
+              "Error while fetching OrgID : " + orgId,
               ERROR.name());
     }
     return orgFound;

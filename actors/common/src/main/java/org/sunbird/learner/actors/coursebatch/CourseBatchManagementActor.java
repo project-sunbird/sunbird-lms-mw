@@ -25,7 +25,6 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.ProgressStatus;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.TelemetryEnvKey;
@@ -41,8 +40,8 @@ import org.sunbird.learner.util.CourseBatchUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.course.batch.CourseBatch;
 import org.sunbird.telemetry.util.TelemetryUtil;
-import org.sunbird.userorg.UserOrg;
 import org.sunbird.userorg.UserOrgService;
+import org.sunbird.userorg.UserOrgServiceImpl;
 import scala.concurrent.Future;
 
 import static org.sunbird.common.models.util.JsonKey.*;
@@ -63,7 +62,7 @@ import static org.sunbird.common.models.util.ProjectLogger.log;
 public class CourseBatchManagementActor extends BaseActor {
 
   private CourseBatchDao courseBatchDao = new CourseBatchDaoImpl();
-  private UserOrg userOrg = new UserOrgService();
+  private UserOrgService userOrg = new UserOrgServiceImpl();
   private UserCoursesService userCoursesService = new UserCoursesService();
   private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
   private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
@@ -504,8 +503,7 @@ public class CourseBatchManagementActor extends BaseActor {
       String batchCreatorRootOrgId = getRootOrg(courseBatch.getCreatedBy());
 
       for (String userId : mentors) {
-        Response response = userOrg.getUserDetailsForSingleUserID(userId);
-        Map<String,Object> result=(Map<String,Object>)new ObjectMapper().convertValue(response.get(RESPONSE), Map.class);
+        Map<String,Object>  result= userOrg.getUserById(userId);
         String check=(String) result.get(IS_DELETED);
         String mentorRootOrgId = getRootOrg(userId);
         if (!batchCreatorRootOrgId.equals(mentorRootOrgId)) {
@@ -689,22 +687,29 @@ public class CourseBatchManagementActor extends BaseActor {
   @SuppressWarnings("unchecked")
   private Map<String, String> getRootOrgForMultipleUsers(List<String> userIds) {
 
-    Response response = userOrg.getUserDetailsForMultipleUserIDs(userIds);
-    Map<String,Object> userContent=(Map<String,Object>)new ObjectMapper().convertValue(response.get(RESPONSE), Map.class);
-    List<Map<String, Object>> userlist = (List<Map<String, Object>>) userContent.get(CONTENT);
+    List<Map<String, Object>> userlist = userOrg.getUsersByIds(userIds);
     Map<String, String> userWithRootOrgs = new HashMap<>();
+    if(CollectionUtils.isNotEmpty(userlist)) {
 
-    for (Map<String, Object> user : userlist) {
-      String rootOrg = getRootOrgFromUserMap(user);
-      userWithRootOrgs.put((String) user.get(JsonKey.ID), rootOrg);
+      for (Map<String, Object> user : userlist) {
+        String rootOrg = getRootOrgFromUserMap(user);
+        userWithRootOrgs.put((String) user.get(JsonKey.ID), rootOrg);
+      }
     }
+      else
+      {
+        throw new ProjectCommonException(
+                ResponseCode.invalidUsrData.getErrorCode(),
+                ResponseCode.invalidUsrData.getErrorMessage(),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+
     return userWithRootOrgs;
   }
 
   private String getRootOrg(String batchCreator) {
 
-    Response response = userOrg.getUserDetailsForSingleUserID(batchCreator);
-    Map<String,Object> userInfo=(Map<String,Object>)new ObjectMapper().convertValue(response.get(RESPONSE), Map.class);
+    Map<String,Object> userInfo = userOrg.getUserById(batchCreator);
     return getRootOrgFromUserMap(userInfo);
   }
 
@@ -850,27 +855,24 @@ public class CourseBatchManagementActor extends BaseActor {
   private boolean isOrgValid(String orgId) {
     Response response;
 
-    boolean orgFound=false;
+
     try {
-      response = userOrg.getOrganisationDetails(orgId);
-      Map<String,Object> orgDetails=(Map<String,Object>)new ObjectMapper().convertValue(response.get(RESPONSE), Map.class);
-      List<Map<String, Object>> list = (List<Map<String, Object>>) orgDetails.get(CONTENT);
-      if (CollectionUtils.isNotEmpty(list)) {
-        ProjectLogger.log(
-                "CourseBatchManagementActor:isOrgValid: Organisation found with id = " + orgId);
-        orgFound = true;
-      }
-      else {
+      Map<String,Object> result = userOrg.getOrganisationById(orgId);
+
+      if (MapUtils.isEmpty(result)) {
         ProjectLogger.log(
                 "CourseBatchManagementActor:isOrgValid: Organisation NOT found with id = " + orgId);
-        orgFound = false;
+        return false;
+      }
+      else {
+        return( result.get(ID)==orgId );
       }
     } catch (Exception e) {
       log(
               "Error while fetching OrgID : " + orgId,
               ERROR.name());
     }
-    return orgFound;
+    return false;
   }
 
   private Map<String, Object> getContentDetails(String courseId, Map<String, String> headers) {

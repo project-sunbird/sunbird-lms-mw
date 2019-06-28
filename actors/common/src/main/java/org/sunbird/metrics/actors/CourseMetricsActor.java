@@ -42,8 +42,8 @@ import org.sunbird.common.util.CloudStorageUtil.CloudStorageType;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.UserUtility;
-import org.sunbird.userorg.UserOrg;
 import org.sunbird.userorg.UserOrgService;
+import org.sunbird.userorg.UserOrgServiceImpl;
 import scala.concurrent.Future;
 
 @ActorConfig(
@@ -60,7 +60,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
   private static final String COURSE_PROGRESS_REPORT = "Course Progress Report";
   protected static final String CONTENT_ID = "content_id";
-  private UserOrg userOrg = new UserOrgService();
+  private UserOrgService userOrg = new UserOrgServiceImpl();
   private static ObjectMapper mapper = new ObjectMapper();
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private DecryptionService decryptionService =
@@ -204,8 +204,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
   }
 
   private void validateUserId(String requestedBy) {
-    Response response = userOrg.getUserDetailsForSingleUserID(requestedBy);
-    Map<String,Object> requestedByInfo=(Map<String,Object>)new ObjectMapper().convertValue(response.get(RESPONSE), Map.class);
+    Map<String,Object> requestedByInfo = userOrg.getUserById(requestedBy);
     if (isNull(requestedByInfo)
         || StringUtils.isBlank((String) requestedByInfo.get(JsonKey.FIRST_NAME))) {
       throw new ProjectCommonException(
@@ -223,8 +222,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
     simpleDateFormat.setLenient(false);
 
     String requestedBy = (String) actorMessage.get(JsonKey.REQUESTED_BY);
-    Response userResponse = userOrg.getUserDetailsForSingleUserID(requestedBy);
-    Map<String,Object> requestedByInfo=(Map<String,Object>)new ObjectMapper().convertValue(userResponse.get(RESPONSE), Map.class);
+    Map<String,Object> requestedByInfo = userOrg.getUserById(requestedBy);
     if (isNull(requestedByInfo)
         || StringUtils.isBlank((String) requestedByInfo.get(JsonKey.FIRST_NAME))) {
       throw new ProjectCommonException(
@@ -308,8 +306,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
 
     String requestedBy = (String) actorMessage.get(JsonKey.REQUESTED_BY);
 
-    Response userResponse = userOrg.getUserDetailsForSingleUserID(requestedBy);
-    Map<String,Object> requestedByInfo=(Map<String,Object>)new ObjectMapper().convertValue(userResponse.get(RESPONSE), Map.class);
+    Map<String,Object> requestedByInfo = userOrg.getUserById(requestedBy);
 
     if (isNull(requestedByInfo)
         || StringUtils.isBlank((String) requestedByInfo.get(JsonKey.FIRST_NAME))) {
@@ -399,40 +396,35 @@ public class CourseMetricsActor extends BaseMetricsActor {
       userfields.add(JsonKey.ROOT_ORG_ID);
       userfields.add(JsonKey.FIRST_NAME);
       userfields.add(JsonKey.LAST_NAME);
-      Response userDetails = userOrg.getUserDetailsForMultipleUserIDs(userIds);
-      Map<String,Object> userContent=(Map<String,Object>)new ObjectMapper().convertValue(userDetails.get(RESPONSE), Map.class);
-      List<Map<String, Object>> useresContent = (List<Map<String, Object>>) userContent.get(CONTENT);
-
-      Map<String, Map<String, Object>> userInfoCache = new HashMap<>();
-      Set<String> orgSet = new HashSet<>();
-      for (Map<String, Object> map : useresContent) {
-        String userId = (String) map.get(JsonKey.USER_ID);
-        map.put("user", userId);
-        map.put(
-            JsonKey.USERNAME, decryptionService.decryptData((String) map.get(JsonKey.USERNAME)));
-        String registerdOrgId = (String) map.get(JsonKey.ROOT_ORG_ID);
-        if (isNotNull(registerdOrgId)) {
-          orgSet.add(registerdOrgId);
+      List<Map<String, Object>> useresContent= userOrg.getUsersByIds(userIds);
+        Map<String, Map<String, Object>> userInfoCache = new HashMap<>();
+        Set<String> orgSet = new HashSet<>();
+        for (Map<String, Object> map : useresContent) {
+          String userId = (String) map.get(JsonKey.USER_ID);
+          map.put("user", userId);
+          map.put(
+                  JsonKey.USERNAME, decryptionService.decryptData((String) map.get(JsonKey.USERNAME)));
+          String registerdOrgId = (String) map.get(JsonKey.ROOT_ORG_ID);
+          if (isNotNull(registerdOrgId)) {
+            orgSet.add(registerdOrgId);
+          }
+          userInfoCache.put(userId, new HashMap<String, Object>(map));
+          // remove the org info from user content bcoz it is not desired in the user info
+          // result
+          map.remove(JsonKey.ROOT_ORG_ID);
+          map.remove(JsonKey.USER_ID);
         }
-        userInfoCache.put(userId, new HashMap<String, Object>(map));
-        // remove the org info from user content bcoz it is not desired in the user info
-        // result
-        map.remove(JsonKey.ROOT_ORG_ID);
-        map.remove(JsonKey.USER_ID);
-      }
 
       List<String> orgfields=orgSet.stream().collect(Collectors.toList());
-      Response orgResult = userOrg.getOrganisationDetailsForMultipleOrgIds(orgfields);
-      Map<String,Object> orgDetails=(Map<String,Object>)new ObjectMapper().convertValue(orgResult.get(RESPONSE), Map.class);
-      List<Map<String, Object>> orgContent = (List<Map<String, Object>>) orgDetails.get(CONTENT);
+      List<Map<String, Object>> orgContent = userOrg.getOrganisationsByIds(orgfields);
+        Map<String, String> orgInfoCache = new HashMap<>();
+        for (Map<String, Object> map : orgContent) {
 
-      Map<String, String> orgInfoCache = new HashMap<>();
-      for (Map<String, Object> map : orgContent) {
+          String regOrgId = (String) map.get(JsonKey.ID);
+          String regOrgName = (String) map.get(JsonKey.ORGANISATION_NAME);
+          orgInfoCache.put(regOrgId, regOrgName);
+        }
 
-        String regOrgId = (String) map.get(JsonKey.ID);
-        String regOrgName = (String) map.get(JsonKey.ORGANISATION_NAME);
-        orgInfoCache.put(regOrgId, regOrgName);
-      }
 
       Map<String, Object> batchFilter = new HashMap<>();
       batchFilter.put(JsonKey.ID, batchId);
@@ -543,8 +535,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
       filterMap.put(CONTENT_ID, courseId);
       requestObject.put(JsonKey.FILTER, filterMap);
 
-      Response userResponse = userOrg.getUserDetailsForSingleUserID(requestedBy);
-      Map<String,Object> result=(Map<String,Object>)new ObjectMapper().convertValue(userResponse.get(RESPONSE), Map.class);
+      Map<String,Object> result= userOrg.getUserById(requestedBy);
       if (null == result || result.isEmpty()) {
         ProjectCommonException exception =
             new ProjectCommonException(
@@ -564,9 +555,7 @@ public class CourseMetricsActor extends BaseMetricsActor {
                 ResponseCode.CLIENT_ERROR.getResponseCode());
         sender().tell(exception, self());
       }
-      Response orgResult = userOrg.getOrganisationDetails(rootOrgId);
-      Map<String,Object> rootOrgData=(Map<String,Object>)new ObjectMapper().convertValue(orgResult.get(RESPONSE), Map.class);
-
+      Map<String,Object> rootOrgData= userOrg.getOrganisationById(rootOrgId);
       if (null == rootOrgData || rootOrgData.isEmpty()) {
         ProjectCommonException exception =
             new ProjectCommonException(

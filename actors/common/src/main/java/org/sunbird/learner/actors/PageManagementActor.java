@@ -41,15 +41,13 @@ import org.sunbird.learner.util.ContentSearchUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.notification.utils.JsonUtil;
 import org.sunbird.telemetry.util.TelemetryUtil;
-import org.sunbird.userorg.UserOrg;
 import org.sunbird.userorg.UserOrgService;
+import org.sunbird.userorg.UserOrgServiceImpl;
 import scala.concurrent.ExecutionContextExecutor;
 import scala.concurrent.Future;
 import scala.concurrent.Promise;
 
-import static org.sunbird.common.models.util.JsonKey.CONTENT;
-import static org.sunbird.common.models.util.JsonKey.RESPONSE;
-import static org.sunbird.common.models.util.LoggerEnum.ERROR;
+import static org.sunbird.common.models.util.JsonKey.*;
 import static org.sunbird.common.models.util.ProjectLogger.log;
 
 /**
@@ -79,7 +77,7 @@ public class PageManagementActor extends BaseActor {
   private Util.DbInfo pageSectionDbInfo = Util.dbInfoMap.get(JsonKey.PAGE_SECTION_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private ObjectMapper mapper = new ObjectMapper();
-  private UserOrg userOrg = new UserOrgService();
+  private UserOrgService userOrg = new UserOrgServiceImpl();
   private boolean isCacheEnabled = false;
   private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
   // Boolean.parseBoolean(ProjectUtil.propertiesCache.getProperty(JsonKey.SUNBIRD_CACHE_ENABLE));
@@ -810,10 +808,8 @@ public class PageManagementActor extends BaseActor {
   }
 
   private void validateOrg(String orgId) {
-    Response result = userOrg.getOrganisationDetails(orgId);
-    Map<String,Object> orgDetails=(Map<String,Object>)new ObjectMapper().convertValue(result.get(RESPONSE), Map.class);
-    List<Map<String, Object>> list = (List<Map<String, Object>>) orgDetails.get(CONTENT);
-    if (CollectionUtils.isEmpty(list)) {
+    Map<String, Object> result = userOrg.getOrganisationById(orgId);
+    if(MapUtils.isNotEmpty(result) && (result.get(ID)==orgId) ){
       throw new ProjectCommonException(
           ResponseCode.invalidOrgId.getErrorCode(),
           ResponseCode.invalidOrgId.getErrorMessage(),

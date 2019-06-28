@@ -8,8 +8,12 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
+import akka.dispatch.Futures;
 import akka.testkit.javadsl.TestKit;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -21,22 +25,28 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.coursebatch.dao.UserCoursesDao;
 import org.sunbird.learner.actors.coursebatch.dao.impl.UserCoursesDaoImpl;
 import org.sunbird.learner.actors.search.SearchHandlerActor;
+import scala.concurrent.Promise;
 
-// @Ignore
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({ServiceFactory.class, ElasticSearchUtil.class, UserCoursesDaoImpl.class})
+@PrepareForTest({
+  ServiceFactory.class,
+  ElasticSearchRestHighImpl.class,
+  UserCoursesDaoImpl.class,
+  EsClientFactory.class
+})
 @PowerMockIgnore({"javax.management.*"})
 public class SearchHandlerActorTest {
 
@@ -44,6 +54,7 @@ public class SearchHandlerActorTest {
   private static final Props props = Props.create(SearchHandlerActor.class);
   private static UserCoursesDao userCoursesDao;
   private static CassandraOperationImpl cassandraOperation;
+  private static ElasticSearchService esService;
 
   @BeforeClass
   public static void setUp() {
@@ -57,12 +68,13 @@ public class SearchHandlerActorTest {
 
   @Before
   public void beforeTest() {
-    PowerMockito.mockStatic(ElasticSearchUtil.class);
-    when(ElasticSearchUtil.complexSearch(
-            Mockito.any(SearchDTO.class),
-            Mockito.eq(ProjectUtil.EsIndex.sunbird.getIndexName()),
-            Mockito.anyVararg()))
-        .thenReturn(createResponseGet(true));
+    PowerMockito.mockStatic(EsClientFactory.class);
+    esService = mock(ElasticSearchRestHighImpl.class);
+    when(EsClientFactory.getInstance(Mockito.anyString())).thenReturn(esService);
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(createResponseGet(true));
+    when(esService.search(Mockito.any(SearchDTO.class), Mockito.anyVararg()))
+        .thenReturn(promise.future());
 
     PowerMockito.mockStatic(ServiceFactory.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);

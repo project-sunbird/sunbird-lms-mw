@@ -7,8 +7,13 @@ import static org.powermock.api.mockito.PowerMockito.when;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
+import akka.dispatch.Futures;
 import akka.testkit.javadsl.TestKit;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -23,8 +28,10 @@ import org.sunbird.actorutil.impl.InterServiceCommunicationImpl;
 import org.sunbird.actorutil.location.impl.LocationClientImpl;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchRestHighImpl;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -37,11 +44,12 @@ import org.sunbird.models.user.User;
 import org.sunbird.user.actors.UserManagementActor;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.UserUtil;
+import scala.concurrent.Promise;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
   ServiceFactory.class,
-  ElasticSearchUtil.class,
+  EsClientFactory.class,
   Util.class,
   RequestRouter.class,
   SystemSettingClientImpl.class,
@@ -49,7 +57,8 @@ import org.sunbird.user.util.UserUtil;
   UserUtil.class,
   InterServiceCommunicationFactory.class,
   LocationClientImpl.class,
-  DataCacheHandler.class
+  DataCacheHandler.class,
+  ElasticSearchRestHighImpl.class
 })
 @PowerMockIgnore({"javax.management.*"})
 public abstract class UserManagementActorTestBase {
@@ -61,6 +70,7 @@ public abstract class UserManagementActorTestBase {
       mock(InterServiceCommunicationImpl.class);;
   public static UserServiceImpl userService;
   public static CassandraOperationImpl cassandraOperation;
+  public static ElasticSearchService esService;
 
   @Before
   public void beforeEachTest() {
@@ -70,7 +80,10 @@ public abstract class UserManagementActorTestBase {
     when(RequestRouter.getActor(Mockito.anyString())).thenReturn(actorRef);
 
     PowerMockito.mockStatic(ServiceFactory.class);
+    PowerMockito.mockStatic(EsClientFactory.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
+    esService = mock(ElasticSearchRestHighImpl.class);
+    when(EsClientFactory.getInstance(Mockito.anyString())).thenReturn(esService);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     when(cassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
@@ -103,10 +116,10 @@ public abstract class UserManagementActorTestBase {
         .thenReturn("anyChannel");
     when(userService.getRootOrgIdFromChannel(Mockito.anyString())).thenReturn("rootOrgId");
 
-    PowerMockito.mockStatic(ElasticSearchUtil.class);
-    when(ElasticSearchUtil.getDataByIdentifier(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getEsResponseMap());
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(getEsResponseMap());
+    when(esService.getDataByIdentifier(Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(promise.future());
 
     PowerMockito.mockStatic(Util.class);
     Util.getUserProfileConfig(Mockito.any(ActorRef.class));
@@ -124,8 +137,9 @@ public abstract class UserManagementActorTestBase {
   }
 
   public void mockForUserOrgUpdate() {
-    when(ElasticSearchUtil.complexSearch(Mockito.any(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(getListOrgResponse());
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(getListOrgResponse());
+    when(esService.search(Mockito.any(), Mockito.anyString())).thenReturn(promise.future());
     when(userService.getUserById(Mockito.anyString())).thenReturn(getUser(false));
     when(cassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))

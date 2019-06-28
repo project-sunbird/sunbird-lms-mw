@@ -62,7 +62,7 @@ import static org.sunbird.common.models.util.ProjectLogger.log;
 public class CourseBatchManagementActor extends BaseActor {
 
   private CourseBatchDao courseBatchDao = new CourseBatchDaoImpl();
-  private UserOrgService userOrg = new UserOrgServiceImpl();
+  private UserOrgService userOrgService = new UserOrgServiceImpl();
   private UserCoursesService userCoursesService = new UserCoursesService();
   private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
   private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
@@ -503,7 +503,7 @@ public class CourseBatchManagementActor extends BaseActor {
       String batchCreatorRootOrgId = getRootOrg(courseBatch.getCreatedBy());
 
       for (String userId : mentors) {
-        Map<String,Object>  result= userOrg.getUserById(userId);
+        Map<String,Object>  result= userOrgService.getUserById(userId);
         String check=(String) result.get(IS_DELETED);
         String mentorRootOrgId = getRootOrg(userId);
         if (!batchCreatorRootOrgId.equals(mentorRootOrgId)) {
@@ -687,29 +687,19 @@ public class CourseBatchManagementActor extends BaseActor {
   @SuppressWarnings("unchecked")
   private Map<String, String> getRootOrgForMultipleUsers(List<String> userIds) {
 
-    List<Map<String, Object>> userlist = userOrg.getUsersByIds(userIds);
+    List<Map<String, Object>> userlist = userOrgService.getUsersByIds(userIds);
     Map<String, String> userWithRootOrgs = new HashMap<>();
     if(CollectionUtils.isNotEmpty(userlist)) {
-
-      for (Map<String, Object> user : userlist) {
-        String rootOrg = getRootOrgFromUserMap(user);
-        userWithRootOrgs.put((String) user.get(JsonKey.ID), rootOrg);
+      userlist.forEach(user ->{
+      String rootOrg = getRootOrgFromUserMap(user);
+      userWithRootOrgs.put((String) user.get(JsonKey.ID), rootOrg);});
       }
-    }
-      else
-      {
-        throw new ProjectCommonException(
-                ResponseCode.invalidUsrData.getErrorCode(),
-                ResponseCode.invalidUsrData.getErrorMessage(),
-                ResponseCode.CLIENT_ERROR.getResponseCode());
-      }
-
     return userWithRootOrgs;
   }
 
   private String getRootOrg(String batchCreator) {
 
-    Map<String,Object> userInfo = userOrg.getUserById(batchCreator);
+    Map<String,Object> userInfo = userOrgService.getUserById(batchCreator);
     return getRootOrgFromUserMap(userInfo);
   }
 
@@ -857,7 +847,7 @@ public class CourseBatchManagementActor extends BaseActor {
 
 
     try {
-      Map<String,Object> result = userOrg.getOrganisationById(orgId);
+      Map<String,Object> result = userOrgService.getOrganisationById(orgId);
 
       if (MapUtils.isEmpty(result)) {
         ProjectLogger.log(

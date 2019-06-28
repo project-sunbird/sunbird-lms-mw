@@ -56,16 +56,15 @@ public class UserOrgServiceImpl implements UserOrgService {
             if(HttpMethod.POST.equals(requestType)) {
                 httpResponse = Unirest.post(requestUrl).headers(headers).body(reqBody).asString();
             }
-            else if (HttpMethod.GET.equals(requestType)){
+             if (HttpMethod.GET.equals(requestType)){
                 requestUrl = FORWARD_SLASH+requestMap.get(USER_ID);
                 httpResponse = Unirest.get(requestUrl).headers(headers).asString();
             }
-
+            log(
+                    "UserOrgServiceImpl:getResponse"+ requestType +"Request , Status : "
+                            + httpResponse.getStatus()+" "+httpResponse.getStatusText(),
+                    ERROR.name());
             if (StringUtils.isBlank(httpResponse.getBody())){
-                log(
-                        "UserOrgServiceImpl:getResponse"+ requestType +"Request , Status : "
-                                + httpResponse.getStatus()+" "+httpResponse.getStatusText()+",Response Body :"+responseBody,
-                        ERROR.name());
                 throwServerErrorException(
                         ResponseCode.SERVER_ERROR, errorProcessingRequest.getErrorMessage());
             }

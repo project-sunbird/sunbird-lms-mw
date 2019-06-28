@@ -77,7 +77,7 @@ public class PageManagementActor extends BaseActor {
   private Util.DbInfo pageSectionDbInfo = Util.dbInfoMap.get(JsonKey.PAGE_SECTION_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private ObjectMapper mapper = new ObjectMapper();
-  private UserOrgService userOrg = new UserOrgServiceImpl();
+  private UserOrgService userOrgService = new UserOrgServiceImpl();
   private boolean isCacheEnabled = false;
   private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
   // Boolean.parseBoolean(ProjectUtil.propertiesCache.getProperty(JsonKey.SUNBIRD_CACHE_ENABLE));
@@ -808,8 +808,8 @@ public class PageManagementActor extends BaseActor {
   }
 
   private void validateOrg(String orgId) {
-    Map<String, Object> result = userOrg.getOrganisationById(orgId);
-    if(MapUtils.isNotEmpty(result) && (result.get(ID)==orgId) ){
+    Map<String, Object> result = userOrgService.getOrganisationById(orgId);
+    if(MapUtils.isEmpty(result) || !orgId.equals(result.get(ID))){
       throw new ProjectCommonException(
           ResponseCode.invalidOrgId.getErrorCode(),
           ResponseCode.invalidOrgId.getErrorMessage(),

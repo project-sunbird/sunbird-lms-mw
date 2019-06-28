@@ -736,6 +736,7 @@ public class CourseBatchManagementActor extends BaseActor {
     if (opType.equalsIgnoreCase(JsonKey.CREATE)) {
       if (!dataMapList.isEmpty()) {
         throw new ProjectCommonException(
+
             ResponseCode.invalidHashTagId.getErrorCode(),
             ResponseCode.invalidHashTagId.getErrorMessage(),
             ResponseCode.CLIENT_ERROR.getResponseCode());

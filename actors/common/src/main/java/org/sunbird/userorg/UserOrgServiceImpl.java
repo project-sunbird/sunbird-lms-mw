@@ -71,10 +71,7 @@ public class UserOrgServiceImpl implements UserOrgService {
             responseBody = httpResponse.getBody();
             response = mapper.readValue(responseBody, Response.class);
             if (!ResponseCode.OK.equals(response.getResponseCode())) {
-                log(
-                        "UserOrgServiceImpl:getResponse:"+ requestType +"Request , Status : "
-                                + httpResponse.getStatus()+" "+httpResponse.getStatusText()+",Response Body :"+responseBody,
-                        ERROR.name());
+
                 throw new ProjectCommonException(
                         response.getResponseCode().name(),
                         response.getParams().getErrmsg(),
@@ -82,7 +79,14 @@ public class UserOrgServiceImpl implements UserOrgService {
             }
         }
 
-
+       catch(ProjectCommonException e)
+       {
+           log(
+                   "UserOrgServiceImpl:getResponse:"+ requestType +"Request , Status : "
+                           + e.getCode()+" "+e.getMessage()+",Response Body :"+responseBody,
+                   ERROR.name());
+           throw e;
+       }
         catch (Exception e) {
             log(
                     "UserOrgServiceImpl:getResponse:Exception occurred with error message = "

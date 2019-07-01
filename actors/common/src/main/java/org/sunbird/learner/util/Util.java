@@ -1624,7 +1624,8 @@ public final class Util {
         List<String> fields = Arrays.asList(JsonKey.ORG_NAME, JsonKey.PARENT_ORG_ID, JsonKey.ID);
 
         Future<Map<String, Map<String, Object>>> orgInfoMapF =
-            esService.getEsResultByListOfIds(organisationIds, fields, EsType.organisation.name());
+            esService.getEsResultByListOfIds(
+                organisationIds, fields, EsType.organisation.getTypeName());
         Map<String, Map<String, Object>> orgInfoMap =
             (Map<String, Map<String, Object>>)
                 ElasticSearchHelper.getResponseFromFuture(orgInfoMapF);

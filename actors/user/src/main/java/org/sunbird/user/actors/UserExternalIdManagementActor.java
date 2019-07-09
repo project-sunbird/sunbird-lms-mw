@@ -188,9 +188,6 @@ public class UserExternalIdManagementActor extends BaseActor {
     map.remove(JsonKey.ORIGINAL_EXTERNAL_ID);
     map.remove(JsonKey.ORIGINAL_ID_TYPE);
     map.remove(JsonKey.ORIGINAL_PROVIDER);
-    if (map.containsKey(JsonKey.EXTERNAL_ID)) {
-      map.put(JsonKey.EXTERNAL_ID, service.decryptData(map.get(JsonKey.EXTERNAL_ID)));
-    }
     cassandraOperation.deleteRecord(JsonKey.SUNBIRD, JsonKey.USR_EXT_IDNT_TABLE, map);
   }
 

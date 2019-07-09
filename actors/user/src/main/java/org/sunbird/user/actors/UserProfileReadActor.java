@@ -251,14 +251,12 @@ public class UserProfileReadActor extends BaseActor {
                   if (StringUtils.isNotBlank(s.get(JsonKey.ORIGINAL_EXTERNAL_ID))
                       && StringUtils.isNotBlank(s.get(JsonKey.ORIGINAL_ID_TYPE))
                       && StringUtils.isNotBlank(s.get(JsonKey.ORIGINAL_PROVIDER))) {
-                    s.put(
-                        JsonKey.ID,
-                        decryptionService.decryptData(s.get(JsonKey.ORIGINAL_EXTERNAL_ID)));
+                    s.put(JsonKey.ID, s.get(JsonKey.ORIGINAL_EXTERNAL_ID));
                     s.put(JsonKey.ID_TYPE, s.get(JsonKey.ORIGINAL_ID_TYPE));
                     s.put(JsonKey.PROVIDER, s.get(JsonKey.ORIGINAL_PROVIDER));
 
                   } else {
-                    s.put(JsonKey.ID, decryptionService.decryptData(s.get(JsonKey.EXTERNAL_ID)));
+                    s.put(JsonKey.ID, s.get(JsonKey.EXTERNAL_ID));
                   }
 
                   s.remove(JsonKey.EXTERNAL_ID);

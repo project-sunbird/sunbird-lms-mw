@@ -1,0 +1,46 @@
+package org.sunbird.user.dao.impl;
+
+import java.util.Map;
+import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.Util;
+import org.sunbird.user.dao.AddressDao;
+
+public class AddressDaoImpl implements AddressDao {
+
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private Util.DbInfo addrDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
+
+  private AddressDaoImpl() {}
+
+  private static class LazyInitializer {
+    private static AddressDao INSTANCE = new AddressDaoImpl();
+  }
+
+  public static AddressDao getInstance() {
+    return LazyInitializer.INSTANCE;
+  }
+
+  @Override
+  public void createAddress(Map<String, Object> address) {
+    cassandraOperation.insertRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), address);
+  }
+
+  @Override
+  public void updateAddress(Map<String, Object> address) {
+    cassandraOperation.updateRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), address);
+  }
+
+  @Override
+  public void deleteAddress(String addressId) {
+    cassandraOperation.deleteRecord(addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), addressId);
+  }
+
+  @Override
+  public Response upsertAddress(Map<String, Object> address) {
+    return cassandraOperation.upsertRecord(
+        addrDbInfo.getKeySpace(), addrDbInfo.getTableName(), address);
+  }
+}

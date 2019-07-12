@@ -3,6 +3,7 @@ package org.sunbird.user.actors;
 import static org.sunbird.learner.util.Util.isNotNull;
 
 import akka.actor.ActorRef;
+import akka.dispatch.Mapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -54,7 +55,9 @@ import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.user.dao.UserDao;
 import org.sunbird.user.dao.impl.UserDaoImpl;
 import org.sunbird.user.dao.impl.UserExternalIdentityDaoImpl;
+import scala.concurrent.Await;
 import scala.concurrent.Future;
+import scala.concurrent.duration.Duration;
 
 @ActorConfig(
   tasks = {"getUserDetailsByLoginId", "getUserProfile", "getUserProfileV2", "getUserByKey"},
@@ -112,7 +115,7 @@ public class UserProfileReadActor extends BaseActor {
     sender().tell(response, self());
   }
 
-  private Response getUserProfileData(Request actorMessage) {
+  private Response getUserProfileData(Request actorMessage){
     Map<String, Object> userMap = actorMessage.getRequest();
     String id = (String) userMap.get(JsonKey.USER_ID);
     String userId;
@@ -142,11 +145,17 @@ public class UserProfileReadActor extends BaseActor {
       showMaskedData = false;
     }
     boolean isPrivate = (boolean) actorMessage.getContext().get(JsonKey.PRIVATE);
-    Map<String, Object> result;
+    Map<String, Object> result=null;
     if (!isPrivate) {
-      Future<Map<String, Object>> resultF =
-          esUtil.getDataByIdentifier(ProjectUtil.EsType.user.getTypeName(), userId);
-      result = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
+      Future<Map<String, Object>> resultF = esUtil.getDataByIdentifier(ProjectUtil.EsType.user.getTypeName(), userId);
+      try {
+        Object object  =  Await.result(resultF, ElasticSearchHelper.timeout.duration());
+        if(object != null) {
+          result = (Map<String, Object>) object;
+        }
+      } catch (Exception e) {
+        ProjectLogger.log(String.format("%s:%s:User not found with provided id == %s and error %s",this.getClass().getSimpleName(),"getUserProfileData",e.getMessage()), LoggerEnum.ERROR.name());
+      }
     } else {
       UserDao userDao = new UserDaoImpl();
       User foundUser = userDao.getUserById(userId);

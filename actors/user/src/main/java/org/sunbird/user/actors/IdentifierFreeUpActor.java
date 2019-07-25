@@ -24,7 +24,7 @@ import java.util.Map;
         tasks = {"freeUpUser"},
         asyncTasks = {}
 )
-public class UserFreedActor extends BaseActor {
+public class IdentifierFreeUpActor extends BaseActor {
 
     private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
@@ -60,13 +60,13 @@ public class UserFreedActor extends BaseActor {
     }
 
     private void nullifyEmail() {
-        userDbMap.replace(JsonKey.FREEUP_EMAIL, userDbMap.get(JsonKey.EMAIL));
+        userDbMap.replace(JsonKey.PREV_USED_EMAIL, userDbMap.get(JsonKey.EMAIL));
         userDbMap.replace(JsonKey.EMAIL, null);
         userDbMap.replace(JsonKey.MASKED_EMAIL, null);
     }
 
     private void nullifyPhone() {
-        userDbMap.replace(JsonKey.FREEUP_PHONE, userDbMap.get(JsonKey.PHONE));
+        userDbMap.replace(JsonKey.PREV_USED_PHONE, userDbMap.get(JsonKey.PHONE));
         userDbMap.replace(JsonKey.PHONE, null);
         userDbMap.replace(JsonKey.MASKED_PHONE, null);
     }

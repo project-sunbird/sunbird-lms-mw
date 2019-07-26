@@ -37,7 +37,7 @@ public class IdentifierFreeUpActor extends BaseActor {
     public void onReceive(Request request) {
         String id = (String) request.get(JsonKey.ID);
         List<String> identifiers = (List) request.get(JsonKey.IDENTIFIER);
-        freeUpUser(id, identifiers);
+        freeUpUserIdentifier(id, identifiers);
     }
 
     private Map<String, Object> getUserById(String id) {
@@ -84,11 +84,11 @@ public class IdentifierFreeUpActor extends BaseActor {
         return cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userDbMap);
     }
 
-    private void freeUpUser(String id, List<String> identifiers) {
+    private void freeUpUserIdentifier(String id, List<String> identifiers) {
         userDbMap = getUserById(id);
         Response response = processUserAttribute(identifiers);
         sender().tell(response, self());
-        ProjectLogger.log(String.format("%s:%s:USER MAP SUCCESSFULLY UPDATED IN CASSANDRA. WITH VALUES  %s", this.getClass().getSimpleName(), "freeUpUser", Collections.singleton(userDbMap.toString())), LoggerEnum.INFO.name());
+        ProjectLogger.log(String.format("%s:%s:USER MAP SUCCESSFULLY UPDATED IN CASSANDRA. WITH VALUES  %s", this.getClass().getSimpleName(), "freeUpUserIdentifier", Collections.singleton(userDbMap.toString())), LoggerEnum.INFO.name());
         saveUserDetailsToEs();
     }
 

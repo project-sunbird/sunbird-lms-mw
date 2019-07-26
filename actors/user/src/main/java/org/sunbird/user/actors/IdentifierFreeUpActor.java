@@ -76,6 +76,7 @@ public class IdentifierFreeUpActor extends BaseActor {
             userDbMap.replace(JsonKey.PHONE, null);
             userDbMap.replace(JsonKey.MASKED_PHONE, null);
             userDbMap.replace(JsonKey.PHONE_VERIFIED, false);
+            userDbMap.replace(JsonKey.COUNTRY_CODE,null);
         }
     }
 

@@ -86,11 +86,11 @@ public class IdentifierFreeUpActor extends BaseActor {
     }
 
     private void saveUserDetailsToEs() {
-        Request userRequest = new Request();
-        userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
-        userRequest.getRequest().put(JsonKey.ID, userDbMap.get(JsonKey.ID));
+        Request userUpdatedRequest = new Request();
+        userUpdatedRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
+        userUpdatedRequest.getRequest().put(JsonKey.ID, userDbMap.get(JsonKey.ID));
         ProjectLogger.log(String.format("%s:%s:Trigger sync of user details to ES with user updated userMap %s", this.getClass().getSimpleName(), "saveUserDetailsToEs", Collections.singleton(userDbMap.toString())));
-        tellToAnother(userRequest);
+        tellToAnother(userUpdatedRequest);
     }
 
 }

@@ -63,12 +63,14 @@ public class IdentifierFreeUpActor extends BaseActor {
         userDbMap.replace(JsonKey.PREV_USED_EMAIL, userDbMap.get(JsonKey.EMAIL));
         userDbMap.replace(JsonKey.EMAIL, null);
         userDbMap.replace(JsonKey.MASKED_EMAIL, null);
+        userDbMap.replace(JsonKey.EMAIL_VERIFIED,false);
     }
 
     private void nullifyPhone() {
         userDbMap.replace(JsonKey.PREV_USED_PHONE, userDbMap.get(JsonKey.PHONE));
         userDbMap.replace(JsonKey.PHONE, null);
         userDbMap.replace(JsonKey.MASKED_PHONE, null);
+        userDbMap.replace(JsonKey.PHONE_VERIFIED,false);
     }
 
     private Response updateUser() {

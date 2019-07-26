@@ -21,7 +21,7 @@ import java.util.Map;
 
 
 @ActorConfig(
-        tasks = {"freeUpUser"},
+        tasks = {"freeUpUserIdentity"},
         asyncTasks = {}
 )
 public class IdentifierFreeUpActor extends BaseActor {

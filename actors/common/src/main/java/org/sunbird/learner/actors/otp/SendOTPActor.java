@@ -30,9 +30,9 @@ public class SendOTPActor extends BaseActor {
     String type = (String) request.getRequest().get(JsonKey.TYPE);
     String key = (String) request.getRequest().get(JsonKey.KEY);
     String otp = (String) request.getRequest().get(JsonKey.OTP);
-    if (JsonKey.EMAIL.equalsIgnoreCase(type) || "prevUsedEmail".equalsIgnoreCase(type)) {
+    if (JsonKey.EMAIL.equalsIgnoreCase(type)) {
       sendOTPViaEmail(key, otp);
-    } else if (JsonKey.PHONE.equalsIgnoreCase(type) || "prevUsedPhone".equalsIgnoreCase(type)) {
+    } else if (JsonKey.PHONE.equalsIgnoreCase(type)) {
       sendOTPViaSMS(key, otp);
     }
   }

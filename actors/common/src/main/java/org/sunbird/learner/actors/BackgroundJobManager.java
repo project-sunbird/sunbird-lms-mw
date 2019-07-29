@@ -634,16 +634,10 @@ public class BackgroundJobManager extends BaseActor {
 
   private void mergeUserDetailsToEs(Request mergeRequest) {
     String mergeeId = (String) mergeRequest.get("mergeeId");
-    String mergerId = (String) mergeRequest.get("mergerId");
     Map<String, Object> mergeeMap = (Map<String, Object>) mergeRequest.get("mergeeMap");
-    Map<String, Object> mergerMap = (Map<String, Object>) mergeRequest.get("mergerMap");
     updateDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.user.getTypeName(),
             mergeeId,
             mergeeMap);
-    updateDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.user.getTypeName(),
-            mergerId,
-            mergerMap);
   }
 }

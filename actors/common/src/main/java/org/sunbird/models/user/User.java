@@ -66,6 +66,8 @@ public class User implements Serializable {
   private String tncAcceptedVersion;
   private Map<String, List<String>> framework;
   private List<String> locationIds;
+  private String prevUsedPhone;
+  private String prevUsedEmail;
 
   public List<String> getLocationIds() {
     return locationIds;
@@ -443,5 +445,21 @@ public class User implements Serializable {
 
   public void setTncAcceptedVersion(String tncAcceptedVersion) {
     this.tncAcceptedVersion = tncAcceptedVersion;
+  }
+
+  public String getPrevUsedPhone() {
+    return prevUsedPhone;
+  }
+
+  public void setPrevUsedPhone(String prevUsedPhone) {
+    this.prevUsedPhone = prevUsedPhone;
+  }
+
+  public String getPrevUsedEmail() {
+    return prevUsedEmail;
+  }
+
+  public void setPrevUsedEmail(String prevUsedEmail) {
+    this.prevUsedEmail = prevUsedEmail;
   }
 }

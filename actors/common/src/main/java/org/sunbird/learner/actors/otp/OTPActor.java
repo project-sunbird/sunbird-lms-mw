@@ -1,7 +1,6 @@
 package org.sunbird.learner.actors.otp;
 
 import java.util.Map;
-
 import org.apache.commons.collections.MapUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -43,6 +42,7 @@ public class OTPActor extends BaseActor {
   private void generateOTP(Request request) {
     String type = (String) request.getRequest().get(JsonKey.TYPE);
     String key = getKey(type, request);
+
     rateLimitService.throttleByKey(
         key, new RateLimiter[] {OtpRateLimiter.HOUR, OtpRateLimiter.DAY});
 

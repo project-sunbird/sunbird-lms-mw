@@ -1,13 +1,10 @@
 package org.sunbird.learner.util;
 
-import com.warrenstrange.googleauth.GoogleAuthenticator;
-import com.warrenstrange.googleauth.GoogleAuthenticatorConfig;
-import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
-import com.warrenstrange.googleauth.KeyRepresentation;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -18,6 +15,11 @@ import org.sunbird.common.request.Request;
 import org.sunbird.learner.actors.otp.service.OTPService;
 import org.sunbird.notification.sms.provider.ISmsProvider;
 import org.sunbird.notification.utils.SMSFactory;
+
+import com.warrenstrange.googleauth.GoogleAuthenticator;
+import com.warrenstrange.googleauth.GoogleAuthenticatorConfig;
+import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
+import com.warrenstrange.googleauth.KeyRepresentation;
 
 public final class OTPUtil {
 
@@ -88,7 +90,7 @@ public final class OTPUtil {
     }
   }
 
-  public static Request sendOTPViaEmail(Map<String, Object> emailTemplateMap) {
+public static Request sendOTPViaEmail(Map<String, Object> emailTemplateMap) {
     Request request = null;
     if ((StringUtils.isBlank((String) emailTemplateMap.get(JsonKey.EMAIL)))) {
       return request;

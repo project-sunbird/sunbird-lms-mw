@@ -23,7 +23,7 @@ import org.sunbird.actor.router.RequestRouter;
 import org.sunbird.actor.service.BaseMWService;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -43,7 +43,7 @@ import org.sunbird.learner.util.Util;
   BaseMWService.class,
   RequestRouter.class,
   InterServiceCommunicationFactory.class,
-  ElasticSearchUtil.class,
+  ElasticSearchHelper.class,
   Util.class,
   //  UserOrgDaoImpl.class,
   DecryptionService.class,

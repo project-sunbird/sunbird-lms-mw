@@ -3,20 +3,19 @@ package org.sunbird.user.actors;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.commons.collections.MapUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchHelper;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
-import org.sunbird.extension.user.UserExtension;
-import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
 import org.sunbird.models.user.User;
 import org.sunbird.user.util.UserUtil;
+import scala.concurrent.Future;
 
 @ActorConfig(
   tasks = {
@@ -37,6 +36,7 @@ import org.sunbird.user.util.UserUtil;
 public class UserBackgroundJobActor extends BaseActor {
 
   private static ObjectMapper mapper = new ObjectMapper();
+  private ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -119,7 +119,6 @@ public class UserBackgroundJobActor extends BaseActor {
     userDetails.remove(JsonKey.PASSWORD);
     User user = mapper.convertValue(userDetails, User.class);
     userDetails = mapper.convertValue(user, Map.class);
-    userDetails = getUserDetailsFromRegistry(userDetails);
     upsertDataToElastic(
         ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.user.getTypeName(),
@@ -129,34 +128,16 @@ public class UserBackgroundJobActor extends BaseActor {
 
   private void upsertDataToElastic(
       String indexName, String typeName, String id, Map<String, Object> userDetails) {
-    Boolean bool = ElasticSearchUtil.upsertData(indexName, typeName, id, userDetails);
-    ProjectLogger.log(
-        "Getting ES save response for type , identifier==" + typeName + "  " + id + "  " + bool,
-        LoggerEnum.INFO.name());
-  }
 
-  private static Map<String, Object> getUserDetailsFromRegistry(Map<String, Object> userMap) {
-    String registryId = (String) userMap.get(JsonKey.REGISTRY_ID);
-    if (StringUtils.isNotBlank(registryId)
-        && "true"
-            .equalsIgnoreCase(
-                ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE))) {
-      Map<String, Object> reqMap = new HashMap<>();
-      try {
-        UserExtension userExtension = new UserProviderRegistryImpl();
-        reqMap.put(JsonKey.REGISTRY_ID, registryId);
-        reqMap = userExtension.read(reqMap);
-        reqMap.putAll(userMap);
-      } catch (Exception ex) {
-        ProjectLogger.log(
-            "getUserDetailsFromRegistry: Failed to fetch registry details for registryId : "
-                + registryId,
-            ex);
-        reqMap.clear();
-      }
-      return MapUtils.isNotEmpty(reqMap) ? reqMap : userMap;
-    } else {
-      return userMap;
-    }
+    Future<Boolean> bool = esUtil.upsert(typeName, id, userDetails);
+
+    ProjectLogger.log(
+        "Getting ES save response for type , identifier=="
+            + typeName
+            + "  "
+            + id
+            + "  "
+            + ElasticSearchHelper.getResponseFromFuture(bool),
+        LoggerEnum.INFO.name());
   }
 }

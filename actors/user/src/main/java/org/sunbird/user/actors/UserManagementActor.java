@@ -39,9 +39,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.request.UserRequestValidator;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
-import org.sunbird.content.util.ContentStoreUtil;
-import org.sunbird.extension.user.UserExtension;
-import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
+import org.sunbird.content.store.util.ContentStoreUtil;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.role.service.RoleService;
 import org.sunbird.learner.organisation.external.identity.service.OrgExternalService;
@@ -144,9 +142,7 @@ public class UserManagementActor extends BaseActor {
     // if we are updating email then need to update isEmailVerified flag inside keycloak
     UserUtil.checkEmailSameOrDiff(userMap, userDbRecord);
     convertValidatedLocationCodesToIDs(userMap);
-    if (IS_REGISTRY_ENABLED) {
-      UserUtil.updateUserToRegistry(userMap, (String) userDbRecord.get(JsonKey.REGISTRY_ID));
-    }
+
     userMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
     if (StringUtils.isBlank(callerId)) {
       userMap.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
@@ -568,10 +564,7 @@ public class UserManagementActor extends BaseActor {
     userMap.put(JsonKey.EXTERNAL_IDS, user.getExternalIds());
     UserUtil.validateUserPhoneEmailAndWebPages(user, JsonKey.CREATE);
     convertValidatedLocationCodesToIDs(userMap);
-    if (IS_REGISTRY_ENABLED) {
-      UserExtension userExtension = new UserProviderRegistryImpl();
-      userExtension.create(userMap);
-    }
+
     UserUtil.toLower(userMap);
     String userId = ProjectUtil.generateUniqueId();
     userMap.put(JsonKey.ID, userId);
@@ -590,10 +583,6 @@ public class UserManagementActor extends BaseActor {
       isPasswordUpdated = UserUtil.updatePassword(userMap);
 
     } finally {
-      if (null == response && IS_REGISTRY_ENABLED) {
-        UserExtension userExtension = new UserProviderRegistryImpl();
-        userExtension.delete(userMap);
-      }
       if (response == null) {
         response = new Response();
       }

@@ -11,7 +11,9 @@ import org.json.JSONObject;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchHelper;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.HttpUtil;
 import org.sunbird.common.models.util.JsonKey;
@@ -22,6 +24,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
+import scala.concurrent.Future;
 
 /** @author Amit Kumar */
 @ActorConfig(
@@ -31,6 +34,7 @@ import org.sunbird.learner.util.Util;
 public class ChannelRegistrationActor extends BaseActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -93,11 +97,10 @@ public class ChannelRegistrationActor extends BaseActor {
     Map<String, Object> filter = new HashMap<>();
     filter.put(JsonKey.IS_ROOT_ORG, true);
     searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
+    Future<Map<String, Object>> esResponseF =
+        esService.search(searchDto, ProjectUtil.EsType.organisation.getTypeName());
     Map<String, Object> esResponse =
-        ElasticSearchUtil.complexSearch(
-            searchDto,
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.organisation.getTypeName());
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(esResponseF);
     List<Map<String, Object>> orgList = (List<Map<String, Object>>) esResponse.get(JsonKey.CONTENT);
     ProjectLogger.log("End call for getting List of channel from sunbird ES");
     return orgList;

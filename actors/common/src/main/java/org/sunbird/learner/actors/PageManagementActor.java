@@ -19,10 +19,12 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.cacheloader.PageCacheLoaderService;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.hash.HashGeneratorUtil;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -72,7 +74,8 @@ public class PageManagementActor extends BaseActor {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private ObjectMapper mapper = new ObjectMapper();
   private boolean isCacheEnabled = false;
-      //Boolean.parseBoolean(ProjectUtil.propertiesCache.getProperty(JsonKey.SUNBIRD_CACHE_ENABLE));
+  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
+  // Boolean.parseBoolean(ProjectUtil.propertiesCache.getProperty(JsonKey.SUNBIRD_CACHE_ENABLE));
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -147,6 +150,8 @@ public class PageManagementActor extends BaseActor {
             ActorOperations.GET_SECTION.getValue(), sectionId, response.get(JsonKey.RESPONSE));
         sender().tell(section, self());
         return;
+      } else {
+        ProjectCommonException.throwClientErrorException(ResponseCode.sectionDoesNotExist);
       }
     } else {
       response = new Response();
@@ -345,10 +350,12 @@ public class PageManagementActor extends BaseActor {
 
           if (MapUtils.isNotEmpty(sectionMap)) {
 
-            Map<String, Object> sectionData = new HashMap<String, Object>(PageCacheLoaderService.getDataFromCache(
-                    ActorOperations.GET_SECTION.getValue(),
-                    (String) sectionMap.get(JsonKey.ID),
-                    Map.class));
+            Map<String, Object> sectionData =
+                new HashMap<String, Object>(
+                    PageCacheLoaderService.getDataFromCache(
+                        ActorOperations.GET_SECTION.getValue(),
+                        (String) sectionMap.get(JsonKey.ID),
+                        Map.class));
             if (MapUtils.isNotEmpty(sectionData)) {
               Future<Map<String, Object>> contentFuture =
                   getContentData(
@@ -683,8 +690,10 @@ public class PageManagementActor extends BaseActor {
     } else {
       return null;
     }
+
+    Future<Map<String, Object>> resultF = esService.search(searcDto, type);
     Map<String, Object> result =
-        ElasticSearchUtil.complexSearch(searcDto, ProjectUtil.EsIndex.sunbird.getIndexName(), type);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     return result;
   }
 

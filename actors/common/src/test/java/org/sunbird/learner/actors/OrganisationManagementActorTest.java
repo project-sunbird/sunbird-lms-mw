@@ -13,19 +13,24 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
-import org.junit.*;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.FixMethodOrder;
+import org.junit.Ignore;
+import org.junit.Test;
 import org.junit.runners.MethodSorters;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.OrgStatus;
 import org.sunbird.common.request.ExecutionContext;
@@ -70,6 +75,7 @@ public class OrganisationManagementActorTest {
   @BeforeClass
   public static void setUp() {
     CassandraOperation operation = ServiceFactory.getInstance();
+    ElasticSearchService esUtil = new ElasticSearchTcpImpl();
     SunbirdMWService.init();
     system = ActorSystem.create("system");
     Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
@@ -97,24 +103,21 @@ public class OrganisationManagementActorTest {
     rootOrg.put(JsonKey.EXTERNAL_ID, EXTERNAL_ID + "01");
 
     operation.upsertRecord(orgDB.getKeySpace(), orgDB.getTableName(), rootOrg);
-    ElasticSearchUtil.createData(
-        EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName(), rootOrgId, rootOrg);
+    esUtil.save(EsType.organisation.getTypeName(), rootOrgId, rootOrg);
 
     Map<String, Object> userMap = new HashMap<>();
     userMap.put(JsonKey.ID, USER_ID);
     // userMap.put(JsonKey.ROOT_ORG_ID, ROOT_ORG_ID);
     operation.insertRecord(userDbInfo.getKeySpace(), userDbInfo.getTableName(), userMap);
     userMap.put(JsonKey.USER_ID, USER_ID);
-    ElasticSearchUtil.createData(
-        EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), USER_ID, userMap);
+    esUtil.save(EsType.user.getTypeName(), USER_ID, userMap);
 
     Map<String, Object> userMap1 = new HashMap<>();
     userMap1.put(JsonKey.ID, USER_ID + "01");
     // userMap.put(JsonKey.ROOT_ORG_ID, ROOT_ORG_ID);
     operation.insertRecord(userDbInfo.getKeySpace(), userDbInfo.getTableName(), userMap1);
     userMap1.put(JsonKey.USER_ID, USER_ID + "01");
-    ElasticSearchUtil.createData(
-        EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), USER_ID, userMap1);
+    esUtil.save(EsType.user.getTypeName(), USER_ID, userMap1);
   }
 
   @Test
@@ -1386,6 +1389,7 @@ public class OrganisationManagementActorTest {
 
   @AfterClass
   public static void delete() {
+    ElasticSearchService esUtil = new ElasticSearchTcpImpl();
     try {
       CassandraOperation operation = ServiceFactory.getInstance();
       operation.deleteRecord(orgTypeDbInfo.getKeySpace(), orgTypeDbInfo.getTableName(), orgTypeId1);
@@ -1412,35 +1416,25 @@ public class OrganisationManagementActorTest {
       ProjectLogger.log(th.getMessage(), th);
     }
     if (!StringUtils.isBlank(usrId)) {
-      ElasticSearchUtil.removeData(
-          EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), usrId);
+      esUtil.delete(EsType.user.getTypeName(), usrId);
     }
 
     if (!StringUtils.isBlank(USER_ID)) {
-      ElasticSearchUtil.removeData(
-          EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), USER_ID);
+      esUtil.delete(EsType.user.getTypeName(), USER_ID);
     }
 
     if (!StringUtils.isBlank(USER_ID + "01")) {
-      ElasticSearchUtil.removeData(
-          EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), USER_ID + "01");
+      esUtil.delete(EsType.user.getTypeName(), USER_ID + "01");
     }
 
     if (!StringUtils.isBlank(orgId)) {
-      ElasticSearchUtil.removeData(
-          EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName(), orgId);
+      esUtil.delete(EsType.organisation.getTypeName(), orgId);
     }
     if (!StringUtils.isBlank(OrgIDWithoutSourceAndExternalId)) {
-      ElasticSearchUtil.removeData(
-          EsIndex.sunbird.getIndexName(),
-          EsType.organisation.getTypeName(),
-          OrgIDWithoutSourceAndExternalId);
+      esUtil.delete(EsType.organisation.getTypeName(), OrgIDWithoutSourceAndExternalId);
     }
     if (!StringUtils.isBlank(OrgIdWithSourceAndExternalId)) {
-      ElasticSearchUtil.removeData(
-          EsIndex.sunbird.getIndexName(),
-          EsType.organisation.getTypeName(),
-          OrgIdWithSourceAndExternalId);
+      esUtil.delete(EsType.organisation.getTypeName(), OrgIdWithSourceAndExternalId);
     }
 
     Map<String, Object> dbMap = new HashMap<>();
@@ -1454,8 +1448,7 @@ public class OrganisationManagementActorTest {
         String id = (String) res.get(JsonKey.ID);
         System.out.println("ID is " + id);
         operation.deleteRecord(orgDB.getKeySpace(), orgDB.getTableName(), id);
-        ElasticSearchUtil.removeData(
-            EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName(), id);
+        esUtil.delete(EsType.organisation.getTypeName(), id);
       }
     }
     try {
@@ -1469,8 +1462,7 @@ public class OrganisationManagementActorTest {
           String id = (String) res.get(JsonKey.ID);
           System.out.println("ID is " + id);
           operation.deleteRecord(orgDB.getKeySpace(), orgDB.getTableName(), id);
-          ElasticSearchUtil.removeData(
-              EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName(), id);
+          esUtil.delete(EsType.organisation.getTypeName(), id);
         }
       }
     } catch (Exception e) {
@@ -1486,8 +1478,7 @@ public class OrganisationManagementActorTest {
         String id = (String) res.get(JsonKey.ID);
         System.out.println("ID is " + id);
         operation.deleteRecord(orgDB.getKeySpace(), orgDB.getTableName(), id);
-        ElasticSearchUtil.removeData(
-            EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName(), id);
+        esUtil.delete(EsType.organisation.getTypeName(), id);
       }
     }
 
@@ -1503,8 +1494,7 @@ public class OrganisationManagementActorTest {
         String id = (String) res.get(JsonKey.ID);
         System.out.println("ID is " + id);
         operation.deleteRecord(orgDB.getKeySpace(), orgDB.getTableName(), id);
-        ElasticSearchUtil.removeData(
-            EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName(), id);
+        esUtil.delete(EsType.organisation.getTypeName(), id);
       }
     }
 
@@ -1520,8 +1510,7 @@ public class OrganisationManagementActorTest {
         String id = (String) res.get(JsonKey.ID);
         System.out.println("ID is " + id);
         operation.deleteRecord(orgDB.getKeySpace(), orgDB.getTableName(), id);
-        ElasticSearchUtil.removeData(
-            EsIndex.sunbird.getIndexName(), EsType.organisation.getTypeName(), id);
+        esUtil.delete(EsType.organisation.getTypeName(), id);
       }
     }
 

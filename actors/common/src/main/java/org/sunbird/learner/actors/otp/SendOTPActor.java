@@ -2,6 +2,7 @@ package org.sunbird.learner.actors.otp;
 
 import java.util.HashMap;
 import java.util.Map;
+
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.models.util.ActorOperations;
@@ -29,10 +30,9 @@ public class SendOTPActor extends BaseActor {
     String type = (String) request.getRequest().get(JsonKey.TYPE);
     String key = (String) request.getRequest().get(JsonKey.KEY);
     String otp = (String) request.getRequest().get(JsonKey.OTP);
-
-    if (JsonKey.EMAIL.equalsIgnoreCase(type)) {
+    if (JsonKey.EMAIL.equalsIgnoreCase(type) || "prevUsedEmail".equalsIgnoreCase(type)) {
       sendOTPViaEmail(key, otp);
-    } else if (JsonKey.PHONE.equalsIgnoreCase(type)) {
+    } else if (JsonKey.PHONE.equalsIgnoreCase(type) || "prevUsedPhone".equalsIgnoreCase(type)) {
       sendOTPViaSMS(key, otp);
     }
   }

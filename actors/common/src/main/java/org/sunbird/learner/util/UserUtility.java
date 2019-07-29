@@ -118,10 +118,14 @@ public final class UserUtility {
     // Decrypt user basic info
     for (String key : userKeyToDecrypt) {
       if (userMap.containsKey(key)) {
-        userMap.put(key, service.decryptData((String) userMap.get(key)));
+        if (JsonKey.EMAIL.equalsIgnoreCase(key) || JsonKey.PHONE.equalsIgnoreCase(key)) {
+          userMap.put(key, maskEmailOrPhone((String) userMap.get(key), key));
+
+        } else {
+          userMap.put(key, service.decryptData((String) userMap.get(key)));
+        }
       }
     }
-
     // Decrypt user address Info
     if (userMap.containsKey(JsonKey.ADDRESS)) {
       List<Map<String, Object>> addressList =

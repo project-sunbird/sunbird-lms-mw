@@ -5,7 +5,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchHelper;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.GeoLocationJsonKey;
 import org.sunbird.common.models.util.JsonKey;
@@ -15,6 +17,7 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.location.dao.LocationDao;
 import org.sunbird.models.location.Location;
+import scala.concurrent.Future;
 
 /** @author Amit Kumar */
 public class LocationDaoImpl implements LocationDao {
@@ -23,6 +26,7 @@ public class LocationDaoImpl implements LocationDao {
   private ObjectMapper mapper = new ObjectMapper();
   private static final String KEYSPACE_NAME = "sunbird";
   private static final String LOCATION_TABLE_NAME = "location";
+  private ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public Response create(Location location) {
@@ -47,10 +51,10 @@ public class LocationDaoImpl implements LocationDao {
   @Override
   public Response search(Map<String, Object> searchQueryMap) {
     SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
-    String[] types = {ProjectUtil.EsType.location.getTypeName()};
+    String type = ProjectUtil.EsType.location.getTypeName();
+    Future<Map<String, Object>> resultF = esUtil.search(searchDto, type);
     Map<String, Object> result =
-        ElasticSearchUtil.complexSearch(
-            searchDto, ProjectUtil.EsIndex.sunbird.getIndexName(), types);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     Response response = new Response();
     if (result != null) {
       response.put(JsonKey.RESPONSE, result.get(JsonKey.CONTENT));

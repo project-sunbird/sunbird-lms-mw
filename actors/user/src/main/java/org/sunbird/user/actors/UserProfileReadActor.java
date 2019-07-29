@@ -3,6 +3,7 @@ package org.sunbird.user.actors;
 import static org.sunbird.learner.util.Util.isNotNull;
 
 import akka.actor.ActorRef;
+import akka.dispatch.Mapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -24,8 +25,10 @@ import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -52,6 +55,9 @@ import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.user.dao.UserDao;
 import org.sunbird.user.dao.impl.UserDaoImpl;
 import org.sunbird.user.dao.impl.UserExternalIdentityDaoImpl;
+import scala.concurrent.Await;
+import scala.concurrent.Future;
+import scala.concurrent.duration.Duration;
 
 @ActorConfig(
   tasks = {"getUserDetailsByLoginId", "getUserProfile", "getUserProfileV2", "getUserByKey"},
@@ -71,6 +77,7 @@ public class UserProfileReadActor extends BaseActor {
   private SSOManager ssoManager = SSOServiceFactory.getInstance();
   private ActorRef systemSettingActorRef = null;
   private UserExternalIdentityDaoImpl userExternalIdentityDao = new UserExternalIdentityDaoImpl();
+  private ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -108,7 +115,7 @@ public class UserProfileReadActor extends BaseActor {
     sender().tell(response, self());
   }
 
-  private Response getUserProfileData(Request actorMessage) {
+  private Response getUserProfileData(Request actorMessage){
     Map<String, Object> userMap = actorMessage.getRequest();
     String id = (String) userMap.get(JsonKey.USER_ID);
     String userId;
@@ -138,13 +145,17 @@ public class UserProfileReadActor extends BaseActor {
       showMaskedData = false;
     }
     boolean isPrivate = (boolean) actorMessage.getContext().get(JsonKey.PRIVATE);
-    Map<String, Object> result;
+    Map<String, Object> result=null;
     if (!isPrivate) {
-      result =
-          ElasticSearchUtil.getDataByIdentifier(
-              ProjectUtil.EsIndex.sunbird.getIndexName(),
-              ProjectUtil.EsType.user.getTypeName(),
-              userId);
+      Future<Map<String, Object>> resultF = esUtil.getDataByIdentifier(ProjectUtil.EsType.user.getTypeName(), userId);
+      try {
+        Object object  =  Await.result(resultF, ElasticSearchHelper.timeout.duration());
+        if(object != null) {
+          result = (Map<String, Object>) object;
+        }
+      } catch (Exception e) {
+        ProjectLogger.log(String.format("%s:%s:User not found with provided id == %s and error %s",this.getClass().getSimpleName(),"getUserProfileData",e.getMessage()), LoggerEnum.ERROR.name());
+      }
     } else {
       UserDao userDao = new UserDaoImpl();
       User foundUser = userDao.getUserById(userId);
@@ -192,11 +203,11 @@ public class UserProfileReadActor extends BaseActor {
         // If the user requests his data then we are fetching the private data from
         // userprofilevisibility index
         // and merge it with user index data
+        Future<Map<String, Object>> privateResultF =
+            esUtil.getDataByIdentifier(
+                ProjectUtil.EsType.userprofilevisibility.getTypeName(), userId);
         Map<String, Object> privateResult =
-            ElasticSearchUtil.getDataByIdentifier(
-                ProjectUtil.EsIndex.sunbird.getIndexName(),
-                ProjectUtil.EsType.userprofilevisibility.getTypeName(),
-                userId);
+            (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(privateResultF);
         // fetch user external identity
         List<Map<String, String>> dbResExternalIds = fetchUserExternalIdentity(userId);
         result.put(JsonKey.EXTERNAL_IDS, dbResExternalIds);
@@ -249,14 +260,12 @@ public class UserProfileReadActor extends BaseActor {
                   if (StringUtils.isNotBlank(s.get(JsonKey.ORIGINAL_EXTERNAL_ID))
                       && StringUtils.isNotBlank(s.get(JsonKey.ORIGINAL_ID_TYPE))
                       && StringUtils.isNotBlank(s.get(JsonKey.ORIGINAL_PROVIDER))) {
-                    s.put(
-                        JsonKey.ID,
-                        decryptionService.decryptData(s.get(JsonKey.ORIGINAL_EXTERNAL_ID)));
+                    s.put(JsonKey.ID, s.get(JsonKey.ORIGINAL_EXTERNAL_ID));
                     s.put(JsonKey.ID_TYPE, s.get(JsonKey.ORIGINAL_ID_TYPE));
                     s.put(JsonKey.PROVIDER, s.get(JsonKey.ORIGINAL_PROVIDER));
 
                   } else {
-                    s.put(JsonKey.ID, decryptionService.decryptData(s.get(JsonKey.EXTERNAL_ID)));
+                    s.put(JsonKey.ID, s.get(JsonKey.EXTERNAL_ID));
                   }
 
                   s.remove(JsonKey.EXTERNAL_ID);
@@ -309,11 +318,10 @@ public class UserProfileReadActor extends BaseActor {
       if (isNotNull(result.get(JsonKey.ROOT_ORG_ID))) {
 
         String rootOrgId = (String) result.get(JsonKey.ROOT_ORG_ID);
+        Future<Map<String, Object>> esResultF =
+            esUtil.getDataByIdentifier(ProjectUtil.EsType.organisation.getTypeName(), rootOrgId);
         Map<String, Object> esResult =
-            ElasticSearchUtil.getDataByIdentifier(
-                ProjectUtil.EsIndex.sunbird.getIndexName(),
-                ProjectUtil.EsType.organisation.getTypeName(),
-                rootOrgId);
+            (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(esResultF);
         result.put(JsonKey.ROOT_ORG, esResult);
       }
     } catch (Exception ex) {
@@ -422,11 +430,10 @@ public class UserProfileReadActor extends BaseActor {
         searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
         searchDTO.setFields(orgfields);
 
+        Future<Map<String, Object>> esresultF =
+            esUtil.search(searchDTO, EsType.organisation.getTypeName());
         Map<String, Object> esresult =
-            ElasticSearchUtil.complexSearch(
-                searchDTO,
-                ProjectUtil.EsIndex.sunbird.getIndexName(),
-                EsType.organisation.getTypeName());
+            (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(esresultF);
         List<Map<String, Object>> esContent =
             (List<Map<String, Object>>) esresult.get(JsonKey.CONTENT);
 
@@ -543,9 +550,9 @@ public class UserProfileReadActor extends BaseActor {
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
     searchDTO.setFields(fields);
 
+    Future<Map<String, Object>> resultF = esUtil.search(searchDTO, typeToSearch.getTypeName());
     Map<String, Object> result =
-        ElasticSearchUtil.complexSearch(
-            searchDTO, ProjectUtil.EsIndex.sunbird.getIndexName(), typeToSearch.getTypeName());
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
 
     List<Map<String, Object>> esContent = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
     return esContent
@@ -630,11 +637,10 @@ public class UserProfileReadActor extends BaseActor {
       Map<String, Object> filter = new HashMap<>();
       filter.put(JsonKey.LOGIN_ID, loginId);
       searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
+      Future<Map<String, Object>> esResponseF =
+          esUtil.search(searchDto, ProjectUtil.EsType.user.getTypeName());
       Map<String, Object> esResponse =
-          ElasticSearchUtil.complexSearch(
-              searchDto,
-              ProjectUtil.EsIndex.sunbird.getIndexName(),
-              ProjectUtil.EsType.user.getTypeName());
+          (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(esResponseF);
       List<Map<String, Object>> userList =
           (List<Map<String, Object>>) esResponse.get(JsonKey.CONTENT);
       Map<String, Object> result = null;
@@ -746,11 +752,12 @@ public class UserProfileReadActor extends BaseActor {
         // If the user requests his data then we are fetching the private data from
         // userprofilevisibility index
         // and merge it with user index data
-        Map<String, Object> privateResult =
-            ElasticSearchUtil.getDataByIdentifier(
-                ProjectUtil.EsIndex.sunbird.getIndexName(),
+        Future<Map<String, Object>> privateResultF =
+            esUtil.getDataByIdentifier(
                 ProjectUtil.EsType.userprofilevisibility.getTypeName(),
                 (String) result.get(JsonKey.USER_ID));
+        Map<String, Object> privateResult =
+            (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(privateResultF);
         // fetch user external identity
         List<Map<String, String>> dbResExternalIds = fetchUserExternalIdentity(requestedById);
         result.put(JsonKey.EXTERNAL_IDS, dbResExternalIds);

@@ -12,6 +12,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 
+/** This actor process the request for reset password. */
 @ActorConfig(
   tasks = {"resetPassword"},
   asyncTasks = {}

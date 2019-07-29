@@ -34,6 +34,8 @@ public class ResetPasswordActor extends BaseActor {
       Response response = new Response();
       response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     } else {
+      ProjectLogger.log(
+          "ResetPasswordActor:resetPassword : reset password failed", LoggerEnum.INFO.name());
       ProjectCommonException.throwServerErrorException(ResponseCode.SERVER_ERROR);
     }
   }

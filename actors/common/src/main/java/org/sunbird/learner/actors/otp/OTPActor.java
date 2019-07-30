@@ -2,6 +2,7 @@ package org.sunbird.learner.actors.otp;
 
 import java.util.Map;
 import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -43,6 +44,12 @@ public class OTPActor extends BaseActor {
     String type = (String) request.getRequest().get(JsonKey.TYPE);
     String key = getKey(type, request);
 
+    String userId = (String) request.getRequest().get(JsonKey.USER_ID);
+    if (StringUtils.isNotBlank(userId)) {
+      key = OTPUtil.getEmailPhoneByUserId(userId, type);
+      type = getType(type);
+    }
+
     rateLimitService.throttleByKey(
         key, new RateLimiter[] {OtpRateLimiter.HOUR, OtpRateLimiter.DAY});
 
@@ -60,7 +67,22 @@ public class OTPActor extends BaseActor {
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(response, self());
 
-    sendOTP(request, otp);
+    sendOTP(request, otp, key);
+  }
+
+  private String getType(String type) {
+    switch (type) {
+      case JsonKey.PREV_USED_EMAIL:
+        return JsonKey.EMAIL;
+      case JsonKey.PREV_USED_PHONE:
+        return JsonKey.PHONE;
+      case JsonKey.EMAIL:
+        return JsonKey.EMAIL;
+      case JsonKey.PHONE:
+        return JsonKey.PHONE;
+      default:
+        return null;
+    }
   }
 
   private void verifyOTP(Request request) {
@@ -94,10 +116,10 @@ public class OTPActor extends BaseActor {
     sender().tell(response, self());
   }
 
-  private void sendOTP(Request request, String otp) {
+  private void sendOTP(Request request, String otp, String key) {
     Request sendOtpRequest = new Request();
-
     sendOtpRequest.getRequest().putAll(request.getRequest());
+    sendOtpRequest.getRequest().put(JsonKey.KEY, key);
     sendOtpRequest.getRequest().put(JsonKey.OTP, otp);
     sendOtpRequest.setOperation(ActorOperations.SEND_OTP.getValue());
 

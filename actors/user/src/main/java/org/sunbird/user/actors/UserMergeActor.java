@@ -47,8 +47,8 @@ public class UserMergeActor extends UserBaseActor {
             mergeeDBMap.put(JsonKey.EMAIL,null);
             mergeeDBMap.put(JsonKey.PHONE,null);
             mergeeDBMap.put(JsonKey.USERNAME, null);
-            mergeeDBMap.put("prevUsedEmail", mergee.getEmail());
-            mergeeDBMap.put("prevUsedPhone", mergee.getPhone());
+            mergeeDBMap.put(JsonKey.PREV_USED_EMAIL, mergee.getEmail());
+            mergeeDBMap.put(JsonKey.PREV_USED_PHONE, mergee.getPhone());
             mergeeDBMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
             mergeeDBMap.put(JsonKey.ID,mergee.getId());
 
@@ -57,8 +57,8 @@ public class UserMergeActor extends UserBaseActor {
             mergeeESMap.put(JsonKey.EMAIL,null);
             mergeeESMap.put(JsonKey.PHONE,null);
             mergeeESMap.put(JsonKey.USERNAME, null);
-            mergeeESMap.put("prevUsedEmail", mergee.getEmail());
-            mergeeESMap.put("prevUsedPhone", mergee.getPhone());
+            mergeeESMap.put(JsonKey.PREV_USED_EMAIL, mergee.getEmail());
+            mergeeESMap.put(JsonKey.PREV_USED_PHONE, mergee.getPhone());
             mergeeESMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
             mergeeESMap.put(JsonKey.USER_ID, mergeeId);
             userRequest.put("userFromAccount", mergeeESMap);

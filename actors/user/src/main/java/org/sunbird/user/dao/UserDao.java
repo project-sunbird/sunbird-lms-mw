@@ -29,6 +29,13 @@ public interface UserDao {
   Response updateUser(User user);
 
   /**
+   * This method will update existing user info even if some fields need to be nullify or throw ProjectCommonException.
+   *
+   * @param userMap User Details.
+   */
+  Response updateUserFieldsWithNullValues(Map<String, Object> userMap);
+
+  /**
    * This method will search user from ES and return list of user details matching filter criteria.
    *
    * @param searchQueryMap search query for ES as a Map.

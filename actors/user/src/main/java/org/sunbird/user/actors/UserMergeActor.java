@@ -2,6 +2,7 @@ package org.sunbird.user.actors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.HttpUtilResponse;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
@@ -20,8 +21,7 @@ import java.util.*;
         asyncTasks = {}
 )
 public class UserMergeActor extends UserBaseActor {
-
-    private ObjectMapper objectMapper;
+    private ObjectMapper objectMapper = new ObjectMapper();
     private UserService userService = UserServiceImpl.getInstance();
     @Override
     public void onReceive(Request userRequest) throws Throwable {
@@ -29,56 +29,76 @@ public class UserMergeActor extends UserBaseActor {
     }
 
     private void updateUserMergeDetails(Request userRequest) throws IOException {
+        ProjectLogger.log(
+                "UserMergeActor:updateUserMergeDetails: starts : " ,
+                LoggerEnum.DEBUG.name());
         Map<String, Object> targetObject = null;
         List<Map<String, Object>> correlatedObject = new ArrayList<>();
-        Map mergeeMap = new HashMap<String, Object>();
+        Response response = new Response();
+        Map mergeeESMap = new HashMap<String, Object>();
+        Map mergeeDBMap = new HashMap<String, Object>();
         Map requestMap = userRequest.getRequest();
-        String mergeeId = (String)requestMap.get("mergeeId");
-        String mergerId = (String)requestMap.get("mergerId");
+        String mergeeId = (String)requestMap.get(JsonKey.FROM_ACCOUNT_ID);
+        String mergerId = (String)requestMap.get(JsonKey.TO_ACCOUNT_ID);
         User mergee = userService.getUserById(mergeeId);
+        if(!mergee.getIsDeleted()) {
+            mergeeDBMap.put(JsonKey.STATUS, 0);
+            mergeeDBMap.put(JsonKey.IS_DELETED, true);
+            mergeeDBMap.put(JsonKey.EMAIL,null);
+            mergeeDBMap.put(JsonKey.PHONE,null);
+            mergeeDBMap.put(JsonKey.USERNAME, null);
+            mergeeDBMap.put("prevUsedEmail", mergee.getEmail());
+            mergeeDBMap.put("prevUsedPhone", mergee.getPhone());
+            mergeeDBMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+            mergeeDBMap.put(JsonKey.ID,mergee.getId());
 
-        mergee.setStatus(0);
-        mergee.setIsDeleted(true);
-        mergee.setPrevUsedEmail(mergee.getEmail());
-        mergee.setPrevUsedPhone(mergee.getPhone());
-        mergee.setEmail(null);
-        mergee.setPhone(null);
-        mergee.setUserName(null);
-        mergee.setUpdatedDate(ProjectUtil.getFormattedDate());
+            mergeeESMap.put(JsonKey.STATUS, 0);
+            mergeeESMap.put(JsonKey.IS_DELETED, true);
+            mergeeESMap.put(JsonKey.EMAIL,null);
+            mergeeESMap.put(JsonKey.PHONE,null);
+            mergeeESMap.put(JsonKey.USERNAME, null);
+            mergeeESMap.put("prevUsedEmail", mergee.getEmail());
+            mergeeESMap.put("prevUsedPhone", mergee.getPhone());
+            mergeeESMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+            mergeeESMap.put(JsonKey.USER_ID, mergeeId);
+            userRequest.put("userFromAccount", mergeeESMap);
 
-        mergeeMap.put("status", 0);
-        mergeeMap.put("isDeleted", true);
-        mergeeMap.put("email",null);
-        mergeeMap.put("phone",null);
-        mergeeMap.put("userName", null);
-        mergeeMap.put("prevUsedEmail", mergee.getPrevUsedEmail());
-        mergeeMap.put("prevUsedPhone", mergee.getPrevUsedPhone());
-        mergeeMap.put("updatedDate", mergee.getUpdatedDate());
-        mergeeMap.put(JsonKey.USER_ID, mergeeId);
-        userRequest.put("userFromAccount", mergeeMap);
+            //update the merger-course details in cassandra & ES
+            String mergerCourseResponse = updateMergerCourseDetails(requestMap);
 
-        //update the merger-course details in cassandra & ES
-        String mergerCourseResponse = updateMergerCourseDetails(requestMap);
+            if(mergerCourseResponse.equalsIgnoreCase(JsonKey.SUCCESS)) {
+                Response mergeeResponse = getUserDao().updateUserFieldsWithNullValues(mergeeDBMap);
+                String mergeeResponseStr = (String) mergeeResponse.get(JsonKey.RESPONSE);
+                ProjectLogger.log("UserMergeActor:UserMergeActor: mergeeResponseStr = " + mergeeResponseStr);
+                Map result = new HashMap<String, Object>();
+                result.put(JsonKey.STATUS,JsonKey.SUCCESS);
+                response.put(JsonKey.RESULT,result);
+                //update mergee details in ES
+                sender().tell(response, self());
+                mergeUserDetailsToEs(userRequest);
 
-        if(mergerCourseResponse.equalsIgnoreCase("SUCCESS")) {
-            Response mergeeResponse = getUserDao().updateUser(mergee);
-            String mergeeResponseStr = (String) mergeeResponse.get(JsonKey.RESPONSE);
-            ProjectLogger.log("UserMergeActor:UserMergeActor: mergeeResponseStr = " + mergeeResponseStr);
-
-            //update mergee details in ES
-            mergeUserDetailsToEs(userRequest);
-
-            //create telemetry event for merge
-            targetObject =
+                //create telemetry event for merge
+            /*targetObject =
                     TelemetryUtil.generateTargetObject(
                             (String) userRequest.getRequest().get(mergeeId), TelemetryEnvKey.USER, JsonKey.MERGE, null);
-            correlatedObject.add(mergeeMap);
-            TelemetryUtil.telemetryProcessingCall(userRequest.getRequest(),targetObject,correlatedObject);
+            correlatedObject.add(mergeeESMap);
+            TelemetryUtil.telemetryProcessingCall(userRequest.getRequest(),targetObject,correlatedObject);*/
+            } else {
+                ProjectLogger.log(
+                        "UserMergeActor:updateUserMergeDetails: User course data is not updated for userId : " + mergerId,
+                        LoggerEnum.ERROR.name());
+            }
         } else {
             ProjectLogger.log(
-                    "UserMergeActor:updateUserMergeDetails: User course data is not updated for userId : " + mergerId,
+                    "UserMergeActor:updateUserMergeDetails: User mergee is not exist : " + mergeeId,
                     LoggerEnum.ERROR.name());
+            throw new ProjectCommonException(
+                    ResponseCode.mergeeIdNotExists.getErrorCode(),
+                    ProjectUtil.formatMessage(
+                            ResponseCode.mergeeIdNotExists.getErrorMessage(), mergeeId),
+                    ResponseCode.CLIENT_ERROR.getResponseCode());
         }
+
 
     }
 
@@ -90,7 +110,6 @@ public class UserMergeActor extends UserBaseActor {
 
     private String updateMergerCourseDetails(Map<String, Object> requestMap) throws IOException {
         //call course service api
-        objectMapper = new ObjectMapper();
         String bodyJson = objectMapper.writeValueAsString(requestMap);
         Map headersMap = new HashMap();
         String responseCode = null;

@@ -56,6 +56,11 @@ public class UserDaoImpl implements UserDao {
   }
 
   @Override
+  public Response updateUserFieldsWithNullValues(Map<String, Object> userMap) {
+    return cassandraOperation.updateRecord(Util.KEY_SPACE_NAME, TABLE_NAME, userMap);
+  }
+
+  @Override
   public List<User> searchUser(Map<String, Object> searchQueryMap) {
     List<User> userList = new ArrayList<>();
     Map<String, Object> searchRequestMap = new HashMap<>();

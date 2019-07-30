@@ -67,7 +67,7 @@ public class OTPActor extends BaseActor {
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(response, self());
 
-    sendOTP(request, otp);
+    sendOTP(request, otp, key);
   }
 
   private String getType(String type) {
@@ -116,9 +116,9 @@ public class OTPActor extends BaseActor {
     sender().tell(response, self());
   }
 
-  private void sendOTP(Request request, String otp) {
+  private void sendOTP(Request request, String otp, String key) {
     Request sendOtpRequest = new Request();
-
+    sendOtpRequest.getRequest().put(JsonKey.KEY, key);
     sendOtpRequest.getRequest().putAll(request.getRequest());
     sendOtpRequest.getRequest().put(JsonKey.OTP, otp);
     sendOtpRequest.setOperation(ActorOperations.SEND_OTP.getValue());

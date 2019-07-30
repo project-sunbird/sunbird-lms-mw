@@ -118,8 +118,8 @@ public class OTPActor extends BaseActor {
 
   private void sendOTP(Request request, String otp, String key) {
     Request sendOtpRequest = new Request();
-    sendOtpRequest.getRequest().put(JsonKey.KEY, key);
     sendOtpRequest.getRequest().putAll(request.getRequest());
+    sendOtpRequest.getRequest().put(JsonKey.KEY, key);
     sendOtpRequest.getRequest().put(JsonKey.OTP, otp);
     sendOtpRequest.setOperation(ActorOperations.SEND_OTP.getValue());
 

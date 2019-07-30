@@ -117,7 +117,7 @@ public final class OTPUtil {
     } else {
       ProjectCommonException.throwClientErrorException(ResponseCode.userNotFound);
     }
-    return "";
+    return null;
   }
 
   public static Request sendOTPViaEmail(Map<String, Object> emailTemplateMap) {

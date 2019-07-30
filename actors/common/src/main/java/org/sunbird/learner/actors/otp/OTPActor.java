@@ -81,7 +81,7 @@ public class OTPActor extends BaseActor {
       case JsonKey.PHONE:
         return JsonKey.PHONE;
       default:
-        return "";
+        return null;
     }
   }
 

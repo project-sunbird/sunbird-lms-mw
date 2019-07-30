@@ -12,6 +12,7 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -19,6 +20,7 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.otp.service.OTPService;
 import org.sunbird.notification.sms.provider.ISmsProvider;
@@ -112,6 +114,8 @@ public final class OTPUtil {
     if (CollectionUtils.isNotEmpty(userList)) {
       Map<String, Object> user = userList.get(0);
       return decService.decryptData((String) user.get(type));
+    } else {
+      ProjectCommonException.throwClientErrorException(ResponseCode.userNotFound);
     }
     return "";
   }

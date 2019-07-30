@@ -71,16 +71,18 @@ public class OTPActor extends BaseActor {
   }
 
   private String getType(String type) {
-    if (JsonKey.PREV_USED_EMAIL.equalsIgnoreCase(type)) {
-      return JsonKey.EMAIL;
-    } else if (JsonKey.PREV_USED_PHONE.equalsIgnoreCase(type)) {
-      return JsonKey.PHONE;
-    } else if (JsonKey.EMAIL.equalsIgnoreCase(type)) {
-      return JsonKey.EMAIL;
-    } else if (JsonKey.PHONE.equalsIgnoreCase(type)) {
-      return JsonKey.PHONE;
+    switch (type) {
+      case JsonKey.PREV_USED_EMAIL:
+        return JsonKey.EMAIL;
+      case JsonKey.PREV_USED_PHONE:
+        return JsonKey.PHONE;
+      case JsonKey.EMAIL:
+        return JsonKey.EMAIL;
+      case JsonKey.PHONE:
+        return JsonKey.PHONE;
+      default:
+        return "";
     }
-    return "";
   }
 
   private void verifyOTP(Request request) {

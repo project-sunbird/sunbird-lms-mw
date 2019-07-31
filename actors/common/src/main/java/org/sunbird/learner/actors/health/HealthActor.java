@@ -31,7 +31,8 @@ public class HealthActor extends BaseActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo badgesDbInfo = Util.dbInfoMap.get(JsonKey.BADGES_DB);
-  private ElasticSearchService esUtil = new ElasticSearchTcpImpl();
+    private ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
+
 
   @Override
   public void onReceive(Request message) throws Throwable {
@@ -172,34 +173,34 @@ public class HealthActor extends BaseActor {
       isallHealthy = false;
     }
     // check EKStep Util.
-    try {
-      String body = "{\"request\":{\"filters\":{\"identifier\":\"test\"}}}";
-      Map<String, String> headers = new HashMap<>();
-      headers.put(
-          JsonKey.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.EKSTEP_AUTHORIZATION));
-      if (StringUtils.isBlank(headers.get(JsonKey.AUTHORIZATION))) {
-        headers.put(
-            JsonKey.AUTHORIZATION,
-            PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
-        headers.put("Content_Type", "application/json; charset=utf-8");
-      }
-      String searchBaseUrl = ProjectUtil.getConfigValue(JsonKey.SEARCH_SERVICE_API_BASE_URL);
-      String response =
-          HttpUtil.sendPostRequest(
-              searchBaseUrl
-                  + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_SEARCH_URL),
-              body,
-              headers);
-      if (response.contains("OK")) {
-        responseList.add(ProjectUtil.createCheckResponse(JsonKey.EKSTEP_SERVICE, false, null));
-      } else {
-        responseList.add(ProjectUtil.createCheckResponse(JsonKey.EKSTEP_SERVICE, true, null));
-      }
-    } catch (Exception e) {
-      responseList.add(ProjectUtil.createCheckResponse(JsonKey.EKSTEP_SERVICE, true, null));
-      isallHealthy = false;
-    }
-
+//     try {
+//       String body = "{\"request\":{\"filters\":{\"identifier\":\"test\"}}}";
+//       Map<String, String> headers = new HashMap<>();
+//       headers.put(
+//           JsonKey.AUTHORIZATION, JsonKey.BEARER + System.getenv(JsonKey.EKSTEP_AUTHORIZATION));
+//       if (StringUtils.isBlank(headers.get(JsonKey.AUTHORIZATION))) {
+//         headers.put(
+//             JsonKey.AUTHORIZATION,
+//             PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_AUTHORIZATION));
+//         headers.put("Content_Type", "application/json; charset=utf-8");
+//       }
+//       String searchBaseUrl = ProjectUtil.getConfigValue(JsonKey.SEARCH_SERVICE_API_BASE_URL);
+//       String response =
+//           HttpUtil.sendPostRequest(
+//               searchBaseUrl
+//                   + PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_CONTENT_SEARCH_URL),
+//               body,
+//               headers);
+//       if (response.contains("OK")) {
+//         responseList.add(ProjectUtil.createCheckResponse(JsonKey.EKSTEP_SERVICE, false, null));
+//       } else {
+//         responseList.add(ProjectUtil.createCheckResponse(JsonKey.EKSTEP_SERVICE, true, null));
+//       }
+//     } catch (Exception e) {
+//       responseList.add(ProjectUtil.createCheckResponse(JsonKey.EKSTEP_SERVICE, true, null));
+//       isallHealthy = false;
+//     }
+     ProjectLogger.log("HealthActor:checkAllComponentHealth: EKSTEP URL COMMENTED",LoggerEnum.INFO.name());
     finalResponseMap.put(JsonKey.CHECKS, responseList);
     finalResponseMap.put(JsonKey.NAME, "Complete health check api");
     if (isallHealthy) {

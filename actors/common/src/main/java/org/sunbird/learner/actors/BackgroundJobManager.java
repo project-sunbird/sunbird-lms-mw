@@ -40,7 +40,7 @@ import scala.concurrent.Future;
 @ActorConfig(
   tasks = {},
   asyncTasks = {
-          "mergerUserSToElastic",
+          "mergeUserToElastic",
     "updateUserInfoToElastic",
     "updateUserRoles",
     "addUserBadgebackground",
@@ -54,7 +54,7 @@ import scala.concurrent.Future;
     "updateUserNotesToElastic",
     "insertUserCoursesInfoToElastic",
     "updateCourseBatchToEs",
-    "insertCourseBatchToEs",
+    "insertCourseBatchToEs"
   }
 )
 public class BackgroundJobManager extends BaseActor {
@@ -114,7 +114,7 @@ public class BackgroundJobManager extends BaseActor {
       insertUserNotesToEs(request);
     } else if (operation.equalsIgnoreCase(ActorOperations.UPDATE_USER_NOTES_ES.getValue())) {
       updateUserNotesToEs(request);
-    } else if (operation.equalsIgnoreCase(ActorOperations.MERGE_USERS_TO_ELASTIC.getValue())) {
+    } else if (operation.equalsIgnoreCase(ActorOperations.MERGE_USER_TO_ELASTIC.getValue())) {
       mergeUserDetailsToEs(request);
     } else {
       ProjectLogger.log("UNSUPPORTED OPERATION");
@@ -633,11 +633,12 @@ public class BackgroundJobManager extends BaseActor {
   }
 
   private void mergeUserDetailsToEs(Request mergeRequest) {
-    String mergeeId = (String) mergeRequest.get("mergeeId");
-    Map<String, Object> mergeeMap = (Map<String, Object>) mergeRequest.get("userFromAccount");
+    String mergeeId = (String) mergeRequest.get(JsonKey.FROM_ACCOUNT_ID);
+    Map<String, Object> mergeeMap = (Map<String, Object>) mergeRequest.get(JsonKey.USER_MERGEE_ACCOUNT);
     updateDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
             ProjectUtil.EsType.user.getTypeName(),
             mergeeId,
             mergeeMap);
+    ProjectLogger.log("user details for updated for user in ES with id:" +mergeeId, LoggerEnum.INFO.name());
   }
 }

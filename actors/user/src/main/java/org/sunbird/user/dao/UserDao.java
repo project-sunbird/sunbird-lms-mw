@@ -33,7 +33,7 @@ public interface UserDao {
    *
    * @param userMap User Details.
    */
-  Response updateUserFieldsWithNullValues(Map<String, Object> userMap);
+  Response updateUser(Map<String, Object> userMap);
 
   /**
    * This method will search user from ES and return list of user details matching filter criteria.

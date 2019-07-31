@@ -3,13 +3,12 @@ package org.sunbird.user.actors;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.models.response.HttpUtilResponse;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.models.user.User;
-import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 
@@ -35,7 +34,6 @@ public class UserMergeActor extends UserBaseActor {
         Map<String, Object> targetObject = null;
         List<Map<String, Object>> correlatedObject = new ArrayList<>();
         Response response = new Response();
-        Map mergeeESMap = new HashMap<String, Object>();
         Map mergeeDBMap = new HashMap<String, Object>();
         Map requestMap = userRequest.getRequest();
         String mergeeId = (String)requestMap.get(JsonKey.FROM_ACCOUNT_ID);
@@ -52,22 +50,13 @@ public class UserMergeActor extends UserBaseActor {
             mergeeDBMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
             mergeeDBMap.put(JsonKey.ID,mergee.getId());
 
-            mergeeESMap.put(JsonKey.STATUS, 0);
-            mergeeESMap.put(JsonKey.IS_DELETED, true);
-            mergeeESMap.put(JsonKey.EMAIL,null);
-            mergeeESMap.put(JsonKey.PHONE,null);
-            mergeeESMap.put(JsonKey.USERNAME, null);
-            mergeeESMap.put(JsonKey.PREV_USED_EMAIL, mergee.getEmail());
-            mergeeESMap.put(JsonKey.PREV_USED_PHONE, mergee.getPhone());
-            mergeeESMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-            mergeeESMap.put(JsonKey.USER_ID, mergeeId);
-            userRequest.put("userFromAccount", mergeeESMap);
+            userRequest.put(JsonKey.USER_MERGEE_ACCOUNT, mergeeDBMap);
 
             //update the merger-course details in cassandra & ES
             String mergerCourseResponse = updateMergerCourseDetails(requestMap);
 
             if(mergerCourseResponse.equalsIgnoreCase(JsonKey.SUCCESS)) {
-                Response mergeeResponse = getUserDao().updateUserFieldsWithNullValues(mergeeDBMap);
+                Response mergeeResponse = getUserDao().updateUser(mergeeDBMap);
                 String mergeeResponseStr = (String) mergeeResponse.get(JsonKey.RESPONSE);
                 ProjectLogger.log("UserMergeActor:UserMergeActor: mergeeResponseStr = " + mergeeResponseStr);
                 Map result = new HashMap<String, Object>();
@@ -93,9 +82,11 @@ public class UserMergeActor extends UserBaseActor {
                     "UserMergeActor:updateUserMergeDetails: User mergee is not exist : " + mergeeId,
                     LoggerEnum.ERROR.name());
             throw new ProjectCommonException(
-                    ResponseCode.mergeeIdNotExists.getErrorCode(),
+                    ResponseCode.invalidIdentifier.getErrorCode(),
                     ProjectUtil.formatMessage(
-                            ResponseCode.mergeeIdNotExists.getErrorMessage(), mergeeId),
+                            ResponseMessage.Message.INVALID_PARAMETER_VALUE,
+                            mergeeId,
+                            JsonKey.FROM_ACCOUNT_ID),
                     ResponseCode.CLIENT_ERROR.getResponseCode());
         }
 
@@ -103,8 +94,8 @@ public class UserMergeActor extends UserBaseActor {
     }
 
     private void mergeUserDetailsToEs(Request userRequest) {
-        userRequest.setOperation(ActorOperations.MERGE_USERS_TO_ELASTIC.getValue());
-        ProjectLogger.log(String.format("%s:%s:Trigger sync of user details to ES with user updated userMap %s", this.getClass().getSimpleName(), "mergeUserDetailsToEs", Collections.singleton(userRequest.toString())));
+        userRequest.setOperation(ActorOperations.MERGE_USER_TO_ELASTIC.getValue());
+        ProjectLogger.log(String.format("%s:%s:Trigger sync of user details to ES with user updated userMap %s", this.getClass().getSimpleName(), "mergeUserDetailsToEs", Collections.singleton(userRequest.toString())),LoggerEnum.INFO.name());
         tellToAnother(userRequest);
     }
 

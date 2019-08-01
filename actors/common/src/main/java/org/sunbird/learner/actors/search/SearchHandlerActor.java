@@ -348,7 +348,7 @@ public class SearchHandlerActor extends BaseActor {
 
   /**
    * this method will convert the  Sunbird required fields(source,externalId,userName,provider,loginId,email)
-   * into lower case and encrypt them ass well
+   * into lower case and encrypt them as well
    * @param searchQueryMap
    * @throws Exception
    */

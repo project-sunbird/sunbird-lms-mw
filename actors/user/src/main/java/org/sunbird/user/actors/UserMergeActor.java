@@ -40,25 +40,15 @@ public class UserMergeActor extends UserBaseActor {
         String mergerId = (String)requestMap.get(JsonKey.TO_ACCOUNT_ID);
         User mergee = userService.getUserById(mergeeId);
         if(!mergee.getIsDeleted()) {
-            mergeeDBMap.put(JsonKey.STATUS, 0);
-            mergeeDBMap.put(JsonKey.IS_DELETED, true);
-            mergeeDBMap.put(JsonKey.EMAIL,null);
-            mergeeDBMap.put(JsonKey.PHONE,null);
-            mergeeDBMap.put(JsonKey.USERNAME, null);
-            mergeeDBMap.put(JsonKey.PREV_USED_EMAIL, mergee.getEmail());
-            mergeeDBMap.put(JsonKey.PREV_USED_PHONE, mergee.getPhone());
-            mergeeDBMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-            mergeeDBMap.put(JsonKey.ID,mergee.getId());
-
+            prepareMergeeAccountData(mergee, mergeeDBMap);
             userRequest.put(JsonKey.USER_MERGEE_ACCOUNT, mergeeDBMap);
 
             //update the merger-course details in cassandra & ES
             String mergerCourseResponse = updateMergerCourseDetails(requestMap);
-
             if(mergerCourseResponse.equalsIgnoreCase(JsonKey.SUCCESS)) {
                 Response mergeeResponse = getUserDao().updateUser(mergeeDBMap);
                 String mergeeResponseStr = (String) mergeeResponse.get(JsonKey.RESPONSE);
-                ProjectLogger.log("UserMergeActor:UserMergeActor: mergeeResponseStr = " + mergeeResponseStr);
+                ProjectLogger.log("UserMergeActor: updateUserMergeDetails: mergeeResponseStr = " + mergeeResponseStr,LoggerEnum.INFO.name());
                 Map result = new HashMap<String, Object>();
                 result.put(JsonKey.STATUS,JsonKey.SUCCESS);
                 response.put(JsonKey.RESULT,result);
@@ -67,15 +57,21 @@ public class UserMergeActor extends UserBaseActor {
                 mergeUserDetailsToEs(userRequest);
 
                 //create telemetry event for merge
-            /*targetObject =
-                    TelemetryUtil.generateTargetObject(
-                            (String) userRequest.getRequest().get(mergeeId), TelemetryEnvKey.USER, JsonKey.MERGE, null);
-            correlatedObject.add(mergeeESMap);
-            TelemetryUtil.telemetryProcessingCall(userRequest.getRequest(),targetObject,correlatedObject);*/
+                /*targetObject =
+                        TelemetryUtil.generateTargetObject(
+                                (String) userRequest.getRequest().get(mergeeId), TelemetryEnvKey.USER, JsonKey.MERGE, null);
+                correlatedObject.add(mergeeESMap);
+                TelemetryUtil.telemetryProcessingCall(userRequest.getRequest(),targetObject,correlatedObject);*/
             } else {
                 ProjectLogger.log(
                         "UserMergeActor:updateUserMergeDetails: User course data is not updated for userId : " + mergerId,
                         LoggerEnum.ERROR.name());
+                throw new ProjectCommonException(
+                        ResponseCode.internalError.getErrorCode(),
+                        ProjectUtil.formatMessage(
+                                ResponseMessage.Message.INTERNAL_ERROR,
+                                mergeeId),
+                        ResponseCode.SERVER_ERROR.getResponseCode());
             }
         } else {
             ProjectLogger.log(
@@ -87,7 +83,7 @@ public class UserMergeActor extends UserBaseActor {
                             ResponseMessage.Message.INVALID_PARAMETER_VALUE,
                             mergeeId,
                             JsonKey.FROM_ACCOUNT_ID),
-                    ResponseCode.CLIENT_ERROR.getResponseCode());
+                    ResponseCode.SERVER_ERROR.getResponseCode());
         }
 
 
@@ -95,7 +91,8 @@ public class UserMergeActor extends UserBaseActor {
 
     private void mergeUserDetailsToEs(Request userRequest) {
         userRequest.setOperation(ActorOperations.MERGE_USER_TO_ELASTIC.getValue());
-        ProjectLogger.log(String.format("%s:%s:Trigger sync of user details to ES with user updated userMap %s", this.getClass().getSimpleName(), "mergeUserDetailsToEs"),LoggerEnum.INFO.name());
+        ProjectLogger.log("UserMergeActor: mergeUserDetailsToEs: Trigger sync of user details to ES for user id"+userRequest.getRequest().get(JsonKey.FROM_ACCOUNT_ID),
+                LoggerEnum.INFO.name());
         tellToAnother(userRequest);
     }
 
@@ -114,6 +111,18 @@ public class UserMergeActor extends UserBaseActor {
             }
         }*/
         return responseCode = "SUCCESS";
+    }
+
+    private void prepareMergeeAccountData(User mergee, Map mergeeDBMap) {
+        mergeeDBMap.put(JsonKey.STATUS, 0);
+        mergeeDBMap.put(JsonKey.IS_DELETED, true);
+        mergeeDBMap.put(JsonKey.EMAIL,null);
+        mergeeDBMap.put(JsonKey.PHONE,null);
+        mergeeDBMap.put(JsonKey.USERNAME, null);
+        mergeeDBMap.put(JsonKey.PREV_USED_EMAIL, mergee.getEmail());
+        mergeeDBMap.put(JsonKey.PREV_USED_PHONE, mergee.getPhone());
+        mergeeDBMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+        mergeeDBMap.put(JsonKey.ID,mergee.getId());
     }
 
 }

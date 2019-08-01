@@ -66,7 +66,7 @@ public class UserMergeActorTest {
         boolean result =
                 testScenario(
                         getRequest(ActorOperations.MERGE_USER),
-                        ResponseCode.mergeeIdNotExists);
+                        ResponseCode.fromAccountIdNotExists);
         assertTrue(result);
     }
 

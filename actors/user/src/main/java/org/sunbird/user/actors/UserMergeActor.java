@@ -95,7 +95,7 @@ public class UserMergeActor extends UserBaseActor {
 
     private void mergeUserDetailsToEs(Request userRequest) {
         userRequest.setOperation(ActorOperations.MERGE_USER_TO_ELASTIC.getValue());
-        ProjectLogger.log(String.format("%s:%s:Trigger sync of user details to ES with user updated userMap %s", this.getClass().getSimpleName(), "mergeUserDetailsToEs", Collections.singleton(userRequest.toString())),LoggerEnum.INFO.name());
+        ProjectLogger.log(String.format("%s:%s:Trigger sync of user details to ES with user updated userMap %s", this.getClass().getSimpleName(), "mergeUserDetailsToEs"),LoggerEnum.INFO.name());
         tellToAnother(userRequest);
     }
 

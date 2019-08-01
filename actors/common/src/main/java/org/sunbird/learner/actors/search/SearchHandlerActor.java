@@ -347,23 +347,28 @@ public class SearchHandlerActor extends BaseActor {
   }
 
   /**
-   * this method will convert the  Sunbird required fields(source,externalId,userName,provider,loginId,email)
-   * into lower case and encrypt PI attributes well
+   * this method will convert the Sunbird required
+   * fields(source,externalId,userName,provider,loginId,email) into lower case and encrypt PI
+   * attributes well
+   *
    * @param searchQueryMap
    * @throws Exception
    */
   private void extractOrFilter(Map<String, Object> searchQueryMap) throws Exception {
-    Map<String,Object>ORFilterMap= (Map<String, Object>) ((Map<String, Object>)(searchQueryMap.get(JsonKey.FILTERS))).get(JsonKey.ES_OR_OPERATION);
-    if(MapUtils.isNotEmpty(ORFilterMap)) {
+    Map<String, Object> ORFilterMap =
+        (Map<String, Object>)
+            ((Map<String, Object>) (searchQueryMap.get(JsonKey.FILTERS)))
+                .get(JsonKey.ES_OR_OPERATION);
+    if (MapUtils.isNotEmpty(ORFilterMap)) {
       Arrays.asList(
               ProjectUtil.getConfigValue(JsonKey.SUNBIRD_API_REQUEST_LOWER_CASE_FIELDS).split(","))
-              .stream()
-              .forEach(
-                      field -> {
-                        if (StringUtils.isNotBlank((String) ORFilterMap.get(field))) {
-                          ORFilterMap.put(field, ((String) ORFilterMap.get(field)).toLowerCase());
-                        }
-                      });
+          .stream()
+          .forEach(
+              field -> {
+                if (StringUtils.isNotBlank((String) ORFilterMap.get(field))) {
+                  ORFilterMap.put(field, ((String) ORFilterMap.get(field)).toLowerCase());
+                }
+              });
       UserUtility.encryptUserData(ORFilterMap);
     }
   }

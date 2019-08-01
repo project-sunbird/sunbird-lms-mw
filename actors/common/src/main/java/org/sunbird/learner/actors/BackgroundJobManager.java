@@ -40,6 +40,7 @@ import scala.concurrent.Future;
 @ActorConfig(
   tasks = {},
   asyncTasks = {
+          "mergeUserToElastic",
     "updateUserInfoToElastic",
     "updateUserRoles",
     "addUserBadgebackground",
@@ -113,6 +114,8 @@ public class BackgroundJobManager extends BaseActor {
       insertUserNotesToEs(request);
     } else if (operation.equalsIgnoreCase(ActorOperations.UPDATE_USER_NOTES_ES.getValue())) {
       updateUserNotesToEs(request);
+    } else if (operation.equalsIgnoreCase(ActorOperations.MERGE_USER_TO_ELASTIC.getValue())) {
+      mergeUserDetailsToEs(request);
     } else {
       ProjectLogger.log("UNSUPPORTED OPERATION");
       ProjectCommonException exception =
@@ -627,5 +630,15 @@ public class BackgroundJobManager extends BaseActor {
         ProjectUtil.EsType.usernotes.getTypeName(),
         (String) noteMap.get(JsonKey.ID),
         noteMap);
+  }
+
+  private void mergeUserDetailsToEs(Request mergeRequest) {
+    String mergeeId = (String) mergeRequest.get(JsonKey.FROM_ACCOUNT_ID);
+    Map<String, Object> mergeeMap = (Map<String, Object>) mergeRequest.get(JsonKey.USER_MERGEE_ACCOUNT);
+    updateDataToElastic(ProjectUtil.EsIndex.sunbird.getIndexName(),
+            ProjectUtil.EsType.user.getTypeName(),
+            mergeeId,
+            mergeeMap);
+    ProjectLogger.log("user details for updated for user in ES with id:" +mergeeId, LoggerEnum.INFO.name());
   }
 }

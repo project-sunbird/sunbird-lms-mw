@@ -1,5 +1,8 @@
 package org.sunbird.user.actors;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -7,11 +10,15 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.TelemetryEnvKey;
+import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
+import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.dao.UserDao;
 import org.sunbird.user.dao.impl.UserDaoImpl;
 
@@ -26,9 +33,13 @@ public class ResetPasswordActor extends BaseActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
+    // Generate Telemetry (initializing context)
+    Util.initializeContext(request, TelemetryEnvKey.USER);
+    ExecutionContext.setRequestId(request.getRequestId());
     String userId = (String) request.get(JsonKey.USER_ID);
     String password = (String) request.get(JsonKey.PASSWORD);
     resetPassword(userId, password);
+    generateTelemetry(request.getRequest());
   }
 
   private void resetPassword(String userId, String password) {
@@ -48,5 +59,16 @@ public class ResetPasswordActor extends BaseActor {
     } else {
       ProjectCommonException.throwClientErrorException(ResponseCode.userNotFound);
     }
+  }
+
+  private void generateTelemetry(Map<String, Object> request) {
+    Map<String, Object> targetObject = null;
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+    targetObject =
+        TelemetryUtil.generateTargetObject(
+            (String) request.get(JsonKey.USER_ID), TelemetryEnvKey.USER, JsonKey.UPDATE, null);
+    TelemetryUtil.generateCorrelatedObject(
+        (String) request.get(JsonKey.USER_ID), TelemetryEnvKey.USER, null, correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(request, targetObject, correlatedObject);
   }
 }

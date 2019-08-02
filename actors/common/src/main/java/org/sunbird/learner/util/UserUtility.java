@@ -118,9 +118,8 @@ public final class UserUtility {
     // Decrypt user basic info
     for (String key : userKeyToDecrypt) {
       if (userMap.containsKey(key)) {
-        if (JsonKey.EMAIL.equalsIgnoreCase(key) || JsonKey.PHONE.equalsIgnoreCase(key)) {
+        if (JsonKey.EMAIL.equalsIgnoreCase(key) || JsonKey.PHONE.equalsIgnoreCase(key) || JsonKey.PREV_USED_EMAIL.equalsIgnoreCase(key)|| JsonKey.PREV_USED_PHONE.equalsIgnoreCase(key)) {
           userMap.put(key, maskEmailOrPhone((String) userMap.get(key), key));
-
         } else {
           userMap.put(key, service.decryptData((String) userMap.get(key)));
         }
@@ -185,9 +184,9 @@ public final class UserUtility {
     if (StringUtils.isEmpty(encryptedEmailOrPhone)) {
       return StringUtils.EMPTY;
     }
-    if (JsonKey.PHONE.equals(type)) {
+    if (JsonKey.PHONE.equals(type) || JsonKey.PREV_USED_PHONE.equals(type)) {
       return maskingService.maskPhone(decryptionService.decryptData(encryptedEmailOrPhone));
-    } else if (JsonKey.EMAIL.equals(type)) {
+    } else if (JsonKey.EMAIL.equals(type) || JsonKey.PREV_USED_EMAIL.equals(type)) {
       return maskingService.maskEmail(decryptionService.decryptData(encryptedEmailOrPhone));
     }
     return StringUtils.EMPTY;

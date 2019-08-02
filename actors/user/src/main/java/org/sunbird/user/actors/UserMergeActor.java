@@ -5,10 +5,13 @@ import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
+import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
+import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
+import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 
@@ -24,6 +27,7 @@ public class UserMergeActor extends UserBaseActor {
     private UserService userService = UserServiceImpl.getInstance();
     @Override
     public void onReceive(Request userRequest) throws Throwable {
+        Util.initializeContext(userRequest,JsonKey.USER);
         updateUserMergeDetails(userRequest);
     }
 
@@ -31,14 +35,16 @@ public class UserMergeActor extends UserBaseActor {
         ProjectLogger.log(
                 "UserMergeActor:updateUserMergeDetails: starts : " ,
                 LoggerEnum.DEBUG.name());
-        Map<String, Object> targetObject = null;
-        List<Map<String, Object>> correlatedObject = new ArrayList<>();
+
+
         Response response = new Response();
         Map mergeeDBMap = new HashMap<String, Object>();
-        Map requestMap = userRequest.getRequest();
+        HashMap requestMap = (HashMap)userRequest.getRequest();
+        Map telemetryMap = (HashMap)requestMap.clone();
         String mergeeId = (String)requestMap.get(JsonKey.FROM_ACCOUNT_ID);
         String mergerId = (String)requestMap.get(JsonKey.TO_ACCOUNT_ID);
         User mergee = userService.getUserById(mergeeId);
+        User merger = userService.getUserById(mergerId);
         if(!mergee.getIsDeleted()) {
             prepareMergeeAccountData(mergee, mergeeDBMap);
             userRequest.put(JsonKey.USER_MERGEE_ACCOUNT, mergeeDBMap);
@@ -57,11 +63,8 @@ public class UserMergeActor extends UserBaseActor {
                 mergeUserDetailsToEs(userRequest);
 
                 //create telemetry event for merge
-                /*targetObject =
-                        TelemetryUtil.generateTargetObject(
-                                (String) userRequest.getRequest().get(mergeeId), TelemetryEnvKey.USER, JsonKey.MERGE, null);
-                correlatedObject.add(mergeeESMap);
-                TelemetryUtil.telemetryProcessingCall(userRequest.getRequest(),targetObject,correlatedObject);*/
+                triggerUserMergeTelemetry(telemetryMap,merger);
+
             } else {
                 ProjectLogger.log(
                         "UserMergeActor:updateUserMergeDetails: User course data is not updated for userId : " + mergerId,
@@ -87,6 +90,24 @@ public class UserMergeActor extends UserBaseActor {
         }
 
 
+    }
+
+    private void triggerUserMergeTelemetry(Map telemetryMap, User merger) {
+        ProjectLogger.log(
+                "UserMergeActor:triggerUserMergeTelemetry: generating telemetry event for merge");
+        Map<String, Object> targetObject = null;
+        List<Map<String, Object>> correlatedObject = new ArrayList<>();
+        Map<String, String> rollUp = new HashMap<>();
+        rollUp.put("l1", merger.getRootOrgId());
+        ExecutionContext.getCurrent().getRequestContext().put(JsonKey.ROLLUP, rollUp);
+        targetObject =
+                TelemetryUtil.generateTargetObject(
+                        (String) telemetryMap.get(JsonKey.FROM_ACCOUNT_ID), TelemetryEnvKey.USER, JsonKey.MERGE, null);
+        TelemetryUtil.generateCorrelatedObject((String) telemetryMap.get(JsonKey.FROM_ACCOUNT_ID),JsonKey.FROM_ACCOUNT_ID,null,correlatedObject);
+        TelemetryUtil.generateCorrelatedObject((String) telemetryMap.get(JsonKey.TO_ACCOUNT_ID),JsonKey.TO_ACCOUNT_ID,null,correlatedObject);
+        telemetryMap.remove(JsonKey.ID);
+        telemetryMap.remove(JsonKey.USER_ID);
+        TelemetryUtil.telemetryProcessingCall(telemetryMap,targetObject,correlatedObject);
     }
 
     private void mergeUserDetailsToEs(Request userRequest) {

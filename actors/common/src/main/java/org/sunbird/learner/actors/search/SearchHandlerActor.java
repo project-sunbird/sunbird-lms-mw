@@ -17,6 +17,7 @@ import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.org.OrganisationClient;
 import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
 import org.sunbird.common.ElasticSearchHelper;
+import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
@@ -104,15 +105,14 @@ public class SearchHandlerActor extends BaseActor {
         Future<Map<String, Object>> resultF = esService.search(searchDto, types[0]);
         result = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
         Response response = new Response();
+        // this fuzzy search Logic
         if(((List<Map<String, Object>>)result.get(JsonKey.CONTENT)).size()!=0 && isFuzzySearchRequired(searchQueryMap)){
           List<Map<String,Object>>responseList=getResponseOnFuzzyRequest(getFuzzyFilterMap(searchQueryMap),(List<Map<String, Object>>)result.get(JsonKey.CONTENT));
           if(responseList.size()!=0){
             result.replace(JsonKey.CONTENT,responseList);
           }
           else{
-            ResponseParams responseParams=new ResponseParams();
-            responseParams.setErrmsg(String.format(ResponseMessage.Message.PARAM_NOT_MATCH,"NAME"));
-            response.setParams(responseParams);
+            throw new ProjectCommonException(ResponseCode.PARTIAL_SUCCESS_RESPONSE.getErrorCode(), String.format(ResponseMessage.Message.PARAM_NOT_MATCH, JsonKey.NAME.toUpperCase()),ResponseCode.PARTIAL_SUCCESS_RESPONSE.getResponseCode());
           }
         }
         // Decrypt the data

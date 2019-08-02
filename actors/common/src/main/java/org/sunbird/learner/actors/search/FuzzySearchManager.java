@@ -55,13 +55,13 @@ public class FuzzySearchManager {
     }
 
 
-    private List<Map<String, Object>> fetchResultSetFromSearchMap(HashSet<String> resultSet) {
+    private List<Map<String, Object>> fetchResultSetFromSearchMap(HashSet<String> fuzzyResultSet) {
 
         List<Map<String, Object>> responseList = new ArrayList<>();
 
             searchMap.stream().forEach(result -> {
                 Map<String, Object> resultMap = (Map<String, Object>) result;
-                if (resultSet.contains(resultMap.get(JsonKey.ID))) {
+                if (fuzzyResultSet.contains(resultMap.get(JsonKey.ID))) {
                     responseList.add(resultMap);
                 }
             });
@@ -69,8 +69,7 @@ public class FuzzySearchManager {
         return responseList;
     }
 
-    private List<Map<String, Object>> prepareResponseList(HashSet<String> resultSet){
-        return resultSet.size()!=0?fetchResultSetFromSearchMap(resultSet): new ArrayList<>();
-
+    private List<Map<String, Object>> prepareResponseList(HashSet<String> fuzzyResultSet){
+        return fuzzyResultSet.size()!=0?fetchResultSetFromSearchMap(fuzzyResultSet): new ArrayList<>();
     }
 }

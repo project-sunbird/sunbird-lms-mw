@@ -62,7 +62,7 @@ public class UserMergeActorTest {
   public void testMergeUserIsAlreadyDeleted() {
     when(userService.getUserById(Mockito.anyString())).thenReturn(getUserDetails(true));
     boolean result =
-        testScenario(getRequest(ActorOperations.MERGE_USER), ResponseCode.fromAccountIdNotExists);
+        testScenario(getRequest(ActorOperations.MERGE_USER), ResponseCode.invalidIdentifier);
     assertTrue(result);
   }
 

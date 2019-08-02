@@ -20,6 +20,7 @@ import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
+import org.sunbird.common.models.response.ResponseParams;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -30,6 +31,8 @@ import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.actors.coursebatch.service.UserCoursesService;
 import org.sunbird.learner.util.UserUtility;
@@ -100,6 +103,18 @@ public class SearchHandlerActor extends BaseActor {
       } else {
         Future<Map<String, Object>> resultF = esService.search(searchDto, types[0]);
         result = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
+        Response response = new Response();
+        if(isFuzzySearchRequired(searchQueryMap)){
+          List<Map<String,Object>>responseList=getResponseOnFuzzyRequest(getFuzzyFilterMap(searchQueryMap),(List<Map<String, Object>>)result.get(JsonKey.CONTENT));
+          if(responseList.size()!=0){
+            result.replace(JsonKey.CONTENT,responseList);
+          }
+          else{
+            ResponseParams responseParams=new ResponseParams();
+            responseParams.setErrmsg(String.format(ResponseMessage.Message.PARAM_NOT_MATCH,"NAME"));
+            response.setParams(responseParams);
+          }
+        }
         // Decrypt the data
         if (EsType.user.getTypeName().equalsIgnoreCase(filterObjectType)) {
           List<Map<String, Object>> userMapList =
@@ -122,7 +137,6 @@ public class SearchHandlerActor extends BaseActor {
             }
           }
         }
-        Response response = new Response();
         if (result != null) {
           response.put(JsonKey.RESPONSE, result);
         } else {
@@ -372,4 +386,25 @@ public class SearchHandlerActor extends BaseActor {
       UserUtility.encryptUserData(ORFilterMap);
     }
   }
+
+  private boolean  isFuzzySearchRequired(Map<String,Object>searchQueryMap){
+    Map<String, Object> fuzzyFilterMap =getFuzzyFilterMap(searchQueryMap);
+    if(MapUtils.isEmpty(fuzzyFilterMap)){
+      return false;
+    }
+    return true;
+  }
+
+  private   List<Map<String,Object>> getResponseOnFuzzyRequest(Map<String,Object>fuzzyFilterMap,List<Map<String,Object>>searchMap){
+    return FuzzySearchManager.getInstance(fuzzyFilterMap,searchMap).startFuzzySearch();
+  }
+
+  private Map<String,Object>getFuzzyFilterMap(Map<String,Object>searchQueryMap){
+    return (Map<String, Object>)
+                    ((Map<String, Object>) (searchQueryMap.get(JsonKey.FILTERS)))
+                            .get(JsonKey.SEARCH_FUZZY);
+
+  }
+
+
 }

@@ -104,7 +104,7 @@ public class SearchHandlerActor extends BaseActor {
         Future<Map<String, Object>> resultF = esService.search(searchDto, types[0]);
         result = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
         Response response = new Response();
-        if(isFuzzySearchRequired(searchQueryMap)){
+        if(((List<Map<String, Object>>)result.get(JsonKey.CONTENT)).size()!=0 && isFuzzySearchRequired(searchQueryMap)){
           List<Map<String,Object>>responseList=getResponseOnFuzzyRequest(getFuzzyFilterMap(searchQueryMap),(List<Map<String, Object>>)result.get(JsonKey.CONTENT));
           if(responseList.size()!=0){
             result.replace(JsonKey.CONTENT,responseList);

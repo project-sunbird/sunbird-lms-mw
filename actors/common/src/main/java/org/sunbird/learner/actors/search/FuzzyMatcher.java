@@ -11,14 +11,17 @@ import com.intuit.fuzzymatcher.domain.Document;
 import com.intuit.fuzzymatcher.domain.Element;
 import com.intuit.fuzzymatcher.domain.ElementType;
 import com.intuit.fuzzymatcher.domain.Match;
+import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.PropertiesCache;
 
 public class FuzzyMatcher {
 
+    private static final String nameToBeMatchedId="0";
 
     public static List<String> matchDoc(String nameToBeMatched,Map<String,String>attributesValueMap) {
-        Document doc = new Document.Builder("0").addElement(new Element.Builder().setType(ElementType.TEXT).setValue(nameToBeMatched).createElement()).setThreshold(0.5).createDocument();
+        Document doc = new Document.Builder(nameToBeMatchedId).addElement(new Element.Builder().setType(ElementType.TEXT).setValue(nameToBeMatched).createElement()).setThreshold(getFuzzyThreshold()).createDocument();
         return match(doc, prepareDocumentFromSearchMap(attributesValueMap));
     }
 
@@ -47,5 +50,11 @@ public class FuzzyMatcher {
         });
         ProjectLogger.log(String.format("%s:%s:document size prepared to be matched is %s ","FuzzyMatcher","prepareDocumentFromSearchMap",docList.size()), LoggerEnum.INFO.name());
         return docList;
+    }
+
+    private static float getFuzzyThreshold(){
+        String  threshold= PropertiesCache.getInstance().readProperty(JsonKey.SUNBIRD_FUZZY_SEARCH_THRESHOLD);
+        ProjectLogger.log(String.format("%s:%s:the threshold got for Fuzzy search is %s","FuzzyMatcher","getFuzzyThreshold",threshold), LoggerEnum.INFO.name());
+        return Float.parseFloat(threshold);
     }
 }

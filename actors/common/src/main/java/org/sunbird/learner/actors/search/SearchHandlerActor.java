@@ -109,6 +109,7 @@ public class SearchHandlerActor extends BaseActor {
         if(((List<Map<String, Object>>)result.get(JsonKey.CONTENT)).size()!=0 && isFuzzySearchRequired(searchQueryMap)){
           List<Map<String,Object>>responseList=getResponseOnFuzzyRequest(getFuzzyFilterMap(searchQueryMap),(List<Map<String, Object>>)result.get(JsonKey.CONTENT));
           if(responseList.size()!=0){
+            result.replace(JsonKey.COUNT,responseList.size());
             result.replace(JsonKey.CONTENT,responseList);
           }
           else{

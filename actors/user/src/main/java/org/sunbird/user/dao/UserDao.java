@@ -29,7 +29,8 @@ public interface UserDao {
   Response updateUser(User user);
 
   /**
-   * This method will update existing user info even if some fields need to be nullify or throw ProjectCommonException.
+   * This method will update existing user info even if some fields need to be nullify or throw
+   * ProjectCommonException.
    *
    * @param userMap User Details.
    */

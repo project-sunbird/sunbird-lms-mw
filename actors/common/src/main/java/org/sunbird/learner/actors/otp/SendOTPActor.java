@@ -2,7 +2,6 @@ package org.sunbird.learner.actors.otp;
 
 import java.util.HashMap;
 import java.util.Map;
-
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.models.util.ActorOperations;
@@ -30,9 +29,10 @@ public class SendOTPActor extends BaseActor {
     String type = (String) request.getRequest().get(JsonKey.TYPE);
     String key = (String) request.getRequest().get(JsonKey.KEY);
     String otp = (String) request.getRequest().get(JsonKey.OTP);
-    if (JsonKey.EMAIL.equalsIgnoreCase(type)) {
+    if (JsonKey.EMAIL.equalsIgnoreCase(type) || JsonKey.PREV_USED_EMAIL.equalsIgnoreCase(type)) {
       sendOTPViaEmail(key, otp);
-    } else if (JsonKey.PHONE.equalsIgnoreCase(type)) {
+    } else if (JsonKey.PHONE.equalsIgnoreCase(type)
+        || JsonKey.PREV_USED_PHONE.equalsIgnoreCase(type)) {
       sendOTPViaSMS(key, otp);
     }
   }
@@ -53,5 +53,4 @@ public class SendOTPActor extends BaseActor {
     otpMap.put(JsonKey.OTP_EXPIRATION_IN_MINUTES, OTPUtil.getOTPExpirationInMinutes());
     OTPUtil.sendOTPViaSMS(otpMap);
   }
-
 }

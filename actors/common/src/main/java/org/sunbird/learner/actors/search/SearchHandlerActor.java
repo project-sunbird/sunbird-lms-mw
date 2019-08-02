@@ -86,6 +86,7 @@ public class SearchHandlerActor extends BaseActor {
           filterObjectType = EsType.organisation.getTypeName();
         }
       }
+      extractOrFilter(searchQueryMap);
       SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
       if (filterObjectType.equalsIgnoreCase(EsType.user.getTypeName())) {
         searchDto.setExcludedFields(Arrays.asList(ProjectUtil.excludes));
@@ -343,5 +344,32 @@ public class SearchHandlerActor extends BaseActor {
     map.put(JsonKey.PARAMS, params);
     map.put(JsonKey.TELEMETRY_EVENT_TYPE, "SEARCH");
     return map;
+  }
+
+  /**
+   * this method will convert the Sunbird required
+   * fields(source,externalId,userName,provider,loginId,email) into lower case and encrypt PI
+   * attributes well
+   *
+   * @param searchQueryMap
+   * @throws Exception
+   */
+  private void extractOrFilter(Map<String, Object> searchQueryMap) throws Exception {
+    Map<String, Object> ORFilterMap =
+        (Map<String, Object>)
+            ((Map<String, Object>) (searchQueryMap.get(JsonKey.FILTERS)))
+                .get(JsonKey.ES_OR_OPERATION);
+    if (MapUtils.isNotEmpty(ORFilterMap)) {
+      Arrays.asList(
+              ProjectUtil.getConfigValue(JsonKey.SUNBIRD_API_REQUEST_LOWER_CASE_FIELDS).split(","))
+          .stream()
+          .forEach(
+              field -> {
+                if (StringUtils.isNotBlank((String) ORFilterMap.get(field))) {
+                  ORFilterMap.put(field, ((String) ORFilterMap.get(field)).toLowerCase());
+                }
+              });
+      UserUtility.encryptUserData(ORFilterMap);
+    }
   }
 }

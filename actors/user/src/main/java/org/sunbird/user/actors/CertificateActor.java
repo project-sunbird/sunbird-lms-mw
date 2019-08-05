@@ -1,5 +1,6 @@
 package org.sunbird.user.actors;
 
+import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -9,8 +10,13 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+@ActorConfig(
+        tasks = {"validateCertificate"},
+        asyncTasks = {}
+)
 public class CertificateActor extends UserBaseActor{
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -23,15 +29,17 @@ public class CertificateActor extends UserBaseActor{
   }
 
   private void getCertificate(Request userRequest) {
-    Request request = (Request) userRequest.getRequest();
+    Map request = userRequest.getRequest();
     Map result = new HashMap<String, Object>();
     String certificatedId = (String) request.get(JsonKey.CERT_ID);
     String accessCode = (String) request.get(JsonKey.ACCESS_CODE);
     Response response = cassandraOperation.getRecordById(JsonKey.SUNBIRD,JsonKey.USER_CERT,certificatedId);
     Map<String, Object> record = response.getResult();
-    if(null != record && null != record.get(JsonKey.ACCESS_CODE)) {
-      if(accessCode.equals(record.get(JsonKey.ACCESS_CODE))) {
-        Map recordStore = (Map<String, Object>) record.get(JsonKey.STORE);
+    if(null != record && null != record.get(JsonKey.RESPONSE)) {
+      List responseList = (List)record.get(JsonKey.RESPONSE);
+      Map<String, Object> responseDetails = (Map<String, Object>) responseList.get(0);
+      if(accessCode.equals(responseDetails.get(JsonKey.ACCESS_CODE))) {
+        Map recordStore = (Map<String, Object>) responseDetails.get(JsonKey.STORE);
         result.put("json",recordStore.get("json"));
         result.put("pdf",recordStore.get("pdf"));
         result.put(JsonKey.STATUS, JsonKey.SUCCESS);

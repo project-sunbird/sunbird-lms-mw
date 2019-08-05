@@ -13,6 +13,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * This class helps in interacting with adding and validating the user-certificate details
+ */
 @ActorConfig(
         tasks = {"validateCertificate"},
         asyncTasks = {}
@@ -28,37 +31,53 @@ public class CertificateActor extends UserBaseActor{
 
   }
 
+  /** This method validates the access-code of the certificate and retrieve certificate details.
+   * @param userRequest
+   */
   private void getCertificate(Request userRequest) {
     Map request = userRequest.getRequest();
-    Map result = new HashMap<String, Object>();
+    Map userResponse = new HashMap<String, Object>();
+    Response userResult = new Response();
     String certificatedId = (String) request.get(JsonKey.CERT_ID);
     String accessCode = (String) request.get(JsonKey.ACCESS_CODE);
+    Map<String, Object> responseDetails = getCertificateDetails(certificatedId);
+    if(accessCode.equals(responseDetails.get(JsonKey.ACCESS_CODE.toLowerCase()))) {
+      Map recordStore = (Map<String, Object>) responseDetails.get(JsonKey.STORE);
+      userResponse.put(JsonKey.JSON,recordStore.get(JsonKey.JSON));
+      userResponse.put(JsonKey.PDF,recordStore.get(JsonKey.PDF));
+      userResult.put(JsonKey.RESPONSE,userResponse);
+      sender().tell(userResult, self());
+    } else {
+      ProjectLogger.log(
+              "CertificateActor:getCertificate: access code is incorrect : "
+                      + accessCode,
+              LoggerEnum.ERROR.name());
+      throw new ProjectCommonException(
+              ResponseCode.invalidParameter.getErrorCode(),
+              ProjectUtil.formatMessage(ResponseCode.invalidParameter.getErrorMessage(),JsonKey.ACCESS_CODE),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+  }
+
+  private Map getCertificateDetails(String certificatedId) {
+    Map<String, Object> responseDetails = null;
     Response response = cassandraOperation.getRecordById(JsonKey.SUNBIRD,JsonKey.USER_CERT,certificatedId);
     Map<String, Object> record = response.getResult();
     if(null != record && null != record.get(JsonKey.RESPONSE)) {
-      List responseList = (List)record.get(JsonKey.RESPONSE);
-      Map<String, Object> responseDetails = (Map<String, Object>) responseList.get(0);
-      if(accessCode.equals(responseDetails.get(JsonKey.ACCESS_CODE))) {
-        Map recordStore = (Map<String, Object>) responseDetails.get(JsonKey.STORE);
-        result.put("json",recordStore.get("json"));
-        result.put("pdf",recordStore.get("pdf"));
-        result.put(JsonKey.STATUS, JsonKey.SUCCESS);
-        response.put(JsonKey.RESULT, result);
-        // update mergee details in ES
-        sender().tell(response, self());
+      List responseList = (List) record.get(JsonKey.RESPONSE);
+      if(!responseList.isEmpty()) {
+        responseDetails = (Map<String, Object>) responseList.get(0);
       } else {
-        //Exception related column data
+        ProjectLogger.log(
+                "CertificateActor:getCertificate: cert id is incorrect : "
+                        + certificatedId,
+                LoggerEnum.ERROR.name());
+        throw new ProjectCommonException(
+                ResponseCode.invalidParameter.getErrorCode(),
+                ProjectUtil.formatMessage(ResponseCode.invalidParameter.getErrorMessage(),JsonKey.CERT_ID),
+                ResponseCode.CLIENT_ERROR.getResponseCode());
       }
-    } else {
-      ProjectLogger.log(
-              "CertificateActor:getCertificate: access code is incorrect for certid : "
-                      + certificatedId,
-              LoggerEnum.ERROR.name());
-      throw new ProjectCommonException(
-              ResponseCode.accessCodeInvalid.getErrorCode(),
-              ResponseCode.accessCodeInvalid.getErrorMessage(),
-              ResponseCode.CLIENT_ERROR.getResponseCode());
     }
-
+    return responseDetails;
   }
 }

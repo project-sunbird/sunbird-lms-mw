@@ -1454,6 +1454,7 @@ public final class Util {
       checkUserProfileVisibility(userDetails, actorRef);
       userDetails.remove(JsonKey.PASSWORD);
       addEmailAndPhone(userDetails);
+      checkEmailAndPhoneVerified(userDetails);
     } else {
       ProjectLogger.log(
           "Util:getUserProfile: User data not available to save in ES for userId : " + userId,
@@ -1464,16 +1465,17 @@ public final class Util {
   }
 
   public static void addEmailAndPhone(Map<String, Object> userDetails) {
-
     userDetails.put(JsonKey.PHONE, userDetails.remove(JsonKey.ENC_PHONE));
     userDetails.put(JsonKey.EMAIL, userDetails.remove(JsonKey.ENC_EMAIL));
+  }
+  public static void checkEmailAndPhoneVerified(Map<String, Object> userDetails){
+    if(StringUtils.isBlank((String)userDetails.get(JsonKey.EMAIL))){
+      userDetails.put(JsonKey.EMAIL_VERIFIED,false);
+    }
+    if(StringUtils.isBlank((String)userDetails.get(JsonKey.PHONE))){
+      userDetails.put(JsonKey.PHONE_VERIFIED,false);
+    }
 
-//
-//    if (!StringUtils.isBlank((String) userDetails.get(JsonKey.ENC_PHONE))) {
-//    }
-//    if (!StringUtils.isBlank((String) userDetails.get(JsonKey.ENC_EMAIL))) {
-//      userDetails.put(JsonKey.EMAIL, userDetails.remove(JsonKey.ENC_EMAIL));
-//    }
   }
 
   public static void checkProfileCompleteness(Map<String, Object> userMap) {

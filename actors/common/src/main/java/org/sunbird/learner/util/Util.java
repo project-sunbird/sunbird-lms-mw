@@ -1464,12 +1464,16 @@ public final class Util {
   }
 
   public static void addEmailAndPhone(Map<String, Object> userDetails) {
-    if (!StringUtils.isBlank((String) userDetails.get(JsonKey.ENC_PHONE))) {
-      userDetails.put(JsonKey.PHONE, userDetails.remove(JsonKey.ENC_PHONE));
-    }
-    if (!StringUtils.isBlank((String) userDetails.get(JsonKey.ENC_EMAIL))) {
-      userDetails.put(JsonKey.EMAIL, userDetails.remove(JsonKey.ENC_EMAIL));
-    }
+
+    userDetails.put(JsonKey.PHONE, userDetails.remove(JsonKey.ENC_PHONE));
+    userDetails.put(JsonKey.EMAIL, userDetails.remove(JsonKey.ENC_EMAIL));
+
+//
+//    if (!StringUtils.isBlank((String) userDetails.get(JsonKey.ENC_PHONE))) {
+//    }
+//    if (!StringUtils.isBlank((String) userDetails.get(JsonKey.ENC_EMAIL))) {
+//      userDetails.put(JsonKey.EMAIL, userDetails.remove(JsonKey.ENC_EMAIL));
+//    }
   }
 
   public static void checkProfileCompleteness(Map<String, Object> userMap) {
@@ -1568,12 +1572,12 @@ public final class Util {
   public static void addMaskEmailAndPhone(Map<String, Object> userMap) {
     String phone = (String) userMap.get(JsonKey.PHONE);
     String email = (String) userMap.get(JsonKey.EMAIL);
+    userMap.put(JsonKey.ENC_PHONE, phone);
+    userMap.put(JsonKey.ENC_EMAIL, email);
     if (!StringUtils.isBlank(phone)) {
-      userMap.put(JsonKey.ENC_PHONE, phone);
       userMap.put(JsonKey.PHONE, maskingService.maskPhone(decService.decryptData(phone)));
     }
     if (!StringUtils.isBlank(email)) {
-      userMap.put(JsonKey.ENC_EMAIL, email);
       userMap.put(JsonKey.EMAIL, maskingService.maskEmail(decService.decryptData(email)));
     }
   }

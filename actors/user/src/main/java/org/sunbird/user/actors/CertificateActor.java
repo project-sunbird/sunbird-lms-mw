@@ -128,6 +128,7 @@ public class CertificateActor extends UserBaseActor {
         if (null != record && null != record.get(JsonKey.RESPONSE)) {
             List responseList = (List) record.get(JsonKey.RESPONSE);
             if (!responseList.isEmpty()) {
+                ProjectLogger.log(String.format("%s:%s:provided  certificateId:%s  exists in record" , this.getClass().getSimpleName(), "assureUniqueId",certificatedId), LoggerEnum.ERROR.name());
                 throw new ProjectCommonException(
                         ResponseCode.invalidParameter.getErrorCode(),
                         ResponseMessage.Message.DATA_ALREADY_EXIST,

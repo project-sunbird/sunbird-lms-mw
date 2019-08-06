@@ -210,6 +210,7 @@ public final class Util {
     dbInfoMap.put(
         BadgingJsonKey.CONTENT_BADGE_ASSOCIATION_DB,
         getDbInfoObject(KEY_SPACE_NAME, "content_badge_association"));
+    dbInfoMap.put(JsonKey.USER_CERT,getDbInfoObject(KEY_SPACE_NAME,JsonKey.USER_CERT));
   }
 
   /**

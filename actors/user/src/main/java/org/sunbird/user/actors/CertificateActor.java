@@ -36,12 +36,12 @@ public class CertificateActor extends UserBaseActor{
    */
   private void getCertificate(Request userRequest) {
     Map request = userRequest.getRequest();
-    Map userResponse = new HashMap<String, Object>();
-    Response userResult = new Response();
     String certificatedId = (String) request.get(JsonKey.CERT_ID);
     String accessCode = (String) request.get(JsonKey.ACCESS_CODE);
     Map<String, Object> responseDetails = getCertificateDetails(certificatedId);
-    if(accessCode.equals(responseDetails.get(JsonKey.ACCESS_CODE.toLowerCase()))) {
+    if(responseDetails.get(JsonKey.ACCESS_CODE.toLowerCase()).equals(accessCode)) {
+      Map userResponse = new HashMap<String, Object>();
+      Response userResult = new Response();
       Map recordStore = (Map<String, Object>) responseDetails.get(JsonKey.STORE);
       userResponse.put(JsonKey.JSON,recordStore.get(JsonKey.JSON));
       userResponse.put(JsonKey.PDF,recordStore.get(JsonKey.PDF));

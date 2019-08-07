@@ -36,6 +36,9 @@ public class CertificateActor extends UserBaseActor {
         } else if (request.getOperation().equalsIgnoreCase(ActorOperations.ADD_CERTIFICATE.getValue())) {
             addCertificate(request);
         }
+        else{
+            unSupportedMessage();
+        }
     }
 
     /**
@@ -100,17 +103,13 @@ public class CertificateActor extends UserBaseActor {
         certAddReqMap = getRequiredRequest(certAddReqMap);
         certAddReqMap.put(JsonKey.CREATED_AT, getTimeStamp());
         Response response = cassandraOperation.insertRecord(certDbInfo.getKeySpace(), certDbInfo.getTableName(), certAddReqMap);
-        ProjectLogger.log(String.format("%s:%s:successfully added certificate in records with userId:%s and certId:%s", this.getClass().getSimpleName(), "addCertificate", certAddReqMap.get(JsonKey.USER_ID), certAddReqMap.get(JsonKey.CERT_ID), LoggerEnum.INFO.name()));
+        ProjectLogger.log("CertificateActor:addCertificate:successfully added certificate in records with userId"+ certAddReqMap.get(JsonKey.USER_ID)+" and certId:"+certAddReqMap.get(JsonKey.CERT_ID),LoggerEnum.INFO.name());
         sender().tell(response, self());
     }
 
     private void populateStoreMapWithUrl(Map<String, String> storeMap, Map<String, Object> certAddRequestMap) {
-        if (certAddRequestMap.containsKey(JsonKey.PDF_URL)) {
-            storeMap.put(JsonKey.PDF_URL, (String) certAddRequestMap.get(JsonKey.PDF_URL));
-        }
-        if (certAddRequestMap.containsKey(JsonKey.JSON_URL)) {
-            storeMap.put(JsonKey.JSON_URL, (String) certAddRequestMap.get(JsonKey.JSON_URL));
-        }
+        storeMap.put(JsonKey.PDF_URL, (String) certAddRequestMap.get(JsonKey.PDF_URL));
+        storeMap.put(JsonKey.JSON_DATA, certAddRequestMap.get(JsonKey.JSON_DATA).toString());
     }
 
     private Map<String, Object> getRequiredRequest(Map<String, Object> certAddReqMap) {
@@ -123,19 +122,24 @@ public class CertificateActor extends UserBaseActor {
     }
 
     private void assureUniqueCertId(String certificatedId) {
-        Response response = cassandraOperation.getRecordById(certDbInfo.getKeySpace(), certDbInfo.getTableName(), certificatedId);
-        Map<String, Object> record = response.getResult();
-        if (null != record && null != record.get(JsonKey.RESPONSE)) {
-            List responseList = (List) record.get(JsonKey.RESPONSE);
-            if (!responseList.isEmpty()) {
-                ProjectLogger.log(String.format("%s:%s:provided  certificateId:%s  exists in record" , this.getClass().getSimpleName(), "assureUniqueId",certificatedId), LoggerEnum.ERROR.name());
+            if (isIdentityPresent(certificatedId)) {
+                ProjectLogger.log("CertificateActor:addCertificate:provided certificateId exists in record ".concat(certificatedId),LoggerEnum.ERROR.name());
                 throw new ProjectCommonException(
                         ResponseCode.invalidParameter.getErrorCode(),
                         ResponseMessage.Message.DATA_ALREADY_EXIST,
                         ResponseCode.CLIENT_ERROR.getResponseCode());
             }
-            ProjectLogger.log(String.format("%s:%s:provided  userId does not exists in record so creating new record", this.getClass().getSimpleName(), "assureUniqueId"), LoggerEnum.INFO.name());
-
+        ProjectLogger.log("CertificateActor:addCertificate:successfully certId not found in records creating new record",LoggerEnum.INFO.name());
         }
+
+    private boolean isIdentityPresent(String certificateId) {
+        Response response = cassandraOperation.getRecordById(certDbInfo.getKeySpace(), certDbInfo.getTableName(), certificateId);
+        Map<String, Object> record = response.getResult();
+        if (null != record && null != record.get(JsonKey.RESPONSE)) {
+            List responseList = (List) record.get(JsonKey.RESPONSE);
+            if (!responseList.isEmpty()) {
+                return true;
+            } }
+        return false;
     }
 }

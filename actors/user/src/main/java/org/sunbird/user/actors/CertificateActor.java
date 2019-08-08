@@ -55,8 +55,8 @@ public class CertificateActor extends UserBaseActor {
             Map userResponse = new HashMap<String, Object>();
             Response userResult = new Response();
             Map recordStore = (Map<String, Object>) responseDetails.get(JsonKey.STORE);
-            userResponse.put(JsonKey.JSON, recordStore.get(JsonKey.JSON));
-            userResponse.put(JsonKey.PDF, recordStore.get(JsonKey.PDF));
+            userResponse.put(JsonKey.JSON, recordStore.get(JsonKey.JSON_DATA));
+            userResponse.put(JsonKey.PDF, recordStore.get(JsonKey.PDF_URL));
             userResult.put(JsonKey.RESPONSE, userResponse);
             sender().tell(userResult, self());
         } else {

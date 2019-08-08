@@ -16,6 +16,8 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.actorutil.org.OrganisationClient;
+import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -55,7 +57,8 @@ import scala.concurrent.Future;
     "removeMemberOrganisation",
     "getOrgTypeList",
     "createOrgType",
-    "updateOrgType"
+    "updateOrgType",
+          "assignKeys"
   },
   asyncTasks = {}
 )
@@ -67,6 +70,8 @@ public class OrganisationManagementActor extends BaseActor {
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
           null);
   private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
+  private static Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
+
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -105,7 +110,10 @@ public class OrganisationManagementActor extends BaseActor {
         .getOperation()
         .equalsIgnoreCase(ActorOperations.UPDATE_ORG_TYPE.getValue())) {
       updateOrgType(request);
-    } else {
+    }else if(request.getOperation().equalsIgnoreCase(ActorOperations.ASSIGN_KEYS.getValue())){
+      assignKey(request);
+    }
+    else {
       onReceiveUnsupportedOperation(request.getOperation());
     }
   }
@@ -349,7 +357,6 @@ public class OrganisationManagementActor extends BaseActor {
       } else if (StringUtils.isBlank((String) request.get(JsonKey.ROOT_ORG_ID))) {
         request.put(JsonKey.ROOT_ORG_ID, JsonKey.DEFAULT_ROOT_ORG_ID);
       }
-
       if (request.containsKey(JsonKey.EMAIL)
           && !EmailValidator.isEmailValid((String) request.get(JsonKey.EMAIL))) {
         ProjectCommonException.throwClientErrorException(ResponseCode.emailFormatError);
@@ -1873,4 +1880,68 @@ public class OrganisationManagementActor extends BaseActor {
   private boolean isEventSyncEnabled() {
     return Boolean.parseBoolean(getEventSyncSetting(JsonKey.ORGANISATION));
   }
+
+
+  private Map<String, Object> enquireOrg(String id) {
+    Map<String, Object> responseMap = new HashMap<>();
+    Response response = cassandraOperation.getRecordById(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), id);
+    Map<String, Object> record = response.getResult();
+    if (null != record && null != record.get(JsonKey.RESPONSE)) {
+      if(((List) record.get(JsonKey.RESPONSE)).size()!=0) {
+        responseMap = (Map<String, Object>) ((List) record.get(JsonKey.RESPONSE)).get(0);
+      }
+      ProjectLogger.log(
+              "OrganisationManagementActor:enquireOrg found org with Id: "+id, LoggerEnum.ERROR.name());
+    }
+    return responseMap;
+  }
+
+  private void assuringAssignKeysOperation(String orgId) {
+    Map<String, Object> orgDbMap = enquireOrg(orgId);
+    boolean isAssignable=MapUtils.isNotEmpty(orgDbMap) ? (boolean)orgDbMap.get(JsonKey.IS_ROOT_ORG) : false;
+    if(!isAssignable){
+             throw  new ProjectCommonException(
+                      ResponseCode.invalidRequestData.getErrorCode(),
+                      ResponseCode.invalidOrgId.getErrorMessage(),
+                      ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+  }
+  private void assignKey(Request request) {
+    addKeysToRequestMap(request);
+    filterRequestMap(request);
+    assuringAssignKeysOperation((String)request.get(JsonKey.ID));
+    Response response=updateCassandraOrgRecord(request.getRequest());
+    sender().tell(response, self());
+    ProjectLogger.log(
+              "OrganisationManagementActor:assignKey keys assigned to root org with Id: "+request.get(JsonKey.ID), LoggerEnum.ERROR.name());
+    updateOrgInfoToES(request.getRequest());
+  }
+
+  private void filterRequestMap(Request request) {
+    request.getRequest().remove(JsonKey.ENC_KEYS);
+    request.getRequest().remove(JsonKey.SIGN_KEYS);
+    request.getRequest().remove(JsonKey.USER_ID);
+  }
+
+  private void addKeysToRequestMap(Request request) {
+    List<String> encKeys = (List<String>) request.get(JsonKey.ENC_KEYS);
+    List<String> signKeys = (List<String>) request.get(JsonKey.SIGN_KEYS);
+    Map<String, List<String>> keys = new HashMap<>();
+    keys.put(JsonKey.ENC_KEYS, encKeys);
+    keys.put(JsonKey.SIGN_KEYS, signKeys);
+    request.getRequest().put(JsonKey.KEYS, keys);
+  }
+
+  private void updateOrgInfoToES(Map<String, Object> updatedOrgMap) {
+    Request orgRequest = new Request();
+    orgRequest.getRequest().put(JsonKey.ORGANISATION, updatedOrgMap);
+    orgRequest.setOperation(ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
+    tellToAnother(orgRequest);
+  }
+
+  private Response updateCassandraOrgRecord(Map<String,Object>reqMap){
+    return cassandraOperation.updateRecord(
+            orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), reqMap);
+  }
+
 }

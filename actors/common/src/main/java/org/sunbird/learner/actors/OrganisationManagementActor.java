@@ -16,8 +16,6 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
-import org.sunbird.actorutil.org.OrganisationClient;
-import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -1882,7 +1880,7 @@ public class OrganisationManagementActor extends BaseActor {
   }
 
 
-  private Map<String, Object> enquireOrg(String id) {
+  private Map<String, Object> getOrgById(String id) {
     Map<String, Object> responseMap = new HashMap<>();
     Response response = cassandraOperation.getRecordById(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), id);
     Map<String, Object> record = response.getResult();
@@ -1891,33 +1889,40 @@ public class OrganisationManagementActor extends BaseActor {
         responseMap = (Map<String, Object>) ((List) record.get(JsonKey.RESPONSE)).get(0);
       }
       ProjectLogger.log(
-              "OrganisationManagementActor:enquireOrg found org with Id: "+id, LoggerEnum.ERROR.name());
+              "OrganisationManagementActor:getOrgById found org with Id: "+id, LoggerEnum.INFO.name());
     }
     return responseMap;
   }
 
-  private void assuringAssignKeysOperation(String orgId) {
-    Map<String, Object> orgDbMap = enquireOrg(orgId);
-    boolean isAssignable=MapUtils.isNotEmpty(orgDbMap) ? (boolean)orgDbMap.get(JsonKey.IS_ROOT_ORG) : false;
-    if(!isAssignable){
+  private boolean isRootOrgIdValid(String id){
+    Map<String, Object> orgDbMap = getOrgById(id);
+    return MapUtils.isNotEmpty(orgDbMap) ? (boolean)orgDbMap.get(JsonKey.IS_ROOT_ORG) : false;
+  }
+
+  private void throwExceptionForInvalidRootOrg(String id) {
+    ProjectLogger.log(
+            "OrganisationManagementActor:throwExceptionForInvalidRootOrg no root org found with Id: "+id, LoggerEnum.ERROR.name());
              throw  new ProjectCommonException(
                       ResponseCode.invalidRequestData.getErrorCode(),
                       ResponseCode.invalidOrgId.getErrorMessage(),
                       ResponseCode.CLIENT_ERROR.getResponseCode());
-    }
   }
+
   private void assignKey(Request request) {
     addKeysToRequestMap(request);
-    filterRequestMap(request);
-    assuringAssignKeysOperation((String)request.get(JsonKey.ID));
+    removeUnusedField(request);
+    if(!isRootOrgIdValid((String)request.get(JsonKey.ID)))
+    {
+      throwExceptionForInvalidRootOrg((String)request.get(JsonKey.ID));
+    }
     Response response=updateCassandraOrgRecord(request.getRequest());
     sender().tell(response, self());
     ProjectLogger.log(
-              "OrganisationManagementActor:assignKey keys assigned to root org with Id: "+request.get(JsonKey.ID), LoggerEnum.ERROR.name());
+              "OrganisationManagementActor:assignKey keys assigned to root org with Id: "+request.get(JsonKey.ID), LoggerEnum.INFO.name());
     updateOrgInfoToES(request.getRequest());
   }
 
-  private void filterRequestMap(Request request) {
+  private void removeUnusedField(Request request) {
     request.getRequest().remove(JsonKey.ENC_KEYS);
     request.getRequest().remove(JsonKey.SIGN_KEYS);
     request.getRequest().remove(JsonKey.USER_ID);

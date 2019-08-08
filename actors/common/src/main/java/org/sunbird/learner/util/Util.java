@@ -210,7 +210,7 @@ public final class Util {
     dbInfoMap.put(
         BadgingJsonKey.CONTENT_BADGE_ASSOCIATION_DB,
         getDbInfoObject(KEY_SPACE_NAME, "content_badge_association"));
-    dbInfoMap.put(JsonKey.USER_CERT,getDbInfoObject(KEY_SPACE_NAME,JsonKey.USER_CERT));
+    dbInfoMap.put(JsonKey.USER_CERT, getDbInfoObject(KEY_SPACE_NAME, JsonKey.USER_CERT));
   }
 
   /**
@@ -1930,12 +1930,12 @@ public final class Util {
         "Util:getUserRequiredActionLink redirectURI = " + redirectUri, LoggerEnum.INFO.name());
     if (StringUtils.isBlank((String) templateMap.get(JsonKey.PASSWORD))) {
       templateMap.put(
-          JsonKey.SET_PASSWORD_LINK, "https://dev.sunbird.org"
-          /*urlShortner.shortUrl(
-          KeycloakRequiredActionLinkUtil.getLink(
-              (String) templateMap.get(JsonKey.USERNAME),
-              redirectUri,
-              KeycloakRequiredActionLinkUtil.UPDATE_PASSWORD))*/ );
+          JsonKey.SET_PASSWORD_LINK,
+          urlShortner.shortUrl(
+              KeycloakRequiredActionLinkUtil.getLink(
+                  (String) templateMap.get(JsonKey.USERNAME),
+                  redirectUri,
+                  KeycloakRequiredActionLinkUtil.UPDATE_PASSWORD)));
     } else {
       templateMap.put(
           JsonKey.VERIFY_EMAIL_LINK,

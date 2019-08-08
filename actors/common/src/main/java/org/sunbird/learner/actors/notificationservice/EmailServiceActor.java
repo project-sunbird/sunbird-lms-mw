@@ -113,6 +113,9 @@ public class EmailServiceActor extends BaseActor {
     String name = "";
     if (emails.size() == 1) {
       name = StringUtils.capitalize((String) user.get(JsonKey.FIRST_NAME));
+      if (StringUtils.isBlank(name) && (String) request.get(JsonKey.FIRST_NAME) != null) {
+        name = StringUtils.capitalize((String) request.get(JsonKey.FIRST_NAME));
+      }
     }
 
     // fetch orgname inorder to set in the Template context

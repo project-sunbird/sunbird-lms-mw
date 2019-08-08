@@ -1,5 +1,6 @@
 package org.sunbird.user.actors;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -13,6 +14,7 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.certificate.Certificate;
 
+import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.*;
 
@@ -46,7 +48,7 @@ public class CertificateActor extends UserBaseActor {
      *
      * @param userRequest
      */
-    private void getCertificate(Request userRequest) {
+    private void getCertificate(Request userRequest) throws IOException {
         Map request = userRequest.getRequest();
         String certificatedId = (String) request.get(JsonKey.CERT_ID);
         String accessCode = (String) request.get(JsonKey.ACCESS_CODE);
@@ -55,7 +57,8 @@ public class CertificateActor extends UserBaseActor {
             Map userResponse = new HashMap<String, Object>();
             Response userResult = new Response();
             Map recordStore = (Map<String, Object>) responseDetails.get(JsonKey.STORE);
-            userResponse.put(JsonKey.JSON, recordStore.get(JsonKey.JSON_DATA));
+            String jsonData = (String) recordStore.get(JsonKey.JSON_DATA);
+            userResponse.put(JsonKey.JSON, objectMapper.readValue(jsonData,Map.class));
             userResponse.put(JsonKey.PDF, recordStore.get(JsonKey.PDF_URL));
             userResult.put(JsonKey.RESPONSE, userResponse);
             sender().tell(userResult, self());
@@ -94,7 +97,7 @@ public class CertificateActor extends UserBaseActor {
     }
 
 
-    private void addCertificate(Request request) {
+    private void addCertificate(Request request) throws JsonProcessingException {
         Map<String, String> storeMap = new HashMap<>();
         Map<String, Object> certAddReqMap = request.getRequest();
         assureUniqueCertId((String) certAddReqMap.get(JsonKey.ID));
@@ -107,9 +110,9 @@ public class CertificateActor extends UserBaseActor {
         sender().tell(response, self());
     }
 
-    private void populateStoreMapWithUrl(Map<String, String> storeMap, Map<String, Object> certAddRequestMap) {
+    private void populateStoreMapWithUrl(Map<String, String> storeMap, Map<String, Object> certAddRequestMap) throws JsonProcessingException {
         storeMap.put(JsonKey.PDF_URL, (String) certAddRequestMap.get(JsonKey.PDF_URL));
-        storeMap.put(JsonKey.JSON_DATA, certAddRequestMap.get(JsonKey.JSON_DATA).toString());
+        storeMap.put(JsonKey.JSON_DATA, objectMapper.writeValueAsString(certAddRequestMap.get(JsonKey.JSON_DATA)));
     }
 
     private Map<String, Object> getRequiredRequest(Map<String, Object> certAddReqMap) {

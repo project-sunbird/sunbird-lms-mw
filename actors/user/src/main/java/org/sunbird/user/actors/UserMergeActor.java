@@ -53,6 +53,10 @@ public class UserMergeActor extends UserBaseActor {
     updateUserMergeDetails(userRequest);
   }
 
+  /** Main method for calling user-course service, merge user details and then call user-cert service
+   * @param userRequest
+   * @throws IOException
+   */
   private void updateUserMergeDetails(Request userRequest) throws IOException {
     ProjectLogger.log("UserMergeActor:updateUserMergeDetails: starts : ", LoggerEnum.DEBUG.name());
     Response response = new Response();
@@ -90,6 +94,7 @@ public class UserMergeActor extends UserBaseActor {
         ProjectLogger.log(
                 "UserMergeActor: updateUserMergeDetails: mergeeResponseStr = " + mergeeResponseStr,
                 LoggerEnum.INFO.name());
+        //update user-cert details
         updateUserCertDetails(userCertMap);
         Map result = new HashMap<String, Object>();
         result.put(JsonKey.STATUS, JsonKey.SUCCESS);
@@ -123,6 +128,9 @@ public class UserMergeActor extends UserBaseActor {
     }
   }
 
+  /** This method returns system custodian value
+   * @return rootCustodianValue
+   */
   private String getCustodianValue() {
     String custodianId = null;
     try {
@@ -147,6 +155,10 @@ public class UserMergeActor extends UserBaseActor {
     return custodianId;
   }
 
+  /** This method creates Kafka topic for user-cert
+   * @param requestMap
+   * @throws IOException
+   */
   private void updateUserCertDetails(Map<String, Object> requestMap) throws IOException {
     String content = null;
     Map<String, Object> userCertMergeRequest = new HashMap<>();
@@ -190,6 +202,11 @@ public class UserMergeActor extends UserBaseActor {
     tellToAnother(userRequest);
   }
 
+  /** This method calls user-course api for updating courses details fromAccount to toAccount
+   * @param requestMap
+   * @return
+   * @throws IOException
+   */
   private String updateMergerCourseDetails(Map<String, Object> requestMap) throws IOException {
     // call course service api
     String bodyJson = objectMapper.writeValueAsString(requestMap);
@@ -231,27 +248,6 @@ public class UserMergeActor extends UserBaseActor {
               ProjectUtil.formatMessage(ResponseMessage.Message.UNAUTHORIZED_USER, mergeeId),
               ResponseCode.UNAUTHORIZED.getResponseCode());
     }
-  }
-
-  private void rollBackUserDetails(User mergee) {
-    Map<String, Object> userMap = new HashMap<>();
-    userMap.put(JsonKey.STATUS, mergee.getStatus());
-    userMap.put(JsonKey.IS_DELETED, mergee.getIsDeleted());
-    userMap.put(JsonKey.EMAIL, mergee.getEmail());
-    userMap.put(JsonKey.PHONE, mergee.getPhone());
-    userMap.put(JsonKey.USERNAME, mergee.getUserName());
-    if(mergee.getPrevUsedEmail() == null) {
-      userMap.put(JsonKey.PREV_USED_EMAIL, null);
-    } else {
-      userMap.put(JsonKey.PREV_USED_EMAIL, mergee.getPrevUsedEmail());
-    }
-    if(mergee.getPrevUsedPhone() == null) {
-      userMap.put(JsonKey.PREV_USED_PHONE, null);
-    } else {
-      userMap.put(JsonKey.PREV_USED_PHONE, mergee.getPrevUsedPhone());
-    }
-    userMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
-    getUserDao().updateUser(userMap);
   }
 
   /** Initialises Kafka producer required for dispatching messages on Kafka. */

@@ -1,6 +1,5 @@
 package org.sunbird.user.actors;
 
-import akka.actor.ActorRef;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.*;
@@ -35,11 +34,9 @@ import org.sunbird.user.util.KafkaConfigConstants;
         asyncTasks = {}
 )
 public class UserMergeActor extends UserBaseActor {
-  private static Config config = ConfigUtil.getConfig();
-  private static String BOOTSTRAP_SERVERS =
-          config.getString(KafkaConfigConstants.SUNBIRD_USER_CERT_KAFKA_SERVICE_CONFIG);
-  private static String topic = config.getString(KafkaConfigConstants.SUNBIRD_USER_CERT_KAFKA_TOPIC);
-  private static Producer<Long, String> producer;
+  String topic = null;
+  String BOOTSTRAP_SERVERS = null;
+  Producer<Long, String> producer = null;
   private ObjectMapper objectMapper = new ObjectMapper();
   private UserService userService = UserServiceImpl.getInstance();
   private SSOManager keyCloakService = SSOServiceFactory.getInstance();
@@ -251,7 +248,12 @@ public class UserMergeActor extends UserBaseActor {
   }
 
   /** Initialises Kafka producer required for dispatching messages on Kafka. */
-  private static void initKafkaClient() {
+  private void initKafkaClient() {
+    Config config = ConfigUtil.getConfig();
+    BOOTSTRAP_SERVERS =
+            config.getString(KafkaConfigConstants.SUNBIRD_USER_CERT_KAFKA_SERVICE_CONFIG);
+    topic = config.getString(KafkaConfigConstants.SUNBIRD_USER_CERT_KAFKA_TOPIC);
+
     ProjectLogger.log(
             "KafkaTelemetryDispatcherActor:initKafkaClient: Bootstrap servers = " + BOOTSTRAP_SERVERS,
             LoggerEnum.INFO.name());

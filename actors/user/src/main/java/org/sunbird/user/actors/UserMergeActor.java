@@ -58,6 +58,7 @@ public class UserMergeActor extends UserBaseActor {
     Response response = new Response();
     Map mergeeDBMap = new HashMap<String, Object>();
     HashMap requestMap = (HashMap)userRequest.getRequest();
+    Map userCertMap = (Map) requestMap.clone();
     Map headers = (Map) userRequest.getContext().get(JsonKey.HEADER);
     String mergeeId = (String)requestMap.get(JsonKey.FROM_ACCOUNT_ID);
     String mergerId = (String)requestMap.get(JsonKey.TO_ACCOUNT_ID);
@@ -67,10 +68,10 @@ public class UserMergeActor extends UserBaseActor {
     User mergee = userService.getUserById(mergeeId);
     User merger = userService.getUserById(mergerId);
     String custodianId = getCustodianValue();
-    if(custodianId.equals(mergee.getRootOrgId()) && (!custodianId.equals(merger.getRootOrgId()))) {
+    if((!custodianId.equals(mergee.getRootOrgId())) || custodianId.equals(merger.getRootOrgId())) {
       ProjectLogger.log(
-              "UserMergeActor:updateUserMergeDetails: User course data is not updated for userId : "
-                      + mergerId,
+              "UserMergeActor:updateUserMergeDetails: Either custodian id is not matching with mergeeid root-org"
+                      + mergeeId + "or matching with mergerid root-org" +mergerId,
               LoggerEnum.ERROR.name());
       throw new ProjectCommonException(
               ResponseCode.internalError.getErrorCode(),
@@ -89,7 +90,7 @@ public class UserMergeActor extends UserBaseActor {
         ProjectLogger.log(
                 "UserMergeActor: updateUserMergeDetails: mergeeResponseStr = " + mergeeResponseStr,
                 LoggerEnum.INFO.name());
-        updateUserCertDetails(requestMap);
+        updateUserCertDetails(userCertMap);
         Map result = new HashMap<String, Object>();
         result.put(JsonKey.STATUS, JsonKey.SUCCESS);
         response.put(JsonKey.RESULT, result);

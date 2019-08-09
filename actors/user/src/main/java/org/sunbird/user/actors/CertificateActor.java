@@ -58,8 +58,9 @@ public class CertificateActor extends UserBaseActor {
             Response userResult = new Response();
             Map recordStore = (Map<String, Object>) responseDetails.get(JsonKey.STORE);
             String jsonData = (String) recordStore.get(JsonKey.JSON_DATA);
-            userResponse.put(JsonKey.JSON, objectMapper.readValue(jsonData,Map.class));
-            userResponse.put(JsonKey.PDF, recordStore.get(JsonKey.PDF_URL));
+            userResponse.put(JsonKey.JSON_DATA, objectMapper.readValue(jsonData,Map.class));
+            userResponse.put(JsonKey.PDF_URL, recordStore.get(JsonKey.PDF_URL));
+            userResponse.put(JsonKey.OTHER_LINK,responseDetails.get(JsonKey.OTHER_LINK));
             userResult.put(JsonKey.RESPONSE, userResponse);
             sender().tell(userResult, self());
         } else {

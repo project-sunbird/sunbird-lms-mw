@@ -56,7 +56,7 @@ import scala.concurrent.Future;
     "getOrgTypeList",
     "createOrgType",
     "updateOrgType",
-          "assignKeys"
+    "assignKeys"
   },
   asyncTasks = {}
 )
@@ -69,7 +69,6 @@ public class OrganisationManagementActor extends BaseActor {
           null);
   private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
   private static Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -108,10 +107,9 @@ public class OrganisationManagementActor extends BaseActor {
         .getOperation()
         .equalsIgnoreCase(ActorOperations.UPDATE_ORG_TYPE.getValue())) {
       updateOrgType(request);
-    }else if(request.getOperation().equalsIgnoreCase(ActorOperations.ASSIGN_KEYS.getValue())){
+    } else if (request.getOperation().equalsIgnoreCase(ActorOperations.ASSIGN_KEYS.getValue())) {
       assignKey(request);
-    }
-    else {
+    } else {
       onReceiveUnsupportedOperation(request.getOperation());
     }
   }
@@ -1879,46 +1877,50 @@ public class OrganisationManagementActor extends BaseActor {
     return Boolean.parseBoolean(getEventSyncSetting(JsonKey.ORGANISATION));
   }
 
-
   private Map<String, Object> getOrgById(String id) {
     Map<String, Object> responseMap = new HashMap<>();
-    Response response = cassandraOperation.getRecordById(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), id);
+    Response response =
+        cassandraOperation.getRecordById(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), id);
     Map<String, Object> record = response.getResult();
     if (null != record && null != record.get(JsonKey.RESPONSE)) {
-      if(((List) record.get(JsonKey.RESPONSE)).size()!=0) {
+      if (((List) record.get(JsonKey.RESPONSE)).size() != 0) {
         responseMap = (Map<String, Object>) ((List) record.get(JsonKey.RESPONSE)).get(0);
       }
       ProjectLogger.log(
-              "OrganisationManagementActor:getOrgById found org with Id: "+id, LoggerEnum.INFO.name());
+          "OrganisationManagementActor:getOrgById found org with Id: " + id,
+          LoggerEnum.INFO.name());
     }
     return responseMap;
   }
 
-  private boolean isRootOrgIdValid(String id){
+  private boolean isRootOrgIdValid(String id) {
     Map<String, Object> orgDbMap = getOrgById(id);
-    return MapUtils.isNotEmpty(orgDbMap) ? (boolean)orgDbMap.get(JsonKey.IS_ROOT_ORG) : false;
+    return MapUtils.isNotEmpty(orgDbMap) ? (boolean) orgDbMap.get(JsonKey.IS_ROOT_ORG) : false;
   }
 
   private void throwExceptionForInvalidRootOrg(String id) {
     ProjectLogger.log(
-            "OrganisationManagementActor:throwExceptionForInvalidRootOrg no root org found with Id: "+id, LoggerEnum.ERROR.name());
-             throw  new ProjectCommonException(
-                      ResponseCode.invalidRequestData.getErrorCode(),
-                      ResponseCode.invalidOrgId.getErrorMessage(),
-                      ResponseCode.CLIENT_ERROR.getResponseCode());
+        "OrganisationManagementActor:throwExceptionForInvalidRootOrg no root org found with Id: "
+            + id,
+        LoggerEnum.ERROR.name());
+    throw new ProjectCommonException(
+        ResponseCode.invalidRequestData.getErrorCode(),
+        ResponseCode.invalidOrgId.getErrorMessage(),
+        ResponseCode.CLIENT_ERROR.getResponseCode());
   }
 
   private void assignKey(Request request) {
     addKeysToRequestMap(request);
     removeUnusedField(request);
-    if(!isRootOrgIdValid((String)request.get(JsonKey.ID)))
-    {
-      throwExceptionForInvalidRootOrg((String)request.get(JsonKey.ID));
+    if (!isRootOrgIdValid((String) request.get(JsonKey.ID))) {
+      throwExceptionForInvalidRootOrg((String) request.get(JsonKey.ID));
     }
-    Response response=updateCassandraOrgRecord(request.getRequest());
+    Response response = updateCassandraOrgRecord(request.getRequest());
     sender().tell(response, self());
     ProjectLogger.log(
-              "OrganisationManagementActor:assignKey keys assigned to root org with Id: "+request.get(JsonKey.ID), LoggerEnum.INFO.name());
+        "OrganisationManagementActor:assignKey keys assigned to root org with Id: "
+            + request.get(JsonKey.ID),
+        LoggerEnum.INFO.name());
     updateOrgInfoToES(request.getRequest());
   }
 
@@ -1944,9 +1946,8 @@ public class OrganisationManagementActor extends BaseActor {
     tellToAnother(orgRequest);
   }
 
-  private Response updateCassandraOrgRecord(Map<String,Object>reqMap){
+  private Response updateCassandraOrgRecord(Map<String, Object> reqMap) {
     return cassandraOperation.updateRecord(
-            orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), reqMap);
+        orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), reqMap);
   }
-
 }

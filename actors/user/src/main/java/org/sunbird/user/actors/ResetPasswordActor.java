@@ -55,7 +55,7 @@ public class ResetPasswordActor extends BaseActor {
       UserUtility.decryptUserData(userMap);
       userMap.put(JsonKey.USERNAME, userMap.get(JsonKey.USERNAME));
       userMap.put(JsonKey.REDIRECT_URI, Util.getSunbirdWebUrlPerTenent(userMap));
-      Util.getUserRequiredActionLink(userMap);
+      Util.getUserRequiredActionLink(userMap, false);
       Request request = new Request(); // Util.sendResetPassMail(userMap);
       if ((String) userMap.get(JsonKey.SET_PASSWORD_LINK) != null) {
         ProjectLogger.log(

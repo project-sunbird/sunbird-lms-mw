@@ -1920,7 +1920,8 @@ public final class Util {
     }
   }
 
-  public static void getUserRequiredActionLink(Map<String, Object> templateMap) {
+  public static void getUserRequiredActionLink(
+      Map<String, Object> templateMap, boolean isUrlShortRequired) {
     URLShortner urlShortner = new URLShortnerImpl();
     String redirectUri =
         StringUtils.isNotBlank((String) templateMap.get(JsonKey.REDIRECT_URI))
@@ -1929,22 +1930,28 @@ public final class Util {
     ProjectLogger.log(
         "Util:getUserRequiredActionLink redirectURI = " + redirectUri, LoggerEnum.INFO.name());
     if (StringUtils.isBlank((String) templateMap.get(JsonKey.PASSWORD))) {
+      String url =
+          KeycloakRequiredActionLinkUtil.getLink(
+              (String) templateMap.get(JsonKey.USERNAME),
+              redirectUri,
+              KeycloakRequiredActionLinkUtil.UPDATE_PASSWORD);
+
       templateMap.put(
-          JsonKey.SET_PASSWORD_LINK,
-          urlShortner.shortUrl(
-              KeycloakRequiredActionLinkUtil.getLink(
-                  (String) templateMap.get(JsonKey.USERNAME),
-                  redirectUri,
-                  KeycloakRequiredActionLinkUtil.UPDATE_PASSWORD)));
+          JsonKey.SET_PASSWORD_LINK, isUrlShortRequired ? urlShortner.shortUrl(url) : url);
+
     } else {
+      String url =
+          KeycloakRequiredActionLinkUtil.getLink(
+              (String) templateMap.get(JsonKey.USERNAME),
+              redirectUri,
+              KeycloakRequiredActionLinkUtil.VERIFY_EMAIL);
       templateMap.put(
-          JsonKey.VERIFY_EMAIL_LINK,
-          urlShortner.shortUrl(
-              KeycloakRequiredActionLinkUtil.getLink(
-                  (String) templateMap.get(JsonKey.USERNAME),
-                  redirectUri,
-                  KeycloakRequiredActionLinkUtil.VERIFY_EMAIL)));
+          JsonKey.VERIFY_EMAIL_LINK, isUrlShortRequired ? urlShortner.shortUrl(url) : url);
     }
+  }
+
+  public static void getUserRequiredActionLink(Map<String, Object> templateMap) {
+    getUserRequiredActionLink(templateMap, true);
   }
 
   public static void sendSMS(Map<String, Object> userMap) {

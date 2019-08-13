@@ -56,19 +56,21 @@ public class ResetPasswordActor extends BaseActor {
       userMap.put(JsonKey.USERNAME, userMap.get(JsonKey.USERNAME));
       userMap.put(JsonKey.REDIRECT_URI, Util.getSunbirdWebUrlPerTenent(userMap));
       Util.getUserRequiredActionLink(userMap);
-      Request request = Util.sendResetPassMail(userMap);
-      if (null != request) {
+      Request request = new Request(); // Util.sendResetPassMail(userMap);
+      if ((String) userMap.get(JsonKey.SET_PASSWORD_LINK) != null) {
         ProjectLogger.log(
-            "ResetPasswordActor:resetPassword: tellToAnother called.", LoggerEnum.INFO.name());
-        tellToAnother(request);
+            "ResetPasswordActor:resetPassword: link generated for reset password.",
+            LoggerEnum.INFO.name());
+        Response response = new Response();
+        response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+        response.put(JsonKey.LINK, (String) userMap.get(JsonKey.SET_PASSWORD_LINK));
+        sender().tell(response, self());
       } else {
         ProjectLogger.log(
-            "ResetPasswordActor:resetPassword: not able to generate email request.",
+            "ResetPasswordActor:resetPassword: not able to generate reset password link.",
             LoggerEnum.INFO.name());
+        ProjectCommonException.throwServerErrorException(ResponseCode.internalError);
       }
-      Response response = new Response();
-      response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-      sender().tell(response, self());
     } else {
       ProjectCommonException.throwClientErrorException(ResponseCode.userNotFound);
     }

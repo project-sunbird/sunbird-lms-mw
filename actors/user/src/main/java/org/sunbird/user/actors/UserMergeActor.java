@@ -12,6 +12,7 @@ import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -23,6 +24,10 @@ import org.sunbird.models.systemsetting.SystemSetting;
 import org.sunbird.models.user.User;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
+import org.sunbird.telemetry.dto.Actor;
+import org.sunbird.telemetry.dto.Context;
+import org.sunbird.telemetry.dto.Target;
+import org.sunbird.telemetry.dto.Telemetry;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
@@ -85,37 +90,25 @@ public class UserMergeActor extends UserBaseActor {
     if (!mergee.getIsDeleted()) {
       prepareMergeeAccountData(mergee, mergeeDBMap);
       userRequest.put(JsonKey.USER_MERGEE_ACCOUNT, mergeeDBMap);
+      Response mergeeResponse = getUserDao().updateUser(mergeeDBMap);
+      String mergeeResponseStr = (String) mergeeResponse.get(JsonKey.RESPONSE);
+      ProjectLogger.log(
+          "UserMergeActor: updateUserMergeDetails: mergeeResponseStr = " + mergeeResponseStr,
+          LoggerEnum.INFO.name());
+      Map result = new HashMap<String, Object>();
+      result.put(JsonKey.STATUS, JsonKey.SUCCESS);
+      response.put(JsonKey.RESULT, result);
+      sender().tell(response, self());
 
-      // update the merger-course details in cassandra & ES
-      String mergerCourseResponse = updateMergerCourseDetails(requestMap);
-      if (mergerCourseResponse.equalsIgnoreCase(JsonKey.SUCCESS)) {
-        Response mergeeResponse = getUserDao().updateUser(mergeeDBMap);
-        String mergeeResponseStr = (String) mergeeResponse.get(JsonKey.RESPONSE);
-        ProjectLogger.log(
-            "UserMergeActor: updateUserMergeDetails: mergeeResponseStr = " + mergeeResponseStr,
-            LoggerEnum.INFO.name());
-        // update user-cert details
-        updateUserCertDetails(userCertMap);
-        Map result = new HashMap<String, Object>();
-        result.put(JsonKey.STATUS, JsonKey.SUCCESS);
-        response.put(JsonKey.RESULT, result);
-        sender().tell(response, self());
+      // update user-course-cert details
+      mergeCertCourseDetails(mergeeId, mergerId);
 
-        // update mergee details in ES
-        mergeUserDetailsToEs(userRequest);
+      // update mergee details in ES
+      mergeUserDetailsToEs(userRequest);
 
-        // create telemetry event for merge
-        triggerUserMergeTelemetry(telemetryMap, merger);
-      } else {
-        ProjectLogger.log(
-            "UserMergeActor:updateUserMergeDetails: User course data is not updated for userId : "
-                + mergerId,
-            LoggerEnum.ERROR.name());
-        throw new ProjectCommonException(
-            ResponseCode.internalError.getErrorCode(),
-            ProjectUtil.formatMessage(ResponseMessage.Message.INTERNAL_ERROR, mergeeId),
-            ResponseCode.SERVER_ERROR.getResponseCode());
-      }
+      // create telemetry event for merge
+      triggerUserMergeTelemetry(telemetryMap, merger);
+
     } else {
       ProjectLogger.log(
           "UserMergeActor:updateUserMergeDetails: User mergee is not exist : " + mergeeId,
@@ -161,23 +154,51 @@ public class UserMergeActor extends UserBaseActor {
   /**
    * This method creates Kafka topic for user-cert
    *
-   * @param requestMap
+   * @param mergeeId
+   * @param mergerId
    * @throws IOException
    */
-  private void updateUserCertDetails(Map<String, Object> requestMap) throws IOException {
+  private void mergeCertCourseDetails(String mergeeId, String mergerId) throws IOException {
     String content = null;
-    Map<String, Object> userCertMergeRequest = new HashMap<>();
-    userCertMergeRequest.put("messageType", "userCertMerge");
-    userCertMergeRequest.put("messageDetails", requestMap);
+    Telemetry userCertMergeRequest = createAccountMergeTopicData(mergeeId, mergerId);
     content = objectMapper.writeValueAsString(userCertMergeRequest);
+    ProjectLogger.log(
+            "UserMergeActor:mergeCertCourseDetails: Kafka producer topic::"+content,
+            LoggerEnum.INFO.name());
     ProducerRecord<Long, String> record = new ProducerRecord<>(topic, content);
     if (producer != null) {
       producer.send(record);
     } else {
       ProjectLogger.log(
-          "KafkaTelemetryDispatcherActor:dispatchEvents: Kafka producer is not initialised.",
+          "UserMergeActor:mergeCertCourseDetails: Kafka producer is not initialised.",
           LoggerEnum.INFO.name());
     }
+  }
+
+  private Telemetry createAccountMergeTopicData(String mergeeId, String mergerId) {
+    Map<String, Object> edata = new HashMap<>();
+    Telemetry mergeUserEvent = new Telemetry();
+    Actor actor = new Actor();
+    actor.setId(JsonKey.TELEMETRY_ACTOR_USER_MERGE_ID);
+    actor.setType(JsonKey.SYSTEM);
+    mergeUserEvent.setActor(actor);
+    mergeUserEvent.setEid(JsonKey.BE_JOB_REQUEST);
+    edata.put(JsonKey.ACTION, JsonKey.TELEMETRY_EDATA_USER_MERGE_ACTION);
+    edata.put(JsonKey.FROM_ACCOUNT_ID, mergeeId);
+    edata.put(JsonKey.TO_ACCOUNT_ID, mergerId);
+    edata.put(JsonKey.ITERATION, 1);
+    mergeUserEvent.setEdata(edata);
+    Context context = new Context();
+    org.sunbird.telemetry.dto.Producer dataProducer =  new org.sunbird.telemetry.dto.Producer();
+    dataProducer.setVer("1.0");
+    dataProducer.setId(JsonKey.TELEMETRY_PRODUCER_USER_MERGE_ID);
+    context.setPdata(dataProducer);
+    mergeUserEvent.setContext(context);
+    Target target = new Target();
+    target.setId(OneWayHashing.encryptVal(mergeeId+"_"+mergerId));
+    target.setType(JsonKey.TELEMETRY_TARGET_USER_MERGE_TYPE);
+    mergeUserEvent.setObject(target);
+    return mergeUserEvent;
   }
 
   private void triggerUserMergeTelemetry(Map telemetryMap, User merger) {
@@ -216,30 +237,6 @@ public class UserMergeActor extends UserBaseActor {
             + userRequest.getRequest().get(JsonKey.FROM_ACCOUNT_ID),
         LoggerEnum.INFO.name());
     tellToAnother(userRequest);
-  }
-
-  /**
-   * This method calls user-course api for updating courses details fromAccount to toAccount
-   *
-   * @param requestMap
-   * @return
-   * @throws IOException
-   */
-  private String updateMergerCourseDetails(Map<String, Object> requestMap) throws IOException {
-    // call course service api
-    String bodyJson = objectMapper.writeValueAsString(requestMap);
-    Map headersMap = new HashMap();
-    String responseCode = null;
-    // courseurl need to provide
-    /*HttpUtilResponse httpResponse = HttpUtil.doPostRequest("courseurl", bodyJson, headersMap);
-    if (httpResponse.getStatusCode() == ResponseCode.OK.getResponseCode()) {
-        String responseStr = httpResponse.getBody();
-        if (responseStr != null) {
-            Map<String, Object> responseMap = objectMapper.readValue(responseStr, HashMap.class);
-            responseCode =  (String) responseMap.get(JsonKey.RESPONSE_CODE);
-        }
-    }*/
-    return responseCode = "SUCCESS";
   }
 
   private void prepareMergeeAccountData(User mergee, Map mergeeDBMap) {

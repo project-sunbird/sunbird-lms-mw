@@ -132,7 +132,9 @@ public class CertificateActor extends UserBaseActor {
         certAddReqMap = getRequiredRequest(certAddReqMap);
         certAddReqMap.put(JsonKey.CREATED_AT, getTimeStamp());
         Response response = cassandraOperation.insertRecord(certDbInfo.getKeySpace(), certDbInfo.getTableName(), certAddReqMap);
-        ProjectLogger.log("CertificateActor:addCertificate:successfully added certificate in records with userId"+ certAddReqMap.get(JsonKey.USER_ID)+" and certId:"+certAddReqMap.get(JsonKey.CERT_ID),LoggerEnum.INFO.name());
+        ProjectLogger.log(
+                "CertificateActor:addCertificate:successfully added certificate in records with userId"
+                        + certAddReqMap.get(JsonKey.USER_ID)+" and certId:"+certAddReqMap.get(JsonKey.CERT_ID),LoggerEnum.INFO.name());
         sender().tell(response, self());
     }
 
@@ -151,15 +153,16 @@ public class CertificateActor extends UserBaseActor {
     }
 
     private void assureUniqueCertId(String certificatedId) {
-            if (isIdentityPresent(certificatedId)) {
-                ProjectLogger.log("CertificateActor:addCertificate:provided certificateId exists in record ".concat(certificatedId),LoggerEnum.ERROR.name());
-                throw new ProjectCommonException(
-                        ResponseCode.invalidParameter.getErrorCode(),
-                        ResponseMessage.Message.DATA_ALREADY_EXIST,
-                        ResponseCode.CLIENT_ERROR.getResponseCode());
-            }
-        ProjectLogger.log("CertificateActor:addCertificate:successfully certId not found in records creating new record",LoggerEnum.INFO.name());
+        if (isIdentityPresent(certificatedId)) {
+            ProjectLogger.log(
+                    "CertificateActor:addCertificate:provided certificateId exists in record ".concat(certificatedId),LoggerEnum.ERROR.name());
+            throw new ProjectCommonException(
+                    ResponseCode.invalidParameter.getErrorCode(),
+                    ResponseMessage.Message.DATA_ALREADY_EXIST,
+                    ResponseCode.CLIENT_ERROR.getResponseCode());
         }
+        ProjectLogger.log("CertificateActor:addCertificate:successfully certId not found in records creating new record",LoggerEnum.INFO.name());
+    }
 
     private boolean isIdentityPresent(String certificateId) {
         Response response = cassandraOperation.getRecordById(certDbInfo.getKeySpace(), certDbInfo.getTableName(), certificateId);

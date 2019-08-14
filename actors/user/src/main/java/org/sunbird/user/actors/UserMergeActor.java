@@ -1,10 +1,9 @@
 package org.sunbird.user.actors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.typesafe.config.Config;
 import java.io.IOException;
 import java.util.*;
-
-import com.typesafe.config.Config;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.sunbird.actor.router.ActorConfig;
@@ -13,6 +12,7 @@ import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -24,14 +24,18 @@ import org.sunbird.models.systemsetting.SystemSetting;
 import org.sunbird.models.user.User;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
+import org.sunbird.telemetry.dto.Actor;
+import org.sunbird.telemetry.dto.Context;
+import org.sunbird.telemetry.dto.Target;
+import org.sunbird.telemetry.dto.Telemetry;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.KafkaConfigConstants;
 
 @ActorConfig(
-        tasks = {"mergeUser"},
-        asyncTasks = {}
+  tasks = {"mergeUser"},
+  asyncTasks = {}
 )
 public class UserMergeActor extends UserBaseActor {
   String topic = null;
@@ -50,7 +54,9 @@ public class UserMergeActor extends UserBaseActor {
     updateUserMergeDetails(userRequest);
   }
 
-  /** Main method for calling user-course service, merge user details and then call user-cert service
+  /**
+   * Main method for calling user-course service, merge user details and then call user-cert service
+   *
    * @param userRequest
    * @throws IOException
    */
@@ -58,74 +64,66 @@ public class UserMergeActor extends UserBaseActor {
     ProjectLogger.log("UserMergeActor:updateUserMergeDetails: starts : ", LoggerEnum.DEBUG.name());
     Response response = new Response();
     Map mergeeDBMap = new HashMap<String, Object>();
-    HashMap requestMap = (HashMap)userRequest.getRequest();
+    HashMap requestMap = (HashMap) userRequest.getRequest();
     Map userCertMap = (Map) requestMap.clone();
     Map headers = (Map) userRequest.getContext().get(JsonKey.HEADER);
-    String mergeeId = (String)requestMap.get(JsonKey.FROM_ACCOUNT_ID);
-    String mergerId = (String)requestMap.get(JsonKey.TO_ACCOUNT_ID);
-    //validating tokens
-    checkTokenDetails(headers,mergeeId,mergerId);
-    Map telemetryMap = (HashMap)requestMap.clone();
+    String mergeeId = (String) requestMap.get(JsonKey.FROM_ACCOUNT_ID);
+    String mergerId = (String) requestMap.get(JsonKey.TO_ACCOUNT_ID);
+    // validating tokens
+    checkTokenDetails(headers, mergeeId, mergerId);
+    Map telemetryMap = (HashMap) requestMap.clone();
     User mergee = userService.getUserById(mergeeId);
     User merger = userService.getUserById(mergerId);
     String custodianId = getCustodianValue();
-    if((!custodianId.equals(mergee.getRootOrgId())) || custodianId.equals(merger.getRootOrgId())) {
+    if ((!custodianId.equals(mergee.getRootOrgId())) || custodianId.equals(merger.getRootOrgId())) {
       ProjectLogger.log(
-              "UserMergeActor:updateUserMergeDetails: Either custodian id is not matching with mergeeid root-org"
-                      + mergeeId + "or matching with mergerid root-org" +mergerId,
-              LoggerEnum.ERROR.name());
+          "UserMergeActor:updateUserMergeDetails: Either custodian id is not matching with mergeeid root-org"
+              + mergeeId
+              + "or matching with mergerid root-org"
+              + mergerId,
+          LoggerEnum.ERROR.name());
       throw new ProjectCommonException(
-              ResponseCode.internalError.getErrorCode(),
-              ProjectUtil.formatMessage(ResponseMessage.Message.INTERNAL_ERROR, mergeeId),
-              ResponseCode.SERVER_ERROR.getResponseCode());
+          ResponseCode.internalError.getErrorCode(),
+          ProjectUtil.formatMessage(ResponseMessage.Message.INTERNAL_ERROR, mergeeId),
+          ResponseCode.SERVER_ERROR.getResponseCode());
     }
     if (!mergee.getIsDeleted()) {
       prepareMergeeAccountData(mergee, mergeeDBMap);
       userRequest.put(JsonKey.USER_MERGEE_ACCOUNT, mergeeDBMap);
+      Response mergeeResponse = getUserDao().updateUser(mergeeDBMap);
+      String mergeeResponseStr = (String) mergeeResponse.get(JsonKey.RESPONSE);
+      ProjectLogger.log(
+          "UserMergeActor: updateUserMergeDetails: mergeeResponseStr = " + mergeeResponseStr,
+          LoggerEnum.INFO.name());
+      Map result = new HashMap<String, Object>();
+      result.put(JsonKey.STATUS, JsonKey.SUCCESS);
+      response.put(JsonKey.RESULT, result);
+      sender().tell(response, self());
 
-      // update the merger-course details in cassandra & ES
-      String mergerCourseResponse = updateMergerCourseDetails(requestMap);
-      if (mergerCourseResponse.equalsIgnoreCase(JsonKey.SUCCESS)) {
-        Response mergeeResponse = getUserDao().updateUser(mergeeDBMap);
-        String mergeeResponseStr = (String) mergeeResponse.get(JsonKey.RESPONSE);
-        ProjectLogger.log(
-                "UserMergeActor: updateUserMergeDetails: mergeeResponseStr = " + mergeeResponseStr,
-                LoggerEnum.INFO.name());
-        //update user-cert details
-        updateUserCertDetails(userCertMap);
-        Map result = new HashMap<String, Object>();
-        result.put(JsonKey.STATUS, JsonKey.SUCCESS);
-        response.put(JsonKey.RESULT, result);
-        sender().tell(response, self());
+      // update user-course-cert details
+      mergeCertCourseDetails(mergeeId, mergerId);
 
-        // update mergee details in ES
-        mergeUserDetailsToEs(userRequest);
+      // update mergee details in ES
+      mergeUserDetailsToEs(userRequest);
 
-        // create telemetry event for merge
-        triggerUserMergeTelemetry(telemetryMap,merger);
-      } else {
-        ProjectLogger.log(
-                "UserMergeActor:updateUserMergeDetails: User course data is not updated for userId : "
-                        + mergerId,
-                LoggerEnum.ERROR.name());
-        throw new ProjectCommonException(
-                ResponseCode.internalError.getErrorCode(),
-                ProjectUtil.formatMessage(ResponseMessage.Message.INTERNAL_ERROR, mergeeId),
-                ResponseCode.SERVER_ERROR.getResponseCode());
-      }
+      // create telemetry event for merge
+      triggerUserMergeTelemetry(telemetryMap, merger);
+
     } else {
       ProjectLogger.log(
-              "UserMergeActor:updateUserMergeDetails: User mergee is not exist : " + mergeeId,
-              LoggerEnum.ERROR.name());
+          "UserMergeActor:updateUserMergeDetails: User mergee is not exist : " + mergeeId,
+          LoggerEnum.ERROR.name());
       throw new ProjectCommonException(
-              ResponseCode.invalidIdentifier.getErrorCode(),
-              ProjectUtil.formatMessage(
-                      ResponseMessage.Message.INVALID_PARAMETER_VALUE, mergeeId, JsonKey.FROM_ACCOUNT_ID),
-              ResponseCode.SERVER_ERROR.getResponseCode());
+          ResponseCode.invalidIdentifier.getErrorCode(),
+          ProjectUtil.formatMessage(
+              ResponseMessage.Message.INVALID_PARAMETER_VALUE, mergeeId, JsonKey.FROM_ACCOUNT_ID),
+          ResponseCode.SERVER_ERROR.getResponseCode());
     }
   }
 
-  /** This method returns system custodian value
+  /**
+   * This method returns system custodian value
+   *
    * @return rootCustodianValue
    */
   private String getCustodianValue() {
@@ -133,92 +131,112 @@ public class UserMergeActor extends UserBaseActor {
     try {
       Map<String, String> configSettingMap = DataCacheHandler.getConfigSettings();
       custodianId = configSettingMap.get(JsonKey.CUSTODIAN_ORG_ID);
-      if(custodianId == null || custodianId.isEmpty()) {
+      if (custodianId == null || custodianId.isEmpty()) {
         SystemSetting custodianIdSetting =
-                systemSettingClient.getSystemSettingByField(
-                        getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()), JsonKey.CUSTODIAN_ORG_ID);
-        if(custodianIdSetting != null) {
-          configSettingMap.put(custodianIdSetting.getId(),custodianIdSetting.getValue());
+            systemSettingClient.getSystemSettingByField(
+                getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
+                JsonKey.CUSTODIAN_ORG_ID);
+        if (custodianIdSetting != null) {
+          configSettingMap.put(custodianIdSetting.getId(), custodianIdSetting.getValue());
           custodianId = custodianIdSetting.getValue();
         }
       }
     } catch (Exception e) {
       ProjectLogger.log(
-              "UserMergeActor:updateTncInfo: Exception occurred while getting system setting for"
-                      + JsonKey.CUSTODIAN_ORG_ID
-                      + e.getMessage(),
-              LoggerEnum.ERROR.name());
+          "UserMergeActor:updateTncInfo: Exception occurred while getting system setting for"
+              + JsonKey.CUSTODIAN_ORG_ID
+              + e.getMessage(),
+          LoggerEnum.ERROR.name());
     }
     return custodianId;
   }
 
-  /** This method creates Kafka topic for user-cert
-   * @param requestMap
+  /**
+   * This method creates Kafka topic for user-cert
+   *
+   * @param mergeeId
+   * @param mergerId
    * @throws IOException
    */
-  private void updateUserCertDetails(Map<String, Object> requestMap) throws IOException {
+  private void mergeCertCourseDetails(String mergeeId, String mergerId) throws IOException {
     String content = null;
-    Map<String, Object> userCertMergeRequest = new HashMap<>();
-    userCertMergeRequest.put("messageType", "userCertMerge");
-    userCertMergeRequest.put("messageDetails",requestMap);
+    Telemetry userCertMergeRequest = createAccountMergeTopicData(mergeeId, mergerId);
     content = objectMapper.writeValueAsString(userCertMergeRequest);
+    ProjectLogger.log(
+            "UserMergeActor:mergeCertCourseDetails: Kafka producer topic::"+content,
+            LoggerEnum.INFO.name());
     ProducerRecord<Long, String> record = new ProducerRecord<>(topic, content);
     if (producer != null) {
       producer.send(record);
     } else {
       ProjectLogger.log(
-              "KafkaTelemetryDispatcherActor:dispatchEvents: Kafka producer is not initialised.",
-              LoggerEnum.INFO.name());
+          "UserMergeActor:mergeCertCourseDetails: Kafka producer is not initialised.",
+          LoggerEnum.INFO.name());
     }
+  }
+
+  private Telemetry createAccountMergeTopicData(String mergeeId, String mergerId) {
+    Map<String, Object> edata = new HashMap<>();
+    Telemetry mergeUserEvent = new Telemetry();
+    Actor actor = new Actor();
+    actor.setId(JsonKey.TELEMETRY_ACTOR_USER_MERGE_ID);
+    actor.setType(JsonKey.SYSTEM);
+    mergeUserEvent.setActor(actor);
+    mergeUserEvent.setEid(JsonKey.BE_JOB_REQUEST);
+    edata.put(JsonKey.ACTION, JsonKey.TELEMETRY_EDATA_USER_MERGE_ACTION);
+    edata.put(JsonKey.FROM_ACCOUNT_ID, mergeeId);
+    edata.put(JsonKey.TO_ACCOUNT_ID, mergerId);
+    edata.put(JsonKey.ITERATION, 1);
+    mergeUserEvent.setEdata(edata);
+    Context context = new Context();
+    org.sunbird.telemetry.dto.Producer dataProducer =  new org.sunbird.telemetry.dto.Producer();
+    dataProducer.setVer("1.0");
+    dataProducer.setId(JsonKey.TELEMETRY_PRODUCER_USER_MERGE_ID);
+    context.setPdata(dataProducer);
+    mergeUserEvent.setContext(context);
+    Target target = new Target();
+    target.setId(OneWayHashing.encryptVal(mergeeId+"_"+mergerId));
+    target.setType(JsonKey.TELEMETRY_TARGET_USER_MERGE_TYPE);
+    mergeUserEvent.setObject(target);
+    return mergeUserEvent;
   }
 
   private void triggerUserMergeTelemetry(Map telemetryMap, User merger) {
     ProjectLogger.log(
-            "UserMergeActor:triggerUserMergeTelemetry: generating telemetry event for merge");
+        "UserMergeActor:triggerUserMergeTelemetry: generating telemetry event for merge");
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     Map<String, String> rollUp = new HashMap<>();
     rollUp.put("l1", merger.getRootOrgId());
     ExecutionContext.getCurrent().getRequestContext().put(JsonKey.ROLLUP, rollUp);
     targetObject =
-            TelemetryUtil.generateTargetObject(
-                    (String) telemetryMap.get(JsonKey.FROM_ACCOUNT_ID), TelemetryEnvKey.USER, JsonKey.MERGE, null);
-    TelemetryUtil.generateCorrelatedObject((String) telemetryMap.get(JsonKey.FROM_ACCOUNT_ID),JsonKey.FROM_ACCOUNT_ID,null,correlatedObject);
-    TelemetryUtil.generateCorrelatedObject((String) telemetryMap.get(JsonKey.TO_ACCOUNT_ID),JsonKey.TO_ACCOUNT_ID,null,correlatedObject);
+        TelemetryUtil.generateTargetObject(
+            (String) telemetryMap.get(JsonKey.FROM_ACCOUNT_ID),
+            TelemetryEnvKey.USER,
+            JsonKey.MERGE,
+            null);
+    TelemetryUtil.generateCorrelatedObject(
+        (String) telemetryMap.get(JsonKey.FROM_ACCOUNT_ID),
+        JsonKey.FROM_ACCOUNT_ID,
+        null,
+        correlatedObject);
+    TelemetryUtil.generateCorrelatedObject(
+        (String) telemetryMap.get(JsonKey.TO_ACCOUNT_ID),
+        JsonKey.TO_ACCOUNT_ID,
+        null,
+        correlatedObject);
     telemetryMap.remove(JsonKey.ID);
     telemetryMap.remove(JsonKey.USER_ID);
-    TelemetryUtil.telemetryProcessingCall(telemetryMap,targetObject,correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(telemetryMap, targetObject, correlatedObject);
   }
 
   private void mergeUserDetailsToEs(Request userRequest) {
     userRequest.setOperation(ActorOperations.MERGE_USER_TO_ELASTIC.getValue());
     ProjectLogger.log(
-            "UserMergeActor: mergeUserDetailsToEs: Trigger sync of user details to ES for user id"
-                    + userRequest.getRequest().get(JsonKey.FROM_ACCOUNT_ID),
-            LoggerEnum.INFO.name());
+        "UserMergeActor: mergeUserDetailsToEs: Trigger sync of user details to ES for user id"
+            + userRequest.getRequest().get(JsonKey.FROM_ACCOUNT_ID),
+        LoggerEnum.INFO.name());
     tellToAnother(userRequest);
-  }
-
-  /** This method calls user-course api for updating courses details fromAccount to toAccount
-   * @param requestMap
-   * @return
-   * @throws IOException
-   */
-  private String updateMergerCourseDetails(Map<String, Object> requestMap) throws IOException {
-    // call course service api
-    String bodyJson = objectMapper.writeValueAsString(requestMap);
-    Map headersMap = new HashMap();
-    String responseCode = null;
-    // courseurl need to provide
-    /*HttpUtilResponse httpResponse = HttpUtil.doPostRequest("courseurl", bodyJson, headersMap);
-    if (httpResponse.getStatusCode() == ResponseCode.OK.getResponseCode()) {
-        String responseStr = httpResponse.getBody();
-        if (responseStr != null) {
-            Map<String, Object> responseMap = objectMapper.readValue(responseStr, HashMap.class);
-            responseCode =  (String) responseMap.get(JsonKey.RESPONSE_CODE);
-        }
-    }*/
-    return responseCode = "SUCCESS";
   }
 
   private void prepareMergeeAccountData(User mergee, Map mergeeDBMap) {
@@ -236,14 +254,19 @@ public class UserMergeActor extends UserBaseActor {
   private void checkTokenDetails(Map headers, String mergeeId, String mergerId) {
     String[] userAuthToken = (String[]) headers.get(JsonKey.X_AUTHENTICATED_USER_TOKEN);
     String[] sourceUserAuthToken = (String[]) headers.get(JsonKey.X_SOURCE_USER_TOKEN);
-
+    String subDomainUrl = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_SUBDOMAIN_KEYCLOAK_BASE_URL);
+    ProjectLogger.log(
+        "UserMergeActor:checkTokenDetails subdomain url value " + subDomainUrl,
+        LoggerEnum.INFO.name());
     String userId = keyCloakService.verifyToken(userAuthToken[0]);
-    String sourceUserId = keyCloakService.verifyToken(sourceUserAuthToken[0]);
-    if(!(mergeeId.equals(sourceUserId) && mergerId.equals(userId))) {
+    // Since source token is generated from subdomain , so verification also need with
+    // same subdomain.
+    String sourceUserId = keyCloakService.verifyToken(sourceUserAuthToken[0], subDomainUrl);
+    if (!(mergeeId.equals(sourceUserId) && mergerId.equals(userId))) {
       throw new ProjectCommonException(
-              ResponseCode.unAuthorized.getErrorCode(),
-              ProjectUtil.formatMessage(ResponseMessage.Message.UNAUTHORIZED_USER, mergeeId),
-              ResponseCode.UNAUTHORIZED.getResponseCode());
+          ResponseCode.unAuthorized.getErrorCode(),
+          ProjectUtil.formatMessage(ResponseMessage.Message.UNAUTHORIZED_USER, mergeeId),
+          ResponseCode.UNAUTHORIZED.getResponseCode());
     }
   }
 
@@ -251,19 +274,19 @@ public class UserMergeActor extends UserBaseActor {
   private void initKafkaClient() {
     Config config = ConfigUtil.getConfig();
     BOOTSTRAP_SERVERS =
-            config.getString(KafkaConfigConstants.SUNBIRD_USER_CERT_KAFKA_SERVICE_CONFIG);
+        config.getString(KafkaConfigConstants.SUNBIRD_USER_CERT_KAFKA_SERVICE_CONFIG);
     topic = config.getString(KafkaConfigConstants.SUNBIRD_USER_CERT_KAFKA_TOPIC);
 
     ProjectLogger.log(
-            "KafkaTelemetryDispatcherActor:initKafkaClient: Bootstrap servers = " + BOOTSTRAP_SERVERS,
-            LoggerEnum.INFO.name());
-    ProjectLogger.log(
-            "UserMergeActor:initKafkaClient: topic = " + topic, LoggerEnum.INFO.name());
+        "KafkaTelemetryDispatcherActor:initKafkaClient: Bootstrap servers = " + BOOTSTRAP_SERVERS,
+        LoggerEnum.INFO.name());
+    ProjectLogger.log("UserMergeActor:initKafkaClient: topic = " + topic, LoggerEnum.INFO.name());
     try {
-      producer = KafkaClient.createProducer(BOOTSTRAP_SERVERS, KafkaConfigConstants.KAFKA_CLIENT_USER_CERT_PRODUCER);
+      producer =
+          KafkaClient.createProducer(
+              BOOTSTRAP_SERVERS, KafkaConfigConstants.KAFKA_CLIENT_USER_CERT_PRODUCER);
     } catch (Exception e) {
       ProjectLogger.log("UserMergeActor:initKafkaClient: An exception occurred.", e);
     }
   }
-
 }

@@ -160,7 +160,7 @@ public class UserMergeActor extends UserBaseActor {
    */
   private void mergeCertCourseDetails(String mergeeId, String mergerId) throws IOException {
     String content = null;
-    Telemetry userCertMergeRequest = createMergeAccountTask(mergeeId, mergerId);
+    Telemetry userCertMergeRequest = createAccountMergeTopicData(mergeeId, mergerId);
     content = objectMapper.writeValueAsString(userCertMergeRequest);
     ProjectLogger.log(
             "UserMergeActor:mergeCertCourseDetails: Kafka producer topic::"+content,
@@ -175,7 +175,7 @@ public class UserMergeActor extends UserBaseActor {
     }
   }
 
-  private Telemetry createMergeAccountTask(String mergeeId, String mergerId) {
+  private Telemetry createAccountMergeTopicData(String mergeeId, String mergerId) {
     Map<String, Object> edata = new HashMap<>();
     Telemetry mergeUserEvent = new Telemetry();
     Actor actor = new Actor();

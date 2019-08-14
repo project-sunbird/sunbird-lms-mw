@@ -257,14 +257,14 @@ public class UserMergeActor extends UserBaseActor {
   private void checkTokenDetails(Map headers, String mergeeId, String mergerId) {
     String[] userAuthToken = (String[]) headers.get(JsonKey.X_AUTHENTICATED_USER_TOKEN);
     String[] sourceUserAuthToken = (String[]) headers.get(JsonKey.X_SOURCE_USER_TOKEN);
-    String subdomainUrl = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_SUBDOMAIN_KEYCLOAK_BASE_URL);
+    String subDomainUrl = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_SUBDOMAIN_KEYCLOAK_BASE_URL);
     ProjectLogger.log(
-        "UserMergeActor:checkTokenDetails subdomain url value " + subdomainUrl,
+        "UserMergeActor:checkTokenDetails subdomain url value " + subDomainUrl,
         LoggerEnum.INFO.name());
     String userId = keyCloakService.verifyToken(userAuthToken[0]);
     // Since source token is generated from subdomain , so verification also need with
     // same subdomain.
-    String sourceUserId = keyCloakService.verifyToken(sourceUserAuthToken[0], subdomainUrl);
+    String sourceUserId = keyCloakService.verifyToken(sourceUserAuthToken[0], subDomainUrl);
     if (!(mergeeId.equals(sourceUserId) && mergerId.equals(userId))) {
       throw new ProjectCommonException(
           ResponseCode.unAuthorized.getErrorCode(),

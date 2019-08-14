@@ -20,7 +20,7 @@ import java.util.*;
  * This class helps in interacting with adding and validating the user-certificate details
  */
 @ActorConfig(
-        tasks = {"validateCertificate", "addCertificate"},
+        tasks = {"validateCertificate", "addCertificate", "mergeCertificate"},
         asyncTasks = {}
 )
 public class CertificateActor extends UserBaseActor {
@@ -35,10 +35,39 @@ public class CertificateActor extends UserBaseActor {
             getCertificate(request);
         } else if (request.getOperation().equalsIgnoreCase(ActorOperations.ADD_CERTIFICATE.getValue())) {
             addCertificate(request);
-        }
-        else{
+        } else if (ActorOperations.MERGE_USER_CERTIFICATE.getValue().equals(request.getOperation())) {
+            mergeUserCertificate(request);
+        } else{
             unSupportedMessage();
         }
+    }
+
+    private void mergeUserCertificate(Request certRequest) {
+        Map<String, Object> responseDetails = null;
+        Map request = certRequest.getRequest();
+        Map messageDetails = (Map) request.get("messageDetails");
+        String mergeeId = (String) messageDetails.get(JsonKey.FROM_ACCOUNT_ID);
+        String mergerId = (String) messageDetails.get(JsonKey.TO_ACCOUNT_ID);
+        Response response = cassandraOperation.getRecordsByProperty(certDbInfo.getKeySpace(),certDbInfo.getTableName(),JsonKey.USER_ID,mergeeId);
+        Map<String, Object> record = response.getResult();
+        if (null != record && null != record.get(JsonKey.RESPONSE)) {
+            List responseList = (List) record.get(JsonKey.RESPONSE);
+            if (!responseList.isEmpty()) {
+                responseDetails = (Map<String, Object>) responseList.get(0);
+            } else {
+                ProjectLogger.log(
+                        "CertificateActor:getCertificate: user id is incorrect : "
+                                + mergeeId,
+                        LoggerEnum.ERROR.name());
+                throw new ProjectCommonException(
+                        ResponseCode.invalidParameter.getErrorCode(),
+                        ProjectUtil.formatMessage(ResponseCode.invalidParameter.getErrorMessage(), JsonKey.USER_ID),
+                        ResponseCode.CLIENT_ERROR.getResponseCode());
+            }
+        }
+        responseDetails.put(JsonKey.USER_ID,mergerId);
+        Response updateResponse = cassandraOperation.updateRecord(certDbInfo.getKeySpace(),certDbInfo.getTableName(),responseDetails);
+        updateResponse.getResponseCode();
     }
 
     /**

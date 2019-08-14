@@ -210,6 +210,7 @@ public final class Util {
     dbInfoMap.put(
         BadgingJsonKey.CONTENT_BADGE_ASSOCIATION_DB,
         getDbInfoObject(KEY_SPACE_NAME, "content_badge_association"));
+    dbInfoMap.put(JsonKey.USER_CERT, getDbInfoObject(KEY_SPACE_NAME, JsonKey.USER_CERT));
   }
 
   /**
@@ -1454,6 +1455,7 @@ public final class Util {
       checkUserProfileVisibility(userDetails, actorRef);
       userDetails.remove(JsonKey.PASSWORD);
       addEmailAndPhone(userDetails);
+      checkEmailAndPhoneVerified(userDetails);
     } else {
       ProjectLogger.log(
           "Util:getUserProfile: User data not available to save in ES for userId : " + userId,
@@ -1464,11 +1466,16 @@ public final class Util {
   }
 
   public static void addEmailAndPhone(Map<String, Object> userDetails) {
-    if (!StringUtils.isBlank((String) userDetails.get(JsonKey.ENC_PHONE))) {
-      userDetails.put(JsonKey.PHONE, userDetails.remove(JsonKey.ENC_PHONE));
+    userDetails.put(JsonKey.PHONE, userDetails.remove(JsonKey.ENC_PHONE));
+    userDetails.put(JsonKey.EMAIL, userDetails.remove(JsonKey.ENC_EMAIL));
+  }
+
+  public static void checkEmailAndPhoneVerified(Map<String, Object> userDetails) {
+    if (StringUtils.isBlank((String) userDetails.get(JsonKey.EMAIL))) {
+      userDetails.put(JsonKey.EMAIL_VERIFIED, false);
     }
-    if (!StringUtils.isBlank((String) userDetails.get(JsonKey.ENC_EMAIL))) {
-      userDetails.put(JsonKey.EMAIL, userDetails.remove(JsonKey.ENC_EMAIL));
+    if (StringUtils.isBlank((String) userDetails.get(JsonKey.PHONE))) {
+      userDetails.put(JsonKey.PHONE_VERIFIED, false);
     }
   }
 
@@ -1568,12 +1575,12 @@ public final class Util {
   public static void addMaskEmailAndPhone(Map<String, Object> userMap) {
     String phone = (String) userMap.get(JsonKey.PHONE);
     String email = (String) userMap.get(JsonKey.EMAIL);
+    userMap.put(JsonKey.ENC_PHONE, phone);
+    userMap.put(JsonKey.ENC_EMAIL, email);
     if (!StringUtils.isBlank(phone)) {
-      userMap.put(JsonKey.ENC_PHONE, phone);
       userMap.put(JsonKey.PHONE, maskingService.maskPhone(decService.decryptData(phone)));
     }
     if (!StringUtils.isBlank(email)) {
-      userMap.put(JsonKey.ENC_EMAIL, email);
       userMap.put(JsonKey.EMAIL, maskingService.maskEmail(decService.decryptData(email)));
     }
   }
@@ -1862,6 +1869,45 @@ public final class Util {
     return request;
   }
 
+  public static Request sendResetPassMail(Map<String, Object> emailTemplateMap) {
+    Request request = null;
+    if (StringUtils.isBlank((String) emailTemplateMap.get(JsonKey.SET_PASSWORD_LINK))) {
+      ProjectLogger.log(
+          "Util:sendResetPassMail: Email not sent as generated link is empty",
+          LoggerEnum.ERROR.name());
+      return null;
+    } else if ((StringUtils.isNotBlank((String) emailTemplateMap.get(JsonKey.EMAIL)))) {
+      String envName = propertiesCache.getProperty(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME);
+      String welcomeSubject = propertiesCache.getProperty(JsonKey.SUNBIRD_RESET_PASS_MAIL_SUBJECT);
+      emailTemplateMap.put(JsonKey.SUBJECT, ProjectUtil.formatMessage(welcomeSubject, envName));
+      List<String> reciptientsMail = new ArrayList<>();
+      reciptientsMail.add((String) emailTemplateMap.get(JsonKey.EMAIL));
+      emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
+      emailTemplateMap.put(JsonKey.ORG_NAME, envName);
+      emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, "resetPassword");
+      setRequiredActionLink(emailTemplateMap);
+    } else if (StringUtils.isNotBlank((String) emailTemplateMap.get(JsonKey.PHONE))) {
+      emailTemplateMap.put(
+          JsonKey.BODY,
+          ProjectUtil.formatMessage(
+              propertiesCache.getProperty("sunbird_reset_pass_msg"),
+              (String) emailTemplateMap.get(JsonKey.SET_PASSWORD_LINK)));
+      emailTemplateMap.put(JsonKey.MODE, "SMS");
+      List<String> phoneList = new ArrayList<String>();
+      phoneList.add((String) emailTemplateMap.get(JsonKey.PHONE));
+      emailTemplateMap.put(JsonKey.RECIPIENT_PHONES, phoneList);
+    } else {
+      ProjectLogger.log(
+          "Util:sendResetPassMail: requested data is neither having email nor phone ",
+          LoggerEnum.ERROR.name());
+      return null;
+    }
+    request = new Request();
+    request.setOperation(BackgroundOperations.emailService.name());
+    request.put(JsonKey.EMAIL_REQUEST, emailTemplateMap);
+    return request;
+  }
+
   private static void setRequiredActionLink(Map<String, Object> templateMap) {
     String setPasswordLink = (String) templateMap.get(JsonKey.SET_PASSWORD_LINK);
     String verifyEmailLink = (String) templateMap.get(JsonKey.VERIFY_EMAIL_LINK);
@@ -1874,7 +1920,8 @@ public final class Util {
     }
   }
 
-  public static void getUserRequiredActionLink(Map<String, Object> templateMap) {
+  public static void getUserRequiredActionLink(
+      Map<String, Object> templateMap, boolean isUrlShortRequired) {
     URLShortner urlShortner = new URLShortnerImpl();
     String redirectUri =
         StringUtils.isNotBlank((String) templateMap.get(JsonKey.REDIRECT_URI))
@@ -1883,22 +1930,28 @@ public final class Util {
     ProjectLogger.log(
         "Util:getUserRequiredActionLink redirectURI = " + redirectUri, LoggerEnum.INFO.name());
     if (StringUtils.isBlank((String) templateMap.get(JsonKey.PASSWORD))) {
+      String url =
+          KeycloakRequiredActionLinkUtil.getLink(
+              (String) templateMap.get(JsonKey.USERNAME),
+              redirectUri,
+              KeycloakRequiredActionLinkUtil.UPDATE_PASSWORD);
+
       templateMap.put(
-          JsonKey.SET_PASSWORD_LINK,
-          urlShortner.shortUrl(
-              KeycloakRequiredActionLinkUtil.getLink(
-                  (String) templateMap.get(JsonKey.USERNAME),
-                  redirectUri,
-                  KeycloakRequiredActionLinkUtil.UPDATE_PASSWORD)));
+          JsonKey.SET_PASSWORD_LINK, isUrlShortRequired ? urlShortner.shortUrl(url) : url);
+
     } else {
+      String url =
+          KeycloakRequiredActionLinkUtil.getLink(
+              (String) templateMap.get(JsonKey.USERNAME),
+              redirectUri,
+              KeycloakRequiredActionLinkUtil.VERIFY_EMAIL);
       templateMap.put(
-          JsonKey.VERIFY_EMAIL_LINK,
-          urlShortner.shortUrl(
-              KeycloakRequiredActionLinkUtil.getLink(
-                  (String) templateMap.get(JsonKey.USERNAME),
-                  redirectUri,
-                  KeycloakRequiredActionLinkUtil.VERIFY_EMAIL)));
+          JsonKey.VERIFY_EMAIL_LINK, isUrlShortRequired ? urlShortner.shortUrl(url) : url);
     }
+  }
+
+  public static void getUserRequiredActionLink(Map<String, Object> templateMap) {
+    getUserRequiredActionLink(templateMap, true);
   }
 
   public static void sendSMS(Map<String, Object> userMap) {

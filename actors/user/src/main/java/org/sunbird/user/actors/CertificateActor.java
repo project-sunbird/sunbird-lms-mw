@@ -20,7 +20,7 @@ import java.util.*;
  * This class helps in interacting with adding and validating the user-certificate details
  */
 @ActorConfig(
-        tasks = {"validateCertificate", "addCertificate", "mergeCertificate"},
+        tasks = {"validateCertificate", "addCertificate", "mergeUserCertificate"},
         asyncTasks = {}
 )
 public class CertificateActor extends UserBaseActor {
@@ -42,32 +42,33 @@ public class CertificateActor extends UserBaseActor {
         }
     }
 
+    /** This method merges the certificates from custodian-user to non-custodian-user
+     * @param certRequest
+     */
     private void mergeUserCertificate(Request certRequest) {
-        Map<String, Object> responseDetails = null;
+        Response userResult = new Response();
         Map request = certRequest.getRequest();
-        Map messageDetails = (Map) request.get("messageDetails");
-        String mergeeId = (String) messageDetails.get(JsonKey.FROM_ACCOUNT_ID);
-        String mergerId = (String) messageDetails.get(JsonKey.TO_ACCOUNT_ID);
+        String mergeeId = (String) request.get(JsonKey.FROM_ACCOUNT_ID);
+        String mergerId = (String) request.get(JsonKey.TO_ACCOUNT_ID);
         Response response = cassandraOperation.getRecordsByProperty(certDbInfo.getKeySpace(),certDbInfo.getTableName(),JsonKey.USER_ID,mergeeId);
         Map<String, Object> record = response.getResult();
         if (null != record && null != record.get(JsonKey.RESPONSE)) {
             List responseList = (List) record.get(JsonKey.RESPONSE);
             if (!responseList.isEmpty()) {
-                responseDetails = (Map<String, Object>) responseList.get(0);
+                responseList.forEach(responseMap -> {
+                    Map<String, Object> responseDetails = (Map<String, Object>) responseMap;
+                    responseDetails.put(JsonKey.USER_ID,mergerId);
+                    cassandraOperation.updateRecord(certDbInfo.getKeySpace(),certDbInfo.getTableName(),responseDetails);
+                });
             } else {
                 ProjectLogger.log(
-                        "CertificateActor:getCertificate: user id is incorrect : "
+                        "CertificateActor:getCertificate: cert details unavailable for user id : "
                                 + mergeeId,
                         LoggerEnum.ERROR.name());
-                throw new ProjectCommonException(
-                        ResponseCode.invalidParameter.getErrorCode(),
-                        ProjectUtil.formatMessage(ResponseCode.invalidParameter.getErrorMessage(), JsonKey.USER_ID),
-                        ResponseCode.CLIENT_ERROR.getResponseCode());
             }
         }
-        responseDetails.put(JsonKey.USER_ID,mergerId);
-        Response updateResponse = cassandraOperation.updateRecord(certDbInfo.getKeySpace(),certDbInfo.getTableName(),responseDetails);
-        updateResponse.getResponseCode();
+        userResult.setResponseCode(ResponseCode.success);
+        sender().tell(userResult, self());
     }
 
     /**

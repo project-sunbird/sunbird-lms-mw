@@ -60,6 +60,10 @@ public class CertificateActor extends UserBaseActor {
                     responseDetails.put(JsonKey.USER_ID,mergerId);
                     cassandraOperation.updateRecord(certDbInfo.getKeySpace(),certDbInfo.getTableName(),responseDetails);
                 });
+                ProjectLogger.log(
+                        "CertificateActor:getCertificate: cert details merged to user id : "
+                                + mergerId,
+                        LoggerEnum.INFO.name());
             } else {
                 ProjectLogger.log(
                         "CertificateActor:getCertificate: cert details unavailable for user id : "
@@ -172,7 +176,8 @@ public class CertificateActor extends UserBaseActor {
             List responseList = (List) record.get(JsonKey.RESPONSE);
             if (!responseList.isEmpty()) {
                 return true;
-            } }
+            }
+        }
         return false;
     }
 }

@@ -8,6 +8,7 @@ import java.util.*;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.response.HttpUtilResponse;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.Request;
@@ -19,7 +20,7 @@ import org.sunbird.models.certificate.Certificate;
 
 /** This class helps in interacting with adding and validating the user-certificate details */
 @ActorConfig(
-  tasks = {"validateCertificate", "addCertificate"},
+  tasks = {"validateCertificate", "addCertificate", "getSignUrl"},
   asyncTasks = {}
 )
 public class CertificateActor extends UserBaseActor {
@@ -36,6 +37,8 @@ public class CertificateActor extends UserBaseActor {
         .getOperation()
         .equalsIgnoreCase(ActorOperations.ADD_CERTIFICATE.getValue())) {
       addCertificate(request);
+    } else if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_SIGN_URL.getValue())) {
+      getSignUrl(request);
     } else {
       unSupportedMessage();
     }
@@ -163,5 +166,42 @@ public class CertificateActor extends UserBaseActor {
       }
     }
     return false;
+  }
+
+  public void getSignUrl(Request request) {
+    try {
+      HashMap<String, Object> certReqMap = new HashMap<>();
+      certReqMap.put(JsonKey.REQUEST, request.getRequest());
+      String requestBody = objectMapper.writeValueAsString(certReqMap);
+      String completeUrl =
+          ProjectUtil.getConfigValue(JsonKey.SUNBIRD_CERT_SERVICE_BASE_URL)
+              + ProjectUtil.getConfigValue(JsonKey.SUNBIRD_CERT_DOWNLOAD_URI);
+      ProjectLogger.log(
+          "CertificateActor:getSignUrl complete url found: " + completeUrl, LoggerEnum.INFO.name());
+      HttpUtilResponse httpResponse = HttpUtil.doPostRequest(completeUrl, requestBody, null);
+      if (httpResponse != null && httpResponse.getStatusCode() == 200) {
+        HashMap<String, Object> val =
+            (HashMap<String, Object>) objectMapper.readValue(httpResponse.getBody(), Map.class);
+        HashMap<String, Object> resultMap = (HashMap<String, Object>) val.get(JsonKey.RESULT);
+        Response response = new Response();
+        response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+        response.put(JsonKey.SIGNED_URL, resultMap.get(JsonKey.SIGNED_URL));
+        sender().tell(response, self());
+      } else {
+        throw new ProjectCommonException(
+            ResponseCode.invalidParameter.getErrorCode(),
+            ProjectUtil.formatMessage(
+                ResponseCode.invalidParameter.getErrorMessage(), JsonKey.PDF_URL),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+
+    } catch (Exception e) {
+      ProjectLogger.log(
+          "CertificateActor:getSignUrl exception occured :" + e, LoggerEnum.ERROR.name());
+      throw new ProjectCommonException(
+          ResponseCode.SERVER_ERROR.getErrorCode(),
+          ResponseCode.SERVER_ERROR.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
+    }
   }
 }

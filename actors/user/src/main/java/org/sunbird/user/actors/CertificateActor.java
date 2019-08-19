@@ -210,7 +210,10 @@ public class CertificateActor extends UserBaseActor {
               + ProjectUtil.getConfigValue(JsonKey.SUNBIRD_CERT_DOWNLOAD_URI);
       ProjectLogger.log(
           "CertificateActor:getSignUrl complete url found: " + completeUrl, LoggerEnum.INFO.name());
-      HttpUtilResponse httpResponse = HttpUtil.doPostRequest(completeUrl, requestBody, null);
+
+        Map<String,String>headerMap=new HashMap<>();
+        headerMap.put("Content-Type","application/json");
+      HttpUtilResponse httpResponse = HttpUtil.doPostRequest(completeUrl, requestBody, headerMap);
       if (httpResponse != null && httpResponse.getStatusCode() == 200) {
         HashMap<String, Object> val =
             (HashMap<String, Object>) objectMapper.readValue(httpResponse.getBody(), Map.class);
@@ -228,7 +231,7 @@ public class CertificateActor extends UserBaseActor {
 
     } catch (Exception e) {
       ProjectLogger.log(
-          "CertificateActor:getSignUrl exception occured :" + e, LoggerEnum.ERROR.name());
+          "CertificateActor:getSignUrl exception occurred :" + e, LoggerEnum.ERROR.name());
       throw new ProjectCommonException(
           ResponseCode.SERVER_ERROR.getErrorCode(),
           ResponseCode.SERVER_ERROR.getErrorMessage(),

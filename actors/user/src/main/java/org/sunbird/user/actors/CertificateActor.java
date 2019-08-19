@@ -2,9 +2,14 @@ package org.sunbird.user.actors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.IOException;
+import java.sql.Timestamp;
+import java.util.*;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.response.HttpUtilResponse;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.Request;
@@ -14,15 +19,9 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.certificate.Certificate;
 
-import java.io.IOException;
-import java.sql.Timestamp;
-import java.util.*;
-
-/**
- * This class helps in interacting with adding and validating the user-certificate details
- */
+/** This class helps in interacting with adding and validating the user-certificate details */
 @ActorConfig(
-        tasks = {"validateCertificate", "addCertificate", "mergeUserCertificate"},
+        tasks = {"validateCertificate", "addCertificate", "getSignUrl", "mergeUserCertificate"},
         asyncTasks = {}
 )
 public class CertificateActor extends UserBaseActor {
@@ -35,16 +34,22 @@ public class CertificateActor extends UserBaseActor {
     public void onReceive(Request request) throws Throwable {
         if (request.getOperation().equals(ActorOperations.VALIDATE_CERTIFICATE.getValue())) {
             getCertificate(request);
-        } else if (request.getOperation().equalsIgnoreCase(ActorOperations.ADD_CERTIFICATE.getValue())) {
+        } else if (request
+                .getOperation()
+                .equalsIgnoreCase(ActorOperations.ADD_CERTIFICATE.getValue())) {
             addCertificate(request);
+        } else if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_SIGN_URL.getValue())) {
+            getSignUrl(request);
         } else if (ActorOperations.MERGE_USER_CERTIFICATE.getValue().equals(request.getOperation())) {
             mergeUserCertificate(request);
-        } else{
+        } else {
             unSupportedMessage();
         }
     }
 
-    /** This method merges the certificates from custodian-user to non-custodian-user
+    /**
+     * This method merges the certificates from custodian-user to non-custodian-user
+     *
      * @param certRequest
      */
     private void mergeUserCertificate(Request certRequest) {
@@ -52,7 +57,9 @@ public class CertificateActor extends UserBaseActor {
         Map request = certRequest.getRequest();
         String mergeeId = (String) request.get(JsonKey.FROM_ACCOUNT_ID);
         String mergerId = (String) request.get(JsonKey.TO_ACCOUNT_ID);
-        Response response = cassandraOperation.getRecordsByProperty(certDbInfo.getKeySpace(),certDbInfo.getTableName(),JsonKey.USER_ID,mergeeId);
+        Response response =
+                cassandraOperation.getRecordsByProperty(
+                        certDbInfo.getKeySpace(), certDbInfo.getTableName(), JsonKey.USER_ID, mergeeId);
         Map<String, Object> record = response.getResult();
         if (null != record && null != record.get(JsonKey.RESPONSE)) {
             List responseList = (List) record.get(JsonKey.RESPONSE);
@@ -63,13 +70,11 @@ public class CertificateActor extends UserBaseActor {
                 });
                 cassandraOperation.batchUpdateById(certDbInfo.getKeySpace(),certDbInfo.getTableName(),responseList);
                 ProjectLogger.log(
-                        "CertificateActor:getCertificate: cert details merged to user id : "
-                                + mergerId,
+                        "CertificateActor:getCertificate: cert details merged to user id : " + mergerId,
                         LoggerEnum.INFO.name());
             } else {
                 ProjectLogger.log(
-                        "CertificateActor:getCertificate: cert details unavailable for user id : "
-                                + mergeeId,
+                        "CertificateActor:getCertificate: cert details unavailable for user id : " + mergeeId,
                         LoggerEnum.ERROR.name());
             }
         }
@@ -98,19 +103,21 @@ public class CertificateActor extends UserBaseActor {
             sender().tell(userResult, self());
         } else {
             ProjectLogger.log(
-                    "CertificateActor:getCertificate: access code is incorrect : "
-                            + accessCode,
+                    "CertificateActor:getCertificate: access code is incorrect : " + accessCode,
                     LoggerEnum.ERROR.name());
             throw new ProjectCommonException(
                     ResponseCode.invalidParameter.getErrorCode(),
-                    ProjectUtil.formatMessage(ResponseCode.invalidParameter.getErrorMessage(), JsonKey.ACCESS_CODE),
+                    ProjectUtil.formatMessage(
+                            ResponseCode.invalidParameter.getErrorMessage(), JsonKey.ACCESS_CODE),
                     ResponseCode.CLIENT_ERROR.getResponseCode());
         }
     }
 
     private Map getCertificateDetails(String certificatedId) {
         Map<String, Object> responseDetails = null;
-        Response response = cassandraOperation.getRecordById(certDbInfo.getKeySpace(), certDbInfo.getTableName(), certificatedId);
+        Response response =
+                cassandraOperation.getRecordById(
+                        certDbInfo.getKeySpace(), certDbInfo.getTableName(), certificatedId);
         Map<String, Object> record = response.getResult();
         if (null != record && null != record.get(JsonKey.RESPONSE)) {
             List responseList = (List) record.get(JsonKey.RESPONSE);
@@ -118,18 +125,17 @@ public class CertificateActor extends UserBaseActor {
                 responseDetails = (Map<String, Object>) responseList.get(0);
             } else {
                 ProjectLogger.log(
-                        "CertificateActor:getCertificate: cert id is incorrect : "
-                                + certificatedId,
+                        "CertificateActor:getCertificate: cert id is incorrect : " + certificatedId,
                         LoggerEnum.ERROR.name());
                 throw new ProjectCommonException(
                         ResponseCode.invalidParameter.getErrorCode(),
-                        ProjectUtil.formatMessage(ResponseCode.invalidParameter.getErrorMessage(), JsonKey.CERT_ID),
+                        ProjectUtil.formatMessage(
+                                ResponseCode.invalidParameter.getErrorMessage(), JsonKey.CERT_ID),
                         ResponseCode.CLIENT_ERROR.getResponseCode());
             }
         }
         return responseDetails;
     }
-
 
     private void addCertificate(Request request) throws JsonProcessingException {
         Map<String, String> storeMap = new HashMap<>();
@@ -139,14 +145,20 @@ public class CertificateActor extends UserBaseActor {
         certAddReqMap.put(JsonKey.STORE, storeMap);
         certAddReqMap = getRequiredRequest(certAddReqMap);
         certAddReqMap.put(JsonKey.CREATED_AT, getTimeStamp());
-        Response response = cassandraOperation.insertRecord(certDbInfo.getKeySpace(), certDbInfo.getTableName(), certAddReqMap);
+        Response response =
+                cassandraOperation.insertRecord(
+                        certDbInfo.getKeySpace(), certDbInfo.getTableName(), certAddReqMap);
         ProjectLogger.log(
                 "CertificateActor:addCertificate:successfully added certificate in records with userId"
-                        + certAddReqMap.get(JsonKey.USER_ID)+" and certId:"+certAddReqMap.get(JsonKey.CERT_ID),LoggerEnum.INFO.name());
+                        + certAddReqMap.get(JsonKey.USER_ID)
+                        + " and certId:"
+                        + certAddReqMap.get(JsonKey.CERT_ID),
+                LoggerEnum.INFO.name());
         sender().tell(response, self());
     }
 
-    private void populateStoreMapWithUrl(Map<String, String> storeMap, Map<String, Object> certAddRequestMap) throws JsonProcessingException {
+    private void populateStoreMapWithUrl(
+            Map<String, String> storeMap, Map<String, Object> certAddRequestMap) throws JsonProcessingException {
         storeMap.put(JsonKey.PDF_URL, (String) certAddRequestMap.get(JsonKey.PDF_URL));
         storeMap.put(JsonKey.JSON_DATA, objectMapper.writeValueAsString(certAddRequestMap.get(JsonKey.JSON_DATA)));
     }
@@ -163,17 +175,23 @@ public class CertificateActor extends UserBaseActor {
     private void assureUniqueCertId(String certificatedId) {
         if (isIdentityPresent(certificatedId)) {
             ProjectLogger.log(
-                    "CertificateActor:addCertificate:provided certificateId exists in record ".concat(certificatedId),LoggerEnum.ERROR.name());
+                    "CertificateActor:addCertificate:provided certificateId exists in record "
+                            .concat(certificatedId),
+                    LoggerEnum.ERROR.name());
             throw new ProjectCommonException(
                     ResponseCode.invalidParameter.getErrorCode(),
                     ResponseMessage.Message.DATA_ALREADY_EXIST,
                     ResponseCode.CLIENT_ERROR.getResponseCode());
         }
-        ProjectLogger.log("CertificateActor:addCertificate:successfully certId not found in records creating new record",LoggerEnum.INFO.name());
+        ProjectLogger.log(
+                "CertificateActor:addCertificate:successfully certId not found in records creating new record",
+                LoggerEnum.INFO.name());
     }
 
     private boolean isIdentityPresent(String certificateId) {
-        Response response = cassandraOperation.getRecordById(certDbInfo.getKeySpace(), certDbInfo.getTableName(), certificateId);
+        Response response =
+                cassandraOperation.getRecordById(
+                        certDbInfo.getKeySpace(), certDbInfo.getTableName(), certificateId);
         Map<String, Object> record = response.getResult();
         if (null != record && null != record.get(JsonKey.RESPONSE)) {
             List responseList = (List) record.get(JsonKey.RESPONSE);
@@ -182,5 +200,41 @@ public class CertificateActor extends UserBaseActor {
             }
         }
         return false;
+    }
+
+    public void getSignUrl(Request request) {
+        try {
+            HashMap<String, Object> certReqMap = new HashMap<>();
+            certReqMap.put(JsonKey.REQUEST, request.getRequest());
+            String requestBody = objectMapper.writeValueAsString(certReqMap);
+            String completeUrl =
+                    ProjectUtil.getConfigValue(JsonKey.SUNBIRD_CERT_SERVICE_BASE_URL)
+                            + ProjectUtil.getConfigValue(JsonKey.SUNBIRD_CERT_DOWNLOAD_URI);
+            ProjectLogger.log(
+                    "CertificateActor:getSignUrl complete url found: " + completeUrl, LoggerEnum.INFO.name());
+            HttpUtilResponse httpResponse = HttpUtil.doPostRequest(completeUrl, requestBody, null);
+            if (httpResponse != null && httpResponse.getStatusCode() == 200) {
+                HashMap<String, Object> val =
+                        (HashMap<String, Object>) objectMapper.readValue(httpResponse.getBody(), Map.class);
+                HashMap<String, Object> resultMap = (HashMap<String, Object>) val.get(JsonKey.RESULT);
+                Response response = new Response();
+                response.put(JsonKey.SIGNED_URL, resultMap.get(JsonKey.SIGNED_URL));
+                sender().tell(response, self());
+            } else {
+                throw new ProjectCommonException(
+                        ResponseCode.invalidParameter.getErrorCode(),
+                        ProjectUtil.formatMessage(
+                                ResponseCode.invalidParameter.getErrorMessage(), JsonKey.PDF_URL),
+                        ResponseCode.CLIENT_ERROR.getResponseCode());
+            }
+
+        } catch (Exception e) {
+            ProjectLogger.log(
+                    "CertificateActor:getSignUrl exception occured :" + e, LoggerEnum.ERROR.name());
+            throw new ProjectCommonException(
+                    ResponseCode.SERVER_ERROR.getErrorCode(),
+                    ResponseCode.SERVER_ERROR.getErrorMessage(),
+                    ResponseCode.SERVER_ERROR.getResponseCode());
+        }
     }
 }

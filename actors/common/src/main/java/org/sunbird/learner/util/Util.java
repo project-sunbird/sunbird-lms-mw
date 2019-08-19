@@ -957,6 +957,23 @@ public final class Util {
     return webUrl.toString();
   }
 
+  /**
+   * As per requirement this page need to be redirect to /resources always.
+   *
+   * @return url of login page
+   */
+  public static String getSunbirdLoginUrl() {
+    StringBuilder webUrl = new StringBuilder();
+    String slug = "/resources";
+    if (StringUtils.isBlank(System.getenv(SUNBIRD_WEB_URL))) {
+      webUrl.append(propertiesCache.getProperty(SUNBIRD_WEB_URL));
+    } else {
+      webUrl.append(System.getenv(SUNBIRD_WEB_URL));
+    }
+    webUrl.append(slug);
+    return webUrl.toString();
+  }
+
   public static Map<String, Object> getOrgDetails(String identifier) {
     DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
     Response response =

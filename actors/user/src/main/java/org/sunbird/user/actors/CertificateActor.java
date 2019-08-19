@@ -1,8 +1,6 @@
 package org.sunbird.user.actors;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.*;
 import org.sunbird.actor.router.ActorConfig;
@@ -20,7 +18,7 @@ import org.sunbird.models.certificate.Certificate;
 
 /** This class helps in interacting with adding and validating the user-certificate details */
 @ActorConfig(
-  tasks = {"validateCertificate", "addCertificate", "getSignUrl"},
+  tasks = {"validateCertificate", "addCertificate", "getSignUrl", "mergeUserCertificate"},
   asyncTasks = {}
 )
 public class CertificateActor extends UserBaseActor {
@@ -39,9 +37,48 @@ public class CertificateActor extends UserBaseActor {
       addCertificate(request);
     } else if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_SIGN_URL.getValue())) {
       getSignUrl(request);
+    } else if (ActorOperations.MERGE_USER_CERTIFICATE.getValue().equals(request.getOperation())) {
+      mergeUserCertificate(request);
     } else {
       unSupportedMessage();
     }
+  }
+
+  /**
+   * This method merges the certificates from custodian-user to non-custodian-user
+   *
+   * @param certRequest
+   */
+  private void mergeUserCertificate(Request certRequest) {
+    Response userResult = new Response();
+    Map request = certRequest.getRequest();
+    String mergeeId = (String) request.get(JsonKey.FROM_ACCOUNT_ID);
+    String mergerId = (String) request.get(JsonKey.TO_ACCOUNT_ID);
+    Response response =
+        cassandraOperation.getRecordsByProperty(
+            certDbInfo.getKeySpace(), certDbInfo.getTableName(), JsonKey.USER_ID, mergeeId);
+    Map<String, Object> record = response.getResult();
+    if (null != record && null != record.get(JsonKey.RESPONSE)) {
+      List responseList = (List) record.get(JsonKey.RESPONSE);
+      if (!responseList.isEmpty()) {
+        responseList.forEach(
+            responseMap -> {
+              Map<String, Object> responseDetails = (Map<String, Object>) responseMap;
+              responseDetails.put(JsonKey.USER_ID, mergerId);
+              cassandraOperation.updateRecord(
+                  certDbInfo.getKeySpace(), certDbInfo.getTableName(), responseDetails);
+            });
+        ProjectLogger.log(
+            "CertificateActor:getCertificate: cert details merged to user id : " + mergerId,
+            LoggerEnum.INFO.name());
+      } else {
+        ProjectLogger.log(
+            "CertificateActor:getCertificate: cert details unavailable for user id : " + mergeeId,
+            LoggerEnum.ERROR.name());
+      }
+    }
+    userResult.setResponseCode(ResponseCode.success);
+    sender().tell(userResult, self());
   }
 
   /**
@@ -49,7 +86,7 @@ public class CertificateActor extends UserBaseActor {
    *
    * @param userRequest
    */
-  private void getCertificate(Request userRequest) throws IOException {
+  private void getCertificate(Request userRequest) {
     Map request = userRequest.getRequest();
     String certificatedId = (String) request.get(JsonKey.CERT_ID);
     String accessCode = (String) request.get(JsonKey.ACCESS_CODE);
@@ -58,10 +95,8 @@ public class CertificateActor extends UserBaseActor {
       Map userResponse = new HashMap<String, Object>();
       Response userResult = new Response();
       Map recordStore = (Map<String, Object>) responseDetails.get(JsonKey.STORE);
-      String jsonData = (String) recordStore.get(JsonKey.JSON_DATA);
-      userResponse.put(JsonKey.JSON_DATA, objectMapper.readValue(jsonData, Map.class));
-      userResponse.put(JsonKey.PDF_URL, recordStore.get(JsonKey.PDF_URL));
-      userResponse.put(JsonKey.OTHER_LINK, responseDetails.get(JsonKey.OTHER_LINK));
+      userResponse.put(JsonKey.JSON, recordStore.get(JsonKey.JSON_DATA));
+      userResponse.put(JsonKey.PDF, recordStore.get(JsonKey.PDF_URL));
       userResult.put(JsonKey.RESPONSE, userResponse);
       sender().tell(userResult, self());
     } else {
@@ -100,7 +135,7 @@ public class CertificateActor extends UserBaseActor {
     return responseDetails;
   }
 
-  private void addCertificate(Request request) throws JsonProcessingException {
+  private void addCertificate(Request request) {
     Map<String, String> storeMap = new HashMap<>();
     Map<String, Object> certAddReqMap = request.getRequest();
     assureUniqueCertId((String) certAddReqMap.get(JsonKey.ID));
@@ -121,12 +156,9 @@ public class CertificateActor extends UserBaseActor {
   }
 
   private void populateStoreMapWithUrl(
-      Map<String, String> storeMap, Map<String, Object> certAddRequestMap)
-      throws JsonProcessingException {
+      Map<String, String> storeMap, Map<String, Object> certAddRequestMap) {
     storeMap.put(JsonKey.PDF_URL, (String) certAddRequestMap.get(JsonKey.PDF_URL));
-    storeMap.put(
-        JsonKey.JSON_DATA,
-        objectMapper.writeValueAsString(certAddRequestMap.get(JsonKey.JSON_DATA)));
+    storeMap.put(JsonKey.JSON_DATA, certAddRequestMap.get(JsonKey.JSON_DATA).toString());
   }
 
   private Map<String, Object> getRequiredRequest(Map<String, Object> certAddReqMap) {
@@ -184,7 +216,6 @@ public class CertificateActor extends UserBaseActor {
             (HashMap<String, Object>) objectMapper.readValue(httpResponse.getBody(), Map.class);
         HashMap<String, Object> resultMap = (HashMap<String, Object>) val.get(JsonKey.RESULT);
         Response response = new Response();
-        response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
         response.put(JsonKey.SIGNED_URL, resultMap.get(JsonKey.SIGNED_URL));
         sender().tell(response, self());
       } else {

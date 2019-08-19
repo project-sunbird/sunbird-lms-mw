@@ -964,13 +964,13 @@ public final class Util {
    */
   public static String getSunbirdLoginUrl() {
     StringBuilder webUrl = new StringBuilder();
-    String slug = "resources";
+    String slug = "/resources";
     if (StringUtils.isBlank(System.getenv(SUNBIRD_WEB_URL))) {
       webUrl.append(propertiesCache.getProperty(SUNBIRD_WEB_URL));
     } else {
       webUrl.append(System.getenv(SUNBIRD_WEB_URL));
     }
-    webUrl.append("/" + slug);
+    webUrl.append(slug);
     return webUrl.toString();
   }
 

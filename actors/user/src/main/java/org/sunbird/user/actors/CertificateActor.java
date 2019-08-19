@@ -172,6 +172,44 @@ public class CertificateActor extends UserBaseActor {
         return new Timestamp(Calendar.getInstance().getTime().getTime());
     }
 
+  public void getSignUrl(Request request) {
+    try {
+      HashMap<String, Object> certReqMap = new HashMap<>();
+      certReqMap.put(JsonKey.REQUEST, request.getRequest());
+      String requestBody = objectMapper.writeValueAsString(certReqMap);
+      String completeUrl =
+          ProjectUtil.getConfigValue(JsonKey.SUNBIRD_CERT_SERVICE_BASE_URL)
+              + ProjectUtil.getConfigValue(JsonKey.SUNBIRD_CERT_DOWNLOAD_URI);
+      ProjectLogger.log(
+          "CertificateActor:getSignUrl complete url found: " + completeUrl, LoggerEnum.INFO.name());
+
+        Map<String,String>headerMap=new HashMap<>();
+        headerMap.put("Content-Type","application/json");
+      HttpUtilResponse httpResponse = HttpUtil.doPostRequest(completeUrl, requestBody, headerMap);
+      if (httpResponse != null && httpResponse.getStatusCode() == 200) {
+        HashMap<String, Object> val =
+            (HashMap<String, Object>) objectMapper.readValue(httpResponse.getBody(), Map.class);
+        HashMap<String, Object> resultMap = (HashMap<String, Object>) val.get(JsonKey.RESULT);
+        Response response = new Response();
+        response.put(JsonKey.SIGNED_URL, resultMap.get(JsonKey.SIGNED_URL));
+        sender().tell(response, self());
+      } else {
+        throw new ProjectCommonException(
+            ResponseCode.invalidParameter.getErrorCode(),
+            ProjectUtil.formatMessage(
+                ResponseCode.invalidParameter.getErrorMessage(), JsonKey.PDF_URL),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+
+    } catch (Exception e) {
+      ProjectLogger.log(
+              "CertificateActor:getSignUrl exception occurred :" + e, LoggerEnum.ERROR.name());
+      throw new ProjectCommonException(
+              ResponseCode.SERVER_ERROR.getErrorCode(),
+              ResponseCode.SERVER_ERROR.getErrorMessage(),
+              ResponseCode.SERVER_ERROR.getResponseCode());
+    }}
+
     private void assureUniqueCertId(String certificatedId) {
         if (isIdentityPresent(certificatedId)) {
             ProjectLogger.log(
@@ -200,41 +238,5 @@ public class CertificateActor extends UserBaseActor {
             }
         }
         return false;
-    }
-
-    public void getSignUrl(Request request) {
-        try {
-            HashMap<String, Object> certReqMap = new HashMap<>();
-            certReqMap.put(JsonKey.REQUEST, request.getRequest());
-            String requestBody = objectMapper.writeValueAsString(certReqMap);
-            String completeUrl =
-                    ProjectUtil.getConfigValue(JsonKey.SUNBIRD_CERT_SERVICE_BASE_URL)
-                            + ProjectUtil.getConfigValue(JsonKey.SUNBIRD_CERT_DOWNLOAD_URI);
-            ProjectLogger.log(
-                    "CertificateActor:getSignUrl complete url found: " + completeUrl, LoggerEnum.INFO.name());
-            HttpUtilResponse httpResponse = HttpUtil.doPostRequest(completeUrl, requestBody, null);
-            if (httpResponse != null && httpResponse.getStatusCode() == 200) {
-                HashMap<String, Object> val =
-                        (HashMap<String, Object>) objectMapper.readValue(httpResponse.getBody(), Map.class);
-                HashMap<String, Object> resultMap = (HashMap<String, Object>) val.get(JsonKey.RESULT);
-                Response response = new Response();
-                response.put(JsonKey.SIGNED_URL, resultMap.get(JsonKey.SIGNED_URL));
-                sender().tell(response, self());
-            } else {
-                throw new ProjectCommonException(
-                        ResponseCode.invalidParameter.getErrorCode(),
-                        ProjectUtil.formatMessage(
-                                ResponseCode.invalidParameter.getErrorMessage(), JsonKey.PDF_URL),
-                        ResponseCode.CLIENT_ERROR.getResponseCode());
-            }
-
-        } catch (Exception e) {
-            ProjectLogger.log(
-                    "CertificateActor:getSignUrl exception occured :" + e, LoggerEnum.ERROR.name());
-            throw new ProjectCommonException(
-                    ResponseCode.SERVER_ERROR.getErrorCode(),
-                    ResponseCode.SERVER_ERROR.getErrorMessage(),
-                    ResponseCode.SERVER_ERROR.getResponseCode());
-        }
     }
 }

@@ -167,7 +167,6 @@ public class CertificateActor extends UserBaseActor {
     private void populateStoreMapWithUrlAndIds(Map<String, String> storeMap, Map<String, Object> certAddRequestMap) throws JsonProcessingException {
         storeMap.put(JsonKey.PDF_URL, (String) certAddRequestMap.get(JsonKey.PDF_URL));
         storeMap.put(JsonKey.JSON_DATA, objectMapper.writeValueAsString(certAddRequestMap.get(JsonKey.JSON_DATA)));
-        storeMap.put(JsonKey.BATCH_ID,(String)certAddRequestMap.get(JsonKey.BATCH_ID));
         String batchId=(String)certAddRequestMap.get(JsonKey.BATCH_ID);
         String courseId=(String)certAddRequestMap.get(JsonKey.COURSE_ID);
         storeMap.put(JsonKey.BATCH_ID, StringUtils.isNotBlank(batchId)?batchId:StringUtils.EMPTY);

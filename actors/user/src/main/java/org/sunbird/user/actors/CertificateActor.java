@@ -148,7 +148,7 @@ public class CertificateActor extends UserBaseActor {
         Map<String, String> storeMap = new HashMap<>();
         Map<String, Object> certAddReqMap = request.getRequest();
         assureUniqueCertId((String) certAddReqMap.get(JsonKey.ID));
-        populateStoreMapWithUrlAndIds(storeMap, certAddReqMap);
+        populateStoreData(storeMap, certAddReqMap);
         certAddReqMap.put(JsonKey.STORE, storeMap);
         certAddReqMap = getRequiredRequest(certAddReqMap);
         certAddReqMap.put(JsonKey.CREATED_AT, getTimeStamp());
@@ -164,7 +164,7 @@ public class CertificateActor extends UserBaseActor {
         sender().tell(response, self());
     }
 
-    private void populateStoreMapWithUrlAndIds(Map<String, String> storeMap, Map<String, Object> certAddRequestMap) throws JsonProcessingException {
+    private void populateStoreData(Map<String, String> storeMap, Map<String, Object> certAddRequestMap) throws JsonProcessingException {
         storeMap.put(JsonKey.PDF_URL, (String) certAddRequestMap.get(JsonKey.PDF_URL));
         storeMap.put(JsonKey.JSON_DATA, objectMapper.writeValueAsString(certAddRequestMap.get(JsonKey.JSON_DATA)));
         String batchId=(String)certAddRequestMap.get(JsonKey.BATCH_ID);

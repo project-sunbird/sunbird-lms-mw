@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.*;
+
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -99,6 +101,11 @@ public class CertificateActor extends UserBaseActor {
             String jsonData = (String) recordStore.get(JsonKey.JSON_DATA);
             userResponse.put(JsonKey.JSON, objectMapper.readValue(jsonData,Map.class));
             userResponse.put(JsonKey.PDF, recordStore.get(JsonKey.PDF_URL));
+            userResponse.put(JsonKey.COURSE_ID,recordStore.get(JsonKey.COURSE_ID));
+            userResponse.put(JsonKey.BATCH_ID,recordStore.get(JsonKey.BATCH_ID));
+            ProjectLogger.log(
+                    "CertificateActor:getCertificate: userMap got with certificateId ".concat(certificatedId+"")+" and response got "+userResponse,
+                    LoggerEnum.INFO.name());
             userResult.put(JsonKey.RESPONSE, userResponse);
             sender().tell(userResult, self());
         } else {
@@ -141,7 +148,7 @@ public class CertificateActor extends UserBaseActor {
         Map<String, String> storeMap = new HashMap<>();
         Map<String, Object> certAddReqMap = request.getRequest();
         assureUniqueCertId((String) certAddReqMap.get(JsonKey.ID));
-        populateStoreMapWithUrl(storeMap, certAddReqMap);
+        populateStoreMapWithUrlAndIds(storeMap, certAddReqMap);
         certAddReqMap.put(JsonKey.STORE, storeMap);
         certAddReqMap = getRequiredRequest(certAddReqMap);
         certAddReqMap.put(JsonKey.CREATED_AT, getTimeStamp());
@@ -157,11 +164,20 @@ public class CertificateActor extends UserBaseActor {
         sender().tell(response, self());
     }
 
-    private void populateStoreMapWithUrl(
-            Map<String, String> storeMap, Map<String, Object> certAddRequestMap) throws JsonProcessingException {
+    private void populateStoreMapWithUrlAndIds(Map<String, String> storeMap, Map<String, Object> certAddRequestMap) throws JsonProcessingException {
         storeMap.put(JsonKey.PDF_URL, (String) certAddRequestMap.get(JsonKey.PDF_URL));
         storeMap.put(JsonKey.JSON_DATA, objectMapper.writeValueAsString(certAddRequestMap.get(JsonKey.JSON_DATA)));
+        storeMap.put(JsonKey.BATCH_ID,(String)certAddRequestMap.get(JsonKey.BATCH_ID));
+        String batchId=(String)certAddRequestMap.get(JsonKey.BATCH_ID);
+        String courseId=(String)certAddRequestMap.get(JsonKey.COURSE_ID);
+        storeMap.put(JsonKey.BATCH_ID, StringUtils.isNotBlank(batchId)?batchId:StringUtils.EMPTY);
+        storeMap.put(JsonKey.COURSE_ID,StringUtils.isNotBlank(batchId)?courseId:StringUtils.EMPTY);
+        ProjectLogger.log(
+                "CertificateActor:populateStoreMapWithUrlAndIds: store map after populated: " + storeMap,
+                LoggerEnum.INFO.name());
+
     }
+
 
     private Map<String, Object> getRequiredRequest(Map<String, Object> certAddReqMap) {
         Certificate certificate = objectMapper.convertValue(certAddReqMap, Certificate.class);

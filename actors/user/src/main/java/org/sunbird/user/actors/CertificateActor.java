@@ -2,18 +2,21 @@ package org.sunbird.user.actors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import java.io.IOException;
 import java.sql.Timestamp;
+import java.text.MessageFormat;
 import java.util.*;
-
+import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.HttpUtilResponse;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.datasecurity.DataMaskingService;
+import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
@@ -23,169 +26,295 @@ import org.sunbird.models.certificate.Certificate;
 
 /** This class helps in interacting with adding and validating the user-certificate details */
 @ActorConfig(
-        tasks = {"validateCertificate", "addCertificate", "getSignUrl", "mergeUserCertificate"},
-        asyncTasks = {}
+  tasks = {"validateCertificate", "addCertificate", "getSignUrl", "mergeUserCertificate"},
+  asyncTasks = {}
 )
 public class CertificateActor extends UserBaseActor {
 
-    private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-    private static Util.DbInfo certDbInfo = Util.dbInfoMap.get(JsonKey.USER_CERT);
-    private static ObjectMapper objectMapper = new ObjectMapper();
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private static Util.DbInfo certDbInfo = Util.dbInfoMap.get(JsonKey.USER_CERT);
+  private static Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+  DecryptionService decryptionService =
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
+          "");
+  DataMaskingService maskingService =
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance("");
+  private static ObjectMapper objectMapper = new ObjectMapper();
+  private static final String ACCOUNT_MERGE_EMAIL_TEMPLATE = "accountMerge";
+  private static final String MASK_IDENTIFIER = "maskIdentifier";
 
-    @Override
-    public void onReceive(Request request) throws Throwable {
-        if (request.getOperation().equals(ActorOperations.VALIDATE_CERTIFICATE.getValue())) {
-            getCertificate(request);
-        } else if (request
-                .getOperation()
-                .equalsIgnoreCase(ActorOperations.ADD_CERTIFICATE.getValue())) {
-            addCertificate(request);
-        } else if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_SIGN_URL.getValue())) {
-            getSignUrl(request);
-        } else if (ActorOperations.MERGE_USER_CERTIFICATE.getValue().equals(request.getOperation())) {
-            mergeUserCertificate(request);
-        } else {
-            unSupportedMessage();
-        }
+  @Override
+  public void onReceive(Request request) throws Throwable {
+    if (request.getOperation().equals(ActorOperations.VALIDATE_CERTIFICATE.getValue())) {
+      getCertificate(request);
+    } else if (request
+        .getOperation()
+        .equalsIgnoreCase(ActorOperations.ADD_CERTIFICATE.getValue())) {
+      addCertificate(request);
+    } else if (request.getOperation().equalsIgnoreCase(ActorOperations.GET_SIGN_URL.getValue())) {
+      getSignUrl(request);
+    } else if (ActorOperations.MERGE_USER_CERTIFICATE.getValue().equals(request.getOperation())) {
+      mergeUserCertificate(request);
+    } else {
+      unSupportedMessage();
     }
+  }
 
-    /**
-     * This method merges the certificates from custodian-user to non-custodian-user
-     *
-     * @param certRequest
-     */
-    private void mergeUserCertificate(Request certRequest) {
-        Response userResult = new Response();
-        Map request = certRequest.getRequest();
-        String mergeeId = (String) request.get(JsonKey.FROM_ACCOUNT_ID);
-        String mergerId = (String) request.get(JsonKey.TO_ACCOUNT_ID);
-        Response response =
-                cassandraOperation.getRecordsByProperty(
-                        certDbInfo.getKeySpace(), certDbInfo.getTableName(), JsonKey.USER_ID, mergeeId);
-        Map<String, Object> record = response.getResult();
-        if (null != record && null != record.get(JsonKey.RESPONSE)) {
-            List responseList = (List) record.get(JsonKey.RESPONSE);
-            if (!responseList.isEmpty()) {
-                responseList.forEach(responseMap -> {
-                    Map<String, Object> responseDetails = (Map<String, Object>) responseMap;
-                    responseDetails.put(JsonKey.USER_ID,mergerId);
-                });
-                cassandraOperation.batchUpdateById(certDbInfo.getKeySpace(),certDbInfo.getTableName(),responseList);
-                ProjectLogger.log(
-                        "CertificateActor:getCertificate: cert details merged to user id : " + mergerId,
-                        LoggerEnum.INFO.name());
-            } else {
-                ProjectLogger.log(
-                        "CertificateActor:getCertificate: cert details unavailable for user id : " + mergeeId,
-                        LoggerEnum.ERROR.name());
-            }
-        }
-        userResult.setResponseCode(ResponseCode.success);
-        sender().tell(userResult, self());
-    }
-
-    /**
-     * This method validates the access-code of the certificate and retrieve certificate details.
-     *
-     * @param userRequest
-     */
-    private void getCertificate(Request userRequest) throws IOException {
-        Map request = userRequest.getRequest();
-        String certificatedId = (String) request.get(JsonKey.CERT_ID);
-        String accessCode = (String) request.get(JsonKey.ACCESS_CODE);
-        Map<String, Object> responseDetails = getCertificateDetails(certificatedId);
-        if (responseDetails.get(JsonKey.ACCESS_CODE.toLowerCase()).equals(accessCode)) {
-            Map userResponse = new HashMap<String, Object>();
-            Response userResult = new Response();
-            Map recordStore = (Map<String, Object>) responseDetails.get(JsonKey.STORE);
-            String jsonData = (String) recordStore.get(JsonKey.JSON_DATA);
-            userResponse.put(JsonKey.JSON, objectMapper.readValue(jsonData,Map.class));
-            userResponse.put(JsonKey.PDF, recordStore.get(JsonKey.PDF_URL));
-            userResponse.put(JsonKey.COURSE_ID,recordStore.get(JsonKey.COURSE_ID));
-            userResponse.put(JsonKey.BATCH_ID,recordStore.get(JsonKey.BATCH_ID));
-            ProjectLogger.log(
-                    "CertificateActor:getCertificate: userMap got with certificateId ".concat(certificatedId+"")+" and response got "+userResponse,
-                    LoggerEnum.INFO.name());
-            userResult.put(JsonKey.RESPONSE, userResponse);
-            sender().tell(userResult, self());
-        } else {
-            ProjectLogger.log(
-                    "CertificateActor:getCertificate: access code is incorrect : " + accessCode,
-                    LoggerEnum.ERROR.name());
-            throw new ProjectCommonException(
-                    ResponseCode.invalidParameter.getErrorCode(),
-                    ProjectUtil.formatMessage(
-                            ResponseCode.invalidParameter.getErrorMessage(), JsonKey.ACCESS_CODE),
-                    ResponseCode.CLIENT_ERROR.getResponseCode());
-        }
-    }
-
-    private Map getCertificateDetails(String certificatedId) {
-        Map<String, Object> responseDetails = null;
-        Response response =
-                cassandraOperation.getRecordById(
-                        certDbInfo.getKeySpace(), certDbInfo.getTableName(), certificatedId);
-        Map<String, Object> record = response.getResult();
-        if (null != record && null != record.get(JsonKey.RESPONSE)) {
-            List responseList = (List) record.get(JsonKey.RESPONSE);
-            if (!responseList.isEmpty()) {
-                responseDetails = (Map<String, Object>) responseList.get(0);
-            } else {
-                ProjectLogger.log(
-                        "CertificateActor:getCertificate: cert id is incorrect : " + certificatedId,
-                        LoggerEnum.ERROR.name());
-                throw new ProjectCommonException(
-                        ResponseCode.invalidParameter.getErrorCode(),
-                        ProjectUtil.formatMessage(
-                                ResponseCode.invalidParameter.getErrorMessage(), JsonKey.CERT_ID),
-                        ResponseCode.CLIENT_ERROR.getResponseCode());
-            }
-        }
-        return responseDetails;
-    }
-
-    private void addCertificate(Request request) throws JsonProcessingException {
-        Map<String, String> storeMap = new HashMap<>();
-        Map<String, Object> certAddReqMap = request.getRequest();
-        assureUniqueCertId((String) certAddReqMap.get(JsonKey.ID));
-        populateStoreData(storeMap, certAddReqMap);
-        certAddReqMap.put(JsonKey.STORE, storeMap);
-        certAddReqMap = getRequiredRequest(certAddReqMap);
-        certAddReqMap.put(JsonKey.CREATED_AT, getTimeStamp());
-        Response response =
-                cassandraOperation.insertRecord(
-                        certDbInfo.getKeySpace(), certDbInfo.getTableName(), certAddReqMap);
+  /**
+   * This method merges the certificates from custodian-user to non-custodian-user
+   *
+   * @param certRequest
+   */
+  private void mergeUserCertificate(Request certRequest) {
+    Response userResult = new Response();
+    Map request = certRequest.getRequest();
+    String mergeeId = (String) request.get(JsonKey.FROM_ACCOUNT_ID);
+    String mergerId = (String) request.get(JsonKey.TO_ACCOUNT_ID);
+    Response response =
+        cassandraOperation.getRecordsByProperty(
+            certDbInfo.getKeySpace(), certDbInfo.getTableName(), JsonKey.USER_ID, mergeeId);
+    Map<String, Object> record = response.getResult();
+    if (null != record && null != record.get(JsonKey.RESPONSE)) {
+      List responseList = (List) record.get(JsonKey.RESPONSE);
+      if (!responseList.isEmpty()) {
+        responseList.forEach(
+            responseMap -> {
+              Map<String, Object> responseDetails = (Map<String, Object>) responseMap;
+              responseDetails.put(JsonKey.USER_ID, mergerId);
+            });
+        cassandraOperation.batchUpdateById(
+            certDbInfo.getKeySpace(), certDbInfo.getTableName(), responseList);
         ProjectLogger.log(
-                "CertificateActor:addCertificate:successfully added certificate in records with userId"
-                        + certAddReqMap.get(JsonKey.USER_ID)
-                        + " and certId:"
-                        + certAddReqMap.get(JsonKey.CERT_ID),
-                LoggerEnum.INFO.name());
-        sender().tell(response, self());
-    }
-
-    private void populateStoreData(Map<String, String> storeMap, Map<String, Object> certAddRequestMap) throws JsonProcessingException {
-        storeMap.put(JsonKey.PDF_URL, (String) certAddRequestMap.get(JsonKey.PDF_URL));
-        storeMap.put(JsonKey.JSON_DATA, objectMapper.writeValueAsString(certAddRequestMap.get(JsonKey.JSON_DATA)));
-        String batchId=(String)certAddRequestMap.get(JsonKey.BATCH_ID);
-        String courseId=(String)certAddRequestMap.get(JsonKey.COURSE_ID);
-        storeMap.put(JsonKey.BATCH_ID, StringUtils.isNotBlank(batchId)?batchId:StringUtils.EMPTY);
-        storeMap.put(JsonKey.COURSE_ID,StringUtils.isNotBlank(batchId)?courseId:StringUtils.EMPTY);
+            "CertificateActor:getCertificate: cert details merged to user id : " + mergerId,
+            LoggerEnum.INFO.name());
+      } else {
         ProjectLogger.log(
-                "CertificateActor:populateStoreMapWithUrlAndIds: store map after populated: " + storeMap,
-                LoggerEnum.INFO.name());
+            "CertificateActor:getCertificate: cert details unavailable for user id : " + mergeeId,
+            LoggerEnum.ERROR.name());
+      }
+    }
+    userResult.setResponseCode(ResponseCode.success);
+    sender().tell(userResult, self());
+    sendMergeNotification(mergeeId, mergerId);
+  }
 
+  private void sendMergeNotification(String mergeeId, String mergerId) {
+    ProjectLogger.log(
+        "CertificateActor:sendMergeNotification start sending merge notification to user "
+            + mergeeId
+            + " -"
+            + mergerId,
+        LoggerEnum.INFO.name());
+    HashMap<String, Object> mergeeUserMap = getUserByIdentifier(mergeeId);
+    if (MapUtils.isNotEmpty(mergeeUserMap)) {
+      mergeeUserMap = createUserData(mergeeUserMap, false);
+    } else {
+      ProjectLogger.log(
+          "CertificateActor:sendMergeNotification mergee user account not found , so email or sms can't be sent "
+              + mergeeId,
+          LoggerEnum.INFO.name());
+      return;
+    }
+    HashMap<String, Object> mergerUserMap = getUserByIdentifier(mergerId);
+    if (MapUtils.isNotEmpty(mergerUserMap)) {
+      mergerUserMap = createUserData(mergerUserMap, true);
+    } else {
+      ProjectLogger.log(
+          "CertificateActor:sendMergeNotification merger user account not found , so email or sms can't be sent "
+              + mergeeId,
+          LoggerEnum.INFO.name());
+      return;
     }
 
+    Request emailReq = createNotificationData(mergeeUserMap, mergerUserMap);
+    tellToAnother(emailReq);
+  }
 
-    private Map<String, Object> getRequiredRequest(Map<String, Object> certAddReqMap) {
-        Certificate certificate = objectMapper.convertValue(certAddReqMap, Certificate.class);
-        return objectMapper.convertValue(certificate, Map.class);
+  private HashMap<String, Object> createUserData(
+      HashMap<String, Object> userMap, boolean isMergerAccount) {
+    if (isMergerAccount) {
+      if (StringUtils.isNotBlank((String) userMap.get(JsonKey.EMAIL))) {
+        String deceryptedEmail = decryptionService.decryptData((String) userMap.get(JsonKey.EMAIL));
+        String maskEmail = maskingService.maskEmail(deceryptedEmail);
+        userMap.put(JsonKey.EMAIL, deceryptedEmail);
+        userMap.put(MASK_IDENTIFIER, maskEmail);
+      } else {
+        String deceryptedPhone = decryptionService.decryptData((String) userMap.get(JsonKey.PHONE));
+        String maskPhone = maskingService.maskPhone(deceryptedPhone);
+        userMap.put(JsonKey.PHONE, deceryptedPhone);
+        userMap.put(MASK_IDENTIFIER, maskPhone);
+      }
+    } else {
+      if (StringUtils.isNotBlank((String) userMap.get(JsonKey.PREV_USED_EMAIL))) {
+        String deceryptedEmail =
+            decryptionService.decryptData((String) userMap.get(JsonKey.PREV_USED_EMAIL));
+        String maskEmail = maskingService.maskEmail(deceryptedEmail);
+        userMap.put(JsonKey.PREV_USED_EMAIL, deceryptedEmail);
+        userMap.put(MASK_IDENTIFIER, maskEmail);
+      } else {
+        String deceryptedPhone =
+            decryptionService.decryptData((String) userMap.get(JsonKey.PREV_USED_PHONE));
+        String maskPhone = maskingService.maskPhone(deceryptedPhone);
+        userMap.put(JsonKey.PREV_USED_PHONE, deceryptedPhone);
+        userMap.put(MASK_IDENTIFIER, maskPhone);
+      }
     }
+    return userMap;
+  }
 
-    private static Timestamp getTimeStamp() {
-        return new Timestamp(Calendar.getInstance().getTime().getTime());
+  private Request createNotificationData(
+      HashMap<String, Object> mergeeUserData, HashMap<String, Object> mergerUserData) {
+    Request request = new Request();
+    Map<String, Object> requestMap = new HashMap<>();
+    List<String> identifiers = new ArrayList<>();
+    requestMap.put(JsonKey.NAME, mergerUserData.get(JsonKey.FIRST_NAME));
+    if (StringUtils.isNotBlank((String) mergerUserData.get(JsonKey.EMAIL))) {
+      identifiers.add((String) mergerUserData.get(JsonKey.EMAIL));
+      requestMap.put(JsonKey.RECIPIENT_EMAILS, identifiers);
+    } else {
+      identifiers.add((String) mergerUserData.get(JsonKey.PHONE));
+      requestMap.put(JsonKey.RECIPIENT_PHONES, identifiers);
+      requestMap.put(JsonKey.MODE, "sms");
     }
+    requestMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, ACCOUNT_MERGE_EMAIL_TEMPLATE);
+    String body =
+        MessageFormat.format(
+            ProjectUtil.getConfigValue(JsonKey.SUNBIRD_ACCOUNT_MERGE_BODY),
+            ProjectUtil.getConfigValue(JsonKey.SUNBIRD_INSTALLATION),
+            (String) mergerUserData.get(MASK_IDENTIFIER),
+            (String) mergeeUserData.get(MASK_IDENTIFIER));
+    requestMap.put(JsonKey.BODY, body);
+    requestMap.put(JsonKey.SUBJECT, ProjectUtil.getConfigValue("sunbird_account_merge_subject"));
+    request.getRequest().put(JsonKey.EMAIL_REQUEST, requestMap);
+    request.setOperation(BackgroundOperations.emailService.name());
+    return request;
+  }
+
+  private HashMap<String, Object> getUserByIdentifier(String identifier) {
+    Response response =
+        cassandraOperation.getRecordById(
+            userDbInfo.getKeySpace(), userDbInfo.getTableName(), identifier);
+    Map<String, Object> record = response.getResult();
+    if (record != null && record.get(JsonKey.RESPONSE) != null) {
+      List responseList = (List) record.get(JsonKey.RESPONSE);
+      ProjectLogger.log(
+          "CertificateActor:getUserByIdentifier user found with id:" + identifier,
+          LoggerEnum.INFO.name());
+      return (HashMap<String, Object>) responseList.get(0);
+    }
+    ProjectLogger.log(
+        "CertificateActor:getUserByIdentifier user not found with id:" + identifier,
+        LoggerEnum.INFO.name());
+    return null;
+  }
+
+  /**
+   * This method validates the access-code of the certificate and retrieve certificate details.
+   *
+   * @param userRequest
+   */
+  private void getCertificate(Request userRequest) throws IOException {
+    Map request = userRequest.getRequest();
+    String certificatedId = (String) request.get(JsonKey.CERT_ID);
+    String accessCode = (String) request.get(JsonKey.ACCESS_CODE);
+    Map<String, Object> responseDetails = getCertificateDetails(certificatedId);
+    if (responseDetails.get(JsonKey.ACCESS_CODE.toLowerCase()).equals(accessCode)) {
+      Map userResponse = new HashMap<String, Object>();
+      Response userResult = new Response();
+      Map recordStore = (Map<String, Object>) responseDetails.get(JsonKey.STORE);
+      String jsonData = (String) recordStore.get(JsonKey.JSON_DATA);
+      userResponse.put(JsonKey.JSON, objectMapper.readValue(jsonData, Map.class));
+      userResponse.put(JsonKey.PDF, recordStore.get(JsonKey.PDF_URL));
+      userResponse.put(JsonKey.COURSE_ID, recordStore.get(JsonKey.COURSE_ID));
+      userResponse.put(JsonKey.BATCH_ID, recordStore.get(JsonKey.BATCH_ID));
+      ProjectLogger.log(
+          "CertificateActor:getCertificate: userMap got with certificateId "
+                  .concat(certificatedId + "")
+              + " and response got "
+              + userResponse,
+          LoggerEnum.INFO.name());
+      userResult.put(JsonKey.RESPONSE, userResponse);
+      sender().tell(userResult, self());
+    } else {
+      ProjectLogger.log(
+          "CertificateActor:getCertificate: access code is incorrect : " + accessCode,
+          LoggerEnum.ERROR.name());
+      throw new ProjectCommonException(
+          ResponseCode.invalidParameter.getErrorCode(),
+          ProjectUtil.formatMessage(
+              ResponseCode.invalidParameter.getErrorMessage(), JsonKey.ACCESS_CODE),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+  }
+
+  private Map getCertificateDetails(String certificatedId) {
+    Map<String, Object> responseDetails = null;
+    Response response =
+        cassandraOperation.getRecordById(
+            certDbInfo.getKeySpace(), certDbInfo.getTableName(), certificatedId);
+    Map<String, Object> record = response.getResult();
+    if (null != record && null != record.get(JsonKey.RESPONSE)) {
+      List responseList = (List) record.get(JsonKey.RESPONSE);
+      if (!responseList.isEmpty()) {
+        responseDetails = (Map<String, Object>) responseList.get(0);
+      } else {
+        ProjectLogger.log(
+            "CertificateActor:getCertificate: cert id is incorrect : " + certificatedId,
+            LoggerEnum.ERROR.name());
+        throw new ProjectCommonException(
+            ResponseCode.invalidParameter.getErrorCode(),
+            ProjectUtil.formatMessage(
+                ResponseCode.invalidParameter.getErrorMessage(), JsonKey.CERT_ID),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+      }
+    }
+    return responseDetails;
+  }
+
+  private void addCertificate(Request request) throws JsonProcessingException {
+    Map<String, String> storeMap = new HashMap<>();
+    Map<String, Object> certAddReqMap = request.getRequest();
+    assureUniqueCertId((String) certAddReqMap.get(JsonKey.ID));
+    populateStoreData(storeMap, certAddReqMap);
+    certAddReqMap.put(JsonKey.STORE, storeMap);
+    certAddReqMap = getRequiredRequest(certAddReqMap);
+    certAddReqMap.put(JsonKey.CREATED_AT, getTimeStamp());
+    Response response =
+        cassandraOperation.insertRecord(
+            certDbInfo.getKeySpace(), certDbInfo.getTableName(), certAddReqMap);
+    ProjectLogger.log(
+        "CertificateActor:addCertificate:successfully added certificate in records with userId"
+            + certAddReqMap.get(JsonKey.USER_ID)
+            + " and certId:"
+            + certAddReqMap.get(JsonKey.CERT_ID),
+        LoggerEnum.INFO.name());
+    sender().tell(response, self());
+  }
+
+  private void populateStoreData(
+      Map<String, String> storeMap, Map<String, Object> certAddRequestMap)
+      throws JsonProcessingException {
+    storeMap.put(JsonKey.PDF_URL, (String) certAddRequestMap.get(JsonKey.PDF_URL));
+    storeMap.put(
+        JsonKey.JSON_DATA,
+        objectMapper.writeValueAsString(certAddRequestMap.get(JsonKey.JSON_DATA)));
+    String batchId = (String) certAddRequestMap.get(JsonKey.BATCH_ID);
+    String courseId = (String) certAddRequestMap.get(JsonKey.COURSE_ID);
+    storeMap.put(JsonKey.BATCH_ID, StringUtils.isNotBlank(batchId) ? batchId : StringUtils.EMPTY);
+    storeMap.put(JsonKey.COURSE_ID, StringUtils.isNotBlank(batchId) ? courseId : StringUtils.EMPTY);
+    ProjectLogger.log(
+        "CertificateActor:populateStoreMapWithUrlAndIds: store map after populated: " + storeMap,
+        LoggerEnum.INFO.name());
+  }
+
+  private Map<String, Object> getRequiredRequest(Map<String, Object> certAddReqMap) {
+    Certificate certificate = objectMapper.convertValue(certAddReqMap, Certificate.class);
+    return objectMapper.convertValue(certificate, Map.class);
+  }
+
+  private static Timestamp getTimeStamp() {
+    return new Timestamp(Calendar.getInstance().getTime().getTime());
+  }
 
   public void getSignUrl(Request request) {
     try {
@@ -198,8 +327,8 @@ public class CertificateActor extends UserBaseActor {
       ProjectLogger.log(
           "CertificateActor:getSignUrl complete url found: " + completeUrl, LoggerEnum.INFO.name());
 
-        Map<String,String>headerMap=new HashMap<>();
-        headerMap.put("Content-Type","application/json");
+      Map<String, String> headerMap = new HashMap<>();
+      headerMap.put("Content-Type", "application/json");
       HttpUtilResponse httpResponse = HttpUtil.doPostRequest(completeUrl, requestBody, headerMap);
       if (httpResponse != null && httpResponse.getStatusCode() == 200) {
         HashMap<String, Object> val =
@@ -218,40 +347,41 @@ public class CertificateActor extends UserBaseActor {
 
     } catch (Exception e) {
       ProjectLogger.log(
-              "CertificateActor:getSignUrl exception occurred :" + e, LoggerEnum.ERROR.name());
+          "CertificateActor:getSignUrl exception occurred :" + e, LoggerEnum.ERROR.name());
       throw new ProjectCommonException(
-              ResponseCode.SERVER_ERROR.getErrorCode(),
-              ResponseCode.SERVER_ERROR.getErrorMessage(),
-              ResponseCode.SERVER_ERROR.getResponseCode());
-    }}
-
-    private void assureUniqueCertId(String certificatedId) {
-        if (isIdentityPresent(certificatedId)) {
-            ProjectLogger.log(
-                    "CertificateActor:addCertificate:provided certificateId exists in record "
-                            .concat(certificatedId),
-                    LoggerEnum.ERROR.name());
-            throw new ProjectCommonException(
-                    ResponseCode.invalidParameter.getErrorCode(),
-                    ResponseMessage.Message.DATA_ALREADY_EXIST,
-                    ResponseCode.CLIENT_ERROR.getResponseCode());
-        }
-        ProjectLogger.log(
-                "CertificateActor:addCertificate:successfully certId not found in records creating new record",
-                LoggerEnum.INFO.name());
+          ResponseCode.SERVER_ERROR.getErrorCode(),
+          ResponseCode.SERVER_ERROR.getErrorMessage(),
+          ResponseCode.SERVER_ERROR.getResponseCode());
     }
+  }
 
-    private boolean isIdentityPresent(String certificateId) {
-        Response response =
-                cassandraOperation.getRecordById(
-                        certDbInfo.getKeySpace(), certDbInfo.getTableName(), certificateId);
-        Map<String, Object> record = response.getResult();
-        if (null != record && null != record.get(JsonKey.RESPONSE)) {
-            List responseList = (List) record.get(JsonKey.RESPONSE);
-            if (!responseList.isEmpty()) {
-                return true;
-            }
-        }
-        return false;
+  private void assureUniqueCertId(String certificatedId) {
+    if (isIdentityPresent(certificatedId)) {
+      ProjectLogger.log(
+          "CertificateActor:addCertificate:provided certificateId exists in record "
+              .concat(certificatedId),
+          LoggerEnum.ERROR.name());
+      throw new ProjectCommonException(
+          ResponseCode.invalidParameter.getErrorCode(),
+          ResponseMessage.Message.DATA_ALREADY_EXIST,
+          ResponseCode.CLIENT_ERROR.getResponseCode());
     }
+    ProjectLogger.log(
+        "CertificateActor:addCertificate:successfully certId not found in records creating new record",
+        LoggerEnum.INFO.name());
+  }
+
+  private boolean isIdentityPresent(String certificateId) {
+    Response response =
+        cassandraOperation.getRecordById(
+            certDbInfo.getKeySpace(), certDbInfo.getTableName(), certificateId);
+    Map<String, Object> record = response.getResult();
+    if (null != record && null != record.get(JsonKey.RESPONSE)) {
+      List responseList = (List) record.get(JsonKey.RESPONSE);
+      if (!responseList.isEmpty()) {
+        return true;
+      }
+    }
+    return false;
+  }
 }

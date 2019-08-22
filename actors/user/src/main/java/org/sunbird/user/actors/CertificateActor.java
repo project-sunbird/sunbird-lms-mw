@@ -168,6 +168,7 @@ public class CertificateActor extends UserBaseActor {
     Map<String, Object> requestMap = new HashMap<>();
     List<String> identifiers = new ArrayList<>();
     requestMap.put(JsonKey.NAME, mergerUserData.get(JsonKey.FIRST_NAME));
+    requestMap.put(JsonKey.FIRST_NAME, mergerUserData.get(JsonKey.FIRST_NAME));
     if (StringUtils.isNotBlank((String) mergerUserData.get(JsonKey.EMAIL))) {
       identifiers.add((String) mergerUserData.get(JsonKey.EMAIL));
       requestMap.put(JsonKey.RECIPIENT_EMAILS, identifiers);

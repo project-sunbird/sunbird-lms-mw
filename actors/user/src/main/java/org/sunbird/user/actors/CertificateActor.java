@@ -105,7 +105,23 @@ public class CertificateActor extends UserBaseActor {
             + " -"
             + mergerId,
         LoggerEnum.INFO.name());
-    HashMap<String, Object> mergeeUserMap = getUserByIdentifier(mergeeId);
+    List<String> ids = new ArrayList<String>();
+    ids.add(mergeeId);
+    ids.add(mergerId);
+    List<String> attributeList = new ArrayList<>();
+    attributeList.add(JsonKey.EMAIL);
+    attributeList.add(JsonKey.PHONE);
+    attributeList.add(JsonKey.PREV_USED_EMAIL);
+    attributeList.add(JsonKey.PREV_USED_PHONE);
+    attributeList.add(JsonKey.FIRST_NAME);
+    attributeList.add(JsonKey.ID);
+    List<HashMap<String, Object>> userList = getUserByIdentifiers(ids, attributeList);
+    HashMap<String, Object> mergeeUserMap = new HashMap<>();
+    HashMap<String, Object> mergerUserMap = new HashMap<>();
+    if (userList != null && userList.size() == 2) {
+      mergeeUserMap = getMergeeUserDetails(userList, mergeeId);
+      mergerUserMap = getMergerUserDetails(userList, mergerId);
+    }
     if (MapUtils.isNotEmpty(mergeeUserMap)) {
       mergeeUserMap = createUserData(mergeeUserMap, false);
     } else {
@@ -115,7 +131,6 @@ public class CertificateActor extends UserBaseActor {
           LoggerEnum.INFO.name());
       return;
     }
-    HashMap<String, Object> mergerUserMap = getUserByIdentifier(mergerId);
     if (MapUtils.isNotEmpty(mergerUserMap)) {
       mergerUserMap = createUserData(mergerUserMap, true);
     } else {
@@ -128,6 +143,26 @@ public class CertificateActor extends UserBaseActor {
 
     Request emailReq = createNotificationData(mergeeUserMap, mergerUserMap);
     tellToAnother(emailReq);
+  }
+
+  private HashMap<String, Object> getMergeeUserDetails(
+      List<HashMap<String, Object>> userList, String mergeeId) {
+    return getUserDetails(userList, mergeeId);
+  }
+
+  private HashMap<String, Object> getMergerUserDetails(
+      List<HashMap<String, Object>> userList, String mergerId) {
+    return getUserDetails(userList, mergerId);
+  }
+
+  private HashMap<String, Object> getUserDetails(
+      List<HashMap<String, Object>> userList, String userId) {
+    HashMap<String, Object> usermap = userList.get(0);
+    if (userId.equalsIgnoreCase((String) usermap.get(JsonKey.ID))) {
+      return usermap;
+    } else {
+      return userList.get(1);
+    }
   }
 
   private HashMap<String, Object> createUserData(
@@ -191,20 +226,21 @@ public class CertificateActor extends UserBaseActor {
     return request;
   }
 
-  private HashMap<String, Object> getUserByIdentifier(String identifier) {
+  private List<HashMap<String, Object>> getUserByIdentifiers(
+      List<String> identifiers, List<String> attributes) {
     Response response =
-        cassandraOperation.getRecordById(
-            userDbInfo.getKeySpace(), userDbInfo.getTableName(), identifier);
+        cassandraOperation.getRecordsByIdsWithSpecifiedColumns(
+            userDbInfo.getKeySpace(), userDbInfo.getTableName(), attributes, identifiers);
     Map<String, Object> record = response.getResult();
     if (record != null && record.get(JsonKey.RESPONSE) != null) {
       List responseList = (List) record.get(JsonKey.RESPONSE);
       ProjectLogger.log(
-          "CertificateActor:getUserByIdentifier user found with id:" + identifier,
+          "CertificateActor:getUserByIdentifier user found with id:" + identifiers,
           LoggerEnum.INFO.name());
-      return (HashMap<String, Object>) responseList.get(0);
+      return responseList;
     }
     ProjectLogger.log(
-        "CertificateActor:getUserByIdentifier user not found with id:" + identifier,
+        "CertificateActor:getUserByIdentifier user not found with id:" + identifiers,
         LoggerEnum.INFO.name());
     return null;
   }

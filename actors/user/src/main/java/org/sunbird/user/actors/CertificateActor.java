@@ -14,12 +14,17 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.HttpUtilResponse;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
+import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.certificate.Certificate;
+import org.sunbird.models.user.User;
+import org.sunbird.telemetry.util.TelemetryUtil;
+import org.sunbird.user.service.UserService;
+import org.sunbird.user.service.impl.UserServiceImpl;
 
 /** This class helps in interacting with adding and validating the user-certificate details */
 @ActorConfig(
@@ -30,10 +35,13 @@ public class CertificateActor extends UserBaseActor {
 
     private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     private static Util.DbInfo certDbInfo = Util.dbInfoMap.get(JsonKey.USER_CERT);
+    private UserService userService = UserServiceImpl.getInstance();
+    private static Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER);
     private static ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public void onReceive(Request request) throws Throwable {
+        Util.initializeContext(request, TelemetryEnvKey.USER);
         if (request.getOperation().equals(ActorOperations.VALIDATE_CERTIFICATE.getValue())) {
             getCertificate(request);
         } else if (request
@@ -74,10 +82,11 @@ public class CertificateActor extends UserBaseActor {
                 ProjectLogger.log(
                         "CertificateActor:getCertificate: cert details merged to user id : " + mergerId,
                         LoggerEnum.INFO.name());
+                triggerMergeCertTelemetry(request);
             } else {
                 ProjectLogger.log(
                         "CertificateActor:getCertificate: cert details unavailable for user id : " + mergeeId,
-                        LoggerEnum.ERROR.name());
+                        LoggerEnum.INFO.name());
             }
         }
         userResult.setResponseCode(ResponseCode.success);
@@ -147,6 +156,8 @@ public class CertificateActor extends UserBaseActor {
     private void addCertificate(Request request) throws JsonProcessingException {
         Map<String, String> storeMap = new HashMap<>();
         Map<String, Object> certAddReqMap = request.getRequest();
+        String userId = (String) certAddReqMap.get(JsonKey.USER_ID);
+        User user = userService.getUserById(userId);
         assureUniqueCertId((String) certAddReqMap.get(JsonKey.ID));
         populateStoreData(storeMap, certAddReqMap);
         certAddReqMap.put(JsonKey.STORE, storeMap);
@@ -157,11 +168,16 @@ public class CertificateActor extends UserBaseActor {
                         certDbInfo.getKeySpace(), certDbInfo.getTableName(), certAddReqMap);
         ProjectLogger.log(
                 "CertificateActor:addCertificate:successfully added certificate in records with userId"
-                        + certAddReqMap.get(JsonKey.USER_ID)
+                        + userId
                         + " and certId:"
-                        + certAddReqMap.get(JsonKey.CERT_ID),
+                        + certAddReqMap.get(JsonKey.ID),
                 LoggerEnum.INFO.name());
         sender().tell(response, self());
+        Map<String, Object> telemetryMap = new HashMap();
+        telemetryMap.put(JsonKey.USER_ID, userId);
+        telemetryMap.put(JsonKey.CERT_ID, certAddReqMap.get(JsonKey.ID));
+        telemetryMap.put(JsonKey.ROOT_ORG_ID, user.getRootOrgId());
+        triggerAddCertTelemetry(telemetryMap);
     }
 
     private void populateStoreData(Map<String, String> storeMap, Map<String, Object> certAddRequestMap) throws JsonProcessingException {
@@ -253,5 +269,63 @@ public class CertificateActor extends UserBaseActor {
             }
         }
         return false;
+    }
+
+    private void triggerMergeCertTelemetry(Map telemetryMap) {
+        ProjectLogger.log(
+                "UserMergeActor:triggerMergeCertTelemetry: generating telemetry event for merge certificate");
+        Map<String, Object> targetObject = null;
+        List<Map<String, Object>> correlatedObject = new ArrayList<>();
+        Map<String, String> rollUp = new HashMap<>();
+        rollUp.put("l1", (String) telemetryMap.get(JsonKey.ROOT_ORG_ID));
+        ExecutionContext.getCurrent().getRequestContext().put(JsonKey.ROLLUP, rollUp);
+        targetObject =
+                TelemetryUtil.generateTargetObject(
+                        (String) telemetryMap.get(JsonKey.FROM_ACCOUNT_ID),
+                        TelemetryEnvKey.USER,
+                        JsonKey.MERGE_CERT,
+                        null);
+        TelemetryUtil.generateCorrelatedObject(
+                (String) telemetryMap.get(JsonKey.FROM_ACCOUNT_ID),
+                JsonKey.FROM_ACCOUNT_ID,
+                null,
+                correlatedObject);
+        TelemetryUtil.generateCorrelatedObject(
+                (String) telemetryMap.get(JsonKey.TO_ACCOUNT_ID),
+                JsonKey.TO_ACCOUNT_ID,
+                null,
+                correlatedObject);
+        telemetryMap.remove(JsonKey.ID);
+        telemetryMap.remove(JsonKey.USER_ID);
+        telemetryMap.remove(JsonKey.ROOT_ORG_ID);
+        TelemetryUtil.telemetryProcessingCall(telemetryMap, targetObject, correlatedObject);
+    }
+
+    private void triggerAddCertTelemetry(Map telemetryMap) {
+        ProjectLogger.log(
+                "UserMergeActor:triggerAddCertTelemetry: generating telemetry event for add certificate");
+        Map<String, Object> targetObject = null;
+        List<Map<String, Object>> correlatedObject = new ArrayList<>();
+        Map<String, String> rollUp = new HashMap<>();
+        rollUp.put("l1", (String) telemetryMap.get(JsonKey.ROOT_ORG_ID));
+        ExecutionContext.getCurrent().getRequestContext().put(JsonKey.ROLLUP, rollUp);
+        targetObject =
+                TelemetryUtil.generateTargetObject(
+                        (String) telemetryMap.get(JsonKey.CERT_ID),
+                        JsonKey.CERTIFICATE,
+                        JsonKey.CREATE,
+                        null);
+        TelemetryUtil.generateCorrelatedObject(
+                (String) telemetryMap.get(JsonKey.USER_ID),
+                JsonKey.USER,
+                null,
+                correlatedObject);
+        TelemetryUtil.generateCorrelatedObject(
+                (String) telemetryMap.get(JsonKey.CERT_ID),
+                JsonKey.CERTIFICATE,
+                null,
+                correlatedObject);
+        telemetryMap.remove(JsonKey.ROOT_ORG_ID);
+        TelemetryUtil.telemetryProcessingCall(telemetryMap, targetObject, correlatedObject);
     }
 }

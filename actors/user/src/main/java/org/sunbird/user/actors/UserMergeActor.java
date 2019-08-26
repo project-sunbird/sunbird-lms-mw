@@ -20,6 +20,7 @@ import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.common.util.ConfigUtil;
 import org.sunbird.kafka.client.KafkaClient;
 import org.sunbird.learner.util.DataCacheHandler;
+import org.sunbird.learner.util.Util;
 import org.sunbird.models.systemsetting.SystemSetting;
 import org.sunbird.models.user.User;
 import org.sunbird.services.sso.SSOManager;
@@ -48,6 +49,7 @@ public class UserMergeActor extends UserBaseActor {
 
   @Override
   public void onReceive(Request userRequest) throws Throwable {
+    Util.initializeContext(userRequest, TelemetryEnvKey.USER);
     if (producer == null) {
       initKafkaClient();
     }
@@ -101,7 +103,7 @@ public class UserMergeActor extends UserBaseActor {
       sender().tell(response, self());
 
       // update user-course-cert details
-      mergeCertCourseDetails(mergeeId, mergerId);
+      mergeCertCourseDetails(mergee, merger);
 
       // update mergee details in ES
       mergeUserDetailsToEs(userRequest);
@@ -154,13 +156,13 @@ public class UserMergeActor extends UserBaseActor {
   /**
    * This method creates Kafka topic for user-cert
    *
-   * @param mergeeId
-   * @param mergerId
+   * @param mergee
+   * @param merger
    * @throws IOException
    */
-  private void mergeCertCourseDetails(String mergeeId, String mergerId) throws IOException {
+  private void mergeCertCourseDetails(User mergee, User merger) throws IOException {
     String content = null;
-    Telemetry userCertMergeRequest = createAccountMergeTopicData(mergeeId, mergerId);
+    Telemetry userCertMergeRequest = createAccountMergeTopicData(mergee, merger);
     content = objectMapper.writeValueAsString(userCertMergeRequest);
     ProjectLogger.log(
             "UserMergeActor:mergeCertCourseDetails: Kafka producer topic::"+content,
@@ -175,7 +177,7 @@ public class UserMergeActor extends UserBaseActor {
     }
   }
 
-  private Telemetry createAccountMergeTopicData(String mergeeId, String mergerId) {
+  private Telemetry createAccountMergeTopicData(User mergee, User merger) {
     Map<String, Object> edata = new HashMap<>();
     Telemetry mergeUserEvent = new Telemetry();
     Actor actor = new Actor();
@@ -184,8 +186,9 @@ public class UserMergeActor extends UserBaseActor {
     mergeUserEvent.setActor(actor);
     mergeUserEvent.setEid(JsonKey.BE_JOB_REQUEST);
     edata.put(JsonKey.ACTION, JsonKey.TELEMETRY_EDATA_USER_MERGE_ACTION);
-    edata.put(JsonKey.FROM_ACCOUNT_ID, mergeeId);
-    edata.put(JsonKey.TO_ACCOUNT_ID, mergerId);
+    edata.put(JsonKey.FROM_ACCOUNT_ID, mergee.getId());
+    edata.put(JsonKey.TO_ACCOUNT_ID, merger.getId());
+    edata.put(JsonKey.ROOT_ORG_ID, merger.getRootOrgId());
     edata.put(JsonKey.ITERATION, 1);
     mergeUserEvent.setEdata(edata);
     Context context = new Context();
@@ -195,7 +198,7 @@ public class UserMergeActor extends UserBaseActor {
     context.setPdata(dataProducer);
     mergeUserEvent.setContext(context);
     Target target = new Target();
-    target.setId(OneWayHashing.encryptVal(mergeeId+"_"+mergerId));
+    target.setId(OneWayHashing.encryptVal(mergee.getId()+"_"+merger.getId()));
     target.setType(JsonKey.TELEMETRY_TARGET_USER_MERGE_TYPE);
     mergeUserEvent.setObject(target);
     return mergeUserEvent;
@@ -213,7 +216,7 @@ public class UserMergeActor extends UserBaseActor {
         TelemetryUtil.generateTargetObject(
             (String) telemetryMap.get(JsonKey.FROM_ACCOUNT_ID),
             TelemetryEnvKey.USER,
-            JsonKey.MERGE,
+            JsonKey.MERGE_USER,
             null);
     TelemetryUtil.generateCorrelatedObject(
         (String) telemetryMap.get(JsonKey.FROM_ACCOUNT_ID),

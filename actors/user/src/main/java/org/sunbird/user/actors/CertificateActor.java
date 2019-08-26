@@ -94,16 +94,16 @@ public class CertificateActor extends UserBaseActor {
         ProjectLogger.log(
                 "CertificateActor:getCertificate: cert details merged to user id : " + mergerId,
                 LoggerEnum.INFO.name());
-        userResult.setResponseCode(ResponseCode.success);
-        sender().tell(userResult, self());
-        triggerMergeCertTelemetry(request);
       } else {
         ProjectLogger.log(
                 "CertificateActor:getCertificate: cert details unavailable for user id : " + mergeeId,
-                LoggerEnum.ERROR.name());
+                LoggerEnum.INFO.name());
       }
+      userResult.setResponseCode(ResponseCode.success);
+      sender().tell(userResult, self());
+      triggerMergeCertTelemetry(request);
+      sendMergeNotification(mergeeId, mergerId);
     }
-    sendMergeNotification(mergeeId, mergerId);
   }
 
   private void sendMergeNotification(String mergeeId, String mergerId) {

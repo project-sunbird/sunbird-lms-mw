@@ -133,12 +133,6 @@ public class UserManagementActor extends BaseActor {
     Map<String, Object> userDbRecord = UserUtil.validateExternalIdsAndReturnActiveUser(userMap);
     validateUserFrameworkData(userMap, userDbRecord);
     validateUserTypeForUpdate(userMap);
-    if(userMap.containsKey(JsonKey.RECOVERY_EMAIL)){
-      isRecoveryEmailEqualsPrimaryEmail(userDbRecord,(String) userMap.get(JsonKey.RECOVERY_EMAIL));
-    }
-    if(userMap.containsKey(JsonKey.RECOVERY_PHONE)){
-      isRecoveryPhoneEqualsPrimaryPhone(userDbRecord,(String) userMap.get(JsonKey.RECOVERY_PHONE));
-    }
     User user = mapper.convertValue(userMap, User.class);
     UserUtil.validateExternalIds(user, JsonKey.UPDATE);
     userMap.put(JsonKey.EXTERNAL_IDS, user.getExternalIds());
@@ -154,6 +148,12 @@ public class UserManagementActor extends BaseActor {
       userMap.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
     }
     Map<String, Object> requestMap = UserUtil.encryptUserData(userMap);
+    if(userMap.containsKey(JsonKey.RECOVERY_EMAIL)){
+      isRecoveryEmailEqualsPrimaryEmail(userDbRecord,(String) userMap.get(JsonKey.RECOVERY_EMAIL));
+    }
+    if(userMap.containsKey(JsonKey.RECOVERY_PHONE)){
+      isRecoveryPhoneEqualsPrimaryPhone(userDbRecord,(String) userMap.get(JsonKey.RECOVERY_PHONE));
+    }
     UserUtil.addMaskEmailAndMaskPhone(requestMap);
     removeUnwanted(requestMap);
     if (requestMap.containsKey(JsonKey.TNC_ACCEPTED_ON)) {
@@ -785,19 +785,19 @@ public class UserManagementActor extends BaseActor {
 
   private void isRecoveryEmailEqualsPrimaryEmail(Map<String, Object> userDbRecord,String recoveryEmail){
     String userPrimaryEmail=(String) userDbRecord.get(JsonKey.EMAIL);
-    if(userPrimaryEmail.equalsIgnoreCase(recoveryEmail)){
+    if(recoveryEmail.equalsIgnoreCase(userPrimaryEmail)){
       ProjectCommonException.throwClientErrorException(
               ResponseCode.recoveryParamsMatchException,
-              String.format(ResponseCode.errorTeacherCannotBelongToCustodianOrg.getErrorMessage(),JsonKey.RECOVERY_EMAIL,JsonKey.EMAIL));
+              MessageFormat.format(ResponseCode.recoveryParamsMatchException.getErrorMessage(),JsonKey.RECOVERY_EMAIL,JsonKey.EMAIL));
     }
   }
 
   private void isRecoveryPhoneEqualsPrimaryPhone(Map<String, Object> userDbRecord,String recoveryPhone){
     String userPrimaryPhone=(String)userDbRecord.get(JsonKey.PHONE);
-    if(userPrimaryPhone.equalsIgnoreCase(recoveryPhone)){
+    if(recoveryPhone.equalsIgnoreCase(userPrimaryPhone)){
       ProjectCommonException.throwClientErrorException(
               ResponseCode.recoveryParamsMatchException,
-              String.format(ResponseCode.errorTeacherCannotBelongToCustodianOrg.getErrorMessage(),JsonKey.RECOVERY_PHONE,JsonKey.PHONE));
+              MessageFormat.format(ResponseCode.recoveryParamsMatchException.getErrorMessage(),JsonKey.RECOVERY_PHONE,JsonKey.PHONE));
     }
 
   }

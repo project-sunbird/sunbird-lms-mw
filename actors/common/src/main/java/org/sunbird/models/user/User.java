@@ -68,6 +68,8 @@ public class User implements Serializable {
   private List<String> locationIds;
   private String prevUsedPhone;
   private String prevUsedEmail;
+  private String recoveryEmail;
+  private String recoveryPhone;
 
   public List<String> getLocationIds() {
     return locationIds;
@@ -462,4 +464,20 @@ public class User implements Serializable {
   public void setPrevUsedEmail(String prevUsedEmail) {
     this.prevUsedEmail = prevUsedEmail;
   }
+  public String getRecoveryEmail() {
+    return recoveryEmail;
+  }
+
+  public void setRecoveryEmail(String recoveryEmail) {
+    this.recoveryEmail = recoveryEmail;
+  }
+
+  public String getRecoveryPhone() {
+    return recoveryPhone;
+  }
+
+  public void setRecoveryPhone(String recoveryPhone) {
+    this.recoveryPhone = recoveryPhone;
+  }
+
 }

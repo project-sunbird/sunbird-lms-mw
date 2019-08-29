@@ -39,6 +39,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.request.UserRequestValidator;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
+import org.sunbird.common.util.Matcher;
 import org.sunbird.content.store.util.ContentStoreUtil;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.role.service.RoleService;
@@ -148,13 +149,8 @@ public class UserManagementActor extends BaseActor {
       userMap.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
     }
     Map<String, Object> requestMap = UserUtil.encryptUserData(userMap);
+    validateRecoveryEmailPhone(userDbRecord,userMap);
     ProjectLogger.log("UserManagementActor:updateUser:user data successfully encrypted",LoggerEnum.INFO.name());
-    if(userMap.containsKey(JsonKey.RECOVERY_EMAIL)){
-      validateRecoveryEmailWithPrimaryEmail(userDbRecord,(String) userMap.get(JsonKey.RECOVERY_EMAIL));
-    }
-    if(userMap.containsKey(JsonKey.RECOVERY_PHONE)){
-      validateRecoveryPhoneWithPrimaryPhone(userDbRecord,(String) userMap.get(JsonKey.RECOVERY_PHONE));
-    }
     UserUtil.addMaskEmailAndMaskPhone(requestMap);
     removeUnwanted(requestMap);
     if (requestMap.containsKey(JsonKey.TNC_ACCEPTED_ON)) {
@@ -784,24 +780,25 @@ public class UserManagementActor extends BaseActor {
     }
   }
 
-  private void validateRecoveryEmailWithPrimaryEmail(Map<String, Object> userDbRecord,String recoveryEmail){
-    String userPrimaryEmail=(String) userDbRecord.get(JsonKey.EMAIL);
-    if(recoveryEmail.equalsIgnoreCase(userPrimaryEmail)){
-      ProjectLogger.log("UserManagementActor:validateRecoveryEmailWithPrimaryEmail:recoveryEmail should not same as primary email".concat(recoveryEmail+""),LoggerEnum.ERROR.name());
+  private void throwRecoveryParamsMatchException(String type, String recoveryType){
+      ProjectLogger.log(String.format("UserManagementActor:throwParamMatchException:%s should not same as primary %s",recoveryType,type),LoggerEnum.ERROR.name());
       ProjectCommonException.throwClientErrorException(
               ResponseCode.recoveryParamsMatchException,
-              MessageFormat.format(ResponseCode.recoveryParamsMatchException.getErrorMessage(),JsonKey.RECOVERY_EMAIL,JsonKey.EMAIL));
-    }
+              MessageFormat.format(ResponseCode.recoveryParamsMatchException.getErrorMessage(),recoveryType,type));
   }
 
-  private void validateRecoveryPhoneWithPrimaryPhone(Map<String, Object> userDbRecord,String recoveryPhone){
+  private void validateRecoveryEmailPhone(Map<String,Object>userDbRecord,Map<String,Object>userReqMap){
     String userPrimaryPhone=(String)userDbRecord.get(JsonKey.PHONE);
-    if(recoveryPhone.equalsIgnoreCase(userPrimaryPhone)){
-      ProjectLogger.log("UserManagementActor:validateRecoveryPhoneWithPrimaryPhone:recoveryPhone should not same as primary phone".concat(recoveryPhone+""),LoggerEnum.ERROR.name());
-      ProjectCommonException.throwClientErrorException(
-              ResponseCode.recoveryParamsMatchException,
-              MessageFormat.format(ResponseCode.recoveryParamsMatchException.getErrorMessage(),JsonKey.RECOVERY_PHONE,JsonKey.PHONE));
+    String userPrimaryEmail=(String) userDbRecord.get(JsonKey.EMAIL);
+    String recoveryEmail=(String)userReqMap.get(JsonKey.RECOVERY_EMAIL);
+    String recoveryPhone=(String)userReqMap.get(JsonKey.RECOVERY_PHONE);
+    if(userReqMap.containsKey(JsonKey.RECOVERY_EMAIL) && Matcher.matchIdentifiers(userPrimaryEmail,recoveryEmail)){
+      throwRecoveryParamsMatchException(JsonKey.EMAIL,JsonKey.RECOVERY_EMAIL);
     }
-
+    if(userReqMap.containsKey(JsonKey.RECOVERY_PHONE) && Matcher.matchIdentifiers(userPrimaryPhone,recoveryPhone)){
+      throwRecoveryParamsMatchException(JsonKey.PHONE,JsonKey.RECOVERY_PHONE);
+    }
   }
+
+
 }

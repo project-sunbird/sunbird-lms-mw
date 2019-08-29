@@ -19,27 +19,15 @@ import org.sunbird.common.models.util.datasecurity.impl.ServiceFactory;
  */
 public final class UserUtility {
 
-  private static List<String> userKeyToEncrypt = new ArrayList<>();
-  private static List<String> addressKeyToEncrypt = new ArrayList<>();
-  private static List<String> userKeyToDecrypt = new ArrayList<>();
-  private static List<String>userKeysToMasked=new ArrayList<>();
-
-  private static DecryptionService decryptionService =
-      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
-          null);
-  private static DataMaskingService maskingService =
-      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance(
-          null);
+  private static List<String> userKeyToEncrypt;
+  private static List<String> addressKeyToEncrypt;
+  private static List<String> userKeyToDecrypt;
+  private static List<String>userKeysToMasked;
+  private static DecryptionService decryptionService;
+  private static DataMaskingService maskingService;
 
   static {
-    String userKey = PropertiesCache.getInstance().getProperty("userkey.encryption");
-    userKeyToEncrypt = new ArrayList<>(Arrays.asList(userKey.split(",")));
-    String addressKey = PropertiesCache.getInstance().getProperty("addresskey.encryption");
-    addressKeyToEncrypt = new ArrayList<>(Arrays.asList(addressKey.split(",")));
-    String userKeyDecrypt = PropertiesCache.getInstance().getProperty("userkey.decryption");
-    String userKeyToMasked=PropertiesCache.getInstance().getProperty("userkey.masked");
-    userKeyToDecrypt = new ArrayList<>(Arrays.asList(userKeyDecrypt.split(",")));
-    userKeysToMasked=new ArrayList<>(Arrays.asList(userKeyToMasked.split(",")));
+    init();
   }
 
   private UserUtility() {}
@@ -193,5 +181,26 @@ public final class UserUtility {
       return maskingService.maskEmail(decryptionService.decryptData(encryptedEmailOrPhone));
     }
     return StringUtils.EMPTY;
+  }
+
+  private static void init(){
+    userKeyToEncrypt = new ArrayList<>();
+    addressKeyToEncrypt=new ArrayList<>();
+    userKeysToMasked=new ArrayList<>();
+    userKeyToDecrypt=new ArrayList<>();
+    decryptionService =
+            org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
+                    null);
+    maskingService =
+            org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance(
+                    null);
+    String userKey = PropertiesCache.getInstance().getProperty("userkey.encryption");
+    userKeyToEncrypt = new ArrayList<>(Arrays.asList(userKey.split(",")));
+    String addressKey = PropertiesCache.getInstance().getProperty("addresskey.encryption");
+    addressKeyToEncrypt = new ArrayList<>(Arrays.asList(addressKey.split(",")));
+    String userKeyDecrypt = PropertiesCache.getInstance().getProperty("userkey.decryption");
+    String userKeyToMasked=PropertiesCache.getInstance().getProperty("userkey.masked");
+    userKeyToDecrypt = new ArrayList<>(Arrays.asList(userKeyDecrypt.split(",")));
+    userKeysToMasked=new ArrayList<>(Arrays.asList(userKeyToMasked.split(",")));
   }
 }

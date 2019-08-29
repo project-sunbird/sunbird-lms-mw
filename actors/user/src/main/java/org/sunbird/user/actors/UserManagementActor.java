@@ -787,7 +787,7 @@ public class UserManagementActor extends BaseActor {
   private void validateRecoveryEmailWithPrimaryEmail(Map<String, Object> userDbRecord,String recoveryEmail){
     String userPrimaryEmail=(String) userDbRecord.get(JsonKey.EMAIL);
     if(recoveryEmail.equalsIgnoreCase(userPrimaryEmail)){
-      ProjectLogger.log("UserManagementActor:isRecoveryEmailEqualsPrimaryEmail:recoveryEmail should not same as primary email".concat(recoveryEmail+""),LoggerEnum.ERROR.name());
+      ProjectLogger.log("UserManagementActor:validateRecoveryEmailWithPrimaryEmail:recoveryEmail should not same as primary email".concat(recoveryEmail+""),LoggerEnum.ERROR.name());
       ProjectCommonException.throwClientErrorException(
               ResponseCode.recoveryParamsMatchException,
               MessageFormat.format(ResponseCode.recoveryParamsMatchException.getErrorMessage(),JsonKey.RECOVERY_EMAIL,JsonKey.EMAIL));
@@ -797,7 +797,7 @@ public class UserManagementActor extends BaseActor {
   private void validateRecoveryPhoneWithPrimaryPhone(Map<String, Object> userDbRecord,String recoveryPhone){
     String userPrimaryPhone=(String)userDbRecord.get(JsonKey.PHONE);
     if(recoveryPhone.equalsIgnoreCase(userPrimaryPhone)){
-      ProjectLogger.log("UserManagementActor:isRecoveryPhoneEqualsPrimaryPhone:recoveryPhone should not same as primary phone".concat(recoveryPhone+""),LoggerEnum.ERROR.name());
+      ProjectLogger.log("UserManagementActor:validateRecoveryPhoneWithPrimaryPhone:recoveryPhone should not same as primary phone".concat(recoveryPhone+""),LoggerEnum.ERROR.name());
       ProjectCommonException.throwClientErrorException(
               ResponseCode.recoveryParamsMatchException,
               MessageFormat.format(ResponseCode.recoveryParamsMatchException.getErrorMessage(),JsonKey.RECOVERY_PHONE,JsonKey.PHONE));

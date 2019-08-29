@@ -22,6 +22,7 @@ public final class UserUtility {
   private static List<String> userKeyToEncrypt = new ArrayList<>();
   private static List<String> addressKeyToEncrypt = new ArrayList<>();
   private static List<String> userKeyToDecrypt = new ArrayList<>();
+  private static List<String>userKeysToMasked=new ArrayList<>();
 
   private static DecryptionService decryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
@@ -36,7 +37,9 @@ public final class UserUtility {
     String addressKey = PropertiesCache.getInstance().getProperty("addresskey.encryption");
     addressKeyToEncrypt = new ArrayList<>(Arrays.asList(addressKey.split(",")));
     String userKeyDecrypt = PropertiesCache.getInstance().getProperty("userkey.decryption");
+    String userKeyToMasked=PropertiesCache.getInstance().getProperty("userkey.masked");
     userKeyToDecrypt = new ArrayList<>(Arrays.asList(userKeyDecrypt.split(",")));
+    userKeysToMasked=new ArrayList<>(Arrays.asList(userKeyToMasked.split(",")));
   }
 
   private UserUtility() {}
@@ -118,7 +121,7 @@ public final class UserUtility {
     // Decrypt user basic info
     for (String key : userKeyToDecrypt) {
       if (userMap.containsKey(key)) {
-        if (JsonKey.EMAIL.equalsIgnoreCase(key) || JsonKey.PHONE.equalsIgnoreCase(key) || JsonKey.PREV_USED_EMAIL.equalsIgnoreCase(key)|| JsonKey.PREV_USED_PHONE.equalsIgnoreCase(key) || JsonKey.RECOVERY_PHONE.equalsIgnoreCase(key) || JsonKey.RECOVERY_EMAIL.equalsIgnoreCase(key)) {
+        if (userKeysToMasked.contains(key)) {
           userMap.put(key, maskEmailOrPhone((String) userMap.get(key), key));
         } else {
           userMap.put(key, service.decryptData((String) userMap.get(key)));

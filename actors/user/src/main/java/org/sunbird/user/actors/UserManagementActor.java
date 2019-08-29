@@ -150,7 +150,6 @@ public class UserManagementActor extends BaseActor {
     }
     Map<String, Object> requestMap = UserUtil.encryptUserData(userMap);
     validateRecoveryEmailPhone(userDbRecord,userMap);
-    ProjectLogger.log("UserManagementActor:updateUser:user data successfully encrypted",LoggerEnum.INFO.name());
     UserUtil.addMaskEmailAndMaskPhone(requestMap);
     removeUnwanted(requestMap);
     if (requestMap.containsKey(JsonKey.TNC_ACCEPTED_ON)) {
@@ -782,7 +781,7 @@ public class UserManagementActor extends BaseActor {
   }
 
   private void throwRecoveryParamsMatchException(String type, String recoveryType){
-      ProjectLogger.log(String.format("UserManagementActor:throwParamMatchException:%s should not same as primary %s",recoveryType,type),LoggerEnum.ERROR.name());
+      ProjectLogger.log("UserManagementActor:throwParamMatchException:".concat(recoveryType+"")+"should not same as primary ".concat(type+""),LoggerEnum.ERROR.name());
       ProjectCommonException.throwClientErrorException(
               ResponseCode.recoveryParamsMatchException,
               MessageFormat.format(ResponseCode.recoveryParamsMatchException.getErrorMessage(),recoveryType,type));
@@ -793,10 +792,10 @@ public class UserManagementActor extends BaseActor {
     String userPrimaryEmail=(String) userDbRecord.get(JsonKey.EMAIL);
     String recoveryEmail=(String)userReqMap.get(JsonKey.RECOVERY_EMAIL);
     String recoveryPhone=(String)userReqMap.get(JsonKey.RECOVERY_PHONE);
-    if(userReqMap.containsKey(JsonKey.RECOVERY_EMAIL) && Matcher.matchIdentifiers(userPrimaryEmail,recoveryEmail)){
+    if(StringUtils.isNotBlank(recoveryEmail) && Matcher.matchIdentifiers(userPrimaryEmail,recoveryEmail)){
       throwRecoveryParamsMatchException(JsonKey.EMAIL,JsonKey.RECOVERY_EMAIL);
     }
-    if(userReqMap.containsKey(JsonKey.RECOVERY_PHONE) && Matcher.matchIdentifiers(userPrimaryPhone,recoveryPhone)){
+    if(StringUtils.isNotBlank(recoveryPhone) && Matcher.matchIdentifiers(userPrimaryPhone,recoveryPhone)){
       throwRecoveryParamsMatchException(JsonKey.PHONE,JsonKey.RECOVERY_PHONE);
     }
     validatePrimaryEmailOrPhone(userDbRecord,userReqMap);
@@ -809,10 +808,10 @@ public class UserManagementActor extends BaseActor {
     String userPrimaryEmail=(String) userReqMap.get(JsonKey.EMAIL);
     String recoveryEmail=(String)userDbRecord.get(JsonKey.RECOVERY_EMAIL);
     String recoveryPhone=(String)userDbRecord.get(JsonKey.RECOVERY_PHONE);
-    if(userReqMap.containsKey(JsonKey.EMAIL) && Matcher.matchIdentifiers(userPrimaryEmail,recoveryEmail)){
+    if(StringUtils.isNotBlank(userPrimaryEmail) && Matcher.matchIdentifiers(userPrimaryEmail,recoveryEmail)){
       throwRecoveryParamsMatchException(JsonKey.EMAIL,JsonKey.RECOVERY_EMAIL);
     }
-    if(userReqMap.containsKey(JsonKey.PHONE) && Matcher.matchIdentifiers(userPrimaryPhone,recoveryPhone)){
+    if(StringUtils.isNotBlank(userPrimaryPhone) && Matcher.matchIdentifiers(userPrimaryPhone,recoveryPhone)){
       throwRecoveryParamsMatchException(JsonKey.PHONE,JsonKey.RECOVERY_PHONE);
     }
   }
@@ -822,10 +821,10 @@ public class UserManagementActor extends BaseActor {
     String userEmail=(String) userReqMap.get(JsonKey.EMAIL);
     String userRecoveryEmail=(String)userReqMap.get(JsonKey.RECOVERY_EMAIL);
     String userRecoveryPhone=(String)userReqMap.get(JsonKey.RECOVERY_PHONE);
-    if(userReqMap.containsKey(JsonKey.EMAIL) && Matcher.matchIdentifiers(userEmail,userRecoveryEmail)){
+    if(StringUtils.isNotBlank(userEmail) && Matcher.matchIdentifiers(userEmail,userRecoveryEmail)){
       throwRecoveryParamsMatchException(JsonKey.EMAIL,JsonKey.RECOVERY_EMAIL);
     }
-    if(userReqMap.containsKey(JsonKey.PHONE) && Matcher.matchIdentifiers(userPhone,userRecoveryPhone)){
+    if(StringUtils.isNotBlank(userPhone) && Matcher.matchIdentifiers(userPhone,userRecoveryPhone)){
       throwRecoveryParamsMatchException(JsonKey.PHONE,JsonKey.RECOVERY_PHONE);
     }
 

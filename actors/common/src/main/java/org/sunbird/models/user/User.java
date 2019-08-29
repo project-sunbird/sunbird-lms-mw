@@ -26,17 +26,17 @@ public class User implements Serializable {
   private String createdDate;
   private String dob;
   private String email;
-  private Boolean emailVerified;
+  private boolean emailVerified;
   private String firstName;
   private String gender;
   private List<String> grade;
-  private Boolean isDeleted;
+  private boolean isDeleted;
   private List<String> language;
   private String lastLoginTime;
   private String lastName;
   private String location;
   private String phone;
-  private Boolean phoneVerified;
+  private boolean phoneVerified;
   private String profileSummary;
   private Map<String, String> profileVisibility;
   private String provider;
@@ -68,7 +68,7 @@ public class User implements Serializable {
   private List<String> locationIds;
   private String prevUsedPhone;
   private String prevUsedEmail;
-  private Boolean isStateValidated;
+  private boolean isStateValidated;
 
   public List<String> getLocationIds() {
     return locationIds;
@@ -174,11 +174,11 @@ public class User implements Serializable {
     this.email = email;
   }
 
-  public Boolean getEmailVerified() {
+  public boolean getEmailVerified() {
     return emailVerified;
   }
 
-  public void setEmailVerified(Boolean emailVerified) {
+  public void setEmailVerified(boolean emailVerified) {
     this.emailVerified = emailVerified;
   }
 
@@ -207,11 +207,11 @@ public class User implements Serializable {
   }
 
   @JsonProperty(value = "isDeleted")
-  public Boolean getIsDeleted() {
+  public boolean getIsDeleted() {
     return isDeleted;
   }
 
-  public void setIsDeleted(Boolean isDeleted) {
+  public void setIsDeleted(boolean isDeleted) {
     this.isDeleted = isDeleted;
   }
 
@@ -407,11 +407,11 @@ public class User implements Serializable {
     this.framework = framework;
   }
 
-  public Boolean getPhoneVerified() {
+  public boolean getPhoneVerified() {
     return phoneVerified;
   }
 
-  public void setPhoneVerified(Boolean phoneVerified) {
+  public void setPhoneVerified(boolean phoneVerified) {
     this.phoneVerified = phoneVerified;
   }
 
@@ -465,11 +465,11 @@ public class User implements Serializable {
   }
 
   @JsonProperty(value = "isStateValidated")
-  public Boolean getIsStateValidated() {
+  public boolean getIsStateValidated() {
     return isStateValidated;
   }
 
-  public void setIsStateValidated(Boolean isStateValidated) {
+  public void setIsStateValidated(boolean isStateValidated) {
     this.isStateValidated = isStateValidated;
   }
 }

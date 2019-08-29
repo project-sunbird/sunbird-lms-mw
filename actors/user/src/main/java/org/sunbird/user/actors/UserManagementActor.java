@@ -642,10 +642,9 @@ public class UserManagementActor extends BaseActor {
   private void setStateValidation(Map<String, Object> userMap) {
     String rootOrgId = (String) userMap.get(JsonKey.ROOT_ORG_ID);
     String custodianRootOrgId = getCustodianRootOrgId();
+    userMap.put(JsonKey.IS_STATE_VALIDATED, false);
     if(!rootOrgId.equals(custodianRootOrgId)) {
-      userMap.put("isStateValidated", true);
-    } else {
-      userMap.put("isStateValidated", false);
+      userMap.put(JsonKey.IS_STATE_VALIDATED, true);
     }
   }
 

@@ -314,9 +314,7 @@ public class UserManagementActor extends BaseActor {
         String custodianRootOrgId = null;
         User user = userService.getUserById((String) userMap.get(JsonKey.USER_ID));
         try {
-          custodianChannel =
-              userService.getCustodianChannel(new HashMap<>(), systemSettingActorRef);
-          custodianRootOrgId = userService.getRootOrgIdFromChannel(custodianChannel);
+          custodianRootOrgId = getCustodianRootOrgId();
         } catch (Exception ex) {
           ProjectLogger.log(
               "UserManagementActor: validateUserTypeForUpdate :"
@@ -483,12 +481,9 @@ public class UserManagementActor extends BaseActor {
             ResponseCode.errorTeacherCannotBelongToCustodianOrg,
             ResponseCode.errorTeacherCannotBelongToCustodianOrg.getErrorMessage());
       } else if (UserType.TEACHER.getTypeName().equalsIgnoreCase(userType)) {
-        String custodianChannel = null;
         String custodianRootOrgId = null;
         try {
-          custodianChannel =
-              userService.getCustodianChannel(new HashMap<>(), systemSettingActorRef);
-          custodianRootOrgId = userService.getRootOrgIdFromChannel(custodianChannel);
+          custodianRootOrgId = getCustodianRootOrgId();
         } catch (Exception ex) {
           ProjectLogger.log(
               "UserManagementActor: validateUserType :"
@@ -559,6 +554,9 @@ public class UserManagementActor extends BaseActor {
       Map<String, Object> userMap, String callerId, String signupType, String source) {
     Map<String, Object> requestMap = null;
     UserUtil.setUserDefaultValue(userMap, callerId);
+    //checks if the user is belongs to state and sets a validation flag
+    setStateValidation(userMap);
+
     User user = mapper.convertValue(userMap, User.class);
     UserUtil.validateExternalIds(user, JsonKey.CREATE);
     userMap.put(JsonKey.EXTERNAL_IDS, user.getExternalIds());
@@ -639,6 +637,22 @@ public class UserManagementActor extends BaseActor {
     }
 
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
+  }
+
+  private void setStateValidation(Map<String, Object> userMap) {
+    String rootOrgId = (String) userMap.get(JsonKey.ROOT_ORG_ID);
+    String custodianRootOrgId = getCustodianRootOrgId();
+    if(!rootOrgId.equals(custodianRootOrgId)) {
+      userMap.put("isStateValidated", true);
+    } else {
+      userMap.put("isStateValidated", false);
+    }
+  }
+
+  private String getCustodianRootOrgId() {
+    String custodianChannel =
+            userService.getCustodianChannel(new HashMap<>(), systemSettingActorRef);
+    return userService.getRootOrgIdFromChannel(custodianChannel);
   }
 
   @SuppressWarnings("unchecked")

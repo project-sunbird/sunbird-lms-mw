@@ -68,6 +68,7 @@ public class User implements Serializable {
   private List<String> locationIds;
   private String prevUsedPhone;
   private String prevUsedEmail;
+  private boolean isSateValidated;
 
   public List<String> getLocationIds() {
     return locationIds;
@@ -461,5 +462,13 @@ public class User implements Serializable {
 
   public void setPrevUsedEmail(String prevUsedEmail) {
     this.prevUsedEmail = prevUsedEmail;
+  }
+
+  public boolean isSateValidated() {
+    return isSateValidated;
+  }
+
+  public void setSateValidated(boolean sateValidated) {
+    isSateValidated = sateValidated;
   }
 }

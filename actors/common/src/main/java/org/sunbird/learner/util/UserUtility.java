@@ -188,10 +188,6 @@ public final class UserUtility {
   }
 
   private static void init(){
-    userKeyToEncrypt = new ArrayList<>();
-    addressKeyToEncrypt=new ArrayList<>();
-    userKeysToMasked=new ArrayList<>();
-    userKeyToDecrypt=new ArrayList<>();
     decryptionService =
             org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
                     null);

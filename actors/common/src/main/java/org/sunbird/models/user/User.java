@@ -68,7 +68,7 @@ public class User implements Serializable {
   private List<String> locationIds;
   private String prevUsedPhone;
   private String prevUsedEmail;
-  private boolean isSateValidated;
+  private Boolean isStateValidated;
 
   public List<String> getLocationIds() {
     return locationIds;
@@ -464,11 +464,12 @@ public class User implements Serializable {
     this.prevUsedEmail = prevUsedEmail;
   }
 
-  public boolean isSateValidated() {
-    return isSateValidated;
+  @JsonProperty(value = "isStateValidated")
+  public Boolean getIsStateValidated() {
+    return isStateValidated;
   }
 
-  public void setSateValidated(boolean sateValidated) {
-    isSateValidated = sateValidated;
+  public void setIsStateValidated(Boolean isStateValidated) {
+    this.isStateValidated = isStateValidated;
   }
 }

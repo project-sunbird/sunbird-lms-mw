@@ -415,6 +415,7 @@ public class UserManagementActor extends BaseActor {
       userRequestValidator.validateCreateUserV1Request(actorMessage);
     }
     validateChannelAndOrganisationId(userMap);
+    validatePrimaryAndRecoveryKeys(userMap);
 
     // remove these fields from req
     userMap.remove(JsonKey.ENC_EMAIL);
@@ -798,6 +799,36 @@ public class UserManagementActor extends BaseActor {
     if(userReqMap.containsKey(JsonKey.RECOVERY_PHONE) && Matcher.matchIdentifiers(userPrimaryPhone,recoveryPhone)){
       throwRecoveryParamsMatchException(JsonKey.PHONE,JsonKey.RECOVERY_PHONE);
     }
+    validatePrimaryEmailOrPhone(userDbRecord,userReqMap);
+    validatePrimaryAndRecoveryKeys(userReqMap);
+  }
+
+
+  private void validatePrimaryEmailOrPhone(Map<String,Object>userDbRecord,Map<String,Object>userReqMap){
+    String userPrimaryPhone=(String)userReqMap.get(JsonKey.PHONE);
+    String userPrimaryEmail=(String) userReqMap.get(JsonKey.EMAIL);
+    String recoveryEmail=(String)userDbRecord.get(JsonKey.RECOVERY_EMAIL);
+    String recoveryPhone=(String)userDbRecord.get(JsonKey.RECOVERY_PHONE);
+    if(userReqMap.containsKey(JsonKey.EMAIL) && Matcher.matchIdentifiers(userPrimaryEmail,recoveryEmail)){
+      throwRecoveryParamsMatchException(JsonKey.EMAIL,JsonKey.RECOVERY_EMAIL);
+    }
+    if(userReqMap.containsKey(JsonKey.PHONE) && Matcher.matchIdentifiers(userPrimaryPhone,recoveryPhone)){
+      throwRecoveryParamsMatchException(JsonKey.PHONE,JsonKey.RECOVERY_PHONE);
+    }
+  }
+
+  private void validatePrimaryAndRecoveryKeys(Map<String,Object>userReqMap){
+    String userPhone=(String)userReqMap.get(JsonKey.PHONE);
+    String userEmail=(String) userReqMap.get(JsonKey.EMAIL);
+    String userRecoveryEmail=(String)userReqMap.get(JsonKey.RECOVERY_EMAIL);
+    String userRecoveryPhone=(String)userReqMap.get(JsonKey.RECOVERY_PHONE);
+    if(userReqMap.containsKey(JsonKey.EMAIL) && Matcher.matchIdentifiers(userEmail,userRecoveryEmail)){
+      throwRecoveryParamsMatchException(JsonKey.EMAIL,JsonKey.RECOVERY_EMAIL);
+    }
+    if(userReqMap.containsKey(JsonKey.PHONE) && Matcher.matchIdentifiers(userPhone,userRecoveryPhone)){
+      throwRecoveryParamsMatchException(JsonKey.PHONE,JsonKey.RECOVERY_PHONE);
+    }
+
   }
 
 

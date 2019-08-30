@@ -262,7 +262,7 @@ public class UserServiceImpl implements UserService {
       try {
         Map<String, String> configSettingMap = DataCacheHandler.getConfigSettings();
         channel = configSettingMap.get(JsonKey.CUSTODIAN_ORG_CHANNEL);
-        if (channel == null || channel.isEmpty()) {
+        if (StringUtils.isBlank(channel)) {
           SystemSettingClient client = SystemSettingClientImpl.getInstance();
           SystemSetting custodianOrgChannelSetting =
                   client.getSystemSettingByField(

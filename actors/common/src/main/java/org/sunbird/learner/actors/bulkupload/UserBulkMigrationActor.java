@@ -8,10 +8,12 @@ import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.bean.Migration;
+import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.systemsetting.SystemSetting;
@@ -29,32 +31,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
     private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
     private static CSVReader csvReader;
     public static final String USER_BULK_MIGRATION_FIELD="shadowdbmandatorycolumn";
-    private String[] bulkUserAllowedFields = {
-            JsonKey.FIRST_NAME,
-            JsonKey.LAST_NAME,
-            JsonKey.PHONE,
-            JsonKey.COUNTRY_CODE,
-            JsonKey.EMAIL,
-            JsonKey.USERNAME,
-            JsonKey.PHONE_VERIFIED,
-            JsonKey.EMAIL_VERIFIED,
-            JsonKey.ROLES,
-            JsonKey.POSITION,
-            JsonKey.GRADE,
-            JsonKey.LOCATION,
-            JsonKey.DOB,
-            JsonKey.GENDER,
-            JsonKey.LANGUAGE,
-            JsonKey.PROFILE_SUMMARY,
-            JsonKey.SUBJECT,
-            JsonKey.WEB_PAGES,
-            JsonKey.EXTERNAL_ID_PROVIDER,
-            JsonKey.EXTERNAL_ID,
-            JsonKey.EXTERNAL_ID_TYPE,
-            JsonKey.EXTERNAL_IDS,
-            JsonKey.USER_ID,
-            JsonKey.ORG_ID
-    };
+    private static ObjectMapper mapper=new ObjectMapper();
 
     @Override
     public void onReceive(Request request) throws Throwable {
@@ -74,105 +51,45 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
                 systemSettingClient.getSystemSettingByField(
                         getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
                         USER_BULK_MIGRATION_FIELD);
-        Map<String,Object>values=new HashMap<>();
-        ObjectMapper mapper=new ObjectMapper();
-        values= mapper.readValue(systemSetting.getValue(),Map.class);
-        Map<String,List<String>>sp=(Map<String, List<String>>) values.get(JsonKey.FILE_TYPE_CSV);
+        Map<String,Object>values= mapper.readValue(systemSetting.getValue(),Map.class);
         validateRequest((byte[])req.get(JsonKey.FILE),values);
         Response response=new Response();
         response.put("hello",systemSetting.getValue());
         sender().tell(response,self());
-//        if (dataObject != null) {
-//            supportedColumnsMap =
-//                    ((Map<String, Object>) ((Map<String, Object>) dataObject).get("supportedColumns"));
-//            List<String> supportedColumnsList = new ArrayList<>();
-//            supportedColumnsLowerCaseMap =
-//                    supportedColumnsMap
-//                            .entrySet()
-//                            .stream()
-//                            .collect(
-//                                    Collectors.toMap(
-//                                            entry -> (entry.getKey()).toLowerCase(), entry -> entry.getValue()));
-//
-//            Map<String, Object> internalNamesLowerCaseMap = new HashMap<>();
-//            supportedColumnsMap.forEach(
-//                    (String k, Object v) -> {
-//                        internalNamesLowerCaseMap.put(v.toString().toLowerCase(), v.toString());
-//                    });
-//            supportedColumnsLowerCaseMap.putAll(internalNamesLowerCaseMap);
-//            supportedColumnsLowerCaseMap.forEach(
-//                    (key, value) -> {
-//                        supportedColumnsList.add(key);
-//                        supportedColumnsList.add((String) value);
-//                    });
-//            List<String> mandatoryColumns =
-//                    (List<String>) (((Map<String, Object>) dataObject).get("mandatoryColumns"));
-//            validateFileHeaderFields(
-//                    req,
-//                    supportedColumnsList.toArray(new String[supportedColumnsList.size()]),
-//                    false,
-//                    true,
-//                    mandatoryColumns,
-//                    supportedColumnsLowerCaseMap);
-//
-//        } else {
-//            validateFileHeaderFields(req, bulkUserAllowedFields, false);
-//        }
-//        BulkUploadProcess bulkUploadProcess =
-//                handleUpload(JsonKey.USER, (String) req.get(JsonKey.CREATED_BY));
-//        processUserBulkUpload(
-//                req, bulkUploadProcess.getId(), bulkUploadProcess, supportedColumnsLowerCaseMap);
-    }
 
-    private void processUserBulkUpload(
-            Map<String, Object> req,
-            String processId,
-            BulkUploadProcess bulkUploadProcess,
-            Map<String, Object> supportedColumnsMap)
-            throws IOException {
-        byte[] fileByteArray = null;
-        if (null != req.get(JsonKey.FILE)) {
-            fileByteArray = (byte[]) req.get(JsonKey.FILE);
-        }
-        Integer recordCount =
-                validateAndParseRecords(fileByteArray, processId, new HashMap(), supportedColumnsMap, true);
-        processBulkUpload(
-                recordCount,
-                processId,
-                bulkUploadProcess,
-                BulkUploadActorOperation.USER_BULK_UPLOAD_BACKGROUND_JOB.getValue(),
-                bulkUserAllowedFields);
     }
 
     private void validateRequest(byte[] fileData,Map<String,Object>fieldsMap){
-        try {
             String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
-            getCsvHeadersAsList(fileData, processId);
             Map<String, List<String>> columnsMap = (Map<String, List<String>>) fieldsMap.get(JsonKey.FILE_TYPE_CSV);
             Migration migration = new Migration.MigrationBuilder()
-                    .setHeaders(columnsMap.get(JsonKey.MANDATORY_FIELDS))
+                    .setHeaders(getCsvHeadersAsList(fileData,processId))
                     .setProcessId(processId)
+                    .setFileData(fileData)
+                    .setFileSize(fileData.length+"")
                     .setMandatoryFields(columnsMap.get(JsonKey.MANDATORY_FIELDS))
-                    .setSupportedFields(columnsMap.get("supportedColumn")).build();
-        }
-        catch (Exception e){
-            e.printStackTrace();
-        }
+                    .setSupportedFields(columnsMap.get(JsonKey.SUPPORTED_COlUMNS))
+                    .build();
+            System.out.println("the migration object is "+ migration.toString());
     }
 
-    private List<String> getCsvHeadersAsList(byte[] fileData,String processId) throws IOException {
+    private List<String> getCsvHeadersAsList(byte[] fileData,String processId){
+        List<String>headers=new ArrayList<>();
         try {
             csvReader = getCsvReader(fileData, ',', '"', 0);
-            List<String>headers=new ArrayList<String>(Arrays.asList(csvReader.readNext()));
-            return headers;
+            ProjectLogger.log("UserBulkMigrationActor:getCsvHeadersAsList:csvReader initialized ".concat(csvReader.toString()),LoggerEnum.ERROR.name());
+            headers.addAll(Arrays.asList(csvReader.readNext()));
+            headers.replaceAll(String::toLowerCase);
         }
         catch (Exception ex) {
-            BulkUploadProcess bulkUploadProcess =
-                    getBulkUploadProcessForFailedStatus(processId, ProjectUtil.BulkProcessStatus.FAILED.getValue(), ex);
-            bulkUploadDao.update(bulkUploadProcess);
-            throw ex;
+            ProjectLogger.log("UserBulkMigrationActor:getCsvHeadersAsList:error occurred while getting csvReader",LoggerEnum.ERROR.name());
+            throw new ProjectCommonException(
+                    ResponseCode.SERVER_ERROR.getErrorCode(),
+                    ResponseCode.SERVER_ERROR.getErrorMessage(),
+                    ResponseCode.SERVER_ERROR.getResponseCode());
         } finally {
             IOUtils.closeQuietly(csvReader);
         }
+        return headers;
     }
 }

@@ -3,6 +3,8 @@ package org.sunbird.validator.user;
 import com.mchange.v1.util.ArrayUtils;
 import org.sunbird.bean.Migration;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.responsecode.ResponseCode;
 public class UserBulkMigrationRequestValidator {
 
@@ -25,7 +27,8 @@ public class UserBulkMigrationRequestValidator {
     private void mandatoryColumns(){
         migration.getMandatoryFields().forEach(
                 column->{
-                    if(!migration.getHeaders().contains(column)){
+                    if(!migration.getHeaders().contains(column.toLowerCase())){
+                        ProjectLogger.log("UserBulkMigrationRequestValidator:mandatoryColumns: mandatory column is not present".concat(column+""), LoggerEnum.ERROR.name());
                         throw new ProjectCommonException(
                                 ResponseCode.mandatoryParamsMissing.getErrorCode(),
                                 ResponseCode.mandatoryParamsMissing.getErrorMessage(),
@@ -38,12 +41,13 @@ public class UserBulkMigrationRequestValidator {
 
     private void supportedColumns(){
         migration.getHeaders().forEach(suppColumn->{
-            if(!migration.getSupportedFields().contains(suppColumn)){
+            if(!migration.getSupportedFields().contains(suppColumn.toLowerCase())){
+                ProjectLogger.log("UserBulkMigrationRequestValidator:supportedColumns: supported column is not present".concat(suppColumn+""), LoggerEnum.ERROR.name());
                 throw new ProjectCommonException(
                         ResponseCode.errorUnsupportedField.getErrorCode(),
                         ResponseCode.errorUnsupportedField.getErrorMessage(),
                         ResponseCode.CLIENT_ERROR.getResponseCode(),
-                        "supported header list ".concat(ArrayUtils.stringifyContents(migration.getSupportedFields().toArray())));
+                        "Invalid provided column ".concat(suppColumn).concat("supported headers are:").concat(ArrayUtils.stringifyContents(migration.getSupportedFields().toArray())));
             }
         });
     }

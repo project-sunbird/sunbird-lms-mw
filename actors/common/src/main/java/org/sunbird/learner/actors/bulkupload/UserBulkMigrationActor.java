@@ -1,14 +1,15 @@
 package org.sunbird.learner.actors.bulkupload;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.opencsv.CSVReader;
+import jodd.util.ArraysUtil;
+import org.apache.commons.io.IOUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
+import org.sunbird.bean.Migration;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.BulkUploadActorOperation;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.TelemetryEnvKey;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
@@ -17,9 +18,8 @@ import org.sunbird.models.systemsetting.SystemSetting;
 import org.sunbird.validator.user.UserBulkMigrationRequestValidator;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.UnsupportedEncodingException;
+import java.util.*;
 
 @ActorConfig(
         tasks = {"userBulkMigration"},
@@ -27,6 +27,7 @@ import java.util.Map;
 )
 public class UserBulkMigrationActor extends BaseBulkUploadActor {
     private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
+    private static CSVReader csvReader;
     public static final String USER_BULK_MIGRATION_FIELD="shadowdbmandatorycolumn";
     private String[] bulkUserAllowedFields = {
             JsonKey.FIRST_NAME,
@@ -73,11 +74,11 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
                 systemSettingClient.getSystemSettingByField(
                         getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
                         USER_BULK_MIGRATION_FIELD);
-        Map<System,Object>values=new HashMap<>();
+        Map<String,Object>values=new HashMap<>();
         ObjectMapper mapper=new ObjectMapper();
         values= mapper.readValue(systemSetting.getValue(),Map.class);
         Map<String,List<String>>sp=(Map<String, List<String>>) values.get(JsonKey.FILE_TYPE_CSV);
-        UserBulkMigrationRequestValidator.getInstance((byte[])req.get(JsonKey.FILE),sp).validate();
+        validateRequest((byte[])req.get(JsonKey.FILE),values);
         Response response=new Response();
         response.put("hello",systemSetting.getValue());
         sender().tell(response,self());
@@ -143,5 +144,35 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
                 bulkUserAllowedFields);
     }
 
+    private void validateRequest(byte[] fileData,Map<String,Object>fieldsMap){
+        try {
+            String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
+            getCsvHeadersAsList(fileData, processId);
+            Map<String, List<String>> columnsMap = (Map<String, List<String>>) fieldsMap.get(JsonKey.FILE_TYPE_CSV);
+            Migration migration = new Migration.MigrationBuilder()
+                    .setHeaders(columnsMap.get(JsonKey.MANDATORY_FIELDS))
+                    .setProcessId(processId)
+                    .setMandatoryFields(columnsMap.get(JsonKey.MANDATORY_FIELDS))
+                    .setSupportedFields(columnsMap.get("supportedColumn")).build();
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
+    }
 
+    private List<String> getCsvHeadersAsList(byte[] fileData,String processId) throws IOException {
+        try {
+            csvReader = getCsvReader(fileData, ',', '"', 0);
+            List<String>headers=new ArrayList<String>(Arrays.asList(csvReader.readNext()));
+            return headers;
+        }
+        catch (Exception ex) {
+            BulkUploadProcess bulkUploadProcess =
+                    getBulkUploadProcessForFailedStatus(processId, ProjectUtil.BulkProcessStatus.FAILED.getValue(), ex);
+            bulkUploadDao.update(bulkUploadProcess);
+            throw ex;
+        } finally {
+            IOUtils.closeQuietly(csvReader);
+        }
+    }
 }

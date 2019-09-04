@@ -1,27 +1,50 @@
 package org.sunbird.validator.user;
 
+import com.mchange.v1.util.ArrayUtils;
 import org.sunbird.bean.Migration;
-import org.sunbird.common.models.util.JsonKey;
-import java.util.List;
-import java.util.Map;
-
+import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.responsecode.ResponseCode;
 public class UserBulkMigrationRequestValidator {
 
-    private byte[] file;
-    private  Map<String, List<String>>fieldsConfigurationMap;
+    private Migration migration;
 
-    public static UserBulkMigrationRequestValidator getInstance(byte[] file, Map<String, List<String>>fieldsConfigurationMap){
-        return new UserBulkMigrationRequestValidator(file,fieldsConfigurationMap);
+    private UserBulkMigrationRequestValidator(Migration migration) {
+        this.migration = migration;
     }
-    private UserBulkMigrationRequestValidator(byte[] file, Map<String, List<String>>fieldsConfigurationMap) {
-        this.file=file;
-        this.fieldsConfigurationMap=fieldsConfigurationMap;
+    public static UserBulkMigrationRequestValidator getInstance(Migration migration){
+        return new UserBulkMigrationRequestValidator(migration);
     }
-    public void validate(){
-        Migration migration=new Migration.MigrationBuilder().setFileData(file).setFileSize("20mb").setHeaders(getMandatoryField()).build();
+    public void validate()
+    {
+        csvHeader();
     }
+    private void csvHeader(){
+        mandatoryColumns();
+        supportedColumns();
+    }
+    private void mandatoryColumns(){
+        migration.getMandatoryFields().forEach(
+                column->{
+                    if(!migration.getHeaders().contains(column)){
+                        throw new ProjectCommonException(
+                                ResponseCode.mandatoryParamsMissing.getErrorCode(),
+                                ResponseCode.mandatoryParamsMissing.getErrorMessage(),
+                                ResponseCode.CLIENT_ERROR.getResponseCode(),
+                                column);
+                    }
+                }
+        );
+        }
 
-    private List<String> getMandatoryField(){
-        return fieldsConfigurationMap.get(JsonKey.MANDATORY_FIELDS);
+    private void supportedColumns(){
+        migration.getHeaders().forEach(suppColumn->{
+            if(!migration.getSupportedFields().contains(suppColumn)){
+                throw new ProjectCommonException(
+                        ResponseCode.errorUnsupportedField.getErrorCode(),
+                        ResponseCode.errorUnsupportedField.getErrorMessage(),
+                        ResponseCode.CLIENT_ERROR.getResponseCode(),
+                        "supported header list ".concat(ArrayUtils.stringifyContents(migration.getSupportedFields().toArray())));
+            }
+        });
     }
-}
+    }

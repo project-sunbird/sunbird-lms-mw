@@ -1,5 +1,7 @@
 package org.sunbird.bean;
 
+import org.sunbird.validator.user.UserBulkMigrationRequestValidator;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -10,6 +12,7 @@ public class Migration {
     private byte[] fileData;
     private List<String>mandatoryFields;
     private List<String>supportedFields;
+    private String processId;
 
     private Migration(MigrationBuilder migrationBuilder) {
         this.fileSize = migrationBuilder.fileSize;
@@ -39,7 +42,6 @@ public class Migration {
         return supportedFields;
     }
 
-
     @Override
     public String toString() {
         return "Migration{" +
@@ -48,8 +50,14 @@ public class Migration {
                 ", fileData=" + Arrays.toString(fileData) +
                 ", mandatoryFields=" + mandatoryFields +
                 ", supportedFields=" + supportedFields +
+                ", processId='" + processId + '\'' +
                 '}';
     }
+
+    public String getProcessId() {
+        return processId;
+    }
+
 
     public static class MigrationBuilder{
 
@@ -58,6 +66,8 @@ public class Migration {
         private byte[] fileData;
         private List<String>mandatoryFields;
         private List<String>supportedFields;
+        private String processId;
+
         public MigrationBuilder() {
         }
 
@@ -85,9 +95,18 @@ public class Migration {
             return this;
         }
 
+        public MigrationBuilder setProcessId(String processId){
+            this.processId=processId;
+            return this;
+        }
+
         public Migration build(){
             Migration migration=new Migration(this);
+            validate(migration);
             return migration;
+        }
+        private void validate(Migration migration){
+            UserBulkMigrationRequestValidator.getInstance(migration).validate();
         }
     }
 }

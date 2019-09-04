@@ -156,6 +156,13 @@ public class UserManagementActor extends BaseActor {
       requestMap.put(
           JsonKey.TNC_ACCEPTED_ON, new Timestamp((Long) requestMap.get(JsonKey.TNC_ACCEPTED_ON)));
     }
+    if( requestMap.containsKey(JsonKey.RECOVERY_EMAIL) && StringUtils.isBlank((String)requestMap.get(JsonKey.RECOVERY_EMAIL))){
+      requestMap.put(JsonKey.RECOVERY_EMAIL,null);
+    }
+    if( requestMap.containsKey(JsonKey.RECOVERY_PHONE) && StringUtils.isBlank((String)requestMap.get(JsonKey.RECOVERY_PHONE))){
+      requestMap.put(JsonKey.RECOVERY_PHONE,null);
+    }
+
     Response response =
         cassandraOperation.updateRecord(
             usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);

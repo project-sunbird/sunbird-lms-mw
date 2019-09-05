@@ -69,6 +69,8 @@ public class User implements Serializable {
   private String prevUsedPhone;
   private String prevUsedEmail;
   private int flagsValue;
+  private String recoveryEmail;
+  private String recoveryPhone;
 
   public List<String> getLocationIds() {
     return locationIds;
@@ -471,4 +473,20 @@ public class User implements Serializable {
   public void setFlagsValue(int flagsValue) {
     this.flagsValue = flagsValue;
   }
+  public String getRecoveryEmail() {
+    return recoveryEmail;
+  }
+
+  public void setRecoveryEmail(String recoveryEmail) {
+    this.recoveryEmail = recoveryEmail;
+  }
+
+  public String getRecoveryPhone() {
+    return recoveryPhone;
+  }
+
+  public void setRecoveryPhone(String recoveryPhone) {
+    this.recoveryPhone = recoveryPhone;
+  }
+
 }

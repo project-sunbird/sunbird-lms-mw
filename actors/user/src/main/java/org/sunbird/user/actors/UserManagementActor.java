@@ -164,7 +164,8 @@ public class UserManagementActor extends BaseActor {
       requestMap.put(JsonKey.RECOVERY_PHONE,null);
     }
 
-    //updatedUserFlagsMap(requestMap, userDbRecord);
+    Map<String, Object> userBooleanMap = updatedUserFlagsMap(requestMap, userDbRecord);
+    userBoolFlagToNum(requestMap, userBooleanMap);
     Response response =
         cassandraOperation.updateRecord(
             usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
@@ -190,7 +191,7 @@ public class UserManagementActor extends BaseActor {
     if (null != resp) {
       Map<String, Object> completeUserDetails = new HashMap<>(userDbRecord);
       completeUserDetails.putAll(requestMap);
-      saveUserDetailsToEs(completeUserDetails);
+      saveUserDetailsToEs(completeUserDetails, userBooleanMap);
     }
     targetObject =
         TelemetryUtil.generateTargetObject(
@@ -580,12 +581,12 @@ public class UserManagementActor extends BaseActor {
     UserUtil.addMaskEmailAndMaskPhone(requestMap);
     removeUnwanted(requestMap);
     requestMap.put(JsonKey.IS_DELETED, false);
-    Map<String, Object> userBooleanMap = new HashMap<>();
+    Map<String, Object> userFlagsMap = new HashMap<>();
     //checks if the user is belongs to state and sets a validation flag
-    setStateValidation(requestMap, userBooleanMap);
-    userBooleanMap.put(JsonKey.EMAIL_VERIFIED, requestMap.get(JsonKey.EMAIL_VERIFIED));
-    userBooleanMap.put(JsonKey.PHONE_VERIFIED, requestMap.get(JsonKey.PHONE_VERIFIED));
-    userBoolFlagToNum(requestMap, userBooleanMap);
+    setStateValidation(requestMap, userFlagsMap);
+    userFlagsMap.put(JsonKey.EMAIL_VERIFIED, requestMap.get(JsonKey.EMAIL_VERIFIED));
+    userFlagsMap.put(JsonKey.PHONE_VERIFIED, requestMap.get(JsonKey.PHONE_VERIFIED));
+    userBoolFlagToNum(requestMap, userFlagsMap);
 
     Response response = null;
     boolean isPasswordUpdated = false;
@@ -618,13 +619,13 @@ public class UserManagementActor extends BaseActor {
     Map<String, Object> esResponse = new HashMap<>();
     esResponse.putAll((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE));
     esResponse.putAll(requestMap);
-    esResponse.putAll(userBooleanMap);
+    esResponse.putAll(userFlagsMap);
     response.put(
         JsonKey.ERRORS,
         ((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE)).get(JsonKey.ERRORS));
     sender().tell(response, self());
     if (null != resp) {
-      saveUserDetailsToEs(esResponse);
+      saveUserDetailsToEs(esResponse, userFlagsMap);
     }
     requestMap.put(JsonKey.PASSWORD, userMap.get(JsonKey.PASSWORD));
     if (StringUtils.isNotBlank(callerId)) {
@@ -688,7 +689,7 @@ public class UserManagementActor extends BaseActor {
     userBooleanMap.put(JsonKey.IS_STATE_VALIDATED, !rootOrgId.equals(custodianRootOrgId));
   }
 
-  private void updatedUserFlagsMap(Map<String, Object> userMap, Map<String, Object> userDbRecord) {
+  private Map<String, Object> updatedUserFlagsMap(Map<String, Object> userMap, Map<String, Object> userDbRecord) {
     Map<String, Object> userBooleanMap = new HashMap<>();
     boolean emailVerified = (boolean) (userMap.containsKey(JsonKey.EMAIL_VERIFIED) ?  userMap.get(JsonKey.EMAIL_VERIFIED) : userDbRecord.get(JsonKey.EMAIL_VERIFIED));
     boolean phoneVerified = (boolean) (userMap.containsKey(JsonKey.PHONE_VERIFIED) ?  userMap.get(JsonKey.PHONE_VERIFIED) : userDbRecord.get(JsonKey.PHONE_VERIFIED));
@@ -696,7 +697,7 @@ public class UserManagementActor extends BaseActor {
     userBooleanMap.put(JsonKey.EMAIL_VERIFIED, emailVerified);
     userBooleanMap.put(JsonKey.PHONE_VERIFIED, phoneVerified);
     userBooleanMap.put(JsonKey.IS_STATE_VALIDATED, isStateValidated);
-    userBoolFlagToNum(userMap, userBooleanMap);
+    return userBooleanMap;
   }
 
   private String getCustodianRootOrgId() {
@@ -736,10 +737,11 @@ public class UserManagementActor extends BaseActor {
     tellToAnother(EmailAndSmsRequest);
   }
 
-  private void saveUserDetailsToEs(Map<String, Object> completeUserMap) {
+  private void saveUserDetailsToEs(Map<String, Object> completeUserMap, Map<String, Object> userBooleanMap) {
     Request userRequest = new Request();
     userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
     userRequest.getRequest().put(JsonKey.ID, completeUserMap.get(JsonKey.ID));
+    userRequest.getRequest().put("userFlagsMap",userBooleanMap);
     ProjectLogger.log(
         "UserManagementActor:saveUserDetailsToEs: Trigger sync of user details to ES");
     tellToAnother(userRequest);

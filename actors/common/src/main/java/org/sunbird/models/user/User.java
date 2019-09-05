@@ -26,17 +26,17 @@ public class User implements Serializable {
   private String createdDate;
   private String dob;
   private String email;
-  private boolean emailVerified;
+  private Boolean emailVerified;
   private String firstName;
   private String gender;
   private List<String> grade;
-  private boolean isDeleted;
+  private Boolean isDeleted;
   private List<String> language;
   private String lastLoginTime;
   private String lastName;
   private String location;
   private String phone;
-  private boolean phoneVerified;
+  private Boolean phoneVerified;
   private String profileSummary;
   private Map<String, String> profileVisibility;
   private String provider;
@@ -176,11 +176,11 @@ public class User implements Serializable {
     this.email = email;
   }
 
-  public boolean getEmailVerified() {
+  public Boolean getEmailVerified() {
     return emailVerified;
   }
 
-  public void setEmailVerified(boolean emailVerified) {
+  public void setEmailVerified(Boolean emailVerified) {
     this.emailVerified = emailVerified;
   }
 
@@ -209,11 +209,11 @@ public class User implements Serializable {
   }
 
   @JsonProperty(value = "isDeleted")
-  public boolean getIsDeleted() {
+  public Boolean getIsDeleted() {
     return isDeleted;
   }
 
-  public void setIsDeleted(boolean isDeleted) {
+  public void setIsDeleted(Boolean isDeleted) {
     this.isDeleted = isDeleted;
   }
 
@@ -409,11 +409,11 @@ public class User implements Serializable {
     this.framework = framework;
   }
 
-  public boolean getPhoneVerified() {
+  public Boolean getPhoneVerified() {
     return phoneVerified;
   }
 
-  public void setPhoneVerified(boolean phoneVerified) {
+  public void setPhoneVerified(Boolean phoneVerified) {
     this.phoneVerified = phoneVerified;
   }
 

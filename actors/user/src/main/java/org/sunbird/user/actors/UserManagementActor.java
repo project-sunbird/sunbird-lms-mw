@@ -55,6 +55,7 @@ import org.sunbird.user.dao.impl.UserOrgDaoImpl;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.UserActorOperations;
+import org.sunbird.user.util.UserBoolFlagEnum;
 import org.sunbird.user.util.UserUtil;
 
 @ActorConfig(
@@ -154,6 +155,7 @@ public class UserManagementActor extends BaseActor {
       requestMap.put(
           JsonKey.TNC_ACCEPTED_ON, new Timestamp((Long) requestMap.get(JsonKey.TNC_ACCEPTED_ON)));
     }
+    //updatedUserFlagsMap(requestMap, userDbRecord);
     Response response =
         cassandraOperation.updateRecord(
             usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
@@ -554,10 +556,8 @@ public class UserManagementActor extends BaseActor {
       Map<String, Object> userMap, String callerId, String signupType, String source) {
     Map<String, Object> requestMap = null;
     UserUtil.setUserDefaultValue(userMap, callerId);
-    //checks if the user is belongs to state and sets a validation flag
-    setStateValidation(userMap);
-
     User user = mapper.convertValue(userMap, User.class);
+
     UserUtil.validateExternalIds(user, JsonKey.CREATE);
     userMap.put(JsonKey.EXTERNAL_IDS, user.getExternalIds());
     UserUtil.validateUserPhoneEmailAndWebPages(user, JsonKey.CREATE);
@@ -570,7 +570,14 @@ public class UserManagementActor extends BaseActor {
     requestMap = UserUtil.encryptUserData(userMap);
     UserUtil.addMaskEmailAndMaskPhone(requestMap);
     removeUnwanted(requestMap);
+
     requestMap.put(JsonKey.IS_DELETED, false);
+    Map<String, Object> userBooleanMap = new HashMap<>();
+    //checks if the user is belongs to state and sets a validation flag
+    setStateValidation(requestMap, userBooleanMap);
+    userBooleanMap.put(JsonKey.EMAIL_VERIFIED, requestMap.get(JsonKey.EMAIL_VERIFIED));
+    userBooleanMap.put(JsonKey.PHONE_VERIFIED, requestMap.get(JsonKey.PHONE_VERIFIED));
+    userBoolFlagToNum(requestMap, userBooleanMap);
 
     Response response = null;
     boolean isPasswordUpdated = false;
@@ -603,6 +610,7 @@ public class UserManagementActor extends BaseActor {
     Map<String, Object> esResponse = new HashMap<>();
     esResponse.putAll((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE));
     esResponse.putAll(requestMap);
+    esResponse.putAll(userBooleanMap);
     response.put(
         JsonKey.ERRORS,
         ((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE)).get(JsonKey.ERRORS));
@@ -639,11 +647,48 @@ public class UserManagementActor extends BaseActor {
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
   }
 
-  private void setStateValidation(Map<String, Object> userMap) {
-    String rootOrgId = (String) userMap.get(JsonKey.ROOT_ORG_ID);
+  private void userBoolFlagToNum(Map<String, Object> requestMap, Map<String, Object> userBooleanMap) {
+    int userFlagValue = 0;
+    Set<Map.Entry<String, Object>> mapEntry = userBooleanMap.entrySet();
+    for(Map.Entry<String, Object> entry: mapEntry) {
+      if(StringUtils.isNotEmpty(entry.getKey())) {
+        userFlagValue += boolFlagValue(entry.getKey(), (Boolean) entry.getValue());
+      }
+    }
+    requestMap.put("flagsValue",userFlagValue);
+  }
+
+  public int boolFlagValue(String userFlagType, boolean isFlagEnabled) {
+    int decimalValue = 0;
+    if(userFlagType.equals(UserBoolFlagEnum.PHONE_VERIFIED.getUserFlagType()) &&
+            isFlagEnabled==UserBoolFlagEnum.PHONE_VERIFIED.isFlagEnabled()) {
+      decimalValue = UserBoolFlagEnum.PHONE_VERIFIED.getUserFlagValue();
+    } else if (userFlagType.equals(UserBoolFlagEnum.EMAIL_VERIFIED.getUserFlagType()) &&
+            isFlagEnabled==UserBoolFlagEnum.EMAIL_VERIFIED.isFlagEnabled()) {
+      decimalValue = UserBoolFlagEnum.EMAIL_VERIFIED.getUserFlagValue();
+    } else if (userFlagType.equals(UserBoolFlagEnum.IS_STATE_VALIDATED.getUserFlagType()) &&
+            isFlagEnabled==UserBoolFlagEnum.IS_STATE_VALIDATED.isFlagEnabled()) {
+      decimalValue = UserBoolFlagEnum.IS_STATE_VALIDATED.getUserFlagValue();
+    }
+    return decimalValue;
+  }
+
+  private void setStateValidation(Map<String, Object> requestMap, Map<String, Object> userBooleanMap) {
+    String rootOrgId = (String) requestMap.get(JsonKey.ROOT_ORG_ID);
     String custodianRootOrgId = getCustodianRootOrgId();
     //if the user is creating for non-custodian(i.e state) the value is set as true else false
-    userMap.put(JsonKey.IS_STATE_VALIDATED, !rootOrgId.equals(custodianRootOrgId));
+    userBooleanMap.put(JsonKey.IS_STATE_VALIDATED, !rootOrgId.equals(custodianRootOrgId));
+  }
+
+  private void updatedUserFlagsMap(Map<String, Object> userMap, Map<String, Object> userDbRecord) {
+    Map<String, Object> userBooleanMap = new HashMap<>();
+    boolean emailVerified = (boolean) (userMap.containsKey(JsonKey.EMAIL_VERIFIED) ?  userMap.get(JsonKey.EMAIL_VERIFIED) : userDbRecord.get(JsonKey.EMAIL_VERIFIED));
+    boolean phoneVerified = (boolean) (userMap.containsKey(JsonKey.PHONE_VERIFIED) ?  userMap.get(JsonKey.PHONE_VERIFIED) : userDbRecord.get(JsonKey.PHONE_VERIFIED));
+    boolean isStateValidated = (boolean) (userMap.containsKey(JsonKey.IS_STATE_VALIDATED) ?  userMap.get(JsonKey.IS_STATE_VALIDATED) : userDbRecord.get(JsonKey.IS_STATE_VALIDATED));
+    userBooleanMap.put(JsonKey.EMAIL_VERIFIED, emailVerified);
+    userBooleanMap.put(JsonKey.PHONE_VERIFIED, phoneVerified);
+    userBooleanMap.put(JsonKey.IS_STATE_VALIDATED, isStateValidated);
+    userBoolFlagToNum(userMap, userBooleanMap);
   }
 
   private String getCustodianRootOrgId() {

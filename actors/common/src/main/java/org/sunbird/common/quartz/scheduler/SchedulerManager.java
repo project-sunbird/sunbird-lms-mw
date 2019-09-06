@@ -59,7 +59,6 @@ public final class SchedulerManager {
         scheduler = new StdSchedulerFactory().getScheduler();
       }
       String identifier = "NetOps-PC1502295457753";
-      scheduleCourseBatchCount(identifier);
       scheduleBulkUploadJob(identifier);
       // scheduleCoursePublishJob(identifier);
       scheduleMetricsReportJob(identifier);
@@ -239,47 +238,6 @@ public final class SchedulerManager {
       ProjectLogger.log(
           "SchedulerManager:scheduleBulkUploadJob: UploadLookUpScheduler schedular started",
           LoggerEnum.INFO.name());
-    } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(), e);
-    }
-  }
-
-  private void scheduleCourseBatchCount(String identifier) {
-    // 1- create a job and bind with class which is implementing Job
-    // interface.
-    JobDetail job =
-        JobBuilder.newJob(ManageCourseBatchCount.class)
-            .requestRecovery(true)
-            .withDescription("Scheduler for computing active count of batches for each course")
-            .withIdentity("schedulerJob", identifier)
-            .build();
-
-    // 2- Create a trigger object that will define frequency of run.
-    // This scheduler will run every day 11:30 PM IN GMT and 6 PM on UTC.
-    // server time is set in UTC so all scheduler need to be manage based on that
-    // time only.
-    String configValue = PropertiesCache.getInstance().readProperty("quartz_course_batch_timer");
-    if (StringUtils.isEmpty(configValue)) {
-      ProjectLogger.log(
-          "SchedulerManager:scheduleCourseBatchCount: Error in starting Course batch count scheduler , quartz_course_batch_timer value not found",
-          LoggerEnum.INFO);
-      return;
-    }
-    Trigger trigger =
-        TriggerBuilder.newTrigger()
-            .withIdentity("schedulertrigger", identifier)
-            .withSchedule(
-                CronScheduleBuilder.cronSchedule(
-                    PropertiesCache.getInstance().readProperty("quartz_course_batch_timer")))
-            .build();
-    try {
-      if (scheduler.checkExists(job.getKey())) {
-        scheduler.deleteJob(job.getKey());
-      }
-      scheduler.scheduleJob(job, trigger);
-      scheduler.start();
-      ProjectLogger.log(
-          "SchedulerManager:scheduleCourseBatchCount: schedular started", LoggerEnum.INFO.name());
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }

@@ -2,26 +2,27 @@ package org.sunbird.learner.actors.bulkupload;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencsv.CSVReader;
-import jodd.util.ArraysUtil;
 import org.apache.commons.io.IOUtils;
+import org.stringtemplate.v4.ST;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.bean.Migration;
+import org.sunbird.bean.MigrationUser;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.systemsetting.SystemSetting;
-import org.sunbird.validator.user.UserBulkMigrationRequestValidator;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 @ActorConfig(
         tasks = {"userBulkMigration"},
@@ -62,13 +63,16 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
     private void validateRequest(byte[] fileData,Map<String,Object>fieldsMap){
             String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
             Map<String, List<String>> columnsMap = (Map<String, List<String>>) fieldsMap.get(JsonKey.FILE_TYPE_CSV);
+            List<String>mappedCsvHeaders=mappedCsvColumn(getCsvHeadersAsList(fileData,processId));
+            List<MigrationUser>migrationUserList=parseCsvRows(getCsvRowsAsList(fileData),mappedCsvHeaders);
             Migration migration = new Migration.MigrationBuilder()
-                    .setHeaders(getCsvHeadersAsList(fileData,processId))
+                    .setHeaders(mappedCsvHeaders)
                     .setProcessId(processId)
                     .setFileData(fileData)
                     .setFileSize(fileData.length+"")
                     .setMandatoryFields(columnsMap.get(JsonKey.MANDATORY_FIELDS))
                     .setSupportedFields(columnsMap.get(JsonKey.SUPPORTED_COlUMNS))
+                    .setValues(migrationUserList)
                     .build();
             System.out.println("the migration object is "+ migration.toString());
     }
@@ -91,5 +95,103 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
             IOUtils.closeQuietly(csvReader);
         }
         return headers;
+    }
+    private List<String[]> getCsvRowsAsList(byte[] fileData){
+        List<String[]>values=new ArrayList<>();
+        try {
+            csvReader = getCsvReader(fileData, ',', '"', 1);
+            ProjectLogger.log("UserBulkMigrationActor:getCsvRowsAsList:csvReader initialized ".concat(csvReader.toString()),LoggerEnum.ERROR.name());
+            values=csvReader.readAll();
+        }
+        catch (Exception ex) {
+            ProjectLogger.log("UserBulkMigrationActor:getCsvRowsAsList:error occurred while getting csvReader",LoggerEnum.ERROR.name());
+            throw new ProjectCommonException(
+                    ResponseCode.SERVER_ERROR.getErrorCode(),
+                    ResponseCode.SERVER_ERROR.getErrorMessage(),
+                    ResponseCode.SERVER_ERROR.getResponseCode());
+        } finally {
+            IOUtils.closeQuietly(csvReader);
+        }
+        return values;
+    }
+
+    private List<String> mappedCsvColumn(List<String> csvColumns){
+        List<String> mappedColumns=new ArrayList<>();
+        csvColumns.forEach(column->{
+            if(column.equalsIgnoreCase(JsonKey.EMAIL)){
+                mappedColumns.add(column);
+            }
+            if (column.equalsIgnoreCase(JsonKey.PHONE)) {
+                 mappedColumns.add(column);
+            }
+            if(column.equalsIgnoreCase(JsonKey.STATE)){
+                mappedColumns.add(JsonKey.CHANNEL);
+            }
+            if(column.equalsIgnoreCase("ext user id"))
+            {
+                mappedColumns.add(JsonKey.USER_EXTERNAL_ID);
+            }
+            if(column.equalsIgnoreCase("ext org id")){
+                mappedColumns.add(JsonKey.ORG_EXTERNAL_ID);
+            }
+            if(column.equalsIgnoreCase(JsonKey.NAME)){
+                mappedColumns.add(JsonKey.FIRST_NAME);
+            }
+            if(column.equalsIgnoreCase("input status")){
+                mappedColumns.add(column);
+            }
+        });
+      return mappedColumns;
+
+    }
+
+    private List<MigrationUser> parseCsvRows(List<String[]> values,List<String>mappedHeaders){
+        List<MigrationUser> migrationUserList=new ArrayList<>();
+        values.stream().forEach(row->{
+            MigrationUser migrationUser=new MigrationUser();
+            for(int i=0;i<row.length;i++){
+                String columnName=getColumnNameByIndex(mappedHeaders,i);
+                setFieldToMigrationUserObject(migrationUser,columnName,row[i]);
+            }
+            migrationUserList.add(migrationUser);
+        });
+        return migrationUserList;
+    }
+
+    private void setFieldToMigrationUserObject(MigrationUser migrationUser,String columnAttribute,Object value){
+
+        if(columnAttribute.equalsIgnoreCase(JsonKey.EMAIL)){
+            String email=(String)value;
+            migrationUser.setEmail(email);
+        }
+        if(columnAttribute.equalsIgnoreCase(JsonKey.PHONE)){
+            String phone=(String)value;
+            migrationUser.setPhone(phone);
+        }
+        if(columnAttribute.equalsIgnoreCase(JsonKey.CHANNEL)){
+            String state=(String)value;
+            migrationUser.setChannel(state);
+        }
+
+        if(columnAttribute.equalsIgnoreCase(JsonKey.ORG_EXTERNAL_ID)){
+            migrationUser.setOrgExternalId((String)value);
+        }
+        if(columnAttribute.equalsIgnoreCase(JsonKey.USER_EXTERNAL_ID)){
+            migrationUser.setUserExternalId((String)value);
+        }
+
+        if(columnAttribute.equalsIgnoreCase(JsonKey.NAME)){
+            migrationUser.setName((String)value);
+        }
+        if(columnAttribute.equalsIgnoreCase("input status"))
+        {
+            migrationUser.setInputStatus(Boolean.parseBoolean(((String) value).toLowerCase()));
+
+        }
+    }
+
+
+    private String getColumnNameByIndex(List<String>mappedHeaders,int index){
+        return mappedHeaders.get(index);
     }
 }

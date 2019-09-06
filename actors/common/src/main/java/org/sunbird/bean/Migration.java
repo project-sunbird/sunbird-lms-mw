@@ -13,6 +13,7 @@ public class Migration {
     private List<String>mandatoryFields;
     private List<String>supportedFields;
     private String processId;
+    private List<MigrationUser>values;
 
     private Migration(MigrationBuilder migrationBuilder) {
         this.fileSize = migrationBuilder.fileSize;
@@ -20,6 +21,8 @@ public class Migration {
         this.fileData = migrationBuilder.fileData;
         this.mandatoryFields=migrationBuilder.mandatoryFields;
         this.supportedFields=migrationBuilder.supportedFields;
+        this.processId=migrationBuilder.processId;
+        this.values=migrationBuilder.values;
 
     }
     public String getFileSize() {
@@ -42,6 +45,10 @@ public class Migration {
         return supportedFields;
     }
 
+    public List<MigrationUser> getValues() {
+        return values;
+    }
+
     @Override
     public String toString() {
         return "Migration{" +
@@ -51,8 +58,10 @@ public class Migration {
                 ", mandatoryFields=" + mandatoryFields +
                 ", supportedFields=" + supportedFields +
                 ", processId='" + processId + '\'' +
+                ", values=" + values +
                 '}';
     }
+
 
     public String getProcessId() {
         return processId;
@@ -67,6 +76,7 @@ public class Migration {
         private List<String>mandatoryFields;
         private List<String>supportedFields;
         private String processId;
+        private List<MigrationUser>values;
 
         public MigrationBuilder() {
         }
@@ -97,6 +107,11 @@ public class Migration {
 
         public MigrationBuilder setProcessId(String processId){
             this.processId=processId;
+            return this;
+        }
+
+        public MigrationBuilder setValues(List<MigrationUser>values){
+            this.values=values;
             return this;
         }
 

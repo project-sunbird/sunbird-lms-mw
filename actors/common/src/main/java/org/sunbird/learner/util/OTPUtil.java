@@ -125,23 +125,20 @@ public final class OTPUtil {
     return null;
   }
 
-  public static Request sendOTPViaEmail(Map<String, Object> emailTemplateMap, String OtpType) {
+  public static Request sendOTPViaEmail(Map<String, Object> emailTemplateMap, String otpType) {
     Request request = null;
     if ((StringUtils.isBlank((String) emailTemplateMap.get(JsonKey.EMAIL)))) {
       return request;
     }
     String envName = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME);
-    String welcomeSubject = null;
-    if (StringUtils.isBlank(OtpType)) {
-      welcomeSubject = ProjectUtil.getConfigValue(JsonKey.ONBOARDING_MAIL_SUBJECT);
-    } else if (SendOTPActor.RESET_PASSWORD.equalsIgnoreCase(OtpType)) {
-      welcomeSubject = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_RESET_PASS_MAIL_SUBJECT);
+    String emailSubject = null;
+    if (SendOTPActor.RESET_PASSWORD.equalsIgnoreCase(otpType)) {
+      emailSubject = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_RESET_PASS_MAIL_SUBJECT);
     } else {
-      // as of now if OtpType value is not equal to resetPassword then send default
-      // onboarding subject.
-      welcomeSubject = ProjectUtil.getConfigValue(JsonKey.ONBOARDING_MAIL_SUBJECT);
+      // default fallback for all other otpType
+      emailSubject = ProjectUtil.getConfigValue(JsonKey.ONBOARDING_MAIL_SUBJECT);
     }
-    emailTemplateMap.put(JsonKey.SUBJECT, ProjectUtil.formatMessage(welcomeSubject, envName));
+    emailTemplateMap.put(JsonKey.SUBJECT, ProjectUtil.formatMessage(emailSubject, envName));
     List<String> reciptientsMail = new ArrayList<>();
     reciptientsMail.add((String) emailTemplateMap.get(JsonKey.EMAIL));
     emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);

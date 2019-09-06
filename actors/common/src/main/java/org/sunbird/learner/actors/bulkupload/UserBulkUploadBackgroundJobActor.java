@@ -206,28 +206,31 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
         return;
       }
 
-      User user = mapper.convertValue(userMap, User.class);
-      user.setId((String) userMap.get(JsonKey.USER_ID));
+      //User user = mapper.convertValue(userMap, User.class);
+      //user.setId((String) userMap.get(JsonKey.USER_ID));
       String orgName = "";
       if (null != organisation) {
         orgName = organisation.getOrgName();
       }
 
-      if (StringUtils.isNotEmpty(user.getPhone())) {
+      /*if (StringUtils.isNotEmpty(user.getPhone())) {
         user.setPhoneVerified(true);
       }
 
       if (StringUtils.isNotEmpty(user.getEmail())) {
         user.setEmailVerified(true);
-      }
-
-      if (StringUtils.isEmpty(user.getId())) {
-        user.setCreatedBy(uploadedBy);
-        user.setRootOrgId(organisationId);
-        callCreateUser(user, task, orgName);
+      }*/
+      String userId  = (String) userMap.get(JsonKey.USER_ID);
+      if (StringUtils.isEmpty(userId)) {
+        userMap.put("createdBy", uploadedBy);
+        userMap.put("rootOrgId", organisationId);
+        /*user.setCreatedBy(uploadedBy);
+        user.setRootOrgId(organisationId);*/
+        callCreateUser(userMap, task, orgName);
       } else {
-        user.setUpdatedBy(uploadedBy);
-        callUpdateUser(user, task, orgName);
+        userMap.put("updatedBy", uploadedBy);
+        //user.setUpdatedBy(uploadedBy);
+        callUpdateUser(userMap, task, orgName);
       }
     } catch (Exception e) {
       ProjectLogger.log("Error in process user", data, e);
@@ -236,20 +239,20 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
   }
 
   @SuppressWarnings("unchecked")
-  private void callCreateUser(User user, BulkUploadProcessTask task, String orgName)
+  private void callCreateUser(Map<String, Object> user, BulkUploadProcessTask task, String orgName)
       throws JsonProcessingException {
     ProjectLogger.log("UserBulkUploadBackgroundJobActor: callCreateUser called", LoggerEnum.INFO);
-    Map<String, Object> row = mapper.convertValue(user, Map.class);
+    //Map<String, Object> row = mapper.convertValue(user, Map.class);
     String userId;
     try {
-      userId = userClient.createUser(getActorRef(ActorOperations.CREATE_USER.getValue()), row);
+      userId = userClient.createUser(getActorRef(ActorOperations.CREATE_USER.getValue()), user);
     } catch (Exception ex) {
       ProjectLogger.log(
           "UserBulkUploadBackgroundJobActor:callCreateUser: Exception occurred with error message = "
               + ex.getMessage(),
           LoggerEnum.INFO);
       setTaskStatus(
-          task, ProjectUtil.BulkProcessStatus.FAILED, ex.getMessage(), row, JsonKey.CREATE);
+          task, ProjectUtil.BulkProcessStatus.FAILED, ex.getMessage(), user, JsonKey.CREATE);
       return;
     }
 
@@ -260,36 +263,36 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
           task,
           ProjectUtil.BulkProcessStatus.FAILED,
           ResponseCode.internalError.getErrorMessage(),
-          row,
+              user,
           JsonKey.CREATE);
     } else {
-      row.put(JsonKey.ID, userId);
-      row.put(JsonKey.ORG_NAME, orgName);
-      setSuccessTaskStatus(task, ProjectUtil.BulkProcessStatus.COMPLETED, row, JsonKey.CREATE);
+      user.put(JsonKey.ID, userId);
+      user.put(JsonKey.ORG_NAME, orgName);
+      setSuccessTaskStatus(task, ProjectUtil.BulkProcessStatus.COMPLETED, user, JsonKey.CREATE);
     }
   }
 
   @SuppressWarnings("unchecked")
-  private void callUpdateUser(User user, BulkUploadProcessTask task, String orgName)
+  private void callUpdateUser(Map<String, Object> user, BulkUploadProcessTask task, String orgName)
       throws JsonProcessingException {
     ProjectLogger.log("UserBulkUploadBackgroundJobActor: callUpdateUser called", LoggerEnum.INFO);
-    Map<String, Object> row = mapper.convertValue(user, Map.class);
+    //Map<String, Object> row = mapper.convertValue(user, Map.class);
     try {
-      row.put(JsonKey.USER_ID, user.getId());
-      row.put(JsonKey.ORG_NAME, orgName);
-      userClient.updateUser(getActorRef(ActorOperations.UPDATE_USER.getValue()), row);
+      /*row.put(JsonKey.USER_ID, user.getId());*/
+      user.put(JsonKey.ORG_NAME, orgName);
+      userClient.updateUser(getActorRef(ActorOperations.UPDATE_USER.getValue()), user);
     } catch (Exception ex) {
       ProjectLogger.log(
           "UserBulkUploadBackgroundJobActor:callUpdateUser: Exception occurred with error message = "
               + ex.getMessage(),
           LoggerEnum.INFO);
-      row.put(JsonKey.ERROR_MSG, ex.getMessage());
+      user.put(JsonKey.ERROR_MSG, ex.getMessage());
       setTaskStatus(
-          task, ProjectUtil.BulkProcessStatus.FAILED, ex.getMessage(), row, JsonKey.UPDATE);
+          task, ProjectUtil.BulkProcessStatus.FAILED, ex.getMessage(), user, JsonKey.UPDATE);
     }
     if (task.getStatus() != ProjectUtil.BulkProcessStatus.FAILED.getValue()) {
-      task.setData(mapper.writeValueAsString(row));
-      setSuccessTaskStatus(task, ProjectUtil.BulkProcessStatus.COMPLETED, row, JsonKey.UPDATE);
+      task.setData(mapper.writeValueAsString(user));
+      setSuccessTaskStatus(task, ProjectUtil.BulkProcessStatus.COMPLETED, user, JsonKey.UPDATE);
     }
   }
 

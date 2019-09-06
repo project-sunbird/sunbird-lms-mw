@@ -164,7 +164,13 @@ public class UserManagementActor extends BaseActor {
       requestMap.put(JsonKey.RECOVERY_PHONE,null);
     }
 
-    Map<String, Object> userBooleanMap = updatedUserFlagsMap(requestMap, userDbRecord);
+    /*if(userMap.containsKey(JsonKey.EMAIL_VERIFIED) && (userMap.get(JsonKey.EMAIL_VERIFIED)!=null)){
+      requestMap.put(JsonKey.EMAIL_VERIFIED,userMap.get(JsonKey.EMAIL_VERIFIED));
+    }
+    if(userMap.containsKey(JsonKey.PHONE_VERIFIED) && (userMap.get(JsonKey.PHONE_VERIFIED)!=null)){
+      requestMap.put(JsonKey.PHONE_VERIFIED,userMap.get(JsonKey.PHONE_VERIFIED));
+    }*/
+    Map<String, Object> userBooleanMap = updatedUserFlagsMap(userMap, userDbRecord);
     userBoolFlagToNum(requestMap, userBooleanMap);
     Response response =
         cassandraOperation.updateRecord(
@@ -578,14 +584,14 @@ public class UserManagementActor extends BaseActor {
     userMap.put(JsonKey.ID, userId);
     userMap.put(JsonKey.USER_ID, userId);
     requestMap = UserUtil.encryptUserData(userMap);
-    UserUtil.addMaskEmailAndMaskPhone(requestMap);
+    UserUtil.addMaskEmailAndMaskPhone(userMap);
     removeUnwanted(requestMap);
     requestMap.put(JsonKey.IS_DELETED, false);
     Map<String, Object> userFlagsMap = new HashMap<>();
     //checks if the user is belongs to state and sets a validation flag
     setStateValidation(requestMap, userFlagsMap);
-    userFlagsMap.put(JsonKey.EMAIL_VERIFIED, requestMap.get(JsonKey.EMAIL_VERIFIED));
-    userFlagsMap.put(JsonKey.PHONE_VERIFIED, requestMap.get(JsonKey.PHONE_VERIFIED));
+    userFlagsMap.put(JsonKey.EMAIL_VERIFIED, userMap.get(JsonKey.EMAIL_VERIFIED));
+    userFlagsMap.put(JsonKey.PHONE_VERIFIED, userMap.get(JsonKey.PHONE_VERIFIED));
     userBoolFlagToNum(requestMap, userFlagsMap);
 
     Response response = null;

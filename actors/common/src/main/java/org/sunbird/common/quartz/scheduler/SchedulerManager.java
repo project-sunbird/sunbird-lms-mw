@@ -61,7 +61,6 @@ public final class SchedulerManager {
       String identifier = "NetOps-PC1502295457753";
       scheduleBulkUploadJob(identifier);
       // scheduleCoursePublishJob(identifier);
-      scheduleMetricsReportJob(identifier);
       scheduleUpdateUserCountJob(identifier);
       scheduleChannelReg(identifier);
     } catch (Exception e) {
@@ -137,38 +136,6 @@ public final class SchedulerManager {
       ProjectLogger.log(
           "SchedulerManager:scheduleUpdateUserCountJob: UpdateUserCount schedular started",
           LoggerEnum.INFO.name());
-    } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(), e);
-    }
-  }
-
-  private void scheduleMetricsReportJob(String identifier) {
-    // add another job for verifying the MetricsReportJob details from EKStep.
-    // 1- create a job and bind with class which is implementing Job
-    // interface.
-    JobDetail metricsReportJob =
-        JobBuilder.newJob(MetricsReportJob.class)
-            .requestRecovery(true)
-            .withDescription("Scheduler for retry of metrics report generation and upload to azure")
-            .withIdentity("metricsReportJob", identifier)
-            .build();
-
-    // 2- Create a trigger object that will define frequency of run.
-    // This job will run every day 11:30 PM IN GMT and 6 PM on UTC.
-    Trigger metricsReportRetryTrigger =
-        TriggerBuilder.newTrigger()
-            .withIdentity("metricsReportRetryTrigger", identifier)
-            .withSchedule(
-                CronScheduleBuilder.cronSchedule(
-                    PropertiesCache.getInstance().getProperty("quartz_matrix_report_timer")))
-            .build();
-    try {
-      if (scheduler.checkExists(metricsReportJob.getKey())) {
-        scheduler.deleteJob(metricsReportJob.getKey());
-      }
-      scheduler.scheduleJob(metricsReportJob, metricsReportRetryTrigger);
-      scheduler.start();
-      ProjectLogger.log("MetricsReportJob schedular started", LoggerEnum.INFO.name());
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }

@@ -140,41 +140,6 @@ public final class SchedulerManager {
     }
   }
 
-  private void scheduleCoursePublishJob(String identifier) {
-    // add another job for verifying the course published details from EKStep.
-    // 1- create a job and bind with class which is implementing Job
-    // interface.
-    JobDetail coursePublishedJob =
-        JobBuilder.newJob(CoursePublishedUpdate.class)
-            .requestRecovery(true)
-            .withDescription(
-                "Scheduler for batch participants enrolment on course status change to published")
-            .withIdentity("coursePublishedScheduler", identifier)
-            .build();
-
-    // 2- Create a trigger object that will define frequency of run.
-    // This job will run every hours.
-    Trigger coursePublishedTrigger =
-        TriggerBuilder.newTrigger()
-            .withIdentity("coursePublishedTrigger", identifier)
-            .withSchedule(
-                CronScheduleBuilder.cronSchedule(
-                    PropertiesCache.getInstance().getProperty("quartz_course_publish_timer")))
-            .build();
-    try {
-      if (scheduler.checkExists(coursePublishedJob.getKey())) {
-        scheduler.deleteJob(coursePublishedJob.getKey());
-      }
-      scheduler.scheduleJob(coursePublishedJob, coursePublishedTrigger);
-      scheduler.start();
-      ProjectLogger.log(
-          "SchedulerManager:scheduleCoursePublishJob: CoursePublishedUpdate schedular started",
-          LoggerEnum.INFO.name());
-    } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(), e);
-    }
-  }
-
   private void scheduleBulkUploadJob(String identifier) {
     // add another job for verifying the bulk upload part.
     // 1- create a job and bind with class which is implementing Job

@@ -68,7 +68,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
         String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
         long validationStartTime =System.currentTimeMillis();
         List<MigrationUser>migrationUserList=validateRequestAndReturnMigrationUsers(processId,(byte[])data.get(JsonKey.FILE),values);
-        ProjectLogger.log("UserBulkMigrationActor:upload: time taken to validate records of size ".concat(migrationUserList.size()+"")+"is(ms): ".concat((System.currentTimeMillis()-validationStartTime)+""),LoggerEnum.INFO.name());
+        ProjectLogger.log("UserBulkMigrationActor:processRecord: time taken to validate records of size ".concat(migrationUserList.size()+"")+"is(ms): ".concat((System.currentTimeMillis()-validationStartTime)+""),LoggerEnum.INFO.name());
         BulkMigrationUser migrationUser=prepareRecord(request,processId,migrationUserList);
         ProjectLogger.log("UserBulkMigrationActor:processRecord:processing record for number of users ".concat(migrationUserList.size()+""));
         insertRecord(migrationUser);
@@ -126,7 +126,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
                     .setSupportedFields(columnsMap.get(JsonKey.SUPPORTED_COlUMNS))
                     .setValues(migrationUserList)
                     .validate();
-            System.out.println("the migration object is "+ migration.toString());
+            ProjectLogger.log("UserBulkMigrationActor:validateRequestAndReturnMigrationUsers: the migration object formed ".concat(migration.toString()));
             return migrationUserList;
     }
 

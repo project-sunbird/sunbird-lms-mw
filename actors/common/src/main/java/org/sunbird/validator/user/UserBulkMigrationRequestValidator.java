@@ -12,7 +12,9 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.error.Error;
 import org.sunbird.error.ErrorDetails;
+import org.sunbird.error.ErrorDispatcher;
 import org.sunbird.error.ErrorEnum;
+import org.sunbird.error.factory.ErrorDispatcherFactory;
 
 import java.util.HashSet;
 
@@ -78,10 +80,8 @@ public class UserBulkMigrationRequestValidator {
             validateMigrationUser(migrationUser,index);
         });
         if(csvRowsErrors.getErrorsList().size()>0){
-            throw new ProjectCommonException(
-                    ResponseCode.invalidRequestData.getErrorCode(),
-                    "Error Occurred: ".concat(ArrayUtils.stringifyContents(csvRowsErrors.getErrorsList().toArray())),
-                     ResponseCode.CLIENT_ERROR.getResponseCode());
+            ErrorDispatcher errorDispatcher= ErrorDispatcherFactory.getErrorDispatcher(csvRowsErrors);
+            errorDispatcher.dispatchError();
         }
     }
 

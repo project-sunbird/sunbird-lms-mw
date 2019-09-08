@@ -40,6 +40,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
     public static final String USER_BULK_MIGRATION_FIELD="shadowdbmandatorycolumn";
     private Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
     private static ObjectMapper mapper=new ObjectMapper();
+    private static   SystemSetting systemSetting;
 
     @Override
     public void onReceive(Request request) throws Throwable {
@@ -55,27 +56,32 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
 
     private void upload(Request request) throws IOException {
         Map<String, Object> req = (Map<String, Object>) request.getRequest().get(JsonKey.DATA);
-        SystemSetting systemSetting  =
+         systemSetting  =
                 systemSettingClient.getSystemSettingByField(
                         getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
                         USER_BULK_MIGRATION_FIELD);
-        Map<String,Object>values= mapper.readValue(systemSetting.getValue(),Map.class);
-        String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
-        List<MigrationUser>migrationUserList=validateRequestAndReturnMigrationUsers(processId,(byte[])req.get(JsonKey.FILE),values);
-        processRecord(request,processId,migrationUserList);
+        processRecord(req,request);
     }
 
-    private void processRecord(Request request,String processId, List<MigrationUser>migrationUserList){
+    private void processRecord(Map<String,Object>data,Request request) throws IOException {
+        Map<String,Object>values= mapper.readValue(systemSetting.getValue(),Map.class);
+        String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
+        long validationStartTime =System.currentTimeMillis();
+        List<MigrationUser>migrationUserList=validateRequestAndReturnMigrationUsers(processId,(byte[])data.get(JsonKey.FILE),values);
+        ProjectLogger.log("UserBulkMigrationActor:upload: time taken to validate records of size ".concat(migrationUserList.size()+"")+"is(ms): ".concat((System.currentTimeMillis()-validationStartTime)+""),LoggerEnum.INFO.name());
         BulkMigrationUser migrationUser=prepareRecord(request,processId,migrationUserList);
+        ProjectLogger.log("UserBulkMigrationActor:processRecord:processing record for number of users ".concat(migrationUserList.size()+""));
         insertRecord(migrationUser);
     }
 
     private void insertRecord(BulkMigrationUser bulkMigrationUser){
+        long insertStartTime=System.currentTimeMillis();
         Map<String,Object>record=mapper.convertValue(bulkMigrationUser,Map.class);
         long createdOn=System.currentTimeMillis();
         record.put(JsonKey.CREATED_ON,new Timestamp(createdOn));
         record.put(JsonKey.LAST_UPDATED_ON,new Timestamp(createdOn));
         Response response=cassandraOperation.insertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), record);
+        ProjectLogger.log("UserBulkMigrationActor:insertRecord:time taken by cassandra to insert record of size ".concat(record.size()+"")+"is(ms):".concat((System.currentTimeMillis()-insertStartTime)+""));
         sender().tell(response,self());
     }
     private BulkMigrationUser prepareRecord(Request request,String processID,List<MigrationUser>migrationUserList){
@@ -145,6 +151,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
     }
     private List<String[]> getCsvRowsAsList(byte[] fileData){
         List<String[]>values=new ArrayList<>();
+        int ROW_BEGINING_COUNT=2;
         try {
             csvReader = getCsvReader(fileData, ',', '"', 1);
             ProjectLogger.log("UserBulkMigrationActor:getCsvRowsAsList:csvReader initialized ".concat(csvReader.toString()),LoggerEnum.ERROR.name());
@@ -159,10 +166,13 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
         } finally {
             IOUtils.closeQuietly(csvReader);
         }
-        if(values.size()>1){
-            return values.subList(1,values.size());
+        if(values.size()<ROW_BEGINING_COUNT){
+            throw new ProjectCommonException(
+                    ResponseCode.noDataForConsumption.getErrorCode(),
+                    ResponseCode.noDataForConsumption.getErrorMessage(),
+                    ResponseCode.CLIENT_ERROR.getResponseCode());
         }
-        return values;
+        return values.subList(1,values.size());
     }
 
     private List<String> mappedCsvColumn(List<String> csvColumns){
@@ -238,8 +248,6 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
             migrationUser.setInputStatus((String)value);
         }
     }
-
-
     private String getColumnNameByIndex(List<String>mappedHeaders,int index){
         return mappedHeaders.get(index);
     }

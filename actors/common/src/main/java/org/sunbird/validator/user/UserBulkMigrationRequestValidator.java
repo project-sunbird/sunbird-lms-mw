@@ -23,6 +23,7 @@ public class UserBulkMigrationRequestValidator {
     private HashSet<String> phoneSet=new HashSet<>();
     private HashSet<String> userExternalIdsSet=new HashSet<>();
     private Error csvRowsErrors=new Error();
+    private static final int MAX_ROW_SUPPORTED=15000;
 
 
     private UserBulkMigrationRequestValidator(Migration migration) {
@@ -71,6 +72,7 @@ public class UserBulkMigrationRequestValidator {
 
 
     private void csvRows(){
+        validateRowsCount();
         migration.getValues().stream().forEach(migrationUser -> {
             int index=migration.getValues().indexOf(migrationUser);
             validateMigrationUser(migrationUser,index);
@@ -78,10 +80,17 @@ public class UserBulkMigrationRequestValidator {
         if(csvRowsErrors.getErrorsList().size()>0){
             throw new ProjectCommonException(
                     ResponseCode.invalidRequestData.getErrorCode(),
-                    ResponseCode.invalidRequestData.getErrorMessage(),
-                    ResponseCode.CLIENT_ERROR.getResponseCode(),
-                    "Error Occurred: ".concat(ArrayUtils.stringifyContents(csvRowsErrors.getErrorsList().toArray())));
+                    "Error Occurred: ".concat(ArrayUtils.stringifyContents(csvRowsErrors.getErrorsList().toArray())),
+                     ResponseCode.CLIENT_ERROR.getResponseCode());
+        }
+    }
 
+    private void validateRowsCount(){
+        if(migration.getValues().size()>=MAX_ROW_SUPPORTED){
+            throw new ProjectCommonException(
+                    ResponseCode.csvRowsExceeds.getErrorCode(),
+                    ResponseCode.csvRowsExceeds.getErrorMessage().concat("supported:"+MAX_ROW_SUPPORTED),
+                    ResponseCode.CLIENT_ERROR.getResponseCode());
         }
     }
     private void validateMigrationUser(MigrationUser migrationUser,int index) {

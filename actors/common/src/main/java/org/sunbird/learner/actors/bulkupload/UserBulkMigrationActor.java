@@ -97,6 +97,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
                     .setRetryCount(RETRY_COUNT)
                     .setTaskCount(migrationUserList.size())
                     .setCreatedBy(getCreatedBy(request))
+                    .setUploadedBy(getCreatedBy(request))
                     .build();
                     return migrationUser;
         }catch (Exception e){
@@ -117,7 +118,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
     private List<MigrationUser> validateRequestAndReturnMigrationUsers(String processId,byte[] fileData,Map<String,Object>fieldsMap){
             Map<String, List<String>> columnsMap = (Map<String, List<String>>) fieldsMap.get(JsonKey.FILE_TYPE_CSV);
             List<String>csvHeaders=getCsvHeadersAsList(fileData);
-            List<String>mappedCsvHeaders=mappedCsvColumn(csvHeaders);
+            List<String>mappedCsvHeaders=mapCsvColumn(csvHeaders);
             List<MigrationUser>migrationUserList=parseCsvRows(getCsvRowsAsList(fileData),mappedCsvHeaders);
             Migration migration = new Migration.MigrationBuilder()
                     .setHeaders(csvHeaders)
@@ -178,7 +179,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
         return values.subList(1,values.size());
     }
 
-    private List<String> mappedCsvColumn(List<String> csvColumns){
+    private List<String> mapCsvColumn(List<String> csvColumns){
         List<String> mappedColumns=new ArrayList<>();
         csvColumns.forEach(column->{
             if(column.equalsIgnoreCase(JsonKey.EMAIL)){

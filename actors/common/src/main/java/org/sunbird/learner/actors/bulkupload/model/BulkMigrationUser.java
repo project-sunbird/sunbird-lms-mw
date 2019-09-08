@@ -3,6 +3,7 @@ package org.sunbird.learner.actors.bulkupload.model;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
@@ -16,6 +17,7 @@ import java.sql.Timestamp;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class BulkMigrationUser {
+    private DecryptionService decryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(null);
     private static final long serialVersionUID = 1L;
     private String id;
     private String data;
@@ -61,7 +63,7 @@ public class BulkMigrationUser {
     }
 
     public String getData() {
-        return data;
+        return decryptionService.decryptData(data);
     }
 
     public String getFailureResult() {
@@ -127,7 +129,6 @@ public class BulkMigrationUser {
 
     public static class BulkMigrationUserBuilder {
         private EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(null);
-        private DecryptionService decryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(null);
         private String id;
         private String data;
         private String failureResult;
@@ -240,14 +241,18 @@ public class BulkMigrationUser {
         }
 
         private String encryptData(String decryptedData) {
+            long encStartTime=System.currentTimeMillis();
             try {
-                return encryptionService.encryptData(decryptedData);
+                String encryptedData= encryptionService.encryptData(decryptedData);
+                ProjectLogger.log("BulkMigrationUser:encryptData:TIME TAKEN TO ENCRYPT DATA in(ms):".concat((System.currentTimeMillis()-encStartTime)+""),LoggerEnum.INFO.name());
+                return encryptedData;
             } catch (Exception e) {
-                ProjectLogger.log("BulkMigrationUser:encryptData:error occurred while encrypting data");
+                ProjectLogger.log("BulkMigrationUser:encryptData:error occurred while encrypting data", LoggerEnum.ERROR.name());
                 throw new ProjectCommonException(
                         ResponseCode.SERVER_ERROR.getErrorCode(),
                         ResponseCode.userDataEncryptionError.getErrorMessage(),
-                        ResponseCode.userDataEncryptionError.getResponseCode());            }
+                        ResponseCode.userDataEncryptionError.getResponseCode());
+            }
         }
 
         public BulkMigrationUser build() {

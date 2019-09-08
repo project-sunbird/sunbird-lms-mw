@@ -11,7 +11,7 @@ import java.util.List;
  * this class will dispatch error in list format
  * @author anmolgupta
  */
-public class ListErrorDispatcher implements ErrorDispatcher {
+public class ListErrorDispatcher implements IErrorDispatcher {
 
     private Error error;
 
@@ -27,7 +27,7 @@ public class ListErrorDispatcher implements ErrorDispatcher {
     public void dispatchError() {
         List<String>errors=new ArrayList<>();
         error.getErrorsList().stream().forEach(errorDetails -> {
-            errors.add(String.format("In Row %s:the column %s: is %s",errorDetails.getRowId()+1,errorDetails.getHeader(),errorDetails.getErrorEnum().getValue()));
+            errors.add(String.format("In Row %s:the Column %s: is %s",errorDetails.getRowId()+1,errorDetails.getHeader(),errorDetails.getErrorEnum().getValue()));
         });
         throw new ProjectCommonException(
                 ResponseCode.invalidRequestData.getErrorCode(),

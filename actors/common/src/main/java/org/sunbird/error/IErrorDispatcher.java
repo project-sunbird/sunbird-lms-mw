@@ -6,7 +6,7 @@ package org.sunbird.error;
  *
  * @author anmolgupta
  */
-public interface ErrorDispatcher {
+public interface IErrorDispatcher {
 
 
     /**

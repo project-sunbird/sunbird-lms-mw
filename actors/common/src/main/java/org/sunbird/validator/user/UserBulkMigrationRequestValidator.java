@@ -12,7 +12,7 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.error.Error;
 import org.sunbird.error.ErrorDetails;
-import org.sunbird.error.ErrorDispatcher;
+import org.sunbird.error.IErrorDispatcher;
 import org.sunbird.error.ErrorEnum;
 import org.sunbird.error.factory.ErrorDispatcherFactory;
 
@@ -80,7 +80,7 @@ public class UserBulkMigrationRequestValidator {
             validateMigrationUser(migrationUser,index);
         });
         if(csvRowsErrors.getErrorsList().size()>0){
-            ErrorDispatcher errorDispatcher= ErrorDispatcherFactory.getErrorDispatcher(csvRowsErrors);
+            IErrorDispatcher errorDispatcher= ErrorDispatcherFactory.getErrorDispatcher(csvRowsErrors);
             errorDispatcher.dispatchError();
         }
     }

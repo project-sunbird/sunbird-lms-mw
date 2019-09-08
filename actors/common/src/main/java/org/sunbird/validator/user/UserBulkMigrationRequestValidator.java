@@ -196,8 +196,5 @@ public class UserBulkMigrationRequestValidator {
 
     private boolean checkDuplicateValueOrAdd(HashSet<String>identifier,String value){
         return identifier.add(value);
-
     }
-
-
 }

@@ -27,7 +27,7 @@ public class ListErrorDispatcher implements IErrorDispatcher {
     public void dispatchError() {
         List<String>errors=new ArrayList<>();
         error.getErrorsList().stream().forEach(errorDetails -> {
-            errors.add(String.format("In Row %s:the Column %s: is %s",errorDetails.getRowId()+1,errorDetails.getHeader(),errorDetails.getErrorEnum().getValue()));
+            errors.add(String.format("In Row %s:the Column %s:is %s",errorDetails.getRowId()+1,errorDetails.getHeader(),errorDetails.getErrorEnum().getValue()));
         });
         throw new ProjectCommonException(
                 ResponseCode.invalidRequestData.getErrorCode(),

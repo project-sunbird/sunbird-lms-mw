@@ -5,6 +5,8 @@ import com.opencsv.CSVReader;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.IOUtils;
 import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.actorutil.org.OrganisationClient;
+import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.bean.Migration;
@@ -18,6 +20,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.bulkupload.model.BulkMigrationUser;
+import org.sunbird.learner.actors.user.service.UserService;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.systemsetting.SystemSetting;
 
@@ -40,8 +43,8 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
     public static final String USER_BULK_MIGRATION_FIELD="shadowdbmandatorycolumn";
     private Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
     private static ObjectMapper mapper=new ObjectMapper();
-    private static   SystemSetting systemSetting;
-
+    private static SystemSetting systemSetting;
+    private OrganisationClient organisationClient = new OrganisationClientImpl();
     @Override
     public void onReceive(Request request) throws Throwable {
         Util.initializeContext(request, TelemetryEnvKey.USER);
@@ -251,4 +254,5 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
     private String getColumnNameByIndex(List<String>mappedHeaders,int index){
         return mappedHeaders.get(index);
     }
+
 }

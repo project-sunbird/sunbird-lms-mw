@@ -184,7 +184,7 @@ public class UserBulkMigrationRequestValidator {
     public void inputStatus(String inputStatus,int index) {
         ErrorDetails errorDetails=new ErrorDetails();
         errorDetails.setRowId(index);
-        errorDetails.setHeader("INPUT STATUS");
+        errorDetails.setHeader(JsonKey.INPUT_STATUS);
         if(StringUtils.isBlank(inputStatus)){
             errorDetails.setErrorEnum(ErrorEnum.missing);
         }

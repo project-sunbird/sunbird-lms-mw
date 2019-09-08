@@ -1,6 +1,8 @@
 package org.sunbird.bean;
 
-public class MigrationUser {
+import java.io.Serializable;
+
+public class MigrationUser implements Serializable {
 
     private String email;
     private String phone;
@@ -8,7 +10,7 @@ public class MigrationUser {
     private String userExternalId;
     private String orgExternalId;
     private String channel;
-    private boolean inputStatus;
+    private String inputStatus;
 
     public void setEmail(String email) {
         this.email = email;
@@ -34,22 +36,13 @@ public class MigrationUser {
         this.channel = state;
     }
 
-    public void setInputStatus(boolean inputStatus) {
+    public void setInputStatus(String inputStatus) {
         this.inputStatus = inputStatus;
     }
 
     public MigrationUser() {
     }
 
-    public MigrationUser(String email, String phone, String name, String userExternalId, String orgExternalId, String state, boolean inputStatus) {
-        this.email = email;
-        this.phone = phone;
-        this.name = name;
-        this.userExternalId = userExternalId;
-        this.orgExternalId = orgExternalId;
-        this.channel = state;
-        this.inputStatus = inputStatus;
-    }
 
     public String getEmail() {
         return email;
@@ -75,7 +68,7 @@ public class MigrationUser {
         return channel;
     }
 
-    public boolean getInputStatus() {
+    public String getInputStatus() {
         return inputStatus;
     }
 

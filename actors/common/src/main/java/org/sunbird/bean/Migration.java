@@ -9,6 +9,7 @@ public class Migration {
 
     private String fileSize;
     private List<String>headers;
+    private List<String>mappedHeaders;
     private byte[] fileData;
     private List<String>mandatoryFields;
     private List<String>supportedFields;
@@ -23,6 +24,7 @@ public class Migration {
         this.supportedFields=migrationBuilder.supportedFields;
         this.processId=migrationBuilder.processId;
         this.values=migrationBuilder.values;
+        this.mappedHeaders=migrationBuilder.mappedHeaders;
 
     }
     public String getFileSize() {
@@ -48,12 +50,17 @@ public class Migration {
     public List<MigrationUser> getValues() {
         return values;
     }
+    public List<String> getMappedHeaders() {
+        return mappedHeaders;
+    }
+
 
     @Override
     public String toString() {
         return "Migration{" +
                 "fileSize='" + fileSize + '\'' +
                 ", headers=" + headers +
+                ", mappedHeaders=" + mappedHeaders +
                 ", fileData=" + Arrays.toString(fileData) +
                 ", mandatoryFields=" + mandatoryFields +
                 ", supportedFields=" + supportedFields +
@@ -61,7 +68,6 @@ public class Migration {
                 ", values=" + values +
                 '}';
     }
-
 
     public String getProcessId() {
         return processId;
@@ -77,6 +83,7 @@ public class Migration {
         private List<String>supportedFields;
         private String processId;
         private List<MigrationUser>values;
+        private List<String>mappedHeaders;
 
         public MigrationBuilder() {
         }
@@ -115,7 +122,12 @@ public class Migration {
             return this;
         }
 
-        public Migration build(){
+        public MigrationBuilder setMappedHeaders(List<String> mappedHeaders) {
+            this.mappedHeaders = mappedHeaders;
+            return this;
+        }
+
+        public Migration validate(){
             Migration migration=new Migration(this);
             validate(migration);
             return migration;

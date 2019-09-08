@@ -2,23 +2,27 @@ package org.sunbird.learner.actors.bulkupload;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencsv.CSVReader;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.IOUtils;
-import org.stringtemplate.v4.ST;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.bean.Migration;
 import org.sunbird.bean.MigrationUser;
+import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.actors.bulkupload.model.BulkMigrationUser;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.systemsetting.SystemSetting;
 
 import java.io.IOException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -30,8 +34,11 @@ import java.util.Map;
 )
 public class UserBulkMigrationActor extends BaseBulkUploadActor {
     private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
+    private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     private static CSVReader csvReader;
+    public static final int RETRY_COUNT=1;
     public static final String USER_BULK_MIGRATION_FIELD="shadowdbmandatorycolumn";
+    private Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
     private static ObjectMapper mapper=new ObjectMapper();
 
     @Override
@@ -53,31 +60,71 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
                         getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
                         USER_BULK_MIGRATION_FIELD);
         Map<String,Object>values= mapper.readValue(systemSetting.getValue(),Map.class);
-        validateRequest((byte[])req.get(JsonKey.FILE),values);
-        Response response=new Response();
-        response.put("hello",systemSetting.getValue());
-        sender().tell(response,self());
-
+        String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
+        List<MigrationUser>migrationUserList=validateRequestAndReturnMigrationUsers(processId,(byte[])req.get(JsonKey.FILE),values);
+        processRecord(request,processId,migrationUserList);
     }
 
-    private void validateRequest(byte[] fileData,Map<String,Object>fieldsMap){
-            String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
+    private void processRecord(Request request,String processId, List<MigrationUser>migrationUserList){
+        BulkMigrationUser migrationUser=prepareRecord(request,processId,migrationUserList);
+        insertRecord(migrationUser);
+    }
+
+    private void insertRecord(BulkMigrationUser bulkMigrationUser){
+        Map<String,Object>record=mapper.convertValue(bulkMigrationUser,Map.class);
+        long createdOn=System.currentTimeMillis();
+        record.put(JsonKey.CREATED_ON,new Timestamp(createdOn));
+        record.put(JsonKey.LAST_UPDATED_ON,new Timestamp(createdOn));
+        Response response=cassandraOperation.insertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), record);
+        sender().tell(response,self());
+    }
+    private BulkMigrationUser prepareRecord(Request request,String processID,List<MigrationUser>migrationUserList){
+        try {
+            String decryptedData=mapper.writeValueAsString(migrationUserList);
+            BulkMigrationUser migrationUser=new BulkMigrationUser.BulkMigrationUserBuilder(processID,decryptedData)
+                    .setObjectType(JsonKey.MIGRATION_USER_OBJECT)
+                    .setUploadedDate(ProjectUtil.getFormattedDate())
+                    .setStatus(ProjectUtil.BulkProcessStatus.NEW.getValue())
+                    .setRetryCount(RETRY_COUNT)
+                    .setTaskCount(migrationUserList.size())
+                    .setCreatedBy(getCreatedBy(request))
+                    .build();
+                    return migrationUser;
+        }catch (Exception e){
+            e.printStackTrace();
+            ProjectLogger.log("UserBulkMigrationActor:prepareRecord:error occurred while getting preparing record with processId".concat(processID+""),LoggerEnum.ERROR.name());
+            throw new ProjectCommonException(
+                    ResponseCode.SERVER_ERROR.getErrorCode(),
+                    ResponseCode.SERVER_ERROR.getErrorMessage(),
+                    ResponseCode.SERVER_ERROR.getResponseCode());
+        }
+    }
+
+    private String getCreatedBy(Request request){
+        Map<String,String>data=(Map<String, String>) request.getRequest().get(JsonKey.DATA);
+        return MapUtils.isNotEmpty(data)?data.get(JsonKey.CREATED_BY):null;
+    }
+
+    private List<MigrationUser> validateRequestAndReturnMigrationUsers(String processId,byte[] fileData,Map<String,Object>fieldsMap){
             Map<String, List<String>> columnsMap = (Map<String, List<String>>) fieldsMap.get(JsonKey.FILE_TYPE_CSV);
-            List<String>mappedCsvHeaders=mappedCsvColumn(getCsvHeadersAsList(fileData,processId));
+            List<String>csvHeaders=getCsvHeadersAsList(fileData);
+            List<String>mappedCsvHeaders=mappedCsvColumn(csvHeaders);
             List<MigrationUser>migrationUserList=parseCsvRows(getCsvRowsAsList(fileData),mappedCsvHeaders);
             Migration migration = new Migration.MigrationBuilder()
-                    .setHeaders(mappedCsvHeaders)
+                    .setHeaders(csvHeaders)
+                    .setMappedHeaders(mappedCsvHeaders)
                     .setProcessId(processId)
                     .setFileData(fileData)
                     .setFileSize(fileData.length+"")
                     .setMandatoryFields(columnsMap.get(JsonKey.MANDATORY_FIELDS))
                     .setSupportedFields(columnsMap.get(JsonKey.SUPPORTED_COlUMNS))
                     .setValues(migrationUserList)
-                    .build();
+                    .validate();
             System.out.println("the migration object is "+ migration.toString());
+            return migrationUserList;
     }
 
-    private List<String> getCsvHeadersAsList(byte[] fileData,String processId){
+    private List<String> getCsvHeadersAsList(byte[] fileData){
         List<String>headers=new ArrayList<>();
         try {
             csvReader = getCsvReader(fileData, ',', '"', 0);
@@ -112,6 +159,9 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
         } finally {
             IOUtils.closeQuietly(csvReader);
         }
+        if(values.size()>1){
+            return values.subList(1,values.size());
+        }
         return values;
     }
 
@@ -127,17 +177,17 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
             if(column.equalsIgnoreCase(JsonKey.STATE)){
                 mappedColumns.add(JsonKey.CHANNEL);
             }
-            if(column.equalsIgnoreCase("ext user id"))
+            if(column.equalsIgnoreCase(JsonKey.EXTERNAL_USER_ID))
             {
                 mappedColumns.add(JsonKey.USER_EXTERNAL_ID);
             }
-            if(column.equalsIgnoreCase("ext org id")){
+            if(column.equalsIgnoreCase(JsonKey.EXTERNAL_ORG_ID)){
                 mappedColumns.add(JsonKey.ORG_EXTERNAL_ID);
             }
             if(column.equalsIgnoreCase(JsonKey.NAME)){
                 mappedColumns.add(JsonKey.FIRST_NAME);
             }
-            if(column.equalsIgnoreCase("input status")){
+            if(column.equalsIgnoreCase(JsonKey.INPUT_STATUS)){
                 mappedColumns.add(column);
             }
         });
@@ -180,13 +230,12 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
             migrationUser.setUserExternalId((String)value);
         }
 
-        if(columnAttribute.equalsIgnoreCase(JsonKey.NAME)){
+        if(columnAttribute.equalsIgnoreCase(JsonKey.FIRST_NAME)){
             migrationUser.setName((String)value);
         }
-        if(columnAttribute.equalsIgnoreCase("input status"))
+        if(columnAttribute.equalsIgnoreCase(JsonKey.INPUT_STATUS))
         {
-            migrationUser.setInputStatus(Boolean.parseBoolean(((String) value).toLowerCase()));
-
+            migrationUser.setInputStatus((String)value);
         }
     }
 

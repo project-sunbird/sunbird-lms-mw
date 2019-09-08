@@ -38,4 +38,13 @@ public class ErrorDetails {
     public void setErrorEnum(ErrorEnum errorEnum) {
         this.errorEnum = errorEnum;
     }
+
+    @Override
+    public String toString() {
+        return "ErrorDetails{" +
+                "rowId=" + rowId +
+                ", header='" + header + '\'' +
+                ", errorEnum=" + errorEnum +
+                '}';
+    }
 }

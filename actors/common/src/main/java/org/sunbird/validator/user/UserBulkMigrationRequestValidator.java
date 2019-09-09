@@ -10,8 +10,8 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.error.Error;
-import org.sunbird.error.ErrorDetails;
+import org.sunbird.error.CsvError;
+import org.sunbird.error.CsvRowErrorDetails;
 import org.sunbird.error.IErrorDispatcher;
 import org.sunbird.error.ErrorEnum;
 import org.sunbird.error.factory.ErrorDispatcherFactory;
@@ -24,7 +24,7 @@ public class UserBulkMigrationRequestValidator {
     private HashSet<String> emailSet=new HashSet<>();
     private HashSet<String> phoneSet=new HashSet<>();
     private HashSet<String> userExternalIdsSet=new HashSet<>();
-    private Error csvRowsErrors=new Error();
+    private CsvError csvRowsErrors=new CsvError();
     private static final int MAX_ROW_SUPPORTED=20000;
 
 
@@ -36,14 +36,14 @@ public class UserBulkMigrationRequestValidator {
     }
     public void validate()
     {
-        csvHeader();
-        csvRows();
+        checkCsvHeader();
+        checkCsvRows();
     }
-    private void csvHeader(){
-        mandatoryColumns();
-        supportedColumns();
+    private void checkCsvHeader(){
+        checkMandatoryColumns();
+        checkSupportedColumns();
     }
-    private void mandatoryColumns(){
+    private void checkMandatoryColumns(){
         shadowUserMigration.getMandatoryFields().forEach(
                 column->{
                     if(!shadowUserMigration.getHeaders().contains(column.toLowerCase())){
@@ -58,7 +58,7 @@ public class UserBulkMigrationRequestValidator {
         );
         }
 
-    private void supportedColumns(){
+    private void checkSupportedColumns(){
         shadowUserMigration.getHeaders().forEach(suppColumn->{
             if(!shadowUserMigration.getSupportedFields().contains(suppColumn.toLowerCase())){
                 ProjectLogger.log("UserBulkMigrationRequestValidator:supportedColumns: supported column is not present".concat(suppColumn+""), LoggerEnum.ERROR.name());
@@ -73,7 +73,7 @@ public class UserBulkMigrationRequestValidator {
 
 
 
-    private void csvRows(){
+    private void checkCsvRows(){
         validateRowsCount();
         shadowUserMigration.getValues().stream().forEach(migrationUser -> {
             int index=shadowUserMigration.getValues().indexOf(migrationUser);
@@ -101,95 +101,102 @@ public class UserBulkMigrationRequestValidator {
         }
     }
     private void validateMigrationUser(MigrationUser migrationUser,int index) {
-      emailAndPhone(migrationUser.getEmail(),migrationUser.getPhone(),index);
-      userExternalId(migrationUser.getUserExternalId(),index);
-      name(migrationUser.getName(),index);
-      orgExternalId(migrationUser.getOrgExternalId(),index);
-      channel(migrationUser.getChannel(),index);
-      inputStatus(migrationUser.getInputStatus(),index);
-    }
-    private void addErrorToList(ErrorDetails errorDetails){
-        if(errorDetails.getErrorEnum()!=null){
-            csvRowsErrors.setError(errorDetails);
-        }
+        checkEmailAndPhone(migrationUser.getEmail(),migrationUser.getPhone(),index);
+        checkUserExternalId(migrationUser.getUserExternalId(),index);
+        checkName(migrationUser.getName(),index);
+        checkOrgExternalId(migrationUser.getOrgExternalId(),index);
+        checkChannel(migrationUser.getChannel(),index);
+        checkInputStatus(migrationUser.getInputStatus(),index);
     }
 
-    public void emailAndPhone(String email, String phone,int index) {
-        ErrorDetails errorDetails=new ErrorDetails();
+    private void addErrorToList(CsvRowErrorDetails errorDetails){
+        csvRowsErrors.setError(errorDetails);
+
+    }
+
+    public void checkEmailAndPhone(String email, String phone,int index) {
+        CsvRowErrorDetails errorDetails=new CsvRowErrorDetails();
         errorDetails.setRowId(index);
-        if(StringUtils.isBlank(email) && StringUtils.isBlank(phone)){
+        boolean isEmailBlank=StringUtils.isBlank(email);
+        boolean isPhoneBlank=StringUtils.isBlank(phone);
+
+        if(isEmailBlank && isPhoneBlank){
             errorDetails.setErrorEnum(ErrorEnum.missing);
             errorDetails.setHeader(JsonKey.EMAIL);
         }
-        else if(StringUtils.isNotBlank(email)){
+        else if(!isEmailBlank){
             errorDetails.setHeader(JsonKey.EMAIL);
             boolean isEmailValid=ProjectUtil.isEmailvalid(email);
             if(!isEmailValid){
             errorDetails.setErrorEnum(ErrorEnum.invalid);
             }
-            if(isEmailValid && !checkDuplicateValueOrAdd(emailSet,email)){
+            if(isEmailValid){
+                if(!emailSet.add(email))
                 errorDetails.setErrorEnum(ErrorEnum.duplicate);
             }
-
         }
-        else  if(StringUtils.isNotBlank(phone)){
+        else  if(!isPhoneBlank){
             errorDetails.setHeader(JsonKey.PHONE);
             boolean isPhoneValid=ProjectUtil.validatePhoneNumber(phone);
             if(!isPhoneValid){
                 errorDetails.setErrorEnum(ErrorEnum.invalid);
             }
-            if(isPhoneValid && !checkDuplicateValueOrAdd(phoneSet,phone)){
-                errorDetails.setErrorEnum(ErrorEnum.duplicate);
+            if(isPhoneValid){
+                if(!phoneSet.add(phone)) {
+                    errorDetails.setErrorEnum(ErrorEnum.duplicate);
+                }
             }
         }
-        addErrorToList(errorDetails);
+        if(errorDetails.getErrorEnum()!=null) {
+            addErrorToList(errorDetails);
+        }
     }
 
-    public void userExternalId(String userExternalId,int index) {
-        ErrorDetails errorDetails=new ErrorDetails();
+    public void checkUserExternalId(String userExternalId,int index) {
+        CsvRowErrorDetails errorDetails=new CsvRowErrorDetails();
         errorDetails.setRowId(index);
         errorDetails.setHeader(JsonKey.USER_EXTERNAL_ID);
         if(StringUtils.isBlank(userExternalId)){
             errorDetails.setErrorEnum(ErrorEnum.missing);
         }
-        if(!checkDuplicateValueOrAdd(userExternalIdsSet,userExternalId)){
+        if(!userExternalIdsSet.add(userExternalId)){
             errorDetails.setErrorEnum(ErrorEnum.duplicate);
         }
-        addErrorToList(errorDetails);
+        if (errorDetails.getErrorEnum() != null) {
+            addErrorToList(errorDetails);
+        }
     }
 
-    public void name(String name,int index) {
-        validateColumnAndErrorToList(name,index,JsonKey.NAME);
+    public void checkName(String name,int index) {
+        checkValue(name,index,JsonKey.NAME);
     }
 
-    public void orgExternalId(String orgExternalId,int index) {
-        validateColumnAndErrorToList(orgExternalId,index,JsonKey.ORG_EXTERNAL_ID);
+    public void checkOrgExternalId(String orgExternalId,int index) {
+        checkValue(orgExternalId,index,JsonKey.ORG_EXTERNAL_ID);
     }
 
-    public void channel(String channel,int index) {
-        validateColumnAndErrorToList(channel,index,JsonKey.STATE);
+    public void checkChannel(String channel,int index) {
+        checkValue(channel,index,JsonKey.STATE);
     }
 
-    public void inputStatus(String inputStatus,int index) {
-        validateColumnAndErrorToList(inputStatus,index,JsonKey.INPUT_STATUS);
+    public void checkInputStatus(String inputStatus,int index) {
+        checkValue(inputStatus,index,JsonKey.INPUT_STATUS);
+        if (!(inputStatus.equalsIgnoreCase(JsonKey.ACTIVE) ||
+                inputStatus.equalsIgnoreCase(JsonKey.INACTIVE))) {
+            CsvRowErrorDetails errorDetails=new CsvRowErrorDetails();
+            errorDetails.setRowId(index);
+            errorDetails.setHeader(JsonKey.INPUT_STATUS);
+            errorDetails.setErrorEnum(ErrorEnum.invalid);
+            addErrorToList(errorDetails);
+        }
     }
-
-    private boolean checkDuplicateValueOrAdd(HashSet<String>identifier,String value){
-        return identifier.add(value);
-    }
-
-    private void validateColumnAndErrorToList(String column,int rowIndex,String header){
-        ErrorDetails errorDetails=new ErrorDetails();
-        errorDetails.setRowId(rowIndex);
-        errorDetails.setHeader(header);
-        if(StringUtils.isBlank(column)){
+    private void checkValue(String column, int rowIndex, String header){
+        if(StringUtils.isBlank(column)) {
+            CsvRowErrorDetails errorDetails=new CsvRowErrorDetails();
+            errorDetails.setRowId(rowIndex);
+            errorDetails.setHeader(header);
             errorDetails.setErrorEnum(ErrorEnum.missing);
+            addErrorToList(errorDetails);
         }
-        if(header.equalsIgnoreCase(JsonKey.INPUT_STATUS)){
-            if(!(column.equalsIgnoreCase(JsonKey.ACTIVE)|| column.equalsIgnoreCase(JsonKey.INACTIVE))){
-                errorDetails.setErrorEnum(ErrorEnum.invalid);
-            }
-        }
-        addErrorToList(errorDetails);
     }
 }

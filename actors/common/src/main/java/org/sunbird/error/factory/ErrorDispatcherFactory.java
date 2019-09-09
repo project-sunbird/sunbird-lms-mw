@@ -4,8 +4,8 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.error.CsvError;
 import org.sunbird.error.CsvErrorDispatcher;
-import org.sunbird.error.Error;
 import org.sunbird.error.IErrorDispatcher;
 import org.sunbird.error.ListErrorDispatcher;
 
@@ -26,7 +26,7 @@ public class ErrorDispatcherFactory {
      * @param error
      * @return IErrorDispatcher
      */
-    public static IErrorDispatcher getErrorDispatcher(Error error) {
+    public static IErrorDispatcher getErrorDispatcher(CsvError error) {
         if (error.getErrorsList().size() > ERROR_VISUALIZATION_THRESHOLD) {
             return CsvErrorDispatcher.getInstance(error);
         }

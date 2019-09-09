@@ -30,6 +30,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+
+/**
+ * @author anmolgupta
+ */
 @ActorConfig(
         tasks = {"userBulkMigration"},
         asyncTasks = {}
@@ -50,22 +54,22 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
         ExecutionContext.setRequestId(request.getRequestId());
         String operation = request.getOperation();
         if (operation.equalsIgnoreCase(BulkUploadActorOperation.USER_BULK_MIGRATION.getValue())) {
-            upload(request);
+            uploadCsv(request);
         } else {
             onReceiveUnsupportedOperation("userBulkMigration");
         }
     }
 
-    private void upload(Request request) throws IOException {
+    private void uploadCsv(Request request) throws IOException {
         Map<String, Object> req = (Map<String, Object>) request.getRequest().get(JsonKey.DATA);
          systemSetting  =
                 systemSettingClient.getSystemSettingByField(
                         getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
                         USER_BULK_MIGRATION_FIELD);
-        processRecord(req,request);
+        processCsvBytes(req,request);
     }
 
-    private void processRecord(Map<String,Object>data,Request request) throws IOException {
+    private void processCsvBytes(Map<String,Object>data,Request request) throws IOException {
         Map<String,Object>values= mapper.readValue(systemSetting.getValue(),Map.class);
         String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
         long validationStartTime =System.currentTimeMillis();

@@ -16,13 +16,13 @@ import java.util.Map;
 public class CsvErrorDispatcher implements IErrorDispatcher {
 
 
-    private Error error;
+    private CsvError error;
 
-    private CsvErrorDispatcher(Error error) {
+    private CsvErrorDispatcher(CsvError error) {
         this.error = error;
     }
 
-    public static CsvErrorDispatcher getInstance(Error error) {
+    public static CsvErrorDispatcher getInstance(CsvError error) {
         return new CsvErrorDispatcher(error);
     }
 

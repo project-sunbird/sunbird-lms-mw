@@ -1,18 +1,18 @@
 package org.sunbird.error;
 
-public class ErrorDetails {
+public class CsvRowErrorDetails {
 
     int rowId;
     private String header;
     private ErrorEnum errorEnum;
 
-    public ErrorDetails(int rowId, String header, ErrorEnum errorEnum) {
+    public CsvRowErrorDetails(int rowId, String header, ErrorEnum errorEnum) {
         this.rowId = rowId;
         this.header = header;
         this.errorEnum = errorEnum;
     }
 
-    public ErrorDetails() {
+    public CsvRowErrorDetails() {
     }
 
     public int getRowId() {

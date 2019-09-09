@@ -13,13 +13,13 @@ import java.util.List;
  */
 public class ListErrorDispatcher implements IErrorDispatcher {
 
-    private Error error;
+    private CsvError error;
 
-    private ListErrorDispatcher(Error error) {
+    private ListErrorDispatcher(CsvError error) {
         this.error = error;
     }
 
-    public static ListErrorDispatcher getInstance(Error error){
+    public static ListErrorDispatcher getInstance(CsvError error){
         return new ListErrorDispatcher(error);
     }
 

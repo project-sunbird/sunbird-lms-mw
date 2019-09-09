@@ -73,7 +73,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
         Map<String,Object>values= mapper.readValue(systemSetting.getValue(),Map.class);
         String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
         long validationStartTime =System.currentTimeMillis();
-        List<MigrationUser>migrationUserList=validateRequestAndReturnMigrationUsers(processId,(byte[])data.get(JsonKey.FILE),values);
+        List<MigrationUser>migrationUserList=getMigrationUsers(processId,(byte[])data.get(JsonKey.FILE),values);
         ProjectLogger.log("UserBulkMigrationActor:processRecord: time taken to validate records of size ".concat(migrationUserList.size()+"")+"is(ms): ".concat((System.currentTimeMillis()-validationStartTime)+""),LoggerEnum.INFO.name());
         BulkMigrationUser migrationUser=prepareRecord(request,processId,migrationUserList);
         ProjectLogger.log("UserBulkMigrationActor:processRecord:processing record for number of users ".concat(migrationUserList.size()+""));
@@ -118,7 +118,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
         return MapUtils.isNotEmpty(data)?data.get(JsonKey.CREATED_BY):null;
     }
 
-    private List<MigrationUser> validateRequestAndReturnMigrationUsers(String processId,byte[] fileData,Map<String,Object>fieldsMap){
+    private List<MigrationUser> getMigrationUsers(String processId,byte[] fileData,Map<String,Object>fieldsMap){
             Map<String, List<String>> columnsMap = (Map<String, List<String>>) fieldsMap.get(JsonKey.FILE_TYPE_CSV);
             List<String[]> csvData=readCsv(fileData);
             List<String>csvHeaders=getCsvHeadersAsList(csvData);

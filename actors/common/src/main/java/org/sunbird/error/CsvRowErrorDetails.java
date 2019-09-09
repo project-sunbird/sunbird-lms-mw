@@ -1,6 +1,6 @@
 package org.sunbird.error;
 
-public class CsvRowErrorDetails {
+public class CsvRowErrorDetails  {
 
     int rowId;
     private String header;

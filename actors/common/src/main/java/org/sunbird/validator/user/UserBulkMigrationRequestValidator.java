@@ -79,9 +79,9 @@ public class UserBulkMigrationRequestValidator {
 
     private void checkCsvRows(){
         validateRowsCount();
-        shadowUserMigration.getValues().stream().forEach(migrationUser -> {
-            int index=shadowUserMigration.getValues().indexOf(migrationUser);
-            validateMigrationUser(migrationUser,index);
+        shadowUserMigration.getValues().stream().forEach(onCsvRow -> {
+            int index=shadowUserMigration.getValues().indexOf(onCsvRow);
+            validateMigrationUser(onCsvRow,index);
         });
         if(csvRowsErrors.getErrorsList().size()>0){
             IErrorDispatcher errorDispatcher= ErrorDispatcherFactory.getErrorDispatcher(csvRowsErrors);
@@ -123,40 +123,60 @@ public class UserBulkMigrationRequestValidator {
         errorDetails.setRowId(index);
         boolean isEmailBlank=StringUtils.isBlank(email);
         boolean isPhoneBlank=StringUtils.isBlank(phone);
-
         if(isEmailBlank && isPhoneBlank){
             errorDetails.setErrorEnum(ErrorEnum.missing);
             errorDetails.setHeader(JsonKey.EMAIL);
         }
-        else if(!isEmailBlank){
-            errorDetails.setHeader(JsonKey.EMAIL);
-            boolean isEmailValid=ProjectUtil.isEmailvalid(email);
-            if(!isEmailValid){
-            errorDetails.setErrorEnum(ErrorEnum.invalid);
-            }
-            if(isEmailValid){
-                if(!emailSet.add(email))
-                errorDetails.setErrorEnum(ErrorEnum.duplicate);
-            }
+
+        if(!isEmailBlank){
+            checkEmail(email,index);
         }
-        else  if(!isPhoneBlank){
-            errorDetails.setHeader(JsonKey.PHONE);
-            boolean isPhoneValid=ProjectUtil.validatePhoneNumber(phone);
-            if(!isPhoneValid){
-                errorDetails.setErrorEnum(ErrorEnum.invalid);
-            }
-            if(isPhoneValid){
-                if(!phoneSet.add(phone)) {
-                    errorDetails.setErrorEnum(ErrorEnum.duplicate);
-                }
-            }
+        if(!isPhoneBlank){
+            checkPhone(phone,index);
         }
         if(errorDetails.getErrorEnum()!=null) {
             addErrorToList(errorDetails);
         }
     }
 
-    public void checkUserExternalId(String userExternalId,int index) {
+    private void checkEmail(String email,int index){
+        CsvRowErrorDetails errorDetails=new CsvRowErrorDetails();
+        errorDetails.setRowId(index);
+        errorDetails.setHeader(JsonKey.EMAIL);
+        boolean isEmailValid=ProjectUtil.isEmailvalid(email);
+        if(!isEmailValid){
+            errorDetails.setErrorEnum(ErrorEnum.invalid);
+        }
+        if(isEmailValid) {
+            if (!emailSet.add(email)) {
+                errorDetails.setErrorEnum(ErrorEnum.duplicate);
+            }
+        }
+        if(errorDetails.getErrorEnum()!=null) {
+            addErrorToList(errorDetails);
+        }
+
+    }
+
+    private void checkPhone(String phone,int index){
+        CsvRowErrorDetails errorDetails=new CsvRowErrorDetails();
+        errorDetails.setRowId(index);
+        errorDetails.setHeader(JsonKey.PHONE);
+        boolean isPhoneValid=ProjectUtil.validatePhoneNumber(phone);
+        if(!isPhoneValid){
+            errorDetails.setErrorEnum(ErrorEnum.invalid);
+        }
+        if(isPhoneValid){
+            if(!phoneSet.add(phone)) {
+                errorDetails.setErrorEnum(ErrorEnum.duplicate);
+            }
+        }
+        if(errorDetails.getErrorEnum()!=null) {
+        addErrorToList(errorDetails);
+    }
+    }
+
+    private void checkUserExternalId(String userExternalId,int index) {
         CsvRowErrorDetails errorDetails=new CsvRowErrorDetails();
         errorDetails.setRowId(index);
         errorDetails.setHeader(JsonKey.USER_EXTERNAL_ID);
@@ -171,19 +191,19 @@ public class UserBulkMigrationRequestValidator {
         }
     }
 
-    public void checkName(String name,int index) {
+    private void checkName(String name,int index) {
         checkValue(name,index,JsonKey.NAME);
     }
 
-    public void checkOrgExternalId(String orgExternalId,int index) {
+    private void checkOrgExternalId(String orgExternalId,int index) {
         checkValue(orgExternalId,index,JsonKey.ORG_EXTERNAL_ID);
     }
 
-    public void checkChannel(String channel,int index) {
+    private void checkChannel(String channel,int index) {
         checkValue(channel,index,JsonKey.STATE);
     }
 
-    public void checkInputStatus(String inputStatus,int index) {
+    private void checkInputStatus(String inputStatus,int index) {
         checkValue(inputStatus,index,JsonKey.INPUT_STATUS);
         if (!(inputStatus.equalsIgnoreCase(JsonKey.ACTIVE) ||
                 inputStatus.equalsIgnoreCase(JsonKey.INACTIVE))) {

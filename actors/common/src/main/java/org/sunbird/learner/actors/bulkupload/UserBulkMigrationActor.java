@@ -20,7 +20,6 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.bulkupload.model.BulkMigrationUser;
-import org.sunbird.learner.actors.user.service.UserService;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.systemsetting.SystemSetting;
 
@@ -117,9 +116,10 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
 
     private List<MigrationUser> validateRequestAndReturnMigrationUsers(String processId,byte[] fileData,Map<String,Object>fieldsMap){
             Map<String, List<String>> columnsMap = (Map<String, List<String>>) fieldsMap.get(JsonKey.FILE_TYPE_CSV);
-            List<String>csvHeaders=getCsvHeadersAsList(fileData);
+            List<String[]> csvData=readCsv(fileData);
+            List<String>csvHeaders=getCsvHeadersAsList(csvData);
             List<String>mappedCsvHeaders=mapCsvColumn(csvHeaders);
-            List<MigrationUser>migrationUserList=parseCsvRows(getCsvRowsAsList(fileData),mappedCsvHeaders);
+            List<MigrationUser>migrationUserList=parseCsvRows(getCsvRowsAsList(csvData),mappedCsvHeaders);
             Migration migration = new Migration.MigrationBuilder()
                     .setHeaders(csvHeaders)
                     .setMappedHeaders(mappedCsvHeaders)
@@ -134,13 +134,33 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
             return migrationUserList;
     }
 
-    private List<String> getCsvHeadersAsList(byte[] fileData){
-        List<String>headers=new ArrayList<>();
+    private List<String[]> readCsv(byte[] fileData){
+        List<String[]>values=new ArrayList<>();
         try {
             csvReader = getCsvReader(fileData, ',', '"', 0);
-            ProjectLogger.log("UserBulkMigrationActor:getCsvHeadersAsList:csvReader initialized ".concat(csvReader.toString()),LoggerEnum.ERROR.name());
-            headers.addAll(Arrays.asList(csvReader.readNext()));
-            headers.replaceAll(String::toLowerCase);
+            ProjectLogger.log("UserBulkMigrationActor:readCsv:csvReader initialized ".concat(csvReader.toString()),LoggerEnum.ERROR.name());
+            values=csvReader.readAll();
+        }
+        catch (Exception ex) {
+            ProjectLogger.log("UserBulkMigrationActor:readCsv:error occurred while getting csvReader",LoggerEnum.ERROR.name());
+            throw new ProjectCommonException(
+                    ResponseCode.SERVER_ERROR.getErrorCode(),
+                    ResponseCode.SERVER_ERROR.getErrorMessage(),
+                    ResponseCode.SERVER_ERROR.getResponseCode());
+        } finally {
+            IOUtils.closeQuietly(csvReader);
+        }
+        return values;
+    }
+
+    private List<String> getCsvHeadersAsList(List<String[]>csvData){
+        List<String>headers=new ArrayList<>();
+        int CSV_COLUMN_NAMES=0;
+        try {
+            if(null!=csvData){
+                headers.addAll(Arrays.asList(csvData.get(CSV_COLUMN_NAMES)));
+                headers.replaceAll(String::toLowerCase);
+            }
         }
         catch (Exception ex) {
             ProjectLogger.log("UserBulkMigrationActor:getCsvHeadersAsList:error occurred while getting csvReader",LoggerEnum.ERROR.name());
@@ -148,35 +168,11 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
                     ResponseCode.SERVER_ERROR.getErrorCode(),
                     ResponseCode.SERVER_ERROR.getErrorMessage(),
                     ResponseCode.SERVER_ERROR.getResponseCode());
-        } finally {
-            IOUtils.closeQuietly(csvReader);
         }
         return headers;
     }
-    private List<String[]> getCsvRowsAsList(byte[] fileData){
-        List<String[]>values=new ArrayList<>();
-        int ROW_BEGINING_COUNT=2;
-        try {
-            csvReader = getCsvReader(fileData, ',', '"', 1);
-            ProjectLogger.log("UserBulkMigrationActor:getCsvRowsAsList:csvReader initialized ".concat(csvReader.toString()),LoggerEnum.ERROR.name());
-            values=csvReader.readAll();
-        }
-        catch (Exception ex) {
-            ProjectLogger.log("UserBulkMigrationActor:getCsvRowsAsList:error occurred while getting csvReader",LoggerEnum.ERROR.name());
-            throw new ProjectCommonException(
-                    ResponseCode.SERVER_ERROR.getErrorCode(),
-                    ResponseCode.SERVER_ERROR.getErrorMessage(),
-                    ResponseCode.SERVER_ERROR.getResponseCode());
-        } finally {
-            IOUtils.closeQuietly(csvReader);
-        }
-        if(values.size()<ROW_BEGINING_COUNT){
-            throw new ProjectCommonException(
-                    ResponseCode.noDataForConsumption.getErrorCode(),
-                    ResponseCode.noDataForConsumption.getErrorMessage(),
-                    ResponseCode.CLIENT_ERROR.getResponseCode());
-        }
-        return values.subList(1,values.size());
+    private List<String[]> getCsvRowsAsList(List<String[]>csvData){
+        return csvData.subList(1,csvData.size());
     }
 
     private List<String> mapCsvColumn(List<String> csvColumns){

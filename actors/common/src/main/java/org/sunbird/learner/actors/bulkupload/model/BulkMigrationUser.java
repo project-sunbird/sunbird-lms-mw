@@ -63,7 +63,7 @@ public class BulkMigrationUser {
     }
 
     public String getData() {
-        return decryptionService.decryptData(data);
+        return data;
     }
 
     public String getFailureResult() {

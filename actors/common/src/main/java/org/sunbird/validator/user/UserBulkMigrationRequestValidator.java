@@ -86,10 +86,17 @@ public class UserBulkMigrationRequestValidator {
     }
 
     private void validateRowsCount(){
+        int ROW_BEGINING_INDEX=1;
         if(migration.getValues().size()>=MAX_ROW_SUPPORTED){
             throw new ProjectCommonException(
                     ResponseCode.csvRowsExceeds.getErrorCode(),
                     ResponseCode.csvRowsExceeds.getErrorMessage().concat("supported:"+MAX_ROW_SUPPORTED),
+                    ResponseCode.CLIENT_ERROR.getResponseCode());
+        }
+        if(migration.getValues().size()<ROW_BEGINING_INDEX){
+            throw new ProjectCommonException(
+                    ResponseCode.noDataForConsumption.getErrorCode(),
+                    ResponseCode.noDataForConsumption.getErrorMessage(),
                     ResponseCode.CLIENT_ERROR.getResponseCode());
         }
     }

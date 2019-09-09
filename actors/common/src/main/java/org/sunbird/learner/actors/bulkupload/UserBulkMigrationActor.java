@@ -9,7 +9,7 @@ import org.sunbird.actorutil.org.OrganisationClient;
 import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
-import org.sunbird.bean.Migration;
+import org.sunbird.bean.ShadowUserUpload;
 import org.sunbird.bean.MigrationUser;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -120,7 +120,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
             List<String>csvHeaders=getCsvHeadersAsList(csvData);
             List<String>mappedCsvHeaders=mapCsvColumn(csvHeaders);
             List<MigrationUser>migrationUserList=parseCsvRows(getCsvRowsAsList(csvData),mappedCsvHeaders);
-            Migration migration = new Migration.MigrationBuilder()
+            ShadowUserUpload migration = new ShadowUserUpload.ShadowUserUploadBuilder()
                     .setHeaders(csvHeaders)
                     .setMappedHeaders(mappedCsvHeaders)
                     .setProcessId(processId)

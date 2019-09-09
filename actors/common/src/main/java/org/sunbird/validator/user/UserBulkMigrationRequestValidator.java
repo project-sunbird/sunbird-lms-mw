@@ -2,7 +2,7 @@ package org.sunbird.validator.user;
 
 import com.mchange.v1.util.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.sunbird.bean.Migration;
+import org.sunbird.bean.ShadowUserUpload;
 import org.sunbird.bean.MigrationUser;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.JsonKey;
@@ -20,18 +20,18 @@ import java.util.HashSet;
 
 public class UserBulkMigrationRequestValidator {
 
-    private Migration migration;
+    private ShadowUserUpload shadowUserMigration;
     private HashSet<String> emailSet=new HashSet<>();
     private HashSet<String> phoneSet=new HashSet<>();
     private HashSet<String> userExternalIdsSet=new HashSet<>();
     private Error csvRowsErrors=new Error();
-    private static final int MAX_ROW_SUPPORTED=15000;
+    private static final int MAX_ROW_SUPPORTED=20000;
 
 
-    private UserBulkMigrationRequestValidator(Migration migration) {
-        this.migration = migration;
+    private UserBulkMigrationRequestValidator(ShadowUserUpload migration) {
+        this.shadowUserMigration = migration;
     }
-    public static UserBulkMigrationRequestValidator getInstance(Migration migration){
+    public static UserBulkMigrationRequestValidator getInstance(ShadowUserUpload migration){
         return new UserBulkMigrationRequestValidator(migration);
     }
     public void validate()
@@ -44,9 +44,9 @@ public class UserBulkMigrationRequestValidator {
         supportedColumns();
     }
     private void mandatoryColumns(){
-        migration.getMandatoryFields().forEach(
+        shadowUserMigration.getMandatoryFields().forEach(
                 column->{
-                    if(!migration.getHeaders().contains(column.toLowerCase())){
+                    if(!shadowUserMigration.getHeaders().contains(column.toLowerCase())){
                         ProjectLogger.log("UserBulkMigrationRequestValidator:mandatoryColumns: mandatory column is not present".concat(column+""), LoggerEnum.ERROR.name());
                         throw new ProjectCommonException(
                                 ResponseCode.mandatoryParamsMissing.getErrorCode(),
@@ -59,14 +59,14 @@ public class UserBulkMigrationRequestValidator {
         }
 
     private void supportedColumns(){
-        migration.getHeaders().forEach(suppColumn->{
-            if(!migration.getSupportedFields().contains(suppColumn.toLowerCase())){
+        shadowUserMigration.getHeaders().forEach(suppColumn->{
+            if(!shadowUserMigration.getSupportedFields().contains(suppColumn.toLowerCase())){
                 ProjectLogger.log("UserBulkMigrationRequestValidator:supportedColumns: supported column is not present".concat(suppColumn+""), LoggerEnum.ERROR.name());
                 throw new ProjectCommonException(
                         ResponseCode.errorUnsupportedField.getErrorCode(),
                         ResponseCode.errorUnsupportedField.getErrorMessage(),
                         ResponseCode.CLIENT_ERROR.getResponseCode(),
-                        "Invalid provided column ".concat(suppColumn).concat("supported headers are:").concat(ArrayUtils.stringifyContents(migration.getSupportedFields().toArray())));
+                        "Invalid provided column ".concat(suppColumn).concat("supported headers are:").concat(ArrayUtils.stringifyContents(shadowUserMigration.getSupportedFields().toArray())));
             }
         });
     }
@@ -75,8 +75,8 @@ public class UserBulkMigrationRequestValidator {
 
     private void csvRows(){
         validateRowsCount();
-        migration.getValues().stream().forEach(migrationUser -> {
-            int index=migration.getValues().indexOf(migrationUser);
+        shadowUserMigration.getValues().stream().forEach(migrationUser -> {
+            int index=shadowUserMigration.getValues().indexOf(migrationUser);
             validateMigrationUser(migrationUser,index);
         });
         if(csvRowsErrors.getErrorsList().size()>0){
@@ -86,14 +86,14 @@ public class UserBulkMigrationRequestValidator {
     }
 
     private void validateRowsCount(){
-        int ROW_BEGINING_INDEX=1;
-        if(migration.getValues().size()>=MAX_ROW_SUPPORTED){
+        int ROW_BEGINNING_INDEX=1;
+        if(shadowUserMigration.getValues().size()>=MAX_ROW_SUPPORTED){
             throw new ProjectCommonException(
                     ResponseCode.csvRowsExceeds.getErrorCode(),
                     ResponseCode.csvRowsExceeds.getErrorMessage().concat("supported:"+MAX_ROW_SUPPORTED),
                     ResponseCode.CLIENT_ERROR.getResponseCode());
         }
-        if(migration.getValues().size()<ROW_BEGINING_INDEX){
+        else if(shadowUserMigration.getValues().size()<ROW_BEGINNING_INDEX){
             throw new ProjectCommonException(
                     ResponseCode.noDataForConsumption.getErrorCode(),
                     ResponseCode.noDataForConsumption.getErrorMessage(),
@@ -127,7 +127,7 @@ public class UserBulkMigrationRequestValidator {
             if(!isEmailValid){
             errorDetails.setErrorEnum(ErrorEnum.invalid);
             }
-            if(!checkDuplicateValueOrAdd(emailSet,email)){
+            if(isEmailValid && !checkDuplicateValueOrAdd(emailSet,email)){
                 errorDetails.setErrorEnum(ErrorEnum.duplicate);
             }
 
@@ -138,7 +138,7 @@ public class UserBulkMigrationRequestValidator {
             if(!isPhoneValid){
                 errorDetails.setErrorEnum(ErrorEnum.invalid);
             }
-            if(!checkDuplicateValueOrAdd(phoneSet,phone)){
+            if(isPhoneValid && !checkDuplicateValueOrAdd(phoneSet,phone)){
                 errorDetails.setErrorEnum(ErrorEnum.duplicate);
             }
         }
@@ -159,49 +159,37 @@ public class UserBulkMigrationRequestValidator {
     }
 
     public void name(String name,int index) {
-        ErrorDetails errorDetails=new ErrorDetails();
-        errorDetails.setRowId(index);
-        errorDetails.setHeader(JsonKey.NAME);
-        if(StringUtils.isBlank(name)){
-            errorDetails.setErrorEnum(ErrorEnum.missing);
-        }
-        addErrorToList(errorDetails);
+        validateColumnAndErrorToList(name,index,JsonKey.NAME);
     }
 
     public void orgExternalId(String orgExternalId,int index) {
-        ErrorDetails errorDetails=new ErrorDetails();
-        errorDetails.setRowId(index);
-        errorDetails.setHeader(JsonKey.ORG_EXTERNAL_ID);
-        if(StringUtils.isBlank(orgExternalId)){
-            errorDetails.setErrorEnum(ErrorEnum.missing);
-        }
-        addErrorToList(errorDetails);
+        validateColumnAndErrorToList(orgExternalId,index,JsonKey.ORG_EXTERNAL_ID);
     }
 
     public void channel(String channel,int index) {
-        ErrorDetails errorDetails=new ErrorDetails();
-        errorDetails.setRowId(index);
-        errorDetails.setHeader(JsonKey.STATE);
-        if(StringUtils.isBlank(channel)){
-            errorDetails.setErrorEnum(ErrorEnum.missing);
-        }
-        addErrorToList(errorDetails);
+        validateColumnAndErrorToList(channel,index,JsonKey.STATE);
     }
 
     public void inputStatus(String inputStatus,int index) {
-        ErrorDetails errorDetails=new ErrorDetails();
-        errorDetails.setRowId(index);
-        errorDetails.setHeader(JsonKey.INPUT_STATUS);
-        if(StringUtils.isBlank(inputStatus)){
-            errorDetails.setErrorEnum(ErrorEnum.missing);
-        }
-        if(!(inputStatus.equalsIgnoreCase(JsonKey.ACTIVE)|| inputStatus.equalsIgnoreCase(JsonKey.INACTIVE))){
-            errorDetails.setErrorEnum(ErrorEnum.invalid);
-        }
-        addErrorToList(errorDetails);
+        validateColumnAndErrorToList(inputStatus,index,JsonKey.INPUT_STATUS);
     }
 
     private boolean checkDuplicateValueOrAdd(HashSet<String>identifier,String value){
         return identifier.add(value);
+    }
+
+    private void validateColumnAndErrorToList(String column,int rowIndex,String header){
+        ErrorDetails errorDetails=new ErrorDetails();
+        errorDetails.setRowId(rowIndex);
+        errorDetails.setHeader(header);
+        if(StringUtils.isBlank(column)){
+            errorDetails.setErrorEnum(ErrorEnum.missing);
+        }
+        if(header.equalsIgnoreCase(JsonKey.INPUT_STATUS)){
+            if(!(column.equalsIgnoreCase(JsonKey.ACTIVE)|| column.equalsIgnoreCase(JsonKey.INACTIVE))){
+                errorDetails.setErrorEnum(ErrorEnum.invalid);
+            }
+        }
+        addErrorToList(errorDetails);
     }
 }

@@ -5,7 +5,7 @@ import org.sunbird.validator.user.UserBulkMigrationRequestValidator;
 import java.util.Arrays;
 import java.util.List;
 
-public class Migration {
+public class ShadowUserUpload {
 
     private String fileSize;
     private List<String>headers;
@@ -16,7 +16,7 @@ public class Migration {
     private String processId;
     private List<MigrationUser>values;
 
-    private Migration(MigrationBuilder migrationBuilder) {
+    private ShadowUserUpload(ShadowUserUploadBuilder migrationBuilder) {
         this.fileSize = migrationBuilder.fileSize;
         this.headers = migrationBuilder.headers;
         this.fileData = migrationBuilder.fileData;
@@ -57,7 +57,7 @@ public class Migration {
 
     @Override
     public String toString() {
-        return "Migration{" +
+        return "ShadowUserUpload{" +
                 "fileSize='" + fileSize + '\'' +
                 ", headers=" + headers +
                 ", mappedHeaders=" + mappedHeaders +
@@ -74,7 +74,7 @@ public class Migration {
     }
 
 
-    public static class MigrationBuilder{
+    public static class ShadowUserUploadBuilder {
 
         private String fileSize;
         private List<String> headers;
@@ -85,54 +85,54 @@ public class Migration {
         private List<MigrationUser>values;
         private List<String>mappedHeaders;
 
-        public MigrationBuilder() {
+        public ShadowUserUploadBuilder() {
         }
 
-        public MigrationBuilder setFileSize(String fileSize) {
+        public ShadowUserUploadBuilder setFileSize(String fileSize) {
             this.fileSize = fileSize;
             return this;
         }
 
-        public MigrationBuilder setHeaders(List<String> headers) {
+        public ShadowUserUploadBuilder setHeaders(List<String> headers) {
             this.headers = headers;
             return this;
         }
 
-        public MigrationBuilder setFileData(byte[] fileData) {
+        public ShadowUserUploadBuilder setFileData(byte[] fileData) {
             this.fileData = fileData;
             return this;
         }
-        public MigrationBuilder setMandatoryFields(List<String> mandatoryFields) {
+        public ShadowUserUploadBuilder setMandatoryFields(List<String> mandatoryFields) {
             this.mandatoryFields = mandatoryFields;
             return this;
         }
 
-        public MigrationBuilder setSupportedFields(List<String> supportedFields) {
+        public ShadowUserUploadBuilder setSupportedFields(List<String> supportedFields) {
             this.supportedFields = supportedFields;
             return this;
         }
 
-        public MigrationBuilder setProcessId(String processId){
+        public ShadowUserUploadBuilder setProcessId(String processId){
             this.processId=processId;
             return this;
         }
 
-        public MigrationBuilder setValues(List<MigrationUser>values){
+        public ShadowUserUploadBuilder setValues(List<MigrationUser>values){
             this.values=values;
             return this;
         }
 
-        public MigrationBuilder setMappedHeaders(List<String> mappedHeaders) {
+        public ShadowUserUploadBuilder setMappedHeaders(List<String> mappedHeaders) {
             this.mappedHeaders = mappedHeaders;
             return this;
         }
 
-        public Migration validate(){
-            Migration migration=new Migration(this);
+        public ShadowUserUpload validate(){
+            ShadowUserUpload migration=new ShadowUserUpload(this);
             validate(migration);
             return migration;
         }
-        private void validate(Migration migration){
+        private void validate(ShadowUserUpload migration){
             UserBulkMigrationRequestValidator.getInstance(migration).validate();
         }
     }

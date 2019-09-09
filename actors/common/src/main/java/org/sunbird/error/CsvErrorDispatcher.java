@@ -29,16 +29,15 @@ public class CsvErrorDispatcher implements IErrorDispatcher {
     @Override
     public void dispatchError() {
         Map<String, List<String>> errorMap = new HashMap<>();
-        error.getErrorsList().stream().forEach(errorDetails -> {
+        error.getErrorsList().parallelStream().forEach(errorDetails -> {
+            List<String> errorRows = new ArrayList<>();
             if (errorMap.containsKey(errorDetails.getHeader())) {
-                List<String> errorRows = errorMap.get(errorDetails.getHeader());
+                errorRows = errorMap.get(errorDetails.getHeader());
+                errorRows.add(errorDetails.getRowId() + "");
+            }
                 errorRows.add(errorDetails.getRowId() + "");
                 errorMap.put(errorDetails.getHeader(), errorRows);
-            } else {
-                List<String> newErrorRows = new ArrayList<>();
-                newErrorRows.add(errorDetails.getRowId() + "");
-                errorMap.put(errorDetails.getHeader(), newErrorRows);
-            }
+
         });
         throw new ProjectCommonException(
                 ResponseCode.invalidRequestData.getErrorCode(),

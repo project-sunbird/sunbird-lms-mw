@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
@@ -206,30 +207,24 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
         return;
       }
 
-      //User user = mapper.convertValue(userMap, User.class);
-      //user.setId((String) userMap.get(JsonKey.USER_ID));
       String orgName = "";
       if (null != organisation) {
         orgName = organisation.getOrgName();
       }
 
-      /*if (StringUtils.isNotEmpty(user.getPhone())) {
-        user.setPhoneVerified(true);
+      if(StringUtils.isNotEmpty((String) userMap.get(JsonKey.PHONE))) {
+        userMap.put(JsonKey.PHONE_VERIFIED, true);
       }
-
-      if (StringUtils.isNotEmpty(user.getEmail())) {
-        user.setEmailVerified(true);
-      }*/
+      if(StringUtils.isNotEmpty((String) userMap.get(JsonKey.EMAIL))) {
+        userMap.put(JsonKey.EMAIL_VERIFIED, true);
+      }
       String userId  = (String) userMap.get(JsonKey.USER_ID);
       if (StringUtils.isEmpty(userId)) {
-        userMap.put("createdBy", uploadedBy);
-        userMap.put("rootOrgId", organisationId);
-        /*user.setCreatedBy(uploadedBy);
-        user.setRootOrgId(organisationId);*/
+        userMap.put(JsonKey.CREATED_BY, uploadedBy);
+        userMap.put(JsonKey.ROOT_ORG_ID, organisationId);
         callCreateUser(userMap, task, orgName);
       } else {
-        userMap.put("updatedBy", uploadedBy);
-        //user.setUpdatedBy(uploadedBy);
+        userMap.put(JsonKey.UPDATED_BY, uploadedBy);
         callUpdateUser(userMap, task, orgName);
       }
     } catch (Exception e) {

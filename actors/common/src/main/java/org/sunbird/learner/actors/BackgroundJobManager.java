@@ -371,8 +371,8 @@ public class BackgroundJobManager extends BaseActor {
     String userId = (String) actorMessage.getRequest().get(JsonKey.ID);
     Map<String, Object> userDetails =
         Util.getUserDetails(userId, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
-    if(actorMessage.getRequest().get("userFlagsMap") != null) {
-      userDetails.putAll((Map<? extends String, ?>) actorMessage.getRequest().get("userFlagsMap"));
+    if(actorMessage.getRequest().get(JsonKey.USER_FLAGS_MAP) != null) {
+      userDetails.putAll((Map<? extends String, ?>) actorMessage.getRequest().get(JsonKey.USER_FLAGS_MAP));
     }
     ProjectLogger.log(
         "BackGroundJobManager:updateUserInfoToEs userRootOrgId "

@@ -164,12 +164,6 @@ public class UserManagementActor extends BaseActor {
       requestMap.put(JsonKey.RECOVERY_PHONE,null);
     }
 
-    /*if(userMap.containsKey(JsonKey.EMAIL_VERIFIED) && (userMap.get(JsonKey.EMAIL_VERIFIED)!=null)){
-      requestMap.put(JsonKey.EMAIL_VERIFIED,userMap.get(JsonKey.EMAIL_VERIFIED));
-    }
-    if(userMap.containsKey(JsonKey.PHONE_VERIFIED) && (userMap.get(JsonKey.PHONE_VERIFIED)!=null)){
-      requestMap.put(JsonKey.PHONE_VERIFIED,userMap.get(JsonKey.PHONE_VERIFIED));
-    }*/
     Map<String, Object> userBooleanMap = updatedUserFlagsMap(userMap, userDbRecord);
     userBoolFlagToNum(requestMap, userBooleanMap);
     Response response =
@@ -625,7 +619,6 @@ public class UserManagementActor extends BaseActor {
     Map<String, Object> esResponse = new HashMap<>();
     esResponse.putAll((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE));
     esResponse.putAll(requestMap);
-    esResponse.putAll(userFlagsMap);
     response.put(
         JsonKey.ERRORS,
         ((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE)).get(JsonKey.ERRORS));
@@ -747,7 +740,7 @@ public class UserManagementActor extends BaseActor {
     Request userRequest = new Request();
     userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
     userRequest.getRequest().put(JsonKey.ID, completeUserMap.get(JsonKey.ID));
-    userRequest.getRequest().put("userFlagsMap",userBooleanMap);
+    userRequest.getRequest().put(JsonKey.USER_FLAGS_MAP,userBooleanMap);
     ProjectLogger.log(
         "UserManagementActor:saveUserDetailsToEs: Trigger sync of user details to ES");
     tellToAnother(userRequest);

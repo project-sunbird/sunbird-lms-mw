@@ -160,19 +160,14 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
     private List<String> getCsvHeadersAsList(List<String[]>csvData){
         List<String>headers=new ArrayList<>();
         int CSV_COLUMN_NAMES=0;
-        try {
-            if(null!=csvData){
+            if(null==csvData || csvData.isEmpty()){
+                throw new ProjectCommonException(
+                        ResponseCode.blankCsvData.getErrorCode(),
+                        ResponseCode.blankCsvData.getErrorMessage(),
+                        ResponseCode.CLIENT_ERROR.getResponseCode());
+            }
                 headers.addAll(Arrays.asList(csvData.get(CSV_COLUMN_NAMES)));
                 headers.replaceAll(String::toLowerCase);
-            }
-        }
-        catch (Exception ex) {
-            ProjectLogger.log("UserBulkMigrationActor:getCsvHeadersAsList:error occurred while getting csvReader",LoggerEnum.ERROR.name());
-            throw new ProjectCommonException(
-                    ResponseCode.SERVER_ERROR.getErrorCode(),
-                    ResponseCode.SERVER_ERROR.getErrorMessage(),
-                    ResponseCode.SERVER_ERROR.getResponseCode());
-        }
         return headers;
     }
     private List<String[]> getCsvRowsAsList(List<String[]>csvData){

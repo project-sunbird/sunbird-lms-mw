@@ -18,6 +18,10 @@ import org.sunbird.error.factory.ErrorDispatcherFactory;
 
 import java.util.HashSet;
 
+/**
+ * this class will validate the csv file for shadow db
+ * @author anmolgupta
+ */
 public class UserBulkMigrationRequestValidator {
 
     private ShadowUserUpload shadowUserMigration;

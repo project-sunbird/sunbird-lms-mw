@@ -1,5 +1,6 @@
 package org.sunbird.bean;
 
+
 import java.io.Serializable;
 
 public class MigrationUser implements Serializable {

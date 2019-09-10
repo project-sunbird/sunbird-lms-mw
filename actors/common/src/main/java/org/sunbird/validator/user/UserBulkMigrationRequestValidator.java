@@ -70,7 +70,7 @@ public class UserBulkMigrationRequestValidator {
                         ResponseCode.errorUnsupportedField.getErrorCode(),
                         ResponseCode.errorUnsupportedField.getErrorMessage(),
                         ResponseCode.CLIENT_ERROR.getResponseCode(),
-                        "Invalid provided column ".concat(suppColumn).concat("supported headers are:").concat(ArrayUtils.stringifyContents(shadowUserMigration.getSupportedFields().toArray())));
+                        "Invalid provided column:".concat(suppColumn).concat(":supported headers are:").concat(ArrayUtils.stringifyContents(shadowUserMigration.getSupportedFields().toArray())));
             }
         });
     }
@@ -108,8 +108,6 @@ public class UserBulkMigrationRequestValidator {
         checkEmailAndPhone(migrationUser.getEmail(),migrationUser.getPhone(),index);
         checkUserExternalId(migrationUser.getUserExternalId(),index);
         checkName(migrationUser.getName(),index);
-        checkOrgExternalId(migrationUser.getOrgExternalId(),index);
-        checkChannel(migrationUser.getChannel(),index);
         checkInputStatus(migrationUser.getInputStatus(),index);
     }
 
@@ -195,13 +193,6 @@ public class UserBulkMigrationRequestValidator {
         checkValue(name,index,JsonKey.NAME);
     }
 
-    private void checkOrgExternalId(String orgExternalId,int index) {
-        checkValue(orgExternalId,index,JsonKey.ORG_EXTERNAL_ID);
-    }
-
-    private void checkChannel(String channel,int index) {
-        checkValue(channel,index,JsonKey.STATE);
-    }
 
     private void checkInputStatus(String inputStatus,int index) {
         checkValue(inputStatus,index,JsonKey.INPUT_STATUS);

@@ -75,8 +75,12 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
         String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
         long validationStartTime =System.currentTimeMillis();
         String userId=getCreatedBy(request);
-        List<MigrationUser>migrationUserList=getMigrationUsers(userId,processId,(byte[])data.get(JsonKey.FILE),values);
+        Map<String,Object>result=getUserById(userId);
+        String channel=getChannel(result);
+        String rootOrgId=getRootOrgId(result);
+        List<MigrationUser>migrationUserList=getMigrationUsers(channel,processId,(byte[])data.get(JsonKey.FILE),values);
         ProjectLogger.log("UserBulkMigrationActor:processRecord: time taken to validate records of size ".concat(migrationUserList.size()+"")+"is(ms): ".concat((System.currentTimeMillis()-validationStartTime)+""),LoggerEnum.INFO.name());
+        request.getRequest().put(JsonKey.ROOT_ORG_ID,rootOrgId);
         BulkMigrationUser migrationUser=prepareRecord(request,processId,migrationUserList);
         ProjectLogger.log("UserBulkMigrationActor:processRecord:processing record for number of users ".concat(migrationUserList.size()+""));
         insertRecord(migrationUser);
@@ -103,6 +107,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
                     .setTaskCount(migrationUserList.size())
                     .setCreatedBy(getCreatedBy(request))
                     .setUploadedBy(getCreatedBy(request))
+                    .setOrganisationId((String)request.getRequest().get(JsonKey.ROOT_ORG_ID))
                     .build();
                     return migrationUser;
         }catch (Exception e){
@@ -120,8 +125,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
         return MapUtils.isNotEmpty(data)?data.get(JsonKey.CREATED_BY):null;
     }
 
-    private List<MigrationUser> getMigrationUsers(String userId,String processId,byte[] fileData,Map<String,Object>fieldsMap){
-            String channel=getChannelByUserId(userId);
+    private List<MigrationUser> getMigrationUsers(String channel,String processId,byte[] fileData,Map<String,Object>fieldsMap){
             Map<String, List<String>> columnsMap = (Map<String, List<String>>) fieldsMap.get(JsonKey.FILE_TYPE_CSV);
             List<String[]> csvData=readCsv(fileData);
             List<String>csvHeaders=getCsvHeadersAsList(csvData);
@@ -248,11 +252,43 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
         return mappedHeaders.get(index);
     }
 
-    private String getChannelByUserId(String userId){
+
+    /**
+     * in bulk_upload_process db user will have channel of admin users
+     * @param result
+     * @return channel
+     */
+    private String getChannel(Map<String,Object> result){
+            String channel = (String) result.get(JsonKey.CHANNEL);
+            ProjectLogger.log("UserBulkMigrationActor:getChannel: the channel of admin user ".concat(channel + ""), LoggerEnum.INFO.name());
+            return channel;
+    }
+    /**
+     * in bulk_upload_process db organisationId will be of user.
+     * @param result
+     * @return rootOrgId
+     */
+    private String getRootOrgId( Map<String,Object> result){
+        String rootOrgId = (String) result.get(JsonKey.ROOT_ORG_ID);
+        ProjectLogger.log("UserBulkMigrationActor:getRootOrgId:the root org id  of admin user ".concat(rootOrgId + ""), LoggerEnum.INFO.name());
+        return rootOrgId;
+    }
+
+
+    /**
+     * this method will fetch user record with userId from cassandra
+     * @param userId
+     * @return result
+     */
+    private Map<String,Object> getUserById(String userId){
         Response response=cassandraOperation.getRecordById(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),userId);
+        if(((List)response.getResult().get(JsonKey.RESPONSE)).isEmpty()) {
+            throw new ProjectCommonException(
+                    ResponseCode.userNotFound.getErrorCode(),
+                    ResponseCode.userNotFound.getErrorMessage(),
+                    ResponseCode.CLIENT_ERROR.getResponseCode());
+        }
         Map<String,Object>result=((Map)((List)response.getResult().get(JsonKey.RESPONSE)).get(0));
-        String channel=(String) result.get(JsonKey.CHANNEL);
-        ProjectLogger.log("UserBulkMigrationActor:getChannelByUserId: the channel of admin user ".concat(channel+""),LoggerEnum.INFO.name());
-        return channel;
+        return result;
     }
 }

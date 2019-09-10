@@ -165,8 +165,8 @@ public class UserMergeActor extends UserBaseActor {
     Telemetry userCertMergeRequest = createAccountMergeTopicData(mergee, merger);
     content = objectMapper.writeValueAsString(userCertMergeRequest);
     ProjectLogger.log(
-            "UserMergeActor:mergeCertCourseDetails: Kafka producer topic::"+content,
-            LoggerEnum.INFO.name());
+        "UserMergeActor:mergeCertCourseDetails: Kafka producer topic::" + content,
+        LoggerEnum.INFO.name());
     ProducerRecord<Long, String> record = new ProducerRecord<>(topic, content);
     if (producer != null) {
       producer.send(record);
@@ -192,13 +192,13 @@ public class UserMergeActor extends UserBaseActor {
     edata.put(JsonKey.ITERATION, 1);
     mergeUserEvent.setEdata(edata);
     Context context = new Context();
-    org.sunbird.telemetry.dto.Producer dataProducer =  new org.sunbird.telemetry.dto.Producer();
+    org.sunbird.telemetry.dto.Producer dataProducer = new org.sunbird.telemetry.dto.Producer();
     dataProducer.setVer("1.0");
     dataProducer.setId(JsonKey.TELEMETRY_PRODUCER_USER_MERGE_ID);
     context.setPdata(dataProducer);
     mergeUserEvent.setContext(context);
     Target target = new Target();
-    target.setId(OneWayHashing.encryptVal(mergee.getId()+"_"+merger.getId()));
+    target.setId(OneWayHashing.encryptVal(mergee.getId() + "_" + merger.getId()));
     target.setType(JsonKey.TELEMETRY_TARGET_USER_MERGE_TYPE);
     mergeUserEvent.setObject(target);
     return mergeUserEvent;
@@ -247,7 +247,6 @@ public class UserMergeActor extends UserBaseActor {
     mergeeDBMap.put(JsonKey.IS_DELETED, true);
     mergeeDBMap.put(JsonKey.EMAIL, null);
     mergeeDBMap.put(JsonKey.PHONE, null);
-    mergeeDBMap.put(JsonKey.USERNAME, null);
     mergeeDBMap.put(JsonKey.PREV_USED_EMAIL, mergee.getEmail());
     mergeeDBMap.put(JsonKey.PREV_USED_PHONE, mergee.getPhone());
     mergeeDBMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());

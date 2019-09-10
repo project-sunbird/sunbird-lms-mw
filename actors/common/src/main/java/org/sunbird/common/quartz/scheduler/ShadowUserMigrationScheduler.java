@@ -71,9 +71,8 @@ public class ShadowUserMigrationScheduler {
             insertShadowUserToDb(processId, singleMigrationUser);
         } else {
             ShadowUser shadowUser = mapper.convertValue(existingUserDetails, ShadowUser.class);
-            updateUserInShadowDb(singleMigrationUser, shadowUser);
-        }
-    }
+            updateUser(singleMigrationUser, shadowUser);
+        } }
 
 
     private List<Map<String, Object>> getRowsFromBulkUserDb() {
@@ -135,7 +134,6 @@ public class ShadowUserMigrationScheduler {
                 .setChannel(migrationUser.getChannel())
                 .setName(migrationUser.getName())
                 .setProcessId(processId)
-                .setCreatedOn(new Timestamp(System.currentTimeMillis()))
                 .setClaimedOn(null)
                 .setClaimStatus(ClaimStatus.UNCLAIMED.getValue())
                 .setId(id)
@@ -144,6 +142,7 @@ public class ShadowUserMigrationScheduler {
                 .setUpdatedOn(null)
                 .build();
         Map<String, Object> dbMap = mapper.convertValue(shadowUser, Map.class);
+        dbMap.put(JsonKey.CREATED_ON,new Timestamp(System.currentTimeMillis()));
         Response response = cassandraOperation.insertRecord(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, dbMap);
         ProjectLogger.log("ShadowUserMigrationScheduler:insertShadowUser: record status in cassandra ".concat(response.getResult() + ""), LoggerEnum.INFO.name());
     }
@@ -155,16 +154,22 @@ public class ShadowUserMigrationScheduler {
         return ProjectUtil.Status.INACTIVE.getValue();
     }
 
-    private void updateUserInShadowDb(MigrationUser migrationUser, ShadowUser shadowUser) {
+    private void updateUser(MigrationUser migrationUser, ShadowUser shadowUser) {
         Map<String, Object> propertiesMap = new HashMap<>();
         propertiesMap.put(JsonKey.EMAIL, migrationUser.getEmail());
         propertiesMap.put(JsonKey.PHONE, migrationUser.getPhone());
         propertiesMap.put(JsonKey.NAME, migrationUser.getName());
-        propertiesMap.put(JsonKey.ORG_EXTERNAL_ID, migrationUser.getOrgExternalId());
+        propertiesMap.put(JsonKey.ORG_EXT_ID, migrationUser.getOrgExternalId());
         propertiesMap.put(JsonKey.UPDATED_ON, new Timestamp(System.currentTimeMillis()));
         propertiesMap.put(JsonKey.CHANNEL, migrationUser.getChannel());
-        cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), propertiesMap);
+        propertiesMap.put(JsonKey.ID,shadowUser.getId());
+        updateUserInShadowDb(propertiesMap);
         updateUserInUserDb(migrationUser.getInputStatus(), shadowUser);
+    }
+
+    private void updateUserInShadowDb(Map<String, Object> propertiesMap){
+        Response response=cassandraOperation.updateRecord(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, propertiesMap);
+        ProjectLogger.log("ShadowUserMigrationScheduler:updateUserInShadowDb: record status in cassandra ".concat(response.getResult() + ""), LoggerEnum.INFO.name());
     }
 
     private void updateUserInUserDb(String migrationUserStatus, ShadowUser shadowUser) {
@@ -190,7 +195,7 @@ public class ShadowUserMigrationScheduler {
             cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), propertiesMap);
         } catch (Exception e) {
             e.printStackTrace();
-            ProjectLogger.log("ShadowUserMigrationScheduler:updateUserStatus: data failed to updates in cassandra  with userId:".concat(userId + ""), LoggerEnum.ERROR.name());
+            ProjectLogger.log("ShadowUserMigrationScheduler:updateUserStatus: data failed to updates in cassandra  with userId:".concat(userId + "error:"+e), LoggerEnum.ERROR.name());
         }
         syncUserToES(propertiesMap);
     }
@@ -217,7 +222,7 @@ public class ShadowUserMigrationScheduler {
             Response response = cassandraOperation.updateRecord(bulkUploadDbInfo.getKeySpace(), bulkUploadDbInfo.getTableName(), propertiesMap);
             ProjectLogger.log("ShadowUserMigrationScheduler:updateStatusInUserBulkTable: status update result".concat(response.getResult() + ""), LoggerEnum.INFO.name());
         } catch (Exception e) {
-            ProjectLogger.log("ShadowUserMigrationScheduler:updateStatusInUserBulkTable: status update failed".concat(e.getMessage() + ""), LoggerEnum.ERROR.name());
+            ProjectLogger.log("ShadowUserMigrationScheduler:updateStatusInUserBulkTable: status update failed".concat(e + ""), LoggerEnum.ERROR.name());
         }
     }
 }

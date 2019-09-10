@@ -1,5 +1,10 @@
 package org.sunbird.learner.util;
 
+/**
+ * UserFlagEnum provides all the flags of user type
+ * It contains flagtype and corresponding boolean value, reason for value is to provide flexibility of providing
+ * either true or false and maintaining purpose.
+ */
 public enum UserFlagEnum {
   PHONE_VERIFIED("phoneVerified", true, 1),
   EMAIL_VERIFIED("emailVerified", true, 2),

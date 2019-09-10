@@ -1488,8 +1488,8 @@ public final class Util {
   }
 
   public static void checkEmailAndPhoneVerified(Map<String, Object> userDetails) {
-    int flagsValue = Integer.parseInt(userDetails.get(JsonKey.FLAGS_VALUE_SMALL_CASE).toString());
-    Map<String, Object> userFlagMap = UserFlagUtil.assignUserFlagValues(flagsValue);
+    int flagsValue = Integer.parseInt(userDetails.get(JsonKey.FLAGS_VALUE).toString());
+    Map<String, Boolean> userFlagMap = UserFlagUtil.assignUserFlagValues(flagsValue);
     userDetails.putAll(userFlagMap);
   }
 

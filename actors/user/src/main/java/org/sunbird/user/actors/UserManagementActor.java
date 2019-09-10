@@ -164,8 +164,9 @@ public class UserManagementActor extends BaseActor {
       requestMap.put(JsonKey.RECOVERY_PHONE,null);
     }
 
-    Map<String, Object> userBooleanMap = updatedUserFlagsMap(userMap, userDbRecord);
-    userBoolFlagToNum(requestMap, userBooleanMap);
+    Map<String, Boolean> userBooleanMap = updatedUserFlagsMap(userMap, userDbRecord);
+    int userFlagValue = userFlagsToNum(userBooleanMap);
+    requestMap.put(JsonKey.FLAGS_VALUE,userFlagValue);
     Response response =
         cassandraOperation.updateRecord(
             usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
@@ -581,13 +582,13 @@ public class UserManagementActor extends BaseActor {
     UserUtil.addMaskEmailAndMaskPhone(userMap);
     removeUnwanted(requestMap);
     requestMap.put(JsonKey.IS_DELETED, false);
-    Map<String, Object> userFlagsMap = new HashMap<>();
+    Map<String, Boolean> userFlagsMap = new HashMap<>();
     //checks if the user is belongs to state and sets a validation flag
     setStateValidation(requestMap, userFlagsMap);
-    userFlagsMap.put(JsonKey.EMAIL_VERIFIED, userMap.get(JsonKey.EMAIL_VERIFIED));
-    userFlagsMap.put(JsonKey.PHONE_VERIFIED, userMap.get(JsonKey.PHONE_VERIFIED));
-    userBoolFlagToNum(requestMap, userFlagsMap);
-
+    userFlagsMap.put(JsonKey.EMAIL_VERIFIED, (Boolean) userMap.get(JsonKey.EMAIL_VERIFIED));
+    userFlagsMap.put(JsonKey.PHONE_VERIFIED, (Boolean) userMap.get(JsonKey.PHONE_VERIFIED));
+    int userFlagValue = userFlagsToNum(userFlagsMap);
+    requestMap.put(JsonKey.FLAGS_VALUE, userFlagValue);
     Response response = null;
     boolean isPasswordUpdated = false;
     try {
@@ -655,32 +656,32 @@ public class UserManagementActor extends BaseActor {
     TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
   }
 
-  private void userBoolFlagToNum(Map<String, Object> requestMap, Map<String, Object> userBooleanMap) {
+  private int userFlagsToNum(Map<String, Boolean> userBooleanMap) {
     int userFlagValue = 0;
-    Set<Map.Entry<String, Object>> mapEntry = userBooleanMap.entrySet();
-    for(Map.Entry<String, Object> entry: mapEntry) {
+    Set<Map.Entry<String, Boolean>> mapEntry = userBooleanMap.entrySet();
+    for(Map.Entry<String, Boolean> entry: mapEntry) {
       if(StringUtils.isNotEmpty(entry.getKey())) {
-        userFlagValue += UserFlagUtil.flagValue(entry.getKey(), (Boolean) entry.getValue());
+        userFlagValue += UserFlagUtil.getFlagValue(entry.getKey(), entry.getValue());
       }
     }
-    requestMap.put("flagsValue",userFlagValue);
+    return userFlagValue;
   }
 
-  private void setStateValidation(Map<String, Object> requestMap, Map<String, Object> userBooleanMap) {
+  private void setStateValidation(Map<String, Object> requestMap, Map<String, Boolean> userBooleanMap) {
     String rootOrgId = (String) requestMap.get(JsonKey.ROOT_ORG_ID);
     String custodianRootOrgId = getCustodianRootOrgId();
     //if the user is creating for non-custodian(i.e state) the value is set as true else false
-    userBooleanMap.put(JsonKey.IS_STATE_VALIDATED, !rootOrgId.equals(custodianRootOrgId));
+    userBooleanMap.put(JsonKey.STATE_VALIDATED, !rootOrgId.equals(custodianRootOrgId));
   }
 
-  private Map<String, Object> updatedUserFlagsMap(Map<String, Object> userMap, Map<String, Object> userDbRecord) {
-    Map<String, Object> userBooleanMap = new HashMap<>();
+  private Map<String, Boolean> updatedUserFlagsMap(Map<String, Object> userMap, Map<String, Object> userDbRecord) {
+    Map<String, Boolean> userBooleanMap = new HashMap<>();
     boolean emailVerified = (boolean) (userMap.containsKey(JsonKey.EMAIL_VERIFIED) ?  userMap.get(JsonKey.EMAIL_VERIFIED) : userDbRecord.get(JsonKey.EMAIL_VERIFIED));
     boolean phoneVerified = (boolean) (userMap.containsKey(JsonKey.PHONE_VERIFIED) ?  userMap.get(JsonKey.PHONE_VERIFIED) : userDbRecord.get(JsonKey.PHONE_VERIFIED));
-    boolean isStateValidated = (boolean) (userMap.containsKey(JsonKey.IS_STATE_VALIDATED) ?  userMap.get(JsonKey.IS_STATE_VALIDATED) : userDbRecord.get(JsonKey.IS_STATE_VALIDATED));
+    boolean isStateValidated = (boolean) (userMap.containsKey(JsonKey.STATE_VALIDATED) ?  userMap.get(JsonKey.STATE_VALIDATED) : userDbRecord.get(JsonKey.STATE_VALIDATED));
     userBooleanMap.put(JsonKey.EMAIL_VERIFIED, emailVerified);
     userBooleanMap.put(JsonKey.PHONE_VERIFIED, phoneVerified);
-    userBooleanMap.put(JsonKey.IS_STATE_VALIDATED, isStateValidated);
+    userBooleanMap.put(JsonKey.STATE_VALIDATED, isStateValidated);
     return userBooleanMap;
   }
 

@@ -236,7 +236,6 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
   private void callCreateUser(Map<String, Object> user, BulkUploadProcessTask task, String orgName)
       throws JsonProcessingException {
     ProjectLogger.log("UserBulkUploadBackgroundJobActor: callCreateUser called", LoggerEnum.INFO);
-    //Map<String, Object> row = mapper.convertValue(user, Map.class);
     String userId;
     try {
       userId = userClient.createUser(getActorRef(ActorOperations.CREATE_USER.getValue()), user);
@@ -270,9 +269,7 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
   private void callUpdateUser(Map<String, Object> user, BulkUploadProcessTask task, String orgName)
       throws JsonProcessingException {
     ProjectLogger.log("UserBulkUploadBackgroundJobActor: callUpdateUser called", LoggerEnum.INFO);
-    //Map<String, Object> row = mapper.convertValue(user, Map.class);
     try {
-      /*row.put(JsonKey.USER_ID, user.getId());*/
       user.put(JsonKey.ORG_NAME, orgName);
       userClient.updateUser(getActorRef(ActorOperations.UPDATE_USER.getValue()), user);
     } catch (Exception ex) {

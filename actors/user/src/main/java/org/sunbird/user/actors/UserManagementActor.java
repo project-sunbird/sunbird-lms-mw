@@ -45,6 +45,7 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.role.service.RoleService;
 import org.sunbird.learner.organisation.external.identity.service.OrgExternalService;
 import org.sunbird.learner.util.DataCacheHandler;
+import org.sunbird.learner.util.UserFlagUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
 import org.sunbird.models.user.User;
@@ -56,7 +57,6 @@ import org.sunbird.user.dao.impl.UserOrgDaoImpl;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.UserActorOperations;
-import org.sunbird.user.util.UserBoolFlagEnum;
 import org.sunbird.user.util.UserUtil;
 
 @ActorConfig(
@@ -191,7 +191,7 @@ public class UserManagementActor extends BaseActor {
     if (null != resp) {
       Map<String, Object> completeUserDetails = new HashMap<>(userDbRecord);
       completeUserDetails.putAll(requestMap);
-      saveUserDetailsToEs(completeUserDetails, userBooleanMap);
+      saveUserDetailsToEs(completeUserDetails);
     }
     targetObject =
         TelemetryUtil.generateTargetObject(
@@ -624,7 +624,7 @@ public class UserManagementActor extends BaseActor {
         ((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE)).get(JsonKey.ERRORS));
     sender().tell(response, self());
     if (null != resp) {
-      saveUserDetailsToEs(esResponse, userFlagsMap);
+      saveUserDetailsToEs(esResponse);
     }
     requestMap.put(JsonKey.PASSWORD, userMap.get(JsonKey.PASSWORD));
     if (StringUtils.isNotBlank(callerId)) {
@@ -660,25 +660,10 @@ public class UserManagementActor extends BaseActor {
     Set<Map.Entry<String, Object>> mapEntry = userBooleanMap.entrySet();
     for(Map.Entry<String, Object> entry: mapEntry) {
       if(StringUtils.isNotEmpty(entry.getKey())) {
-        userFlagValue += boolFlagValue(entry.getKey(), (Boolean) entry.getValue());
+        userFlagValue += UserFlagUtil.flagValue(entry.getKey(), (Boolean) entry.getValue());
       }
     }
     requestMap.put("flagsValue",userFlagValue);
-  }
-
-  public int boolFlagValue(String userFlagType, boolean isFlagEnabled) {
-    int decimalValue = 0;
-    if(userFlagType.equals(UserBoolFlagEnum.PHONE_VERIFIED.getUserFlagType()) &&
-            isFlagEnabled==UserBoolFlagEnum.PHONE_VERIFIED.isFlagEnabled()) {
-      decimalValue = UserBoolFlagEnum.PHONE_VERIFIED.getUserFlagValue();
-    } else if (userFlagType.equals(UserBoolFlagEnum.EMAIL_VERIFIED.getUserFlagType()) &&
-            isFlagEnabled==UserBoolFlagEnum.EMAIL_VERIFIED.isFlagEnabled()) {
-      decimalValue = UserBoolFlagEnum.EMAIL_VERIFIED.getUserFlagValue();
-    } else if (userFlagType.equals(UserBoolFlagEnum.IS_STATE_VALIDATED.getUserFlagType()) &&
-            isFlagEnabled==UserBoolFlagEnum.IS_STATE_VALIDATED.isFlagEnabled()) {
-      decimalValue = UserBoolFlagEnum.IS_STATE_VALIDATED.getUserFlagValue();
-    }
-    return decimalValue;
   }
 
   private void setStateValidation(Map<String, Object> requestMap, Map<String, Object> userBooleanMap) {
@@ -736,11 +721,10 @@ public class UserManagementActor extends BaseActor {
     tellToAnother(EmailAndSmsRequest);
   }
 
-  private void saveUserDetailsToEs(Map<String, Object> completeUserMap, Map<String, Object> userBooleanMap) {
+  private void saveUserDetailsToEs(Map<String, Object> completeUserMap) {
     Request userRequest = new Request();
     userRequest.setOperation(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue());
     userRequest.getRequest().put(JsonKey.ID, completeUserMap.get(JsonKey.ID));
-    userRequest.getRequest().put(JsonKey.USER_FLAGS_MAP,userBooleanMap);
     ProjectLogger.log(
         "UserManagementActor:saveUserDetailsToEs: Trigger sync of user details to ES");
     tellToAnother(userRequest);

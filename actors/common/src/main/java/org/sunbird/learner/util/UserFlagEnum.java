@@ -1,15 +1,15 @@
-package org.sunbird.user.util;
+package org.sunbird.learner.util;
 
-public enum UserBoolFlagEnum {
+public enum UserFlagEnum {
   PHONE_VERIFIED("phoneVerified", true, 1),
   EMAIL_VERIFIED("emailVerified", true, 2),
-  IS_STATE_VALIDATED("isStateValidated", true, 4);
+  STATE_VALIDATED("isStateValidated", true, 4);
 
   private String userFlagType;
   private boolean flagEnabled;
   private int userFlagValue;
 
-  UserBoolFlagEnum(String userFlagType, boolean flagEnabled, int userFlagValue) {
+  UserFlagEnum(String userFlagType, boolean flagEnabled, int userFlagValue) {
     this.userFlagType = userFlagType;
     this.flagEnabled = flagEnabled;
     this.userFlagValue = userFlagValue;

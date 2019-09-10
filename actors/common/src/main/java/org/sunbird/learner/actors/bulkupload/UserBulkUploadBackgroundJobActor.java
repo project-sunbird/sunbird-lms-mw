@@ -34,7 +34,6 @@ import org.sunbird.learner.actors.role.service.RoleService;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
-import org.sunbird.models.user.User;
 import org.sunbird.validator.user.UserBulkUploadRequestValidator;
 
 @ActorConfig(

@@ -144,10 +144,8 @@ public abstract class BaseBulkUploadActor extends BaseActor {
    */
   public CSVReader getCsvReader(byte[] byteArray, char seperator, char quoteChar, int lineNum)
       throws UnsupportedEncodingException {
-
     InputStreamReader inputStreamReader =
         new InputStreamReader(new ByteArrayInputStream(byteArray), StandardCharsets.UTF_8);
-    // RFC4180Parser rfc4180Parser = new RFC4180ParserBuilder().build();
     CSVReaderBuilder csvReaderBuilder = new CSVReaderBuilder(inputStreamReader);
     CSVReader csvReader = csvReaderBuilder.build();
     return csvReader;

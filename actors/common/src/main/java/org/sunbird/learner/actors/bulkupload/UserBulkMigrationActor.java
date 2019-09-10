@@ -42,9 +42,10 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
     private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
     private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     private static CSVReader csvReader;
-    public static final int RETRY_COUNT=1;
+    public static final int RETRY_COUNT=2;
     public static final String USER_BULK_MIGRATION_FIELD="shadowdbmandatorycolumn";
     private Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
+    private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     private static ObjectMapper mapper=new ObjectMapper();
     private static SystemSetting systemSetting;
     private OrganisationClient organisationClient = new OrganisationClientImpl();
@@ -73,8 +74,13 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
         Map<String,Object>values= mapper.readValue(systemSetting.getValue(),Map.class);
         String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
         long validationStartTime =System.currentTimeMillis();
-        List<MigrationUser>migrationUserList=getMigrationUsers(processId,(byte[])data.get(JsonKey.FILE),values);
+        String userId=getCreatedBy(request);
+        Map<String,Object>result=getUserById(userId);
+        String channel=getChannel(result);
+        String rootOrgId=getRootOrgId(result);
+        List<MigrationUser>migrationUserList=getMigrationUsers(channel,processId,(byte[])data.get(JsonKey.FILE),values);
         ProjectLogger.log("UserBulkMigrationActor:processRecord: time taken to validate records of size ".concat(migrationUserList.size()+"")+"is(ms): ".concat((System.currentTimeMillis()-validationStartTime)+""),LoggerEnum.INFO.name());
+        request.getRequest().put(JsonKey.ROOT_ORG_ID,rootOrgId);
         BulkMigrationUser migrationUser=prepareRecord(request,processId,migrationUserList);
         ProjectLogger.log("UserBulkMigrationActor:processRecord:processing record for number of users ".concat(migrationUserList.size()+""));
         insertRecord(migrationUser);
@@ -101,6 +107,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
                     .setTaskCount(migrationUserList.size())
                     .setCreatedBy(getCreatedBy(request))
                     .setUploadedBy(getCreatedBy(request))
+                    .setOrganisationId((String)request.getRequest().get(JsonKey.ROOT_ORG_ID))
                     .build();
                     return migrationUser;
         }catch (Exception e){
@@ -118,12 +125,12 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
         return MapUtils.isNotEmpty(data)?data.get(JsonKey.CREATED_BY):null;
     }
 
-    private List<MigrationUser> getMigrationUsers(String processId,byte[] fileData,Map<String,Object>fieldsMap){
+    private List<MigrationUser> getMigrationUsers(String channel,String processId,byte[] fileData,Map<String,Object>fieldsMap){
             Map<String, List<String>> columnsMap = (Map<String, List<String>>) fieldsMap.get(JsonKey.FILE_TYPE_CSV);
             List<String[]> csvData=readCsv(fileData);
             List<String>csvHeaders=getCsvHeadersAsList(csvData);
             List<String>mappedCsvHeaders=mapCsvColumn(csvHeaders);
-            List<MigrationUser>migrationUserList=parseCsvRows(getCsvRowsAsList(csvData),mappedCsvHeaders);
+            List<MigrationUser>migrationUserList=parseCsvRows(channel,getCsvRowsAsList(csvData),mappedCsvHeaders);
             ShadowUserUpload migration = new ShadowUserUpload.ShadowUserUploadBuilder()
                     .setHeaders(csvHeaders)
                     .setMappedHeaders(mappedCsvHeaders)
@@ -183,9 +190,6 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
             if (column.equalsIgnoreCase(JsonKey.PHONE)) {
                  mappedColumns.add(column);
             }
-            if(column.equalsIgnoreCase(JsonKey.STATE)){
-                mappedColumns.add(JsonKey.CHANNEL);
-            }
             if(column.equalsIgnoreCase(JsonKey.EXTERNAL_USER_ID))
             {
                 mappedColumns.add(JsonKey.USER_EXTERNAL_ID);
@@ -204,7 +208,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
 
     }
 
-    private List<MigrationUser> parseCsvRows(List<String[]> values,List<String>mappedHeaders){
+    private List<MigrationUser> parseCsvRows(String channel,List<String[]> values,List<String>mappedHeaders){
         List<MigrationUser> migrationUserList=new ArrayList<>();
         values.stream().forEach(row->{
             MigrationUser migrationUser=new MigrationUser();
@@ -212,6 +216,8 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
                 String columnName=getColumnNameByIndex(mappedHeaders,i);
                 setFieldToMigrationUserObject(migrationUser,columnName,row[i]);
             }
+            //channel to be added here
+            migrationUser.setChannel(channel);
             migrationUserList.add(migrationUser);
         });
         return migrationUserList;
@@ -227,11 +233,6 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
             String phone=(String)value;
             migrationUser.setPhone(phone);
         }
-        if(columnAttribute.equalsIgnoreCase(JsonKey.CHANNEL)){
-            String state=(String)value;
-            migrationUser.setChannel(state);
-        }
-
         if(columnAttribute.equalsIgnoreCase(JsonKey.ORG_EXTERNAL_ID)){
             migrationUser.setOrgExternalId((String)value);
         }
@@ -251,4 +252,43 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
         return mappedHeaders.get(index);
     }
 
+
+    /**
+     * in bulk_upload_process db user will have channel of admin users
+     * @param result
+     * @return channel
+     */
+    private String getChannel(Map<String,Object> result){
+            String channel = (String) result.get(JsonKey.CHANNEL);
+            ProjectLogger.log("UserBulkMigrationActor:getChannel: the channel of admin user ".concat(channel + ""), LoggerEnum.INFO.name());
+            return channel;
+    }
+    /**
+     * in bulk_upload_process db organisationId will be of user.
+     * @param result
+     * @return rootOrgId
+     */
+    private String getRootOrgId( Map<String,Object> result){
+        String rootOrgId = (String) result.get(JsonKey.ROOT_ORG_ID);
+        ProjectLogger.log("UserBulkMigrationActor:getRootOrgId:the root org id  of admin user ".concat(rootOrgId + ""), LoggerEnum.INFO.name());
+        return rootOrgId;
+    }
+
+
+    /**
+     * this method will fetch user record with userId from cassandra
+     * @param userId
+     * @return result
+     */
+    private Map<String,Object> getUserById(String userId){
+        Response response=cassandraOperation.getRecordById(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),userId);
+        if(((List)response.getResult().get(JsonKey.RESPONSE)).isEmpty()) {
+            throw new ProjectCommonException(
+                    ResponseCode.userNotFound.getErrorCode(),
+                    ResponseCode.userNotFound.getErrorMessage(),
+                    ResponseCode.CLIENT_ERROR.getResponseCode());
+        }
+        Map<String,Object>result=((Map)((List)response.getResult().get(JsonKey.RESPONSE)).get(0));
+        return result;
+    }
 }

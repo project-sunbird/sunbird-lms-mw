@@ -103,11 +103,13 @@ public class ShadowUserUpload {
             return this;
         }
         public ShadowUserUploadBuilder setMandatoryFields(List<String> mandatoryFields) {
+            mandatoryFields.replaceAll(String::toLowerCase);
             this.mandatoryFields = mandatoryFields;
             return this;
         }
 
         public ShadowUserUploadBuilder setSupportedFields(List<String> supportedFields) {
+            supportedFields.replaceAll(String::toLowerCase);
             this.supportedFields = supportedFields;
             return this;
         }

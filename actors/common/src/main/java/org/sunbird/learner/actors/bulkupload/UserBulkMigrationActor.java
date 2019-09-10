@@ -42,7 +42,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
     private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
     private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     private static CSVReader csvReader;
-    public static final int RETRY_COUNT=1;
+    public static final int RETRY_COUNT=2;
     public static final String USER_BULK_MIGRATION_FIELD="shadowdbmandatorycolumn";
     private Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
     private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);

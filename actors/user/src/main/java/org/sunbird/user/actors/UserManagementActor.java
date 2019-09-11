@@ -385,7 +385,7 @@ public class UserManagementActor extends BaseActor {
   private void removeFieldsFrmReq(Map<String, Object> userMap) {
     userMap.remove(JsonKey.ENC_EMAIL);
     userMap.remove(JsonKey.ENC_PHONE);
-    userMap.remove(JsonKey.EMAIL_VERIFIED);
+    //userMap.remove(JsonKey.EMAIL_VERIFIED);
     userMap.remove(JsonKey.STATUS);
     userMap.remove(JsonKey.PROVIDER);
     userMap.remove(JsonKey.USERNAME);

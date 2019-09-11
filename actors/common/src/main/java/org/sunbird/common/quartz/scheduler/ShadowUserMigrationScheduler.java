@@ -3,6 +3,7 @@ package org.sunbird.common.quartz.scheduler;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.bean.ClaimStatus;
 import org.sunbird.bean.MigrationUser;
 import org.sunbird.bean.ShadowUser;
@@ -138,7 +139,6 @@ public class ShadowUserMigrationScheduler {
     }
 
     private void insertShadowUserToDb(String processId, MigrationUser migrationUser) {
-        String id = ProjectUtil.generateUniqueId();
         List<String> userRoles = new ArrayList<>();
         userRoles.add(ProjectUtil.UserRole.PUBLIC.getValue());
         ShadowUser shadowUser = new ShadowUser.ShadowUserBuilder()
@@ -152,7 +152,6 @@ public class ShadowUserMigrationScheduler {
                 .setProcessId(processId)
                 .setClaimedOn(null)
                 .setClaimStatus(ClaimStatus.UNCLAIMED.getValue())
-                .setId(id)
                 .setRoles(userRoles)
                 .setUserStatus(getInputStatus(migrationUser.getInputStatus()))
                 .setUpdatedOn(null)
@@ -171,21 +170,27 @@ public class ShadowUserMigrationScheduler {
     }
 
     private void updateUser(MigrationUser migrationUser, ShadowUser shadowUser) {
-        Map<String, Object> propertiesMap = new HashMap<>();
-        propertiesMap.put(JsonKey.EMAIL, migrationUser.getEmail());
-        propertiesMap.put(JsonKey.PHONE, migrationUser.getPhone());
-        propertiesMap.put(JsonKey.NAME, migrationUser.getName());
-        propertiesMap.put(JsonKey.ORG_EXT_ID, migrationUser.getOrgExternalId());
-        propertiesMap.put(JsonKey.UPDATED_ON, new Timestamp(System.currentTimeMillis()));
-        propertiesMap.put(JsonKey.CHANNEL, migrationUser.getChannel());
-        propertiesMap.put(JsonKey.ID, shadowUser.getId());
-        updateUserInShadowDb(propertiesMap);
-        updateUserInUserDb(migrationUser.getInputStatus(), shadowUser);
+        updateUserInShadowDb(migrationUser,shadowUser);
+        //updateUserInUserDb(migrationUser.getInputStatus(), shadowUser);
     }
 
-    private void updateUserInShadowDb(Map<String, Object> propertiesMap) {
-        Response response = cassandraOperation.updateRecord(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, propertiesMap);
-        ProjectLogger.log("ShadowUserMigrationScheduler:updateUserInShadowDb: record status in cassandra ".concat(response.getResult() + ""), LoggerEnum.INFO.name());
+    private void updateUserInShadowDb(MigrationUser migrationUser, ShadowUser shadowUser) {
+        if(!isSame(shadowUser,migrationUser)){
+            Map<String, Object> propertiesMap = new HashMap<>();
+            propertiesMap.put(JsonKey.EMAIL, migrationUser.getEmail());
+            propertiesMap.put(JsonKey.PHONE, migrationUser.getPhone());
+            propertiesMap.put(JsonKey.NAME, migrationUser.getName());
+            propertiesMap.put(JsonKey.ORG_EXT_ID, migrationUser.getOrgExternalId());
+            propertiesMap.put(JsonKey.UPDATED_ON, new Timestamp(System.currentTimeMillis()));
+            propertiesMap.put(JsonKey.USER_STATUS,getInputStatus(migrationUser.getInputStatus()));
+            propertiesMap.put(JsonKey.CLAIM_STATUS,ClaimStatus.UNCLAIMED.getValue());
+            propertiesMap.put(JsonKey.USER_ID,null);
+            Map<String,Object>compositeKeysMap=new HashMap<>();
+            compositeKeysMap.put(JsonKey.CHANNEL, migrationUser.getChannel());
+            compositeKeysMap.put(JsonKey.USER_EXT_ID,migrationUser.getUserExternalId());
+            Response response = cassandraOperation.updateRecord(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, propertiesMap,compositeKeysMap);
+            ProjectLogger.log("ShadowUserMigrationScheduler:updateUserInShadowDb: record status in cassandra ".concat(response.getResult() + ""), LoggerEnum.INFO.name());
+        }
     }
 
     private void updateUserInUserDb(String migrationUserStatus, ShadowUser shadowUser) {
@@ -257,4 +262,40 @@ public class ShadowUserMigrationScheduler {
         }
         updateBulkUserTable(propertiesMap);
     }
+
+
+    /**
+     *
+     * @param shadowUser
+     * @param migrationUser
+     * @return
+     */
+    private boolean isSame(ShadowUser shadowUser,MigrationUser migrationUser){
+        if(!shadowUser.getName().equalsIgnoreCase(migrationUser.getName())){
+        return false;
+        }
+        if(StringUtils.isNotBlank(migrationUser.getEmail()) && !shadowUser.getEmail().equalsIgnoreCase(migrationUser.getEmail())){
+            return false;
+        }
+        if(StringUtils.isNotBlank(migrationUser.getOrgExternalId()) && !shadowUser.getOrgExtId().equalsIgnoreCase(migrationUser.getOrgExternalId())){
+            return false;
+        }
+        if(StringUtils.isNotBlank(migrationUser.getPhone()) && !shadowUser.getPhone().equalsIgnoreCase(migrationUser.getPhone()))
+        {
+            return false;
+        }
+        if((getInputStatus(migrationUser.getInputStatus())!=shadowUser.getUserStatus())){
+            return false;
+        }
+        return true;
+    }
+
+
+
+
+
+
+
+
+
 }

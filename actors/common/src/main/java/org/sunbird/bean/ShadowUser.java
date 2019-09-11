@@ -6,7 +6,6 @@ import java.util.List;
 public class ShadowUser {
 
     /**
-     * id text PRIMARY KEY,
      *     channel text,
      *     claimedon timestamp,
      *     claimstatus int,
@@ -23,7 +22,6 @@ public class ShadowUser {
      *     userstatus int
      */
 
-    private String id;
     private Timestamp claimedOn;
     private int claimStatus;
     private Timestamp createdOn;
@@ -43,7 +41,6 @@ public class ShadowUser {
     }
 
     public ShadowUser(ShadowUserBuilder shadowUserBuilder) {
-        this.id = shadowUserBuilder.id;
         this.claimedOn = shadowUserBuilder.claimedOn;
         this.claimStatus = shadowUserBuilder.claimStatus;
         this.createdOn = shadowUserBuilder.createdOn;
@@ -59,11 +56,6 @@ public class ShadowUser {
         this.userStatus = shadowUserBuilder.userStatus;
         this.channel=shadowUserBuilder.channel;
     }
-
-    public String getId() {
-        return id;
-    }
-
     public Timestamp getClaimedOn() {
         return claimedOn;
     }
@@ -122,7 +114,6 @@ public class ShadowUser {
 
     public static class ShadowUserBuilder{
 
-        private String id;
         private Timestamp claimedOn;
         private int claimStatus;
         private Timestamp createdOn;
@@ -141,11 +132,6 @@ public class ShadowUser {
 
         public ShadowUserBuilder setChannel(String channel) {
             this.channel = channel;
-            return this;
-        }
-
-        public ShadowUserBuilder setId(String id) {
-            this.id = id;
             return this;
         }
 

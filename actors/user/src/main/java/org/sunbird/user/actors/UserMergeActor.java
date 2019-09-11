@@ -247,6 +247,7 @@ public class UserMergeActor extends UserBaseActor {
     mergeeDBMap.put(JsonKey.IS_DELETED, true);
     mergeeDBMap.put(JsonKey.EMAIL, null);
     mergeeDBMap.put(JsonKey.PHONE, null);
+    mergeeDBMap.put(JsonKey.USERNAME, null);
     mergeeDBMap.put(JsonKey.PREV_USED_EMAIL, mergee.getEmail());
     mergeeDBMap.put(JsonKey.PREV_USED_PHONE, mergee.getPhone());
     mergeeDBMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());

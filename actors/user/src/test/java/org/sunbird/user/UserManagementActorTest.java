@@ -10,6 +10,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
@@ -20,6 +22,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.DataCacheHandler;
 import scala.concurrent.Promise;
 
+@Ignore
 public class UserManagementActorTest extends UserManagementActorTestBase {
 
   @Test

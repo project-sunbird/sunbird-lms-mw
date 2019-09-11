@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
@@ -60,6 +61,7 @@ import scala.concurrent.Promise;
   DataCacheHandler.class,
   ElasticSearchRestHighImpl.class
 })
+@Ignore
 @PowerMockIgnore({"javax.management.*"})
 public abstract class UserManagementActorTestBase {
 

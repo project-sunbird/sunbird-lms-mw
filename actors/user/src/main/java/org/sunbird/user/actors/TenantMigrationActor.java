@@ -3,13 +3,12 @@ package org.sunbird.user.actors;
 import akka.actor.ActorRef;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.InterServiceCommunication;
@@ -27,6 +26,8 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.StringFormatter;
 import org.sunbird.common.models.util.TelemetryEnvKey;
+import org.sunbird.common.models.util.datasecurity.DataMaskingService;
+import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -63,6 +64,13 @@ public class TenantMigrationActor extends BaseActor {
   private ObjectMapper mapper = new ObjectMapper();
   private ActorRef systemSettingActorRef = null;
   private ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
+  private static final String ACCOUNT_MERGE_EMAIL_TEMPLATE = "accountMerge";
+  private static final String MASK_IDENTIFIER = "maskIdentifier";
+  DecryptionService decryptionService =
+          org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
+                  "");
+  DataMaskingService maskingService =
+          org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance("");
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -138,11 +146,57 @@ public class TenantMigrationActor extends BaseActor {
     // send the response
     sender().tell(response, self());
     // save user data to ES
+    notify(userDetails);
     saveUserDetailsToEs((String) request.getRequest().get(JsonKey.USER_ID));
     targetObject =
         TelemetryUtil.generateTargetObject(
             (String) reqMap.get(JsonKey.USER_ID), TelemetryEnvKey.USER, MIGRATE, null);
     TelemetryUtil.telemetryProcessingCall(reqMap, targetObject, correlatedObject);
+  }
+  private void notify(Map<String, Object> userDetail) {
+    ProjectLogger.log("notify starts sending migrate notification to user " + userDetail.get(JsonKey.USER_ID));
+      Map<String, Object> userData = createUserData(userDetail);
+      Request notificationRequest =  createNotificationData(userData);
+      tellToAnother(notificationRequest);
+  }
+
+  private Request createNotificationData(Map<String, Object> userData) {
+    Request request = new Request();
+    Map<String, Object> requestMap = new HashMap<>();
+    requestMap.put(JsonKey.NAME, userData.get(JsonKey.FIRST_NAME));
+    requestMap.put(JsonKey.FIRST_NAME, userData.get(JsonKey.FIRST_NAME));
+    if (StringUtils.isNotBlank((String) userData.get(JsonKey.EMAIL))) {
+      requestMap.put(JsonKey.RECIPIENT_EMAILS, Arrays.asList(userData.get(JsonKey.EMAIL)));
+    } else {
+      requestMap.put(JsonKey.RECIPIENT_PHONES, Arrays.asList(userData.get(JsonKey.PHONE)));
+      requestMap.put(JsonKey.MODE, JsonKey.SMS);
+    }
+    requestMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, ACCOUNT_MERGE_EMAIL_TEMPLATE);
+    String body =
+            MessageFormat.format(
+                    ProjectUtil.getConfigValue(JsonKey.SUNBIRD_MIGRATE_USER_BODY),
+                    ProjectUtil.getConfigValue(JsonKey.SUNBIRD_INSTALLATION),
+                     userData.get(MASK_IDENTIFIER));
+    requestMap.put(JsonKey.BODY, body);
+    requestMap.put(JsonKey.SUBJECT, ProjectUtil.getConfigValue("sunbird_account_merge_subject"));
+    request.getRequest().put(JsonKey.EMAIL_REQUEST, requestMap);
+    request.setOperation(BackgroundOperations.emailService.name());
+    return request;
+  }
+
+  private Map<String, Object> createUserData(Map<String, Object> userData) {
+      if (StringUtils.isNotBlank((String) userData.get(JsonKey.EMAIL))) {
+        String deceryptedEmail = decryptionService.decryptData((String) userData.get(JsonKey.EMAIL));
+        String maskEmail = maskingService.maskEmail(deceryptedEmail);
+        userData.put(JsonKey.EMAIL, deceryptedEmail);
+        userData.put(MASK_IDENTIFIER, maskEmail);
+      } else {
+        String deceryptedPhone = decryptionService.decryptData((String) userData.get(JsonKey.PHONE));
+        String maskPhone = maskingService.maskPhone(deceryptedPhone);
+        userData.put(JsonKey.PHONE, deceryptedPhone);
+        userData.put(MASK_IDENTIFIER, maskPhone);
+      }
+      return userData;
   }
 
   private String validateOrgExternalIdOrOrgIdAndGetOrgId(Map<String, Object> migrateReq) {

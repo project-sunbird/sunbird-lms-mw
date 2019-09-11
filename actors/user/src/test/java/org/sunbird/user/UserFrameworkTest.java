@@ -5,6 +5,7 @@ import static org.powermock.api.mockito.PowerMockito.when;
 
 import java.util.*;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
@@ -18,6 +19,7 @@ import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 
 @PrepareForTest({DataCacheHandler.class, ContentStoreUtil.class})
+@Ignore
 public class UserFrameworkTest extends UserManagementActorTestBase {
 
   @Before

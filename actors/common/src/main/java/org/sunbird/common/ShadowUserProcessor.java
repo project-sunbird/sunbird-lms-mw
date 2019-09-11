@@ -71,6 +71,7 @@ public class ShadowUserProcessor {
                         updateUserInUserTable((String) userMap.get(JsonKey.ID),rootOrgId,shadowUser);
                         String orgIdFromOrgExtId=getOrgId(shadowUser);
                         updateUserOrg(orgIdFromOrgExtId,rootOrgId,userMap);
+                        syncUserToES((String) userMap.get(JsonKey.ID));
                     }
                 }
             } else {

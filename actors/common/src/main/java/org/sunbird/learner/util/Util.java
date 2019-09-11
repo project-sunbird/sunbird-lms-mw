@@ -1469,7 +1469,9 @@ public final class Util {
       // save masked email and phone number
       addMaskEmailAndPhone(userDetails);
       checkProfileCompleteness(userDetails);
-      checkUserProfileVisibility(userDetails, actorRef);
+      if(actorRef!=null) {
+        checkUserProfileVisibility(userDetails, actorRef);
+      }
       userDetails.remove(JsonKey.PASSWORD);
       addEmailAndPhone(userDetails);
       checkEmailAndPhoneVerified(userDetails);

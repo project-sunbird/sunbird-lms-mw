@@ -3,6 +3,7 @@ package org.sunbird.common;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.bean.ClaimStatus;
 import org.sunbird.bean.ShadowUser;
@@ -14,40 +15,30 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
-import org.sunbird.models.systemsetting.SystemSetting;
+import org.sunbird.models.user.UserType;
+import scala.concurrent.Future;
 
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class ShadowUserProcessor {
-    private Util.DbInfo bulkUploadDbInfo = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
     private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     private ObjectMapper mapper = new ObjectMapper();
-    private static SystemSetting systemSetting;
     private EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(null);
     private ElasticSearchService elasticSearchService = EsClientFactory.getInstance(JsonKey.REST);
-    private DecryptionService decryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(null);
-
     public void process() {
         List<ShadowUser> shadowUserList = getShadowUserFromDb();
         shadowUserList.stream().forEach(singleShadowUser -> {
             processSingleShadowUser(singleShadowUser);
         });
     }
-
     private void processSingleShadowUser(ShadowUser shadowUser) {
-        getUserFromEs(shadowUser);
-
-
+        updateUser(shadowUser);
     }
 
 
@@ -66,12 +57,21 @@ public class ShadowUserProcessor {
     }
 
     private void updateUser(ShadowUser shadowUser) {
-        List<Map<String, Object>> dbUser = (List<Map<String, Object>>) getUserFromEs(shadowUser);
-        if (CollectionUtils.isNotEmpty(dbUser)) {
-            if (dbUser.size() == 1) {
-                Map<String, Object> userMap = dbUser.get(0);
-                if(!isSame(shadowUser,userMap)){
-
+        List<Map<String, Object>> esUser = (List<Map<String, Object>>) getUserFromEs(shadowUser);
+        if (CollectionUtils.isNotEmpty(esUser)) {
+            if (esUser.size() == 1) {
+                Map<String, Object> userMap = esUser.get(0);
+                if (!isSame(shadowUser, userMap)) {
+                    String rootOrgId=getRootOrgIdFromChannel(shadowUser.getChannel());
+                    if(StringUtils.isEmpty(rootOrgId)){
+                        updateUserInShadowDb(shadowUser,ClaimStatus.REJECTED.getValue());
+                        return;
+                    }
+                    else{
+                        updateUserInUserTable((String) userMap.get(JsonKey.ID),rootOrgId,shadowUser);
+                        String orgIdFromOrgExtId=getOrgId(shadowUser);
+                        updateUserOrg(orgIdFromOrgExtId,rootOrgId,userMap);
+                    }
                 }
             } else {
                 updateUserInShadowDb(shadowUser, ClaimStatus.REJECTED.getValue());
@@ -80,17 +80,48 @@ public class ShadowUserProcessor {
 
     }
 
+    private void  updateUserOrg(String orgIdFromOrgExtId,String rootOrgId, Map<String, Object> userMap){
+        deleteUserOrganisations(userMap);
+        registerUserToOrg((String)userMap.get(JsonKey.ID),rootOrgId);
+        if(!StringUtils.equals(rootOrgId,orgIdFromOrgExtId)){
+            registerUserToOrg((String) userMap.get(JsonKey.ID),orgIdFromOrgExtId);
+        }
+    }
 
-    private void updateUserInUserTable(ShadowUser shadowUser){
-
-
-
-
-
-
+    private void updateUserInUserTable(String userId,String rootOrgId,ShadowUser shadowUser) {
+        Map<String, Object> propertiesMap = new HashMap<>();
+        propertiesMap.put(JsonKey.FIRST_NAME, shadowUser.getName());
+        propertiesMap.put(JsonKey.STATUS, shadowUser.getClaimStatus());
+        propertiesMap.put(JsonKey.ID,userId);
+        if (shadowUser.getClaimStatus() == ProjectUtil.Status.ACTIVE.getValue()) {
+            propertiesMap.put(JsonKey.IS_DELETED, false);
+        } else {
+            propertiesMap.put(JsonKey.IS_DELETED, true);
+        }
+        propertiesMap.put(JsonKey.USER_TYPE, UserType.TEACHER.getTypeName());
+        propertiesMap.put(JsonKey.CHANNEL, shadowUser.getChannel());
+        propertiesMap.put(JsonKey.ROOT_ORG_ID,rootOrgId);
+        Response response=cassandraOperation.updateRecord(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),propertiesMap);
+        ProjectLogger.log("ShadowUserProcessor:updateUserInUserTable:user is updated ".concat(response.getResult()+""));
     }
 
 
+    private String getRootOrgIdFromChannel(String channel) {
+        Map<String, Object> request = new HashMap<>();
+        Map<String, Object> filters = new HashMap<>();
+        filters.put(JsonKey.CHANNEL, channel);
+        filters.put(JsonKey.IS_ROOT_ORG, true);
+        request.put(JsonKey.FILTERS, filters);
+        SearchDTO searchDTO = ElasticSearchHelper.createSearchDTO(request);
+        searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
+        Future<Map<String, Object>> esResultF = elasticSearchService.search(searchDTO, ProjectUtil.EsType.organisation.getTypeName());
+        Map<String, Object> esResult = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(esResultF);
+        if (MapUtils.isNotEmpty(esResult) && CollectionUtils.isNotEmpty((List) esResult.get(JsonKey.CONTENT))) {
+            Map<String, Object> esContent = ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT)).get(0);
+            return (String) esContent.get(JsonKey.ID);
+        }
+        return StringUtils.EMPTY;
+    }
     private String getEncryptedValue(String key) {
         try {
             return encryptionService.encryptData(key);
@@ -102,6 +133,7 @@ public class ShadowUserProcessor {
 
     /**
      * this method
+     *
      * @return
      */
     private String getCustodianOrgId() {
@@ -146,14 +178,14 @@ public class ShadowUserProcessor {
     }
 
     private boolean isSame(ShadowUser shadowUser, Map<String, Object> esUserMap) {
-        String orgId=getOrgId(shadowUser);
+        String orgId = getOrgId(shadowUser);
         if (!shadowUser.getName().equalsIgnoreCase((String) esUserMap.get(JsonKey.FIRST_NAME))) {
             return false;
         }
-        if(StringUtils.isNotBlank(orgId) && !getOrganisationIds(esUserMap).contains(orgId)) {
+        if (StringUtils.isNotBlank(orgId) && !getOrganisationIds(esUserMap).contains(orgId)) {
             return false;
         }
-        if (shadowUser.getUserStatus()!=(int)(esUserMap.get(JsonKey.STATUS))) {
+        if (shadowUser.getUserStatus() != (int) (esUserMap.get(JsonKey.STATUS))) {
             return false;
         }
         return true;
@@ -172,7 +204,7 @@ public class ShadowUserProcessor {
     }
 
     private String getOrgId(ShadowUser shadowUser) {
-        if (StringUtils.isNotBlank(shadowUser.getOrgExtId())){
+        if (StringUtils.isNotBlank(shadowUser.getOrgExtId())) {
             Map<String, Object> request = new HashMap<>();
             Map<String, Object> filters = new HashMap<>();
             filters.put(JsonKey.EXTERNAL_ID, shadowUser.getOrgExtId());
@@ -190,12 +222,59 @@ public class ShadowUserProcessor {
     }
 
 
-    private List<String> getOrganisationIds(Map<String, Object> dbUser){
-        List<String>organisationsIds= new ArrayList<>();
-        ((List<Map<String,Object>>)dbUser.get(JsonKey.ORGANISATIONS)).stream().forEach(organisation->{
+    private List<String> getOrganisationIds(Map<String, Object> dbUser) {
+        List<String> organisationsIds = new ArrayList<>();
+        ((List<Map<String, Object>>) dbUser.get(JsonKey.ORGANISATIONS)).stream().forEach(organisation -> {
             organisationsIds.add((String) organisation.get(JsonKey.ORGANISATION_ID));
         });
         return organisationsIds;
+    }
+
+    private void syncUserToES(String userId) {
+        Map<String, Object> fullUserDetails= Util.getUserDetails(userId,null);
+        try {
+            Future<Boolean> future = elasticSearchService.update(JsonKey.USER, userId, fullUserDetails);
+            if ((boolean) ElasticSearchHelper.getResponseFromFuture(future)) {
+                ProjectLogger.log("ShadowUserMigrationScheduler:updateUserStatus: data successfully updated to elastic search with userId:".concat(userId + ""), LoggerEnum.INFO.name());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            ProjectLogger.log("ShadowUserMigrationScheduler:syncUserToES: data failed to updates in elastic search with userId:".concat(userId + ""), LoggerEnum.ERROR.name());
+        }
+    }
+
+
+    private void deleteUserOrganisations(Map<String,Object>esUserMap){
+        ((List<Map<String, Object>>) esUserMap.get(JsonKey.ORGANISATIONS)).stream().forEach(organisation -> {
+            String id=(String) organisation.get(JsonKey.ID);
+            deleteOrgFromUserOrg(id);
+        });
+    }
+
+    private void deleteOrgFromUserOrg(String id){
+        Response response=cassandraOperation.deleteRecord(JsonKey.SUNBIRD,JsonKey.USER_ORG,id);
+        ProjectLogger.log("ShadowUserProcessor:deleteOrgFromUserOrg:user org is deleted ".concat(response.getResult()+""));
+    }
+
+
+    private void registerUserToOrg(String userId,String organisationId) {
+        Map<String, Object> reqMap = new WeakHashMap<>();
+        List<String> roles = new ArrayList<>();
+        roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
+        reqMap.put(JsonKey.ROLES, roles);
+        String hashTagId = Util.getHashTagIdFromOrgId(organisationId);
+        reqMap.put(JsonKey.HASHTAGID, hashTagId);
+        reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
+        reqMap.put(JsonKey.USER_ID, userId);
+        reqMap.put(JsonKey.ORGANISATION_ID, organisationId);
+        reqMap.put(JsonKey.ORG_JOIN_DATE, ProjectUtil.getFormattedDate());
+        reqMap.put(JsonKey.IS_DELETED, false);
+        Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
+        try {
+            cassandraOperation.insertRecord(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(), reqMap);
+        } catch (Exception e) {
+            ProjectLogger.log(e.getMessage(), e);
+        }
     }
 }
 

@@ -2,6 +2,7 @@ package org.sunbird.common.quartz.scheduler;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.bean.ClaimStatus;
@@ -17,6 +18,7 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
+import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.bulkupload.model.BulkMigrationUser;
 import org.sunbird.learner.util.Util;
@@ -158,8 +160,12 @@ public class ShadowUserMigrationScheduler {
                 .build();
         Map<String, Object> dbMap = mapper.convertValue(shadowUser, Map.class);
         dbMap.put(JsonKey.CREATED_ON, new Timestamp(System.currentTimeMillis()));
-        Response response = cassandraOperation.insertRecord(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, dbMap);
-        ProjectLogger.log("ShadowUserMigrationScheduler:insertShadowUser: record status in cassandra ".concat(response.getResult() + ""), LoggerEnum.INFO.name());
+        if(!isOrgExternalIdValid(migrationUser)) {
+            dbMap.put(JsonKey.CLAIM_STATUS,ClaimStatus.REJECTED.getValue());
+        }
+            Response response = cassandraOperation.insertRecord(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, dbMap);
+            ProjectLogger.log("ShadowUserMigrationScheduler:insertShadowUser: record status in cassandra ".concat(response.getResult() + ""), LoggerEnum.INFO.name());
+
     }
 
     private int getInputStatus(String inputStatus) {
@@ -183,7 +189,12 @@ public class ShadowUserMigrationScheduler {
             propertiesMap.put(JsonKey.ORG_EXT_ID, migrationUser.getOrgExternalId());
             propertiesMap.put(JsonKey.UPDATED_ON, new Timestamp(System.currentTimeMillis()));
             propertiesMap.put(JsonKey.USER_STATUS,getInputStatus(migrationUser.getInputStatus()));
-            propertiesMap.put(JsonKey.CLAIM_STATUS,ClaimStatus.UNCLAIMED.getValue());
+            if(!isOrgExternalIdValid(migrationUser)) {
+                propertiesMap.put(JsonKey.CLAIM_STATUS, ClaimStatus.REJECTED.getValue());
+            }
+            else{
+                propertiesMap.put(JsonKey.CLAIM_STATUS, ClaimStatus.UNCLAIMED.getValue());
+            }
             propertiesMap.put(JsonKey.USER_ID,null);
             Map<String,Object>compositeKeysMap=new HashMap<>();
             compositeKeysMap.put(JsonKey.CHANNEL, migrationUser.getChannel());
@@ -287,15 +298,25 @@ public class ShadowUserMigrationScheduler {
         if((getInputStatus(migrationUser.getInputStatus())!=shadowUser.getUserStatus())){
             return false;
         }
+
+        if(!migrationUser.getName().equalsIgnoreCase(shadowUser.getName())){
+            return false;
+        }
         return true;
     }
 
-
-
-
-
-
-
-
+    private boolean isOrgExternalIdValid(MigrationUser migrationUser) {
+        if (StringUtils.isBlank(migrationUser.getOrgExternalId())) {
+        return true;
+        }
+        Map<String, Object> request = new HashMap<>();
+        Map<String, Object> filters = new HashMap<>();
+        filters.put(JsonKey.EXTERNAL_ID, migrationUser.getOrgExternalId());
+        filters.put(JsonKey.CHANNEL, migrationUser.getChannel());
+        request.put(JsonKey.FILTERS, filters);
+        SearchDTO searchDTO = ElasticSearchHelper.createSearchDTO(request);
+        Map<String, Object> response = (Map<String, Object>) elasticSearchService.search(searchDTO, ProjectUtil.EsType.organisation.getTypeName());
+        return CollectionUtils.isNotEmpty((List<Map<String, Object>>) response.get(JsonKey.CONTENT));
+        }
 
 }

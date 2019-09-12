@@ -679,6 +679,7 @@ public class UserManagementActor extends BaseActor {
     boolean phoneVerified = (boolean) (userMap.containsKey(JsonKey.PHONE_VERIFIED) ?  userMap.get(JsonKey.PHONE_VERIFIED) : userDbRecord.get(JsonKey.PHONE_VERIFIED));
     //for existing users, it won't contain state-validation
     //adding in release-2.4.0
+    //userDbRecord- record from es.
     if(!userDbRecord.containsKey(JsonKey.STATE_VALIDATED)) {
       setStateValidation(userDbRecord,userBooleanMap);
     } else {

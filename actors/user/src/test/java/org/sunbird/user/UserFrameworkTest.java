@@ -5,7 +5,6 @@ import static org.powermock.api.mockito.PowerMockito.when;
 
 import java.util.*;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
@@ -19,7 +18,6 @@ import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 
 @PrepareForTest({DataCacheHandler.class, ContentStoreUtil.class})
-@Ignore
 public class UserFrameworkTest extends UserManagementActorTestBase {
 
   @Before
@@ -121,6 +119,7 @@ public class UserFrameworkTest extends UserManagementActorTestBase {
     request.put(JsonKey.USER, innerMap);
     request.put(JsonKey.USER_ID, userId);
     request.put(JsonKey.FRAMEWORK, frameworkMap);
+    getUpdateRequestWithDefaultFlags(request);
     reqObj.setRequest(request);
     Map<String, Object> context = new HashMap<>();
     context.put(JsonKey.REQUESTED_BY, "someValue");

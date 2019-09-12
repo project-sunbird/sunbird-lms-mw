@@ -128,6 +128,7 @@ public abstract class UserManagementActorTestBase {
     UserUtil.setUserDefaultValue(Mockito.anyMap(), Mockito.anyString());
 
     Map<String, Object> requestMap = new HashMap<>();
+    requestMap.put(JsonKey.ROOT_ORG_ID, "rootOrgId");
     requestMap.put(JsonKey.TNC_ACCEPTED_ON, 12345678L);
     when(UserUtil.encryptUserData(Mockito.anyMap())).thenReturn(requestMap);
     PowerMockito.mockStatic(DataCacheHandler.class);
@@ -259,6 +260,14 @@ public abstract class UserManagementActorTestBase {
     Map<String, Object> reqObj = new HashMap();
     reqObj.put(JsonKey.LOCATION_CODES, Arrays.asList("locationCode"));
     reqObj.put(JsonKey.USER_ID, "userId");
+    getUpdateRequestWithDefaultFlags(reqObj);
+    return reqObj;
+  }
+
+  public Map<String, Object> getUpdateRequestWithDefaultFlags(Map<String, Object> reqObj) {
+    reqObj.put(JsonKey.EMAIL_VERIFIED, false);
+    reqObj.put(JsonKey.PHONE_VERIFIED, false);
+    reqObj.put(JsonKey.STATE_VALIDATED, false);
     return reqObj;
   }
 

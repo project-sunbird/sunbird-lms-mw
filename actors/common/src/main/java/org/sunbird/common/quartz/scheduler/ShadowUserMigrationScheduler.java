@@ -37,6 +37,8 @@ public class ShadowUserMigrationScheduler {
     private ObjectMapper mapper = new ObjectMapper();
     private ElasticSearchService elasticSearchService = EsClientFactory.getInstance(JsonKey.REST);
     private DecryptionService decryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(null);
+    ShadowUserProcessor object=new  ShadowUserProcessor();
+
 
 
 //    @Override
@@ -72,7 +74,6 @@ public class ShadowUserMigrationScheduler {
             }
         });
         ProjectLogger.log("ShadowUserMigrationScheduler:processRecords:started stage3__________________________-",LoggerEnum.INFO.name());
-        ShadowUserProcessor object=new  ShadowUserProcessor();
         object.process();
     }
 
@@ -176,7 +177,6 @@ public class ShadowUserMigrationScheduler {
 
     private void updateUser(MigrationUser migrationUser, ShadowUser shadowUser) {
         updateUserInShadowDb(migrationUser,shadowUser);
-        //updateUserInUserDb(migrationUser.getInputStatus(), shadowUser);
     }
 
     private void updateUserInShadowDb(MigrationUser migrationUser, ShadowUser shadowUser) {
@@ -191,17 +191,21 @@ public class ShadowUserMigrationScheduler {
             if(!isOrgExternalIdValid(migrationUser)) {
                 propertiesMap.put(JsonKey.CLAIM_STATUS, ClaimStatus.REJECTED.getValue());
             }
-            else{
-                propertiesMap.put(JsonKey.CLAIM_STATUS, ClaimStatus.UNCLAIMED.getValue());
-            }
-            propertiesMap.put(JsonKey.USER_ID,null);
             Map<String,Object>compositeKeysMap=new HashMap<>();
             compositeKeysMap.put(JsonKey.CHANNEL, migrationUser.getChannel());
             compositeKeysMap.put(JsonKey.USER_EXT_ID,migrationUser.getUserExternalId());
             Response response = cassandraOperation.updateRecord(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, propertiesMap,compositeKeysMap);
             ProjectLogger.log("ShadowUserMigrationScheduler:updateUserInShadowDb: record status in cassandra ".concat(response.getResult() + ""), LoggerEnum.INFO.name());
+            object.processClaimedUser(getUpdatedShadowUser(compositeKeysMap));
         }
     }
+    private ShadowUser getUpdatedShadowUser( Map<String,Object>compositeKeysMap){
+        Response response=cassandraOperation.getRecordsByCompositeKey(JsonKey.SUNBIRD, JsonKey.SHADOW_USER,compositeKeysMap);
+        Map<String,Object>resultmap=((List<Map<String, Object>>)response.getResult().get(JsonKey.RESPONSE)).get(0);
+        ShadowUser shadowUser=mapper.convertValue(resultmap,ShadowUser.class);
+        return shadowUser;
+    }
+
 
     private void updateStatusInUserBulkTable(String processId, int statusVal) {
         try {

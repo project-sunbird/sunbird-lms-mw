@@ -33,6 +33,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.organisation.external.identity.service.OrgExternalService;
+import org.sunbird.learner.util.UserFlagEnum;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
 import org.sunbird.telemetry.util.TelemetryUtil;
@@ -107,6 +108,11 @@ public class TenantMigrationActor extends BaseActor {
     context.getRequestContext().put(JsonKey.ROLLUP, rollup);
     String orgId = validateOrgExternalIdOrOrgIdAndGetOrgId(request.getRequest());
     request.getRequest().put(JsonKey.ORG_ID, orgId);
+    int userFlagValue = UserFlagEnum.STATE_VALIDATED.getUserFlagValue();
+    if(userDetails.containsKey(JsonKey.FLAGS_VALUE)) {
+      userFlagValue += Integer.parseInt(String.valueOf(userDetails.get(JsonKey.FLAGS_VALUE)));
+    }
+    request.getRequest().put(JsonKey.FLAGS_VALUE, userFlagValue);
     Map<String, Object> userUpdateRequest = createUserUpdateRequest(request);
     // Update user channel and rootOrgId
     Response response =
@@ -369,6 +375,8 @@ public class TenantMigrationActor extends BaseActor {
     userRequest.put(JsonKey.ID, request.getRequest().get(JsonKey.USER_ID));
     userRequest.put(JsonKey.CHANNEL, request.getRequest().get(JsonKey.CHANNEL));
     userRequest.put(JsonKey.ROOT_ORG_ID, request.getRequest().get(JsonKey.ROOT_ORG_ID));
+    userRequest.put(JsonKey.FLAGS_VALUE, request.getRequest().get(JsonKey.FLAGS_VALUE));
+    userRequest.put(JsonKey.USER_TYPE, request.getRequest().get(JsonKey.TEACHER));
     return userRequest;
   }
 }

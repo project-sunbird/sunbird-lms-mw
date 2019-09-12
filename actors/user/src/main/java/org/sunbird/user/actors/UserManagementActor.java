@@ -682,8 +682,7 @@ public class UserManagementActor extends BaseActor {
     if(!userDbRecord.containsKey(JsonKey.STATE_VALIDATED)) {
       setStateValidation(userDbRecord,userBooleanMap);
     } else {
-      boolean isStateValidated = (boolean) (userMap.containsKey(JsonKey.STATE_VALIDATED) ?  userMap.get(JsonKey.STATE_VALIDATED) : userDbRecord.get(JsonKey.STATE_VALIDATED));
-      userBooleanMap.put(JsonKey.STATE_VALIDATED, isStateValidated);
+      userBooleanMap.put(JsonKey.STATE_VALIDATED, (boolean) userDbRecord.get(JsonKey.STATE_VALIDATED));
     }
     userBooleanMap.put(JsonKey.EMAIL_VERIFIED, emailVerified);
     userBooleanMap.put(JsonKey.PHONE_VERIFIED, phoneVerified);

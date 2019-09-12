@@ -146,8 +146,8 @@ public class TenantMigrationActor extends BaseActor {
     // send the response
     sender().tell(response, self());
     // save user data to ES
-    notify(userDetails);
     saveUserDetailsToEs((String) request.getRequest().get(JsonKey.USER_ID));
+    notify(userDetails);
     targetObject =
         TelemetryUtil.generateTargetObject(
             (String) reqMap.get(JsonKey.USER_ID), TelemetryEnvKey.USER, MIGRATE, null);
@@ -178,7 +178,7 @@ public class TenantMigrationActor extends BaseActor {
                     ProjectUtil.getConfigValue(JsonKey.SUNBIRD_INSTALLATION),
                      userData.get(MASK_IDENTIFIER));
     requestMap.put(JsonKey.BODY, body);
-    requestMap.put(JsonKey.SUBJECT, ProjectUtil.getConfigValue("sunbird_account_merge_subject"));
+    requestMap.put(JsonKey.SUBJECT, ProjectUtil.getConfigValue(JsonKey.SUNBIRD_ACCOUNT_MERGE_SUBJECT));
     request.getRequest().put(JsonKey.EMAIL_REQUEST, requestMap);
     request.setOperation(BackgroundOperations.emailService.name());
     return request;
@@ -186,15 +186,11 @@ public class TenantMigrationActor extends BaseActor {
 
   private Map<String, Object> createUserData(Map<String, Object> userData) {
       if (StringUtils.isNotBlank((String) userData.get(JsonKey.EMAIL))) {
-        String deceryptedEmail = decryptionService.decryptData((String) userData.get(JsonKey.EMAIL));
-        String maskEmail = maskingService.maskEmail(deceryptedEmail);
-        userData.put(JsonKey.EMAIL, deceryptedEmail);
-        userData.put(MASK_IDENTIFIER, maskEmail);
+        userData.put(JsonKey.EMAIL,decryptionService.decryptData((String) userData.get(JsonKey.EMAIL)));
+        userData.put(MASK_IDENTIFIER,maskingService.maskEmail((String)userData.get(JsonKey.EMAIL)));
       } else {
-        String deceryptedPhone = decryptionService.decryptData((String) userData.get(JsonKey.PHONE));
-        String maskPhone = maskingService.maskPhone(deceryptedPhone);
-        userData.put(JsonKey.PHONE, deceryptedPhone);
-        userData.put(MASK_IDENTIFIER, maskPhone);
+        userData.put(JsonKey.PHONE, decryptionService.decryptData((String) userData.get(JsonKey.PHONE)));
+        userData.put(MASK_IDENTIFIER, maskingService.maskPhone((String) userData.get(JsonKey.PHONE)));
       }
       return userData;
   }

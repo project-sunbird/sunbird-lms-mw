@@ -88,11 +88,13 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
 
     private void insertRecord(BulkMigrationUser bulkMigrationUser){
         long insertStartTime=System.currentTimeMillis();
+        ProjectLogger.log("UserBulkMigrationActor:insertRecord:record started inserting with ".concat(bulkMigrationUser.getId()+""));
         Map<String,Object>record=mapper.convertValue(bulkMigrationUser,Map.class);
         long createdOn=System.currentTimeMillis();
         record.put(JsonKey.CREATED_ON,new Timestamp(createdOn));
         record.put(JsonKey.LAST_UPDATED_ON,new Timestamp(createdOn));
         Response response=cassandraOperation.insertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), record);
+        response.put(JsonKey.PROCESS_ID,bulkMigrationUser.getId());
         ProjectLogger.log("UserBulkMigrationActor:insertRecord:time taken by cassandra to insert record of size ".concat(record.size()+"")+"is(ms):".concat((System.currentTimeMillis()-insertStartTime)+""));
         sender().tell(response,self());
     }

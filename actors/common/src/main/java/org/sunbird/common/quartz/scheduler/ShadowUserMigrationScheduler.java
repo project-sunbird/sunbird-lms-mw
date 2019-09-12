@@ -10,6 +10,7 @@ import org.sunbird.bean.MigrationUser;
 import org.sunbird.bean.ShadowUser;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
+import org.sunbird.common.ShadowUserProcessor;
 import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
@@ -22,7 +23,6 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.bulkupload.model.BulkMigrationUser;
 import org.sunbird.learner.util.Util;
-import scala.concurrent.Future;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -33,8 +33,6 @@ import java.util.Map;
 public class ShadowUserMigrationScheduler {
 
     private Util.DbInfo bulkUploadDbInfo = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
-    private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-
     private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     private ObjectMapper mapper = new ObjectMapper();
     private ElasticSearchService elasticSearchService = EsClientFactory.getInstance(JsonKey.REST);
@@ -69,13 +67,16 @@ public class ShadowUserMigrationScheduler {
                 });
                 updateMessageInBulkUserTable(bulkMigrationUser.getId(), JsonKey.SUCCESS_RESULT, JsonKey.SUCCESS);
             } catch (Exception e) {
+                ProjectLogger.log("ShadowUserMigrationScheduler:processRecords:error occurred ".concat(e+""),LoggerEnum.ERROR.name());
                 updateMessageInBulkUserTable(bulkMigrationUser.getId(), JsonKey.FAILURE_RESULT, e.getMessage());
             }
         });
+        ProjectLogger.log("ShadowUserMigrationScheduler:processRecords:started stage3__________________________-",LoggerEnum.INFO.name());
+        ShadowUserProcessor object=new  ShadowUserProcessor();
+        object.process();
     }
 
     private void processSingleMigUser(String createdBy,String processId, MigrationUser singleMigrationUser) {
-        try {
             Map<String, Object> existingUserDetails = getShadowExistingUserDetails(singleMigrationUser.getChannel(), singleMigrationUser.getUserExternalId());
             if (MapUtils.isEmpty(existingUserDetails)) {
                 insertShadowUserToDb(createdBy,processId, singleMigrationUser);
@@ -83,9 +84,6 @@ public class ShadowUserMigrationScheduler {
                 ShadowUser shadowUser = mapper.convertValue(existingUserDetails, ShadowUser.class);
                 updateUser(singleMigrationUser, shadowUser);
             }
-        } catch (Exception e) {
-            ProjectLogger.log("ShadowUserMigrationScheduler:processSingleMigUser:error occurred while processing user".concat(e + "with user id:".concat(singleMigrationUser.toString())), LoggerEnum.ERROR.name());
-        }
     }
 
 
@@ -205,47 +203,6 @@ public class ShadowUserMigrationScheduler {
         }
     }
 
-    private void updateUserInUserDb(String migrationUserStatus, ShadowUser shadowUser) {
-        if (shadowUser.getClaimStatus() == ClaimStatus.CLAIMED.getValue()) {
-            if (migrationUserStatus.equalsIgnoreCase(JsonKey.ACTIVE)) {
-                updateUser(true, shadowUser.getUserId());
-            } else {
-                updateUser(false, shadowUser.getUserId());
-            }
-        }
-    }
-
-    private void updateUser(boolean isActive, String userId) {
-        Map<String, Object> propertiesMap = new HashMap<>();
-        try {
-            propertiesMap.put(JsonKey.ID, userId);
-            if (isActive) {
-                propertiesMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
-            } else {
-                propertiesMap.put(JsonKey.STATUS, ProjectUtil.Status.INACTIVE.getValue());
-            }
-            propertiesMap.put(JsonKey.IS_DELETED, isActive);
-            cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), propertiesMap);
-        } catch (Exception e) {
-            e.printStackTrace();
-            ProjectLogger.log("ShadowUserMigrationScheduler:updateUserStatus: data failed to updates in cassandra  with userId:".concat(userId + "error:" + e), LoggerEnum.ERROR.name());
-        }
-        syncUserToES(propertiesMap);
-    }
-
-    private void syncUserToES(Map<String, Object> propertiesMap) {
-        String userId = (String) propertiesMap.get(JsonKey.ID);
-        try {
-            Future<Boolean> future = elasticSearchService.update(JsonKey.USER, userId, propertiesMap);
-            if ((boolean) ElasticSearchHelper.getResponseFromFuture(future)) {
-                ProjectLogger.log("ShadowUserMigrationScheduler:updateUserStatus: data successfully updated to elastic search with userId:".concat(userId + ""), LoggerEnum.INFO.name());
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            ProjectLogger.log("ShadowUserMigrationScheduler:syncUserToES: data failed to updates in elastic search with userId:".concat(userId + ""), LoggerEnum.ERROR.name());
-        }
-    }
-
     private void updateStatusInUserBulkTable(String processId, int statusVal) {
         try {
             ProjectLogger.log("ShadowUserMigrationScheduler:updateStatusInUserBulkTable: got status to change in bulk upload table".concat(statusVal + ""), LoggerEnum.INFO.name());
@@ -269,7 +226,9 @@ public class ShadowUserMigrationScheduler {
         propertiesMap.put(key, value);
         if (value.equalsIgnoreCase(JsonKey.SUCCESS)) {
             propertiesMap.put(JsonKey.STATUS, ProjectUtil.BulkProcessStatus.COMPLETED.getValue());
+            propertiesMap.put(JsonKey.FAILURE_RESULT, "");
         } else {
+            propertiesMap.put(JsonKey.SUCCESS_RESULT, "");
             propertiesMap.put(JsonKey.STATUS, ProjectUtil.BulkProcessStatus.FAILED.getValue());
         }
         updateBulkUserTable(propertiesMap);
@@ -316,8 +275,7 @@ public class ShadowUserMigrationScheduler {
         filters.put(JsonKey.CHANNEL, migrationUser.getChannel());
         request.put(JsonKey.FILTERS, filters);
         SearchDTO searchDTO = ElasticSearchHelper.createSearchDTO(request);
-        Map<String, Object> response = (Map<String, Object>) elasticSearchService.search(searchDTO, ProjectUtil.EsType.organisation.getTypeName());
+        Map<String, Object> response = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(elasticSearchService.search(searchDTO, ProjectUtil.EsType.organisation.getTypeName()));
         return CollectionUtils.isNotEmpty((List<Map<String, Object>>) response.get(JsonKey.CONTENT));
         }
-
 }

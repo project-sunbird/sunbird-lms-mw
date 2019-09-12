@@ -215,7 +215,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
             MigrationUser migrationUser=new MigrationUser();
             for(int i=0;i<row.length;i++){
                 String columnName=getColumnNameByIndex(mappedHeaders,i);
-                setFieldToMigrationUserObject(migrationUser,columnName,row[i]);
+                setFieldToMigrationUserObject(migrationUser,columnName,row[i].trim());
             }
             //channel to be added here
             migrationUser.setChannel(channel);

@@ -33,10 +33,13 @@ public class ShadowUserProcessor {
     private ElasticSearchService elasticSearchService = EsClientFactory.getInstance(JsonKey.REST);
 
     public void process() {
+        ProjectLogger.log("ShadowUserProcessor:process:process started for updating users",LoggerEnum.INFO.name());
         List<ShadowUser> shadowUserList = getShadowUserFromDb();
+        ProjectLogger.log("ShadowUserProcessor:process:list of shadow user got ".concat(shadowUserList.size()+""),LoggerEnum.INFO.name());
         shadowUserList.stream().forEach(singleShadowUser -> {
             processSingleShadowUser(singleShadowUser);
         });
+        ProjectLogger.log("ShadowUserProcessor:process:successfully processed shadow user ".concat(shadowUserList.size()+""),LoggerEnum.INFO.name());
     }
 
     private void processSingleShadowUser(ShadowUser shadowUser) {
@@ -59,27 +62,26 @@ public class ShadowUserProcessor {
     }
 
     private void updateUser(ShadowUser shadowUser) {
-        List<Map<String, Object>> esUser = (List<Map<String, Object>>) getUserFromEs(shadowUser);
+        List<Map<String, Object>> esUser = getUserFromEs(shadowUser);
         if (CollectionUtils.isNotEmpty(esUser)) {
             if (esUser.size() == 1) {
                 Map<String, Object> userMap = esUser.get(0);
                 if (!isSame(shadowUser, userMap)) {
                     String rootOrgId = getRootOrgIdFromChannel(shadowUser.getChannel());
                     if (StringUtils.isEmpty(rootOrgId)) {
-                        updateUserInShadowDb(shadowUser, ClaimStatus.REJECTED.getValue());
+                        updateUserInShadowDb(null,shadowUser, ClaimStatus.REJECTED.getValue());
                         return;
                     } else {
                         updateUserInUserTable((String) userMap.get(JsonKey.ID), rootOrgId, shadowUser);
                         String orgIdFromOrgExtId = getOrgId(shadowUser);
                         updateUserOrg(orgIdFromOrgExtId, rootOrgId, userMap);
-                        syncUserToES((String) userMap.get(JsonKey.ID));
                         createUserExternalId((String) userMap.get(JsonKey.ID),shadowUser);
-                        updateUserInShadowDb(shadowUser, ClaimStatus.CLAIMED.getValue());
-
+                        updateUserInShadowDb((String) userMap.get(JsonKey.ID),shadowUser, ClaimStatus.CLAIMED.getValue());
+                        syncUserToES((String) userMap.get(JsonKey.ID));
                     }
                 }
             } else {
-                updateUserInShadowDb(shadowUser, ClaimStatus.REJECTED.getValue());
+                updateUserInShadowDb(null,shadowUser, ClaimStatus.REJECTED.getValue());
             }
         }
 
@@ -96,14 +98,15 @@ public class ShadowUserProcessor {
     private void updateUserInUserTable(String userId, String rootOrgId, ShadowUser shadowUser) {
         Map<String, Object> propertiesMap = new HashMap<>();
         propertiesMap.put(JsonKey.FIRST_NAME, shadowUser.getName());
-        propertiesMap.put(JsonKey.STATUS, shadowUser.getClaimStatus());
         propertiesMap.put(JsonKey.ID, userId);
         propertiesMap.put(JsonKey.UPDATED_BY, shadowUser.getAddedBy());
-        propertiesMap.put(JsonKey.UPDATED_ON, new Timestamp(System.currentTimeMillis()));
+        propertiesMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
         if (shadowUser.getClaimStatus() == ProjectUtil.Status.ACTIVE.getValue()) {
             propertiesMap.put(JsonKey.IS_DELETED, false);
+            propertiesMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
         } else {
             propertiesMap.put(JsonKey.IS_DELETED, true);
+            propertiesMap.put(JsonKey.STATUS, ProjectUtil.Status.INACTIVE.getValue());
         }
         propertiesMap.put(JsonKey.USER_TYPE, UserType.TEACHER.getTypeName());
         propertiesMap.put(JsonKey.CHANNEL, shadowUser.getChannel());
@@ -200,10 +203,13 @@ public class ShadowUserProcessor {
     }
 
 
-    private void updateUserInShadowDb(ShadowUser shadowUser, int claimStatus) {
+    private void updateUserInShadowDb(String userId,ShadowUser shadowUser, int claimStatus) {
         Map<String, Object> propertiesMap = new HashMap<>();
-        propertiesMap.put(JsonKey.CLAIMED_ON, new Timestamp(System.currentTimeMillis()));
         propertiesMap.put(JsonKey.CLAIM_STATUS, claimStatus);
+        if(claimStatus==ClaimStatus.CLAIMED.getValue()) {
+            propertiesMap.put(JsonKey.CLAIMED_ON, new Timestamp(System.currentTimeMillis()));
+            propertiesMap.put(JsonKey.USER_ID, userId);
+        }
         Map<String, Object> compositeKeysMap = new HashMap<>();
         compositeKeysMap.put(JsonKey.CHANNEL, shadowUser.getChannel());
         compositeKeysMap.put(JsonKey.USER_EXT_ID, shadowUser.getUserExtId());
@@ -219,7 +225,7 @@ public class ShadowUserProcessor {
             filters.put(JsonKey.CHANNEL, shadowUser.getChannel());
             request.put(JsonKey.FILTERS, filters);
             SearchDTO searchDTO = ElasticSearchHelper.createSearchDTO(request);
-            Map<String, Object> response = (Map<String, Object>) elasticSearchService.search(searchDTO, ProjectUtil.EsType.organisation.getTypeName());
+            Map<String, Object> response = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(elasticSearchService.search(searchDTO, ProjectUtil.EsType.organisation.getTypeName()));
             List<Map<String, Object>> orgData = ((List<Map<String, Object>>) response.get(JsonKey.CONTENT));
             if (CollectionUtils.isNotEmpty(orgData)) {
                 Map<String, Object> orgMap = orgData.get(0);
@@ -288,14 +294,14 @@ public class ShadowUserProcessor {
         Map<String, Object> externalId = new HashMap<>();
         externalId.put(JsonKey.ID_TYPE, shadowUser.getChannel().toLowerCase());
         externalId.put(JsonKey.PROVIDER, shadowUser.getChannel().toLowerCase());
-        externalId.put(JsonKey.ID, shadowUser.getUserExtId().toLowerCase());
-        externalId.put(JsonKey.ORIGINAL_EXTERNAL_ID, externalId.get(JsonKey.ID));
+        externalId.put(JsonKey.EXTERNAL_ID, shadowUser.getUserExtId().toLowerCase());
+        externalId.put(JsonKey.ORIGINAL_EXTERNAL_ID, externalId.get(JsonKey.EXTERNAL_ID));
         externalId.put(JsonKey.ORIGINAL_PROVIDER, externalId.get(JsonKey.PROVIDER));
         externalId.put(JsonKey.ORIGINAL_ID_TYPE, externalId.get(JsonKey.ID_TYPE));
         externalId.put(JsonKey.USER_ID,userId);
         externalId.put(JsonKey.CREATED_BY,shadowUser.getAddedBy());
         externalId.put(JsonKey.CREATED_ON,new Timestamp(System.currentTimeMillis()));
-        Response response=cassandraOperation.upsertRecord(JsonKey.SUNBIRD, JsonKey.USR_EXT_IDNT_TABLE, externalId);
+        Response response=cassandraOperation.insertRecord(JsonKey.SUNBIRD, JsonKey.USR_EXT_IDNT_TABLE, externalId);
         ProjectLogger.log("ShadowUserProcessor:createUserExternalId:response from cassandra ".concat(response.getResult()+""));
 
     }

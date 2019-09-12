@@ -65,7 +65,7 @@ public class ShadowUserMigrationScheduler {
                 updateStatusInUserBulkTable(bulkMigrationUser.getId(), ProjectUtil.BulkProcessStatus.IN_PROGRESS.getValue());
                 List<MigrationUser> migrationUserList = getMigrationUserAsList(bulkMigrationUser);
                 migrationUserList.stream().forEach(singleMigrationUser -> {
-                    processSingleMigUser(bulkMigrationUser.getId(), singleMigrationUser);
+                    processSingleMigUser(bulkMigrationUser.getCreatedBy(),bulkMigrationUser.getId(), singleMigrationUser);
                 });
                 updateMessageInBulkUserTable(bulkMigrationUser.getId(), JsonKey.SUCCESS_RESULT, JsonKey.SUCCESS);
             } catch (Exception e) {
@@ -74,11 +74,11 @@ public class ShadowUserMigrationScheduler {
         });
     }
 
-    private void processSingleMigUser(String processId, MigrationUser singleMigrationUser) {
+    private void processSingleMigUser(String createdBy,String processId, MigrationUser singleMigrationUser) {
         try {
             Map<String, Object> existingUserDetails = getShadowExistingUserDetails(singleMigrationUser.getChannel(), singleMigrationUser.getUserExternalId());
             if (MapUtils.isEmpty(existingUserDetails)) {
-                insertShadowUserToDb(processId, singleMigrationUser);
+                insertShadowUserToDb(createdBy,processId, singleMigrationUser);
             } else {
                 ShadowUser shadowUser = mapper.convertValue(existingUserDetails, ShadowUser.class);
                 updateUser(singleMigrationUser, shadowUser);
@@ -140,7 +140,7 @@ public class ShadowUserMigrationScheduler {
         return result;
     }
 
-    private void insertShadowUserToDb(String processId, MigrationUser migrationUser) {
+    private void insertShadowUserToDb(String createdBy,String processId, MigrationUser migrationUser) {
         List<String> userRoles = new ArrayList<>();
         userRoles.add(ProjectUtil.UserRole.PUBLIC.getValue());
         ShadowUser shadowUser = new ShadowUser.ShadowUserBuilder()
@@ -149,6 +149,7 @@ public class ShadowUserMigrationScheduler {
                 .setEmail(migrationUser.getEmail())
                 .setPhone(migrationUser.getPhone())
                 .setUserId(null)
+                .setAddedBy(createdBy)
                 .setChannel(migrationUser.getChannel())
                 .setName(migrationUser.getName())
                 .setProcessId(processId)

@@ -36,6 +36,7 @@ public class ShadowUser {
     private String userId;
     private int userStatus;
     private String channel;
+    private String addedBy;
 
     public ShadowUser() {
     }
@@ -55,10 +56,16 @@ public class ShadowUser {
         this.userId = shadowUserBuilder.userId;
         this.userStatus = shadowUserBuilder.userStatus;
         this.channel=shadowUserBuilder.channel;
+        this.addedBy=shadowUserBuilder.addedBy;
     }
     public Timestamp getClaimedOn() {
         return claimedOn;
     }
+
+    public String getAddedBy() {
+        return addedBy;
+    }
+
 
     public int getClaimStatus() {
         return claimStatus;
@@ -128,7 +135,12 @@ public class ShadowUser {
         private String userId;
         private int userStatus;
         private String channel;
+        private String addedBy;
 
+        public ShadowUserBuilder setAddedBy(String addedBy) {
+            this.addedBy = addedBy;
+            return this;
+        }
 
         public ShadowUserBuilder setChannel(String channel) {
             this.channel = channel;

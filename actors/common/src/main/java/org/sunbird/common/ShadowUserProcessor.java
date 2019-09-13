@@ -31,6 +31,7 @@ public class ShadowUserProcessor {
     private ObjectMapper mapper = new ObjectMapper();
     private Map<String, String> hashTagIdMap = new HashMap<>();
     private Map<String, String> extOrgIdMap = new HashMap<>();
+    private Map<String,String>channelOrgIdMap=new HashMap<>();
     private static String custodianOrgId;
 
     private EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(null);
@@ -173,6 +174,10 @@ public class ShadowUserProcessor {
 
 
     private String getRootOrgIdFromChannel(String channel) {
+        String rootOrgId=channelOrgIdMap.get(channel);
+        if(StringUtils.isNotBlank(rootOrgId)){
+            return rootOrgId;
+        }
         Map<String, Object> request = new HashMap<>();
         Map<String, Object> filters = new HashMap<>();
         filters.put(JsonKey.CHANNEL, channel);
@@ -184,6 +189,7 @@ public class ShadowUserProcessor {
         Map<String, Object> esResult = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(esResultF);
         if (MapUtils.isNotEmpty(esResult) && CollectionUtils.isNotEmpty((List) esResult.get(JsonKey.CONTENT))) {
             Map<String, Object> esContent = ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT)).get(0);
+            channelOrgIdMap.put(channel,(String) esContent.get(JsonKey.ID));
             return (String) esContent.get(JsonKey.ID);
         }
         return StringUtils.EMPTY;
@@ -356,9 +362,11 @@ public class ShadowUserProcessor {
         reqMap.put(JsonKey.IS_DELETED, false);
         Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
         try {
-            cassandraOperation.insertRecord(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(), reqMap);
+            Response response=cassandraOperation.insertRecord(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(), reqMap);
+            ProjectLogger.log("ShadowUserProcessor:registerUserToOrg:user status whiel registration with org is:"+response.getResult(),LoggerEnum.INFO.name());
+
         } catch (Exception e) {
-            ProjectLogger.log(e.getMessage(), e);
+            ProjectLogger.log("ShadowUserProcessor:registerUserToOrg:user is failed to register with org"+userId,LoggerEnum.ERROR.name());
         }
     }
 

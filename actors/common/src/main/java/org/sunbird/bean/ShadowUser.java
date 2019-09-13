@@ -3,25 +3,12 @@ package org.sunbird.bean;
 import java.sql.Timestamp;
 import java.util.List;
 
+
+/**
+ * this is POJO class for the shadow user in the shadow_user table
+ * @author anmolgupta
+ */
 public class ShadowUser {
-
-    /**
-     *     channel text,
-     *     claimedon timestamp,
-     *     claimstatus int,
-     *     createdon timestamp,
-     *     email text,
-     *     name text,
-     *     orgextid text,
-     *     phone text,
-     *     processid text,
-     *     roles list<text>,
-     *     updatedon timestamp,
-     *     userextid text,
-     *     userid text,
-     *     userstatus int
-     */
-
     private Timestamp claimedOn;
     private int claimStatus;
     private Timestamp createdOn;
@@ -30,11 +17,11 @@ public class ShadowUser {
     private String orgExtId;
     private String phone;
     private String processId;
-    private List<String> roles;
     private Timestamp updatedOn;
     private String userExtId;
     private String userId;
     private int userStatus;
+    private List<String>userIds;
     private String channel;
     private String addedBy;
 
@@ -50,13 +37,13 @@ public class ShadowUser {
         this.orgExtId = shadowUserBuilder.orgExtId;
         this.phone = shadowUserBuilder.phone;
         this.processId = shadowUserBuilder.processId;
-        this.roles = shadowUserBuilder.roles;
         this.updatedOn = shadowUserBuilder.updatedOn;
         this.userExtId = shadowUserBuilder.userExtId;
         this.userId = shadowUserBuilder.userId;
         this.userStatus = shadowUserBuilder.userStatus;
         this.channel=shadowUserBuilder.channel;
         this.addedBy=shadowUserBuilder.addedBy;
+        this.userIds=shadowUserBuilder.userIds;
     }
     public Timestamp getClaimedOn() {
         return claimedOn;
@@ -66,6 +53,10 @@ public class ShadowUser {
         return addedBy;
     }
 
+
+    public List<String> getUserIds() {
+        return userIds;
+    }
 
     public int getClaimStatus() {
         return claimStatus;
@@ -93,10 +84,6 @@ public class ShadowUser {
 
     public String getProcessId() {
         return processId;
-    }
-
-    public List<String> getRoles() {
-        return roles;
     }
 
     public Timestamp getUpdatedOn() {
@@ -129,13 +116,18 @@ public class ShadowUser {
         private String orgExtId;
         private String phone;
         private String processId;
-        private List<String> roles;
         private Timestamp updatedOn;
         private String userExtId;
         private String userId;
         private int userStatus;
         private String channel;
         private String addedBy;
+        private List<String>userIds;
+
+        public ShadowUserBuilder setUserIds(List<String> userIds) {
+            this.userIds = userIds;
+            return this;
+        }
 
         public ShadowUserBuilder setAddedBy(String addedBy) {
             this.addedBy = addedBy;
@@ -191,12 +183,6 @@ public class ShadowUser {
 
         public ShadowUserBuilder setProcessId(String processId) {
             this.processId = processId;
-            return this;
-
-        }
-
-        public ShadowUserBuilder setRoles(List<String> roles) {
-            this.roles = roles;
             return this;
 
         }

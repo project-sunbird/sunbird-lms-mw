@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.sunbird.bean.ClaimStatus;
@@ -92,11 +91,14 @@ public class ShadowUserMigrationScheduler extends BaseJob{
     }
 
     private void processSingleMigUser(String createdBy,String processId, MigrationUser singleMigrationUser) {
-            Map<String, Object> existingUserDetails = getShadowExistingUserDetails(singleMigrationUser.getChannel(), singleMigrationUser.getUserExternalId());
-            if (MapUtils.isEmpty(existingUserDetails)) {
-                insertShadowUserToDb(createdBy,processId, singleMigrationUser);
+        ProjectLogger.log("ShadowUserMigrationScheduler:processSingleMigUser:Single migration User Started processing with processId:"+processId,LoggerEnum.INFO.name());
+        Map<String, Object> existingUserDetails = getShadowExistingUserDetails(singleMigrationUser.getChannel(), singleMigrationUser.getUserExternalId());
+        if (MapUtils.isEmpty(existingUserDetails)) {
+            ProjectLogger.log("ShadowUserMigrationScheduler:processSingleMigUser:existing user not found with processId:"+processId,LoggerEnum.INFO.name());
+            insertShadowUserToDb(createdBy,processId, singleMigrationUser);
             } else {
-                ShadowUser shadowUser = mapper.convertValue(existingUserDetails, ShadowUser.class);
+            ProjectLogger.log("ShadowUserMigrationScheduler:processSingleMigUser:existing user found with processId:"+processId,LoggerEnum.INFO.name());
+            ShadowUser shadowUser = mapper.convertValue(existingUserDetails, ShadowUser.class);
                 updateUser(singleMigrationUser, shadowUser);
             }
     }
@@ -153,9 +155,13 @@ public class ShadowUserMigrationScheduler extends BaseJob{
         return result;
     }
 
+    /**
+     * this method will prepare the shawdow user object and insert the record into shawdow_user table
+     * @param createdBy
+     * @param processId
+     * @param migrationUser
+     */
     private void insertShadowUserToDb(String createdBy,String processId, MigrationUser migrationUser) {
-        List<String> userRoles = new ArrayList<>();
-        userRoles.add(ProjectUtil.UserRole.PUBLIC.getValue());
         ShadowUser shadowUser = new ShadowUser.ShadowUserBuilder()
                 .setUserExtId(migrationUser.getUserExternalId())
                 .setOrgExtId(migrationUser.getOrgExternalId())
@@ -163,12 +169,12 @@ public class ShadowUserMigrationScheduler extends BaseJob{
                 .setPhone(migrationUser.getPhone())
                 .setUserId(null)
                 .setAddedBy(createdBy)
+                .setUserIds(null)
                 .setChannel(migrationUser.getChannel())
                 .setName(migrationUser.getName())
                 .setProcessId(processId)
                 .setClaimedOn(null)
                 .setClaimStatus(ClaimStatus.UNCLAIMED.getValue())
-                .setRoles(userRoles)
                 .setUserStatus(getInputStatus(migrationUser.getInputStatus()))
                 .setUpdatedOn(null)
                 .build();
@@ -177,8 +183,8 @@ public class ShadowUserMigrationScheduler extends BaseJob{
         if(!isOrgExternalIdValid(migrationUser)) {
             dbMap.put(JsonKey.CLAIM_STATUS,ClaimStatus.REJECTED.getValue());
         }
-            Response response = cassandraOperation.insertRecord(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, dbMap);
-            ProjectLogger.log("ShadowUserMigrationScheduler:insertShadowUser: record status in cassandra ".concat(response.getResult() + ""), LoggerEnum.INFO.name());
+        Response response = cassandraOperation.insertRecord(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, dbMap);
+        ProjectLogger.log("ShadowUserMigrationScheduler:insertShadowUser: record status in cassandra ".concat(response.getResult() + ""), LoggerEnum.INFO.name());
 
     }
 
@@ -213,8 +219,15 @@ public class ShadowUserMigrationScheduler extends BaseJob{
             processorObject.processClaimedUser(getUpdatedShadowUser(compositeKeysMap));
         }
     }
+
+    /**
+     * this method will return the updated shadow user object when new orgExtId , name is been passed
+     * @param compositeKeysMap
+     * @return shawdow user
+     */
     private ShadowUser getUpdatedShadowUser( Map<String,Object>compositeKeysMap){
         Response response=cassandraOperation.getRecordsByCompositeKey(JsonKey.SUNBIRD, JsonKey.SHADOW_USER,compositeKeysMap);
+        ProjectLogger.log("ShadowUserMigrationScheduler:getUpdatedShadowUser: record status in cassandra for getting the updated shawdow user object ".concat(response.getResult() + ""), LoggerEnum.INFO.name());
         Map<String,Object>resultmap=((List<Map<String, Object>>)response.getResult().get(JsonKey.RESPONSE)).get(0);
         ShadowUser shadowUser=mapper.convertValue(resultmap,ShadowUser.class);
         return shadowUser;
@@ -254,10 +267,10 @@ public class ShadowUserMigrationScheduler extends BaseJob{
 
 
     /**
-     *
+     * this method will take descision wheather to update the record or not.
      * @param shadowUser
      * @param migrationUser
-     * @return
+     * @return boolean
      */
     private boolean isSame(ShadowUser shadowUser,MigrationUser migrationUser){
         if(!shadowUser.getName().equalsIgnoreCase(migrationUser.getName())){

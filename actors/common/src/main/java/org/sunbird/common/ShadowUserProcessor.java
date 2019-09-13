@@ -65,7 +65,7 @@ public class ShadowUserProcessor {
             registerUserToOrg(userId,orgId);
         }
         syncUserToES(userId);
-        updateUserInShadowDb(userId,shadowUser,ClaimStatus.CLAIMED.getValue());
+        updateUserInShadowDb(userId,shadowUser,ClaimStatus.CLAIMED.getValue(),null);
     }
 
     private boolean isRootOrgMatchedWithOrgId(String rootOrgId,String orgId){
@@ -115,23 +115,33 @@ public class ShadowUserProcessor {
                 if (!isSame(shadowUser, userMap)) {
                     String rootOrgId = getRootOrgIdFromChannel(shadowUser.getChannel());
                     if (StringUtils.isEmpty(rootOrgId)) {
-                        updateUserInShadowDb(null, shadowUser, ClaimStatus.REJECTED.getValue());
+                        updateUserInShadowDb(null, shadowUser, ClaimStatus.REJECTED.getValue(),null);
                         return;
                     } else {
                         updateUserInUserTable((String) userMap.get(JsonKey.ID), rootOrgId, shadowUser);
                         String orgIdFromOrgExtId = getOrgId(shadowUser);
                         updateUserOrg(orgIdFromOrgExtId, rootOrgId, userMap);
                         createUserExternalId((String) userMap.get(JsonKey.ID), shadowUser);
-                        updateUserInShadowDb((String) userMap.get(JsonKey.ID), shadowUser, ClaimStatus.CLAIMED.getValue());
+                        updateUserInShadowDb((String) userMap.get(JsonKey.ID), shadowUser, ClaimStatus.CLAIMED.getValue(),null);
                         syncUserToES((String) userMap.get(JsonKey.ID));
                     }
                 }
             } else {
-                updateUserInShadowDb(null, shadowUser, ClaimStatus.REJECTED.getValue());
+                updateUserInShadowDb(null, shadowUser, ClaimStatus.MULTIMATCH.getValue(),getMatchingUserIds(esUser));
             }
         }
 
     }
+
+    private List<String> getMatchingUserIds( List<Map<String, Object>> esUser){
+       List<String>matchingUserIds=new ArrayList<>();
+        esUser.stream().forEach(singleEsUser->{
+            matchingUserIds.add((String)singleEsUser.get(JsonKey.ID));
+        });
+        return matchingUserIds;
+    }
+
+
 
     private void updateUserOrg(String orgIdFromOrgExtId, String rootOrgId, Map<String, Object> userMap) {
         deleteUserOrganisations(userMap);
@@ -211,7 +221,7 @@ public class ShadowUserProcessor {
     }
 
     private List<ShadowUser> getShadowUserFromDb() {
-        List<Map<String, Object>> shadowUserList = getRowsFromShadowUserDb();
+        List<Map<String, Object>> shadowUserList = getUnclaimedRowsFromShadowUserDb();
         List<ShadowUser> shadowUsers = mapper.convertValue(shadowUserList, new TypeReference<List<ShadowUser>>() {
         });
         return shadowUsers;
@@ -222,7 +232,7 @@ public class ShadowUserProcessor {
      *
      * @return list
      */
-    private List<Map<String, Object>> getRowsFromShadowUserDb() {
+    private List<Map<String, Object>> getUnclaimedRowsFromShadowUserDb() {
         Map<String, Object> proertiesMap = new HashMap<>();
         proertiesMap.put(JsonKey.CLAIM_STATUS, ClaimStatus.UNCLAIMED.getValue());
         Response response = cassandraOperation.getRecordsByProperties(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, proertiesMap);
@@ -249,12 +259,15 @@ public class ShadowUserProcessor {
     }
 
 
-    private void updateUserInShadowDb(String userId, ShadowUser shadowUser, int claimStatus) {
+    private void updateUserInShadowDb(String userId, ShadowUser shadowUser, int claimStatus,List<String>matchingUserIds) {
         Map<String, Object> propertiesMap = new HashMap<>();
         propertiesMap.put(JsonKey.CLAIM_STATUS, claimStatus);
         if (claimStatus == ClaimStatus.CLAIMED.getValue()) {
             propertiesMap.put(JsonKey.CLAIMED_ON, new Timestamp(System.currentTimeMillis()));
             propertiesMap.put(JsonKey.USER_ID, userId);
+        }
+        if(null!=matchingUserIds && CollectionUtils.isNotEmpty(matchingUserIds)){
+            propertiesMap.put(JsonKey.USER_IDs,matchingUserIds);
         }
         Map<String, Object> compositeKeysMap = new HashMap<>();
         compositeKeysMap.put(JsonKey.CHANNEL, shadowUser.getChannel());

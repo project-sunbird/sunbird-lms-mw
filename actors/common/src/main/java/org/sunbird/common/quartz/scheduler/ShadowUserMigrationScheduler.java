@@ -5,6 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.quartz.Job;
+import org.quartz.JobExecutionContext;
+import org.quartz.JobExecutionException;
 import org.sunbird.bean.ClaimStatus;
 import org.sunbird.bean.MigrationUser;
 import org.sunbird.bean.ShadowUser;
@@ -30,7 +33,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class ShadowUserMigrationScheduler {
+public class ShadowUserMigrationScheduler extends BaseJob {
 
     private Util.DbInfo bulkUploadDbInfo = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
     private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -41,10 +44,10 @@ public class ShadowUserMigrationScheduler {
 
 
 
-//    @Override
-//    public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
-//        getMigrationUser();
-//    }
+    @Override
+    public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
+     processRecords();
+    }
 
 
     /**

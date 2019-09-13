@@ -52,19 +52,20 @@ public final class SchedulerManager {
         configProp = setUpClusterMode();
       }
       if (!isEmbedded && configProp != null) {
-        ProjectLogger.log("Quartz scheduler is running in cluster mode.");
+        ProjectLogger.log("Quartz scheduler is running in cluster mode.",LoggerEnum.INFO.name());
         scheduler = new StdSchedulerFactory(configProp).getScheduler();
       } else {
-        ProjectLogger.log("Quartz scheduler is running in embedded mode.");
+        ProjectLogger.log("Quartz scheduler is running in embedded mode.",LoggerEnum.INFO.name());
         scheduler = new StdSchedulerFactory().getScheduler();
       }
       String identifier = "NetOps-PC1502295457753";
-      scheduleCourseBatchCount(identifier);
-      scheduleBulkUploadJob(identifier);
-      // scheduleCoursePublishJob(identifier);
-      scheduleMetricsReportJob(identifier);
-      scheduleUpdateUserCountJob(identifier);
-      scheduleChannelReg(identifier);
+     // scheduleCourseBatchCount(identifier);
+//      scheduleBulkUploadJob(identifier);
+//      // scheduleCoursePublishJob(identifier);
+//      scheduleMetricsReportJob(identifier);
+//      scheduleUpdateUserCountJob(identifier);
+//      scheduleChannelReg(identifier);
+      scheduleShadowUser(identifier);
     } catch (Exception e) {
       ProjectLogger.log(
           "SchedulerManager:schedule: Error in starting scheduler jobs - org.sunbird.common.quartz.scheduler.SchedulerManager ",
@@ -363,4 +364,44 @@ public final class SchedulerManager {
         "SchedulerManager:registerShutDownHook: ShutDownHook registered for Quartz scheduler.",
         LoggerEnum.INFO);
   }
+
+  private void scheduleShadowUser(String identifier) {
+    // add another job for updating user count to Location Table.
+    // 1- create a job and bind with class which is implementing Job
+    // interface.
+    JobDetail migrateShadowUserJob =
+            JobBuilder.newJob(ShadowUserMigrationScheduler.class)
+                    .requestRecovery(true)
+                    .withDescription("Scheduler for migrating shadow user ")
+                    .withIdentity("migrateShadowUserScheduler", identifier)
+                    .build();
+
+    // 2- Create a trigger object that will define frequency of run.
+    // This will run every day 2:00 AM
+    Trigger migrateShadowUserTrigger =
+            TriggerBuilder.newTrigger()
+                    .withIdentity("migrateShadowUserTrigger", identifier)
+                    .withSchedule(
+                            CronScheduleBuilder.cronSchedule(
+                                    PropertiesCache.getInstance().getProperty("quartz_update_user_count_timer")))
+                    .build();
+    try {
+      if (scheduler.checkExists(migrateShadowUserJob.getKey())) {
+        scheduler.deleteJob(migrateShadowUserJob.getKey());
+      }
+      scheduler.scheduleJob(migrateShadowUserJob, migrateShadowUserTrigger);
+      scheduler.start();
+      ProjectLogger.log(
+              "SchedulerManager:scheduleShadowUser:UpdateUserCount schedular started",
+              LoggerEnum.INFO.name());
+    } catch (Exception e) {
+      ProjectLogger.log(e.getMessage(), e);
+    }
+  }
+
+
+
+
+
+
 }

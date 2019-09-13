@@ -46,7 +46,11 @@ public class FuzzyMatcher {
     private static List<Document> prepareDocumentFromSearchMap(Map<String,String>attributesValueMap) {
         List<Document> docList = new ArrayList<>();
         attributesValueMap.entrySet().stream().forEach(result -> {
-            docList.add(new Document.Builder(result.getKey()).addElement(new Element.Builder().setType(ElementType.TEXT).setValue(result.getValue()).createElement()).createDocument());
+            String[]attributes=result.getValue().split(" ");
+            ProjectLogger.log("FuzzyMatcher:prepareDocumentFromSearchMap: the name got for match ".concat(result.getValue()+"").concat("spliited name size is "+attributes.length),LoggerEnum.INFO.name());
+            for(int i=0;i<attributes.length;i++) {
+                docList.add(new Document.Builder(result.getKey()).addElement(new Element.Builder().setType(ElementType.TEXT).setValue(attributes[i].trim()).createElement()).createDocument());
+            }
         });
         ProjectLogger.log(String.format("%s:%s:document size prepared to be matched is %s ","FuzzyMatcher","prepareDocumentFromSearchMap",docList.size()), LoggerEnum.INFO.name());
         return docList;

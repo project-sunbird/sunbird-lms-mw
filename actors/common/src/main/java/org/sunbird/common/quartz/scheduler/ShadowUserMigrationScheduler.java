@@ -28,25 +28,32 @@ import org.sunbird.learner.actors.bulkupload.model.BulkMigrationUser;
 import org.sunbird.learner.util.Util;
 
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-public class ShadowUserMigrationScheduler extends BaseJob {
+public class ShadowUserMigrationScheduler extends BaseJob{
 
     private Util.DbInfo bulkUploadDbInfo = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
     private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     private ObjectMapper mapper = new ObjectMapper();
     private ElasticSearchService elasticSearchService = EsClientFactory.getInstance(JsonKey.REST);
     private DecryptionService decryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(null);
-    ShadowUserProcessor object=new  ShadowUserProcessor();
+    ShadowUserProcessor processorObject=new  ShadowUserProcessor();
 
 
 
     @Override
     public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
+        ProjectLogger.log(
+                "ShadowUserMigrationScheduler:execute:Running Shadow User Upload Scheduler Job at: "
+                        + Calendar.getInstance().getTime()
+                        + " triggered by: "
+                        + jobExecutionContext.getJobDetail().toString(),
+                LoggerEnum.INFO.name());
+        Util.initializeContextForSchedulerJob(
+                JsonKey.SYSTEM, jobExecutionContext.getFireInstanceId(), JsonKey.SCHEDULER_JOB);
+
      processRecords();
+        ProjectLogger.log("ShadowUserMigrationScheduler:execute:Scheduler Job ended for shawdow user migration",LoggerEnum.INFO.name());
     }
 
 
@@ -61,7 +68,9 @@ public class ShadowUserMigrationScheduler extends BaseJob {
      * - if fails update the bulk upload row status to failed and add failureResult
      */
     public void processRecords() {
+        ProjectLogger.log("ShadowUserMigrationScheduler:processRecords:Scheduler Job Started for ShadowUser Migration",LoggerEnum.INFO.name());
         List<Map<String, Object>> bulkDbRows = getRowsFromBulkUserDb();
+        ProjectLogger.log("ShadowUserMigrationScheduler:processRecords:Got Bulk record size ".concat(bulkDbRows.size()+""),LoggerEnum.INFO.name());
         bulkDbRows.stream().forEach(row -> {
             BulkMigrationUser bulkMigrationUser = convertRowToObject(row);
             try {
@@ -77,7 +86,9 @@ public class ShadowUserMigrationScheduler extends BaseJob {
             }
         });
         ProjectLogger.log("ShadowUserMigrationScheduler:processRecords:started stage3__________________________-",LoggerEnum.INFO.name());
-        object.process();
+        processorObject.process();
+        ProjectLogger.log("ShadowUserMigrationScheduler:processRecords:Scheduler Job Ended for ShadowUser Migration",LoggerEnum.INFO.name());
+
     }
 
     private void processSingleMigUser(String createdBy,String processId, MigrationUser singleMigrationUser) {
@@ -199,7 +210,7 @@ public class ShadowUserMigrationScheduler extends BaseJob {
             compositeKeysMap.put(JsonKey.USER_EXT_ID,migrationUser.getUserExternalId());
             Response response = cassandraOperation.updateRecord(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, propertiesMap,compositeKeysMap);
             ProjectLogger.log("ShadowUserMigrationScheduler:updateUserInShadowDb: record status in cassandra ".concat(response.getResult() + ""), LoggerEnum.INFO.name());
-            object.processClaimedUser(getUpdatedShadowUser(compositeKeysMap));
+            processorObject.processClaimedUser(getUpdatedShadowUser(compositeKeysMap));
         }
     }
     private ShadowUser getUpdatedShadowUser( Map<String,Object>compositeKeysMap){

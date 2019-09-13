@@ -59,12 +59,12 @@ public final class SchedulerManager {
         scheduler = new StdSchedulerFactory().getScheduler();
       }
       String identifier = "NetOps-PC1502295457753";
-     // scheduleCourseBatchCount(identifier);
-//      scheduleBulkUploadJob(identifier);
-//      // scheduleCoursePublishJob(identifier);
-//      scheduleMetricsReportJob(identifier);
-//      scheduleUpdateUserCountJob(identifier);
-//      scheduleChannelReg(identifier);
+      scheduleCourseBatchCount(identifier);
+      scheduleBulkUploadJob(identifier);
+      scheduleCoursePublishJob(identifier);
+      scheduleMetricsReportJob(identifier);
+      scheduleUpdateUserCountJob(identifier);
+      scheduleChannelReg(identifier);
       scheduleShadowUser(identifier);
     } catch (Exception e) {
       ProjectLogger.log(
@@ -369,6 +369,9 @@ public final class SchedulerManager {
     // add another job for updating user count to Location Table.
     // 1- create a job and bind with class which is implementing Job
     // interface.
+    ProjectLogger.log(
+            "SchedulerManager:scheduleShadowUser:scheduleShadowUser scheduler started",
+            LoggerEnum.INFO.name());
     JobDetail migrateShadowUserJob =
             JobBuilder.newJob(ShadowUserMigrationScheduler.class)
                     .requestRecovery(true)
@@ -383,7 +386,7 @@ public final class SchedulerManager {
                     .withIdentity("migrateShadowUserTrigger", identifier)
                     .withSchedule(
                             CronScheduleBuilder.cronSchedule(
-                                    PropertiesCache.getInstance().getProperty("quartz_update_user_count_timer")))
+                                    PropertiesCache.getInstance().getProperty("quartz_shadow_user_migration_timer")))
                     .build();
     try {
       if (scheduler.checkExists(migrateShadowUserJob.getKey())) {
@@ -392,7 +395,7 @@ public final class SchedulerManager {
       scheduler.scheduleJob(migrateShadowUserJob, migrateShadowUserTrigger);
       scheduler.start();
       ProjectLogger.log(
-              "SchedulerManager:scheduleShadowUser:UpdateUserCount schedular started",
+              "SchedulerManager:scheduleShadowUser:scheduleShadowUser scheduler ended",
               LoggerEnum.INFO.name());
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);

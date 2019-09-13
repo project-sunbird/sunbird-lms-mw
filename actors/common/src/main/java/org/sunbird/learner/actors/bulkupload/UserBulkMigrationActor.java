@@ -49,7 +49,6 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
     private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     private static ObjectMapper mapper=new ObjectMapper();
     private static SystemSetting systemSetting;
-    private OrganisationClient organisationClient = new OrganisationClientImpl();
     @Override
     public void onReceive(Request request) throws Throwable {
         Util.initializeContext(request, TelemetryEnvKey.USER);

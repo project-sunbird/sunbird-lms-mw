@@ -3,13 +3,12 @@ package org.sunbird.user.actors;
 import akka.actor.ActorRef;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.InterServiceCommunication;
@@ -27,11 +26,14 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.StringFormatter;
 import org.sunbird.common.models.util.TelemetryEnvKey;
+import org.sunbird.common.models.util.datasecurity.DataMaskingService;
+import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.organisation.external.identity.service.OrgExternalService;
+import org.sunbird.learner.util.UserFlagEnum;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
 import org.sunbird.telemetry.util.TelemetryUtil;
@@ -63,6 +65,13 @@ public class TenantMigrationActor extends BaseActor {
   private ObjectMapper mapper = new ObjectMapper();
   private ActorRef systemSettingActorRef = null;
   private ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
+  private static final String ACCOUNT_MERGE_EMAIL_TEMPLATE = "accountMerge";
+  private static final String MASK_IDENTIFIER = "maskIdentifier";
+  DecryptionService decryptionService =
+          org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
+                  "");
+  DataMaskingService maskingService =
+          org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance("");
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -99,6 +108,11 @@ public class TenantMigrationActor extends BaseActor {
     context.getRequestContext().put(JsonKey.ROLLUP, rollup);
     String orgId = validateOrgExternalIdOrOrgIdAndGetOrgId(request.getRequest());
     request.getRequest().put(JsonKey.ORG_ID, orgId);
+    int userFlagValue = UserFlagEnum.STATE_VALIDATED.getUserFlagValue();
+    if(userDetails.containsKey(JsonKey.FLAGS_VALUE)) {
+      userFlagValue += Integer.parseInt(String.valueOf(userDetails.get(JsonKey.FLAGS_VALUE)));
+    }
+    request.getRequest().put(JsonKey.FLAGS_VALUE, userFlagValue);
     Map<String, Object> userUpdateRequest = createUserUpdateRequest(request);
     // Update user channel and rootOrgId
     Response response =
@@ -139,10 +153,52 @@ public class TenantMigrationActor extends BaseActor {
     sender().tell(response, self());
     // save user data to ES
     saveUserDetailsToEs((String) request.getRequest().get(JsonKey.USER_ID));
+    notify(userDetails);
     targetObject =
         TelemetryUtil.generateTargetObject(
             (String) reqMap.get(JsonKey.USER_ID), TelemetryEnvKey.USER, MIGRATE, null);
     TelemetryUtil.telemetryProcessingCall(reqMap, targetObject, correlatedObject);
+  }
+  private void notify(Map<String, Object> userDetail) {
+    ProjectLogger.log("notify starts sending migrate notification to user " + userDetail.get(JsonKey.USER_ID));
+      Map<String, Object> userData = createUserData(userDetail);
+      Request notificationRequest =  createNotificationData(userData);
+      tellToAnother(notificationRequest);
+  }
+
+  private Request createNotificationData(Map<String, Object> userData) {
+    Request request = new Request();
+    Map<String, Object> requestMap = new HashMap<>();
+    requestMap.put(JsonKey.NAME, userData.get(JsonKey.FIRST_NAME));
+    requestMap.put(JsonKey.FIRST_NAME, userData.get(JsonKey.FIRST_NAME));
+    if (StringUtils.isNotBlank((String) userData.get(JsonKey.EMAIL))) {
+      requestMap.put(JsonKey.RECIPIENT_EMAILS, Arrays.asList(userData.get(JsonKey.EMAIL)));
+    } else {
+      requestMap.put(JsonKey.RECIPIENT_PHONES, Arrays.asList(userData.get(JsonKey.PHONE)));
+      requestMap.put(JsonKey.MODE, JsonKey.SMS);
+    }
+    requestMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, ACCOUNT_MERGE_EMAIL_TEMPLATE);
+    String body =
+            MessageFormat.format(
+                    ProjectUtil.getConfigValue(JsonKey.SUNBIRD_MIGRATE_USER_BODY),
+                    ProjectUtil.getConfigValue(JsonKey.SUNBIRD_INSTALLATION),
+                     userData.get(MASK_IDENTIFIER));
+    requestMap.put(JsonKey.BODY, body);
+    requestMap.put(JsonKey.SUBJECT, ProjectUtil.getConfigValue(JsonKey.SUNBIRD_ACCOUNT_MERGE_SUBJECT));
+    request.getRequest().put(JsonKey.EMAIL_REQUEST, requestMap);
+    request.setOperation(BackgroundOperations.emailService.name());
+    return request;
+  }
+
+  private Map<String, Object> createUserData(Map<String, Object> userData) {
+      if (StringUtils.isNotBlank((String) userData.get(JsonKey.EMAIL))) {
+        userData.put(JsonKey.EMAIL,decryptionService.decryptData((String) userData.get(JsonKey.EMAIL)));
+        userData.put(MASK_IDENTIFIER,maskingService.maskEmail((String)userData.get(JsonKey.EMAIL)));
+      } else {
+        userData.put(JsonKey.PHONE, decryptionService.decryptData((String) userData.get(JsonKey.PHONE)));
+        userData.put(MASK_IDENTIFIER, maskingService.maskPhone((String) userData.get(JsonKey.PHONE)));
+      }
+      return userData;
   }
 
   private String validateOrgExternalIdOrOrgIdAndGetOrgId(Map<String, Object> migrateReq) {
@@ -319,6 +375,8 @@ public class TenantMigrationActor extends BaseActor {
     userRequest.put(JsonKey.ID, request.getRequest().get(JsonKey.USER_ID));
     userRequest.put(JsonKey.CHANNEL, request.getRequest().get(JsonKey.CHANNEL));
     userRequest.put(JsonKey.ROOT_ORG_ID, request.getRequest().get(JsonKey.ROOT_ORG_ID));
+    userRequest.put(JsonKey.FLAGS_VALUE, request.getRequest().get(JsonKey.FLAGS_VALUE));
+    userRequest.put(JsonKey.USER_TYPE, JsonKey.TEACHER);
     return userRequest;
   }
 }

@@ -670,17 +670,23 @@ public class UserManagementActor extends BaseActor {
     String rootOrgId = (String) requestMap.get(JsonKey.ROOT_ORG_ID);
     String custodianRootOrgId = getCustodianRootOrgId();
     //if the user is creating for non-custodian(i.e state) the value is set as true else false
-    userBooleanMap.put(JsonKey.STATE_VALIDATED, !rootOrgId.equals(custodianRootOrgId));
+    userBooleanMap.put(JsonKey.STATE_VALIDATED, !custodianRootOrgId.equals(rootOrgId));
   }
 
   private Map<String, Boolean> updatedUserFlagsMap(Map<String, Object> userMap, Map<String, Object> userDbRecord) {
     Map<String, Boolean> userBooleanMap = new HashMap<>();
     boolean emailVerified = (boolean) (userMap.containsKey(JsonKey.EMAIL_VERIFIED) ?  userMap.get(JsonKey.EMAIL_VERIFIED) : userDbRecord.get(JsonKey.EMAIL_VERIFIED));
     boolean phoneVerified = (boolean) (userMap.containsKey(JsonKey.PHONE_VERIFIED) ?  userMap.get(JsonKey.PHONE_VERIFIED) : userDbRecord.get(JsonKey.PHONE_VERIFIED));
-    boolean isStateValidated = (boolean) (userMap.containsKey(JsonKey.STATE_VALIDATED) ?  userMap.get(JsonKey.STATE_VALIDATED) : userDbRecord.get(JsonKey.STATE_VALIDATED));
+    //for existing users, it won't contain state-validation
+    //adding in release-2.4.0
+    //userDbRecord- record from es.
+    if(!userDbRecord.containsKey(JsonKey.STATE_VALIDATED)) {
+      setStateValidation(userDbRecord,userBooleanMap);
+    } else {
+      userBooleanMap.put(JsonKey.STATE_VALIDATED, (boolean) userDbRecord.get(JsonKey.STATE_VALIDATED));
+    }
     userBooleanMap.put(JsonKey.EMAIL_VERIFIED, emailVerified);
     userBooleanMap.put(JsonKey.PHONE_VERIFIED, phoneVerified);
-    userBooleanMap.put(JsonKey.STATE_VALIDATED, isStateValidated);
     return userBooleanMap;
   }
 

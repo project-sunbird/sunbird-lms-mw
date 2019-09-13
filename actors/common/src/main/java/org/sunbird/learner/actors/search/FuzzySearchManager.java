@@ -26,7 +26,10 @@ public class FuzzySearchManager {
         HashSet<String> resultSet = new HashSet<>();
         fuzzySearchMap.entrySet().forEach(map -> {
             validateKeyInFuzzyMap(map.getKey());
-            resultSet.addAll(FuzzyMatcher.matchDoc((String) map.getValue(), getFuzzyAttributeFromMap(map.getKey())));
+            String[] splittedName=map.getValue().toString().split(" ");
+            for(int i=0;i<splittedName.length;i++) {
+                resultSet.addAll(FuzzyMatcher.matchDoc(splittedName[i].trim(), getFuzzyAttributeFromMap(map.getKey())));
+            }
         });
         ProjectLogger.log(String.format("%s:%s:the size of resultSet i.e number of searches found is %s",this.getClass().getSimpleName(),"startFuzzySearch",resultSet.size()), LoggerEnum.INFO.name());
         return prepareResponseList(resultSet);

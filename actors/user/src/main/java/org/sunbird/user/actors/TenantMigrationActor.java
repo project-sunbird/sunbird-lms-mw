@@ -376,7 +376,7 @@ public class TenantMigrationActor extends BaseActor {
     userRequest.put(JsonKey.CHANNEL, request.getRequest().get(JsonKey.CHANNEL));
     userRequest.put(JsonKey.ROOT_ORG_ID, request.getRequest().get(JsonKey.ROOT_ORG_ID));
     userRequest.put(JsonKey.FLAGS_VALUE, request.getRequest().get(JsonKey.FLAGS_VALUE));
-    userRequest.put(JsonKey.USER_TYPE, request.getRequest().get(JsonKey.TEACHER));
+    userRequest.put(JsonKey.USER_TYPE, JsonKey.TEACHER);
     return userRequest;
   }
 }

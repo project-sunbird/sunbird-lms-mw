@@ -366,9 +366,6 @@ public final class SchedulerManager {
   }
 
   private void scheduleShadowUser(String identifier) {
-    // add another job for updating user count to Location Table.
-    // 1- create a job and bind with class which is implementing Job
-    // interface.
     ProjectLogger.log(
             "SchedulerManager:scheduleShadowUser:scheduleShadowUser scheduler started",
             LoggerEnum.INFO.name());
@@ -378,9 +375,6 @@ public final class SchedulerManager {
                     .withDescription("Scheduler for migrating shadow user ")
                     .withIdentity("migrateShadowUserScheduler", identifier)
                     .build();
-
-    // 2- Create a trigger object that will define frequency of run.
-    // This will run every day 2:00 AM
     Trigger migrateShadowUserTrigger =
             TriggerBuilder.newTrigger()
                     .withIdentity("migrateShadowUserTrigger", identifier)

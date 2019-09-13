@@ -29,6 +29,10 @@ public class ShadowUserProcessor {
     private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     private ObjectMapper mapper = new ObjectMapper();
+    private Map<String, String> hashTagIdMap = new HashMap<>();
+    private Map<String, String> extOrgIdMap = new HashMap<>();
+    private static String custodianOrgId;
+
     private EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(null);
     private ElasticSearchService elasticSearchService = EsClientFactory.getInstance(JsonKey.REST);
 
@@ -55,45 +59,47 @@ public class ShadowUserProcessor {
     public void processClaimedUser(ShadowUser shadowUser) {
         String orgId = getOrgId(shadowUser);
         Map<String, Object> esUser = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(elasticSearchService.getDataByIdentifier(ProjectUtil.EsType.user.getTypeName(), shadowUser.getUserId()));
-        String userId=(String) esUser.get(JsonKey.ID);
+        String userId = (String) esUser.get(JsonKey.ID);
         String rootOrgId = (String) esUser.get(JsonKey.ROOT_ORG_ID);
         if (!((String) esUser.get(JsonKey.FIRST_NAME)).equalsIgnoreCase(shadowUser.getName()) || ((int) esUser.get(JsonKey.STATUS)) != shadowUser.getUserStatus()) {
             updateUserInUserTable(shadowUser.getUserId(), rootOrgId, shadowUser);
         }
         if (StringUtils.isNotBlank(orgId) && !getOrganisationIds(esUser).contains(orgId)) {
-            updateOrganisationsOfUsers(shadowUser,rootOrgId,(List<Map<String, Object>>) esUser.get(JsonKey.ORGANISATIONS));
-            registerUserToOrg(userId,orgId);
+            updateOrganisationsOfUsers(shadowUser, rootOrgId, (List<Map<String, Object>>) esUser.get(JsonKey.ORGANISATIONS));
+            registerUserToOrg(userId, orgId);
         }
         syncUserToES(userId);
-        updateUserInShadowDb(userId,shadowUser,ClaimStatus.CLAIMED.getValue(),null);
+        updateUserInShadowDb(userId, shadowUser, ClaimStatus.CLAIMED.getValue(), null);
     }
 
-    private boolean isRootOrgMatchedWithOrgId(String rootOrgId,String orgId){
-        if(StringUtils.equalsIgnoreCase(rootOrgId,orgId)){
+    private boolean isRootOrgMatchedWithOrgId(String rootOrgId, String orgId) {
+        if (StringUtils.equalsIgnoreCase(rootOrgId, orgId)) {
             return true;
         }
         return false;
     }
-    private  void updateOrganisationsOfUsers(ShadowUser shadowUser,String rootOrgId,List<Map<String,Object>>organisations){
-        organisations.stream().forEach(organisation->{
-            String orgId=(String) organisation.get(JsonKey.ORGANISATION_ID);
-            if(!isRootOrgMatchedWithOrgId(rootOrgId,orgId)){
-                String id=(String) organisation.get(JsonKey.ID);
-                updateStatusInUserOrg(shadowUser,id);
+
+    private void updateOrganisationsOfUsers(ShadowUser shadowUser, String rootOrgId, List<Map<String, Object>> organisations) {
+        organisations.stream().forEach(organisation -> {
+            String orgId = (String) organisation.get(JsonKey.ORGANISATION_ID);
+            if (!isRootOrgMatchedWithOrgId(rootOrgId, orgId)) {
+                String id = (String) organisation.get(JsonKey.ID);
+                updateStatusInUserOrg(shadowUser, id);
             }
         });
     }
-    private void updateStatusInUserOrg(ShadowUser shadowUser,String id){
-        Map<String,Object>propertiesMap=new HashMap<>();
-        propertiesMap.put(JsonKey.ID,id);
-        propertiesMap.put(JsonKey.IS_DELETED,true);
-        propertiesMap.put(JsonKey.UPDATED_BY,shadowUser.getAddedBy());
-        propertiesMap.put(JsonKey.UPDATED_DATE,ProjectUtil.getFormattedDate());
-        Response response=cassandraOperation.updateRecord(JsonKey.SUNBIRD,JsonKey.USER_ORG,propertiesMap);
-        ProjectLogger.log("ShadowUserProcessor:updateStatusInUserOrg:response from cassandra in updating user org ".concat(response.getResult()+""));
+
+    private void updateStatusInUserOrg(ShadowUser shadowUser, String id) {
+        Map<String, Object> propertiesMap = new HashMap<>();
+        propertiesMap.put(JsonKey.ID, id);
+        propertiesMap.put(JsonKey.IS_DELETED, true);
+        propertiesMap.put(JsonKey.UPDATED_BY, shadowUser.getAddedBy());
+        propertiesMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
+        Response response = cassandraOperation.updateRecord(JsonKey.SUNBIRD, JsonKey.USER_ORG, propertiesMap);
+        ProjectLogger.log("ShadowUserProcessor:updateStatusInUserOrg:response from cassandra in updating user org ".concat(response.getResult() + ""));
     }
 
-    private List<Map<String, Object>> getUserFromEs(ShadowUser shadowUser) {
+    private List<Map<String, Object>> getUserMatchedIdentifierFromES(ShadowUser shadowUser) {
         Map<String, Object> request = new HashMap<>();
         Map<String, Object> filters = new HashMap<>();
         Map<String, Object> or = new HashMap<>();
@@ -108,39 +114,33 @@ public class ShadowUserProcessor {
     }
 
     private void updateUser(ShadowUser shadowUser) {
-        List<Map<String, Object>> esUser = getUserFromEs(shadowUser);
+        List<Map<String, Object>> esUser = getUserMatchedIdentifierFromES(shadowUser);
         if (CollectionUtils.isNotEmpty(esUser)) {
             if (esUser.size() == 1) {
                 Map<String, Object> userMap = esUser.get(0);
                 if (!isSame(shadowUser, userMap)) {
                     String rootOrgId = getRootOrgIdFromChannel(shadowUser.getChannel());
-                    if (StringUtils.isEmpty(rootOrgId)) {
-                        updateUserInShadowDb(null, shadowUser, ClaimStatus.REJECTED.getValue(),null);
-                        return;
-                    } else {
-                        updateUserInUserTable((String) userMap.get(JsonKey.ID), rootOrgId, shadowUser);
-                        String orgIdFromOrgExtId = getOrgId(shadowUser);
-                        updateUserOrg(orgIdFromOrgExtId, rootOrgId, userMap);
-                        createUserExternalId((String) userMap.get(JsonKey.ID), shadowUser);
-                        updateUserInShadowDb((String) userMap.get(JsonKey.ID), shadowUser, ClaimStatus.CLAIMED.getValue(),null);
-                        syncUserToES((String) userMap.get(JsonKey.ID));
+                    updateUserInUserTable((String) userMap.get(JsonKey.ID), rootOrgId, shadowUser);
+                    String orgIdFromOrgExtId = getOrgId(shadowUser);
+                    updateUserOrg(orgIdFromOrgExtId, rootOrgId, userMap);
+                    createUserExternalId((String) userMap.get(JsonKey.ID), shadowUser);
+                    updateUserInShadowDb((String) userMap.get(JsonKey.ID), shadowUser, ClaimStatus.CLAIMED.getValue(), null);
+                    syncUserToES((String) userMap.get(JsonKey.ID));
                     }
-                }
             } else {
-                updateUserInShadowDb(null, shadowUser, ClaimStatus.MULTIMATCH.getValue(),getMatchingUserIds(esUser));
+                updateUserInShadowDb(null, shadowUser, ClaimStatus.MULTIMATCH.getValue(), getMatchingUserIds(esUser));
             }
         }
 
     }
 
-    private List<String> getMatchingUserIds( List<Map<String, Object>> esUser){
-       List<String>matchingUserIds=new ArrayList<>();
-        esUser.stream().forEach(singleEsUser->{
-            matchingUserIds.add((String)singleEsUser.get(JsonKey.ID));
+    private List<String> getMatchingUserIds(List<Map<String, Object>> esUser) {
+        List<String> matchingUserIds = new ArrayList<>();
+        esUser.stream().forEach(singleEsUser -> {
+            matchingUserIds.add((String) singleEsUser.get(JsonKey.ID));
         });
         return matchingUserIds;
     }
-
 
 
     private void updateUserOrg(String orgIdFromOrgExtId, String rootOrgId, Map<String, Object> userMap) {
@@ -204,7 +204,9 @@ public class ShadowUserProcessor {
      * @return
      */
     private String getCustodianOrgId() {
-        String custodianOrgId = null;
+        if (StringUtils.isNotBlank(custodianOrgId)) {
+            return custodianOrgId;
+        }
         Response response = cassandraOperation.getRecordById(JsonKey.SUNBIRD, JsonKey.SYSTEM_SETTINGS_DB, JsonKey.CUSTODIAN_ORG_ID);
         List<Map<String, Object>> result = new ArrayList<>();
         if (!((List) response.getResult().get(JsonKey.RESPONSE)).isEmpty()) {
@@ -259,15 +261,15 @@ public class ShadowUserProcessor {
     }
 
 
-    private void updateUserInShadowDb(String userId, ShadowUser shadowUser, int claimStatus,List<String>matchingUserIds) {
+    private void updateUserInShadowDb(String userId, ShadowUser shadowUser, int claimStatus, List<String> matchingUserIds) {
         Map<String, Object> propertiesMap = new HashMap<>();
         propertiesMap.put(JsonKey.CLAIM_STATUS, claimStatus);
         if (claimStatus == ClaimStatus.CLAIMED.getValue()) {
             propertiesMap.put(JsonKey.CLAIMED_ON, new Timestamp(System.currentTimeMillis()));
             propertiesMap.put(JsonKey.USER_ID, userId);
         }
-        if(null!=matchingUserIds && CollectionUtils.isNotEmpty(matchingUserIds)){
-            propertiesMap.put(JsonKey.USER_IDs,matchingUserIds);
+        if (null != matchingUserIds && CollectionUtils.isNotEmpty(matchingUserIds)) {
+            propertiesMap.put(JsonKey.USER_IDs, matchingUserIds);
         }
         Map<String, Object> compositeKeysMap = new HashMap<>();
         compositeKeysMap.put(JsonKey.CHANNEL, shadowUser.getChannel());
@@ -278,6 +280,10 @@ public class ShadowUserProcessor {
 
     private String getOrgId(ShadowUser shadowUser) {
         if (StringUtils.isNotBlank(shadowUser.getOrgExtId())) {
+            String orgId = extOrgIdMap.get(shadowUser.getChannel().concat(":").concat(shadowUser.getOrgExtId()));
+            if (StringUtils.isNotBlank(orgId)) {
+                return orgId;
+            }
             Map<String, Object> request = new HashMap<>();
             Map<String, Object> filters = new HashMap<>();
             filters.put(JsonKey.EXTERNAL_ID, shadowUser.getOrgExtId());
@@ -288,6 +294,7 @@ public class ShadowUserProcessor {
             List<Map<String, Object>> orgData = ((List<Map<String, Object>>) response.get(JsonKey.CONTENT));
             if (CollectionUtils.isNotEmpty(orgData)) {
                 Map<String, Object> orgMap = orgData.get(0);
+                extOrgIdMap.put(shadowUser.getChannel().concat(":").concat(shadowUser.getOrgExtId()), (String) orgMap.get(JsonKey.ID));
                 return (String) orgMap.get(JsonKey.ID);
             }
         }
@@ -302,8 +309,6 @@ public class ShadowUserProcessor {
         });
         return organisationsIds;
     }
-
-
 
 
     private void syncUserToES(String userId) {
@@ -338,7 +343,11 @@ public class ShadowUserProcessor {
         List<String> roles = new ArrayList<>();
         roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
         reqMap.put(JsonKey.ROLES, roles);
-        String hashTagId = Util.getHashTagIdFromOrgId(organisationId);
+        String hashTagId = hashTagIdMap.get(organisationId);
+        if (StringUtils.isBlank(hashTagId)) {
+            hashTagId = Util.getHashTagIdFromOrgId(organisationId);
+            hashTagIdMap.put(organisationId, hashTagId);
+        }
         reqMap.put(JsonKey.HASHTAGID, hashTagId);
         reqMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
         reqMap.put(JsonKey.USER_ID, userId);
@@ -364,9 +373,17 @@ public class ShadowUserProcessor {
         externalId.put(JsonKey.USER_ID, userId);
         externalId.put(JsonKey.CREATED_BY, shadowUser.getAddedBy());
         externalId.put(JsonKey.CREATED_ON, new Timestamp(System.currentTimeMillis()));
+        saveUserExternalId(externalId);
+    }
+
+
+    /**
+     * this method will save user data in usr_external_identity table
+     * @param externalId
+     */
+    private void saveUserExternalId(Map<String, Object> externalId) {
         Response response = cassandraOperation.insertRecord(JsonKey.SUNBIRD, JsonKey.USR_EXT_IDNT_TABLE, externalId);
         ProjectLogger.log("ShadowUserProcessor:createUserExternalId:response from cassandra ".concat(response.getResult() + ""));
-
     }
 
 

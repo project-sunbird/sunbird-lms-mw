@@ -13,7 +13,8 @@ public enum ClaimStatus {
     UNCLAIMED(1),
     REJECTED(2),
     FAILED(3),
-    MULTIMATCH(4);
+    MULTIMATCH(4),
+    EXTERNALIDMISMATCH(5);
 
     private int value;
     ClaimStatus(int value) {

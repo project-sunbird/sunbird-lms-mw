@@ -34,7 +34,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
     private Util.DbInfo bulkUploadDbInfo = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
     private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     private ObjectMapper mapper = new ObjectMapper();
-    private HashSet<String>verifiedOrgExternalIdSet=new HashSet<>();
+    private HashSet<String>verifiedChannelOrgExternalIdSet=new HashSet<>();
     private ElasticSearchService elasticSearchService = EsClientFactory.getInstance(JsonKey.REST);
     private DecryptionService decryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(null);
     ShadowUserProcessor processorObject=new  ShadowUserProcessor();
@@ -182,7 +182,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
         Map<String, Object> dbMap = mapper.convertValue(shadowUser, Map.class);
         dbMap.put(JsonKey.CREATED_ON, new Timestamp(System.currentTimeMillis()));
         if(!isOrgExternalIdValid(migrationUser)) {
-            dbMap.put(JsonKey.CLAIM_STATUS,ClaimStatus.EXTERNALIDMISMATCH.getValue());
+            dbMap.put(JsonKey.CLAIM_STATUS,ClaimStatus.ORGEXTERNALIDMISMATCH.getValue());
         }
         Response response = cassandraOperation.insertRecord(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, dbMap);
         ProjectLogger.log("ShadowUserMigrationScheduler:insertShadowUser: record status in cassandra ".concat(response.getResult() + ""), LoggerEnum.INFO.name());
@@ -210,7 +210,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
             propertiesMap.put(JsonKey.UPDATED_ON, new Timestamp(System.currentTimeMillis()));
             propertiesMap.put(JsonKey.USER_STATUS,getInputStatus(migrationUser.getInputStatus()));
             if(!isOrgExternalIdValid(migrationUser)) {
-                propertiesMap.put(JsonKey.CLAIM_STATUS, ClaimStatus.EXTERNALIDMISMATCH.getValue());
+                propertiesMap.put(JsonKey.CLAIM_STATUS, ClaimStatus.ORGEXTERNALIDMISMATCH.getValue());
             }
             Map<String,Object>compositeKeysMap=new HashMap<>();
             compositeKeysMap.put(JsonKey.CHANNEL, migrationUser.getChannel());
@@ -307,7 +307,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
         if (StringUtils.isBlank(migrationUser.getOrgExternalId())) {
         return true;
         }
-        else if(verifiedOrgExternalIdSet.contains(migrationUser.getOrgExternalId())){
+        else if(verifiedChannelOrgExternalIdSet.contains(migrationUser.getChannel()+":"+migrationUser.getOrgExternalId())){
             return true;
         }
         Map<String, Object> request = new HashMap<>();
@@ -318,7 +318,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
         SearchDTO searchDTO = ElasticSearchHelper.createSearchDTO(request);
         Map<String, Object> response = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(elasticSearchService.search(searchDTO, ProjectUtil.EsType.organisation.getTypeName()));
         if(CollectionUtils.isNotEmpty((List<Map<String, Object>>) response.get(JsonKey.CONTENT))){
-            verifiedOrgExternalIdSet.add(migrationUser.getOrgExternalId());
+            verifiedChannelOrgExternalIdSet.add(migrationUser.getChannel()+":"+migrationUser.getOrgExternalId());
             return true;
         }
         return false;

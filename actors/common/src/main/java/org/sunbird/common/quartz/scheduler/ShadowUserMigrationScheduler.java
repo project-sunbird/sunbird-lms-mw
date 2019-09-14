@@ -308,6 +308,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
         return true;
         }
         else if(verifiedChannelOrgExternalIdSet.contains(migrationUser.getChannel()+":"+migrationUser.getOrgExternalId())){
+            ProjectLogger.log("ShadowUserMigrationScheduler:isOrgExternalIdValid: found orgexternalid in cache "+migrationUser.getOrgExternalId(), LoggerEnum.INFO.name());
             return true;
         }
         Map<String, Object> request = new HashMap<>();

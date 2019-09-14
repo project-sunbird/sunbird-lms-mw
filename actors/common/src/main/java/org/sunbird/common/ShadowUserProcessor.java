@@ -176,6 +176,7 @@ public class ShadowUserProcessor {
     private String getRootOrgIdFromChannel(String channel) {
         String rootOrgId=channelOrgIdMap.get(channel);
         if(StringUtils.isNotBlank(rootOrgId)){
+            ProjectLogger.log("ShadowUserProcessor:getRootOrgIdFromChannel: found rootorgid in cache "+rootOrgId, LoggerEnum.INFO.name());
             return rootOrgId;
         }
         Map<String, Object> request = new HashMap<>();
@@ -211,6 +212,7 @@ public class ShadowUserProcessor {
      */
     private String getCustodianOrgId() {
         if (StringUtils.isNotBlank(custodianOrgId)) {
+            ProjectLogger.log("ShadowUserProcessor:getCustodianOrgId:No CUSTODIAN ORD ID FOUND in cache:"+custodianOrgId, LoggerEnum.ERROR.name());
             return custodianOrgId;
         }
         Response response = cassandraOperation.getRecordById(JsonKey.SUNBIRD, JsonKey.SYSTEM_SETTINGS_DB, JsonKey.CUSTODIAN_ORG_ID);

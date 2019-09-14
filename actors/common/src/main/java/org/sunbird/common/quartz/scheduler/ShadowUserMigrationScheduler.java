@@ -256,7 +256,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
         Map<String, Object> propertiesMap = new HashMap<>();
         propertiesMap.put(JsonKey.ID, processId);
         propertiesMap.put(key, value);
-        if (value.equalsIgnoreCase(JsonKey.SUCCESS)) {
+        if (StringUtils.equalsIgnoreCase(value,JsonKey.SUCCESS)) {
             propertiesMap.put(JsonKey.STATUS, ProjectUtil.BulkProcessStatus.COMPLETED.getValue());
             propertiesMap.put(JsonKey.FAILURE_RESULT, "");
         } else {

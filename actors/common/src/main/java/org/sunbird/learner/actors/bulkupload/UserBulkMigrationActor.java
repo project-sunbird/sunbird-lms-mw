@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencsv.CSVReader;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.org.OrganisationClient;
 import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
@@ -48,7 +49,6 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
     private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     private static ObjectMapper mapper=new ObjectMapper();
     private static SystemSetting systemSetting;
-    private OrganisationClient organisationClient = new OrganisationClientImpl();
     @Override
     public void onReceive(Request request) throws Throwable {
         Util.initializeContext(request, TelemetryEnvKey.USER);
@@ -216,13 +216,21 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
             MigrationUser migrationUser=new MigrationUser();
             for(int i=0;i<row.length;i++){
                 String columnName=getColumnNameByIndex(mappedHeaders,i);
-                setFieldToMigrationUserObject(migrationUser,columnName,row[i]);
+                setFieldToMigrationUserObject(migrationUser,columnName,trimValue(row[i]));
             }
             //channel to be added here
             migrationUser.setChannel(channel);
             migrationUserList.add(migrationUser);
         });
         return migrationUserList;
+    }
+
+
+    private String trimValue(String value){
+        if(StringUtils.isNotBlank(value)){
+            return value.trim();
+        }
+        return value;
     }
 
     private void setFieldToMigrationUserObject(MigrationUser migrationUser,String columnAttribute,Object value){

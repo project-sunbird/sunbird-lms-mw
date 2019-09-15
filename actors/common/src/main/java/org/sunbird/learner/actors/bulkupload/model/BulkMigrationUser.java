@@ -2,6 +2,7 @@ package org.sunbird.learner.actors.bulkupload.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import org.codehaus.jackson.annotate.JsonIgnore;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
@@ -17,7 +18,6 @@ import java.sql.Timestamp;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class BulkMigrationUser {
-    private DecryptionService decryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(null);
     private static final long serialVersionUID = 1L;
     private String id;
     private String data;
@@ -56,6 +56,10 @@ public class BulkMigrationUser {
         this.createdOn = builder.createdOn;
         this.lastUpdatedOn = builder.lastUpdatedOn;
         this.storageDetails = builder.storageDetails;
+    }
+
+    public BulkMigrationUser() {
+
     }
 
     public String getId() {
@@ -125,7 +129,6 @@ public class BulkMigrationUser {
     public String getStorageDetails() {
         return storageDetails;
     }
-
 
     public static class BulkMigrationUserBuilder {
         private EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(null);

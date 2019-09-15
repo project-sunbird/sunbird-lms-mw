@@ -10,15 +10,13 @@ public class Application {
 
   public static void main(String[] args) {
     SunbirdMWService.init();
-    checkCassandraConnection();
+     checkCassandraConnection();
   }
 
   public static void checkCassandraConnection() {
     Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
     Util.checkCassandraDbConnections(JsonKey.SUNBIRD_PLUGIN);
     SchedulerManager.schedule();
-    // scheduler should start after few minutes so internally it is sleeping for 4 minute , so
-    // putting in seperate thread .
     new Thread(
             new Runnable() {
               @Override

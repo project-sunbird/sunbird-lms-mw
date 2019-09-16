@@ -225,6 +225,8 @@ public class ShadowUserProcessor {
             result = ((List) response.getResult().get(JsonKey.RESPONSE));
             Map<String, Object> resultMap = result.get(0);
             custodianOrgId = (String) resultMap.get(JsonKey.VALUE);
+            ProjectLogger.log("ShadowUserProcessor:getCustodianOrgId:CUSTODIAN ORD ID FOUND in DB:"+custodianOrgId, LoggerEnum.INFO.name());
+
         }
 
         if (StringUtils.isBlank(custodianOrgId)) {
@@ -301,7 +303,7 @@ public class ShadowUserProcessor {
             filters.put(JsonKey.EXTERNAL_ID, shadowUser.getOrgExtId().toLowerCase());
             filters.put(JsonKey.CHANNEL, shadowUser.getChannel());
             request.put(JsonKey.FILTERS, filters);
-            ProjectLogger.log("ShadowUserProcessor:getOrgId: request map prepared to query elasticsearch for org id :"+request,LoggerEnum.INFO.name());
+            ProjectLogger.log("ShadowUserProcessor:getOrgId: request map prepared to query elasticsearch for org id :"+filters,LoggerEnum.INFO.name());
             SearchDTO searchDTO = ElasticSearchHelper.createSearchDTO(request);
             Map<String, Object> response = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(elasticSearchService.search(searchDTO, ProjectUtil.EsType.organisation.getTypeName()));
             List<Map<String, Object>> orgData = ((List<Map<String, Object>>) response.get(JsonKey.CONTENT));

@@ -137,7 +137,7 @@ public class ShadowUserProcessor {
                         updateUserInShadowDb((String) userMap.get(JsonKey.ID), shadowUser, ClaimStatus.CLAIMED.getValue(), null);
                         syncUserToES((String) userMap.get(JsonKey.ID));
                     }
-                } else if (esUser.size() > 2) {
+                } else if (esUser.size() >=2) {
                     ProjectLogger.log("ShadowUserProcessor:updateUser:GOT response from ES :" + esUser, LoggerEnum.INFO.name());
                     updateUserInShadowDb(null, shadowUser, ClaimStatus.MULTIMATCH.getValue(), getMatchingUserIds(esUser));
                 }

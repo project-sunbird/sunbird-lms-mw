@@ -121,31 +121,32 @@ public class ShadowUserProcessor {
     }
 
     private void updateUser(ShadowUser shadowUser) {
-        List<Map<String, Object>> esUser = getUserMatchedIdentifierFromES(shadowUser);
-        ProjectLogger.log("ShadowUserProcessor:updateUser:GOT ES RESPONSE FOR USER WITH SIZE" + esUser.size(), LoggerEnum.INFO.name());
-        if (CollectionUtils.isNotEmpty(esUser)) {
-            esUser.stream().forEach(singleEsUser -> {
-                ProjectLogger.log("ShadowUserProcessor:updateUser:matchingusrids"+(String) singleEsUser.get(JsonKey.ID),LoggerEnum.INFO.name());
-            });
-            if (esUser.size() == 1) {
-                Map<String, Object> userMap = esUser.get(0);
-                if (!isSame(shadowUser, userMap)) {
-                    String rootOrgId = getRootOrgIdFromChannel(shadowUser.getChannel());
-                    updateUserInUserTable((String) userMap.get(JsonKey.ID), rootOrgId, shadowUser);
-                    String orgIdFromOrgExtId = getOrgId(shadowUser);
-                    updateUserOrg(orgIdFromOrgExtId, rootOrgId, userMap);
-                    createUserExternalId((String) userMap.get(JsonKey.ID), shadowUser);
-                    updateUserInShadowDb((String) userMap.get(JsonKey.ID), shadowUser, ClaimStatus.CLAIMED.getValue(), null);
-                    syncUserToES((String) userMap.get(JsonKey.ID));
+        try {
+            List<Map<String, Object>> esUser = getUserMatchedIdentifierFromES(shadowUser);
+            ProjectLogger.log("ShadowUserProcessor:updateUser:GOT ES RESPONSE FOR USER WITH SIZE" + esUser.size(), LoggerEnum.INFO.name());
+            if (CollectionUtils.isNotEmpty(esUser)) {
+                if (esUser.size() == 1) {
+                    ProjectLogger.log("ShadowUserProcessor:updateUser:Got single user:" + esUser, LoggerEnum.INFO.name());
+                    Map<String, Object> userMap = esUser.get(0);
+                    if (!isSame(shadowUser, userMap)) {
+                        String rootOrgId = getRootOrgIdFromChannel(shadowUser.getChannel());
+                        updateUserInUserTable((String) userMap.get(JsonKey.ID), rootOrgId, shadowUser);
+                        String orgIdFromOrgExtId = getOrgId(shadowUser);
+                        updateUserOrg(orgIdFromOrgExtId, rootOrgId, userMap);
+                        createUserExternalId((String) userMap.get(JsonKey.ID), shadowUser);
+                        updateUserInShadowDb((String) userMap.get(JsonKey.ID), shadowUser, ClaimStatus.CLAIMED.getValue(), null);
+                        syncUserToES((String) userMap.get(JsonKey.ID));
                     }
+                } else if (esUser.size() > 2) {
+                    ProjectLogger.log("ShadowUserProcessor:updateUser:GOT response from ES :" + esUser, LoggerEnum.INFO.name());
+                    updateUserInShadowDb(null, shadowUser, ClaimStatus.MULTIMATCH.getValue(), getMatchingUserIds(esUser));
+                }
             } else {
-                ProjectLogger.log("ShadowUserProcessor:updateUser:GOT response from ES :"+esUser,LoggerEnum.INFO.name());
-                updateUserInShadowDb(null, shadowUser, ClaimStatus.MULTIMATCH.getValue(), getMatchingUserIds(esUser));
+                ProjectLogger.log("ShadowUserProcessor:updateUser:SKIPPING SHADOW USER:" + shadowUser.toString(), LoggerEnum.INFO.name());
             }
         }
-        else {
-            ProjectLogger.log("ShadowUserProcessor:updateUser:SKIPPING SHAWDOW USER:" + shadowUser.toString(), LoggerEnum.INFO.name());
-
+        catch (Exception e){
+            ProjectLogger.log("ShadowUserProcessor:updateUser:Error occurred with processing shadow user "+shadowUser.toString()+"ERROR IS:"+e, LoggerEnum.ERROR.name());
         }
     }
 
@@ -164,7 +165,7 @@ public class ShadowUserProcessor {
         ProjectLogger.log("ShadowUserProcessor:updateUserOrg:deleting user organisation completed no started registering user to org",LoggerEnum.INFO.name());
         registerUserToOrg((String) userMap.get(JsonKey.ID), rootOrgId);
         if (StringUtils.isNotBlank(orgIdFromOrgExtId) && !StringUtils.equalsIgnoreCase(rootOrgId, orgIdFromOrgExtId)) {
-            ProjectLogger.log("ShadowUserProcessor:updateUserOrg:user also needs to register with suborg",LoggerEnum.INFO.name());
+            ProjectLogger.log("ShadowUserProcessor:updateUserOrg:user also needs to register with sub org",LoggerEnum.INFO.name());
             registerUserToOrg((String) userMap.get(JsonKey.ID), orgIdFromOrgExtId);
         }
     }
@@ -186,7 +187,7 @@ public class ShadowUserProcessor {
         propertiesMap.put(JsonKey.CHANNEL, shadowUser.getChannel());
         propertiesMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
         Response response = cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), propertiesMap);
-        ProjectLogger.log("ShadowUserProcessor:updateUserInUserTable:user is updated ".concat(response.getResult() + ""),LoggerEnum.INFO.name());
+        ProjectLogger.log("ShadowUserProcessor:updateUserInUserTable:user is updated with shadow user "+shadowUser.toString()+"RESPONSE FROM CASSANDRA IS:"+response,LoggerEnum.INFO.name());
     }
 
 

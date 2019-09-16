@@ -32,7 +32,7 @@ public class ShadowUserProcessor {
     private Map<String, String> hashTagIdMap = new HashMap<>();
     private Map<String, String> extOrgIdMap = new HashMap<>();
     private Map<String,String>channelOrgIdMap=new HashMap<>();
-    private  String custodianOrgId;
+    private String custodianOrgId;
 
     private EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(null);
     private ElasticSearchService elasticSearchService = EsClientFactory.getInstance(JsonKey.REST);
@@ -97,28 +97,36 @@ public class ShadowUserProcessor {
         propertiesMap.put(JsonKey.UPDATED_BY, shadowUser.getAddedBy());
         propertiesMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
         Response response = cassandraOperation.updateRecord(JsonKey.SUNBIRD, JsonKey.USER_ORG, propertiesMap);
-        ProjectLogger.log("ShadowUserProcessor:updateStatusInUserOrg:response from cassandra in updating user org ".concat(response.getResult() + ""));
+        ProjectLogger.log("ShadowUserProcessor:updateStatusInUserOrg:response from cassandra in updating user org ".concat(response.getResult() + ""),LoggerEnum.INFO.name());
     }
 
     private List<Map<String, Object>> getUserMatchedIdentifierFromES(ShadowUser shadowUser) {
         Map<String, Object> request = new HashMap<>();
         Map<String, Object> filters = new HashMap<>();
         Map<String, Object> or = new HashMap<>();
-        or.put(JsonKey.EMAIL, StringUtils.isNotBlank(shadowUser.getEmail()) ? getEncryptedValue(shadowUser.getEmail()) : "");
-        or.put(JsonKey.PHONE, StringUtils.isNotBlank(shadowUser.getPhone()) ? getEncryptedValue(shadowUser.getPhone()) : "");
+        if(StringUtils.isNotBlank(shadowUser.getEmail())) {
+            or.put(JsonKey.EMAIL,getEncryptedValue(shadowUser.getEmail()));
+        }
+        if(StringUtils.isNotBlank(shadowUser.getPhone())) {
+            or.put(JsonKey.PHONE,getEncryptedValue(shadowUser.getPhone()));
+        }
         filters.put(JsonKey.ES_OR_OPERATION, or);
         filters.put(JsonKey.ROOT_ORG_ID, getCustodianOrgId());
         request.put(JsonKey.FILTERS, filters);
         ProjectLogger.log("ShadowUserProcessor:getUserMatchedIdentifierFromES:the filter prepared for elasticsearch "+filters,LoggerEnum.INFO.name());
         SearchDTO searchDTO = ElasticSearchHelper.createSearchDTO(request);
         Map<String, Object> response = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(elasticSearchService.search(searchDTO, JsonKey.USER));
-        ProjectLogger.log("ShadowUserProcessor:getUserMatchedIdentifierFromES:response got from elasticsearch is "+response,LoggerEnum.INFO.name());
+        ProjectLogger.log("ShadowUserProcessor:getUserMatchedIdentifierFromES:response got from elasticSearch is "+response,LoggerEnum.INFO.name());
         return (List<Map<String, Object>>) response.get(JsonKey.CONTENT);
     }
 
     private void updateUser(ShadowUser shadowUser) {
         List<Map<String, Object>> esUser = getUserMatchedIdentifierFromES(shadowUser);
+        ProjectLogger.log("ShadowUserProcessor:updateUser:GOT ES RESPONSE FOR USER WITH SIZE" + esUser.size(), LoggerEnum.INFO.name());
         if (CollectionUtils.isNotEmpty(esUser)) {
+            esUser.stream().forEach(singleEsUser -> {
+                ProjectLogger.log("ShadowUserProcessor:updateUser:matchingusrids"+(String) singleEsUser.get(JsonKey.ID),LoggerEnum.INFO.name());
+            });
             if (esUser.size() == 1) {
                 Map<String, Object> userMap = esUser.get(0);
                 if (!isSame(shadowUser, userMap)) {
@@ -131,13 +139,18 @@ public class ShadowUserProcessor {
                     syncUserToES((String) userMap.get(JsonKey.ID));
                     }
             } else {
+                ProjectLogger.log("ShadowUserProcessor:updateUser:GOT response from ES :"+esUser,LoggerEnum.INFO.name());
                 updateUserInShadowDb(null, shadowUser, ClaimStatus.MULTIMATCH.getValue(), getMatchingUserIds(esUser));
             }
         }
+        else {
+            ProjectLogger.log("ShadowUserProcessor:updateUser:SKIPPING SHAWDOW USER:" + shadowUser.toString(), LoggerEnum.INFO.name());
 
+        }
     }
 
     private List<String> getMatchingUserIds(List<Map<String, Object>> esUser) {
+        ProjectLogger.log("ShadowUserProcessor:getMatchingUserIds:GOT response from counting matchingUserIds:"+esUser.size(),LoggerEnum.INFO.name());
         List<String> matchingUserIds = new ArrayList<>();
         esUser.stream().forEach(singleEsUser -> {
             matchingUserIds.add((String) singleEsUser.get(JsonKey.ID));
@@ -289,7 +302,7 @@ public class ShadowUserProcessor {
         compositeKeysMap.put(JsonKey.CHANNEL, shadowUser.getChannel());
         compositeKeysMap.put(JsonKey.USER_EXT_ID, shadowUser.getUserExtId());
         Response response = cassandraOperation.updateRecord(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, propertiesMap, compositeKeysMap);
-        ProjectLogger.log("ShadowUserProcessor:updateUserInShadowDb:update ".concat(response.getResult() + ""), LoggerEnum.INFO.name());
+        ProjectLogger.log("ShadowUserProcessor:updateUserInShadowDb:update"+response, LoggerEnum.INFO.name());
     }
 
     private String getOrgId(ShadowUser shadowUser) {

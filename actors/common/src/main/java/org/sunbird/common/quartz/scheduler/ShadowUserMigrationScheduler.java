@@ -51,8 +51,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
                 LoggerEnum.INFO.name());
         Util.initializeContextForSchedulerJob(
                 JsonKey.SYSTEM, jobExecutionContext.getFireInstanceId(), JsonKey.SCHEDULER_JOB);
-
-     processRecords();
+        processRecords();
         ProjectLogger.log("ShadowUserMigrationScheduler:execute:Scheduler Job ended for shawdow user migration",LoggerEnum.INFO.name());
     }
 

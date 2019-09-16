@@ -97,7 +97,7 @@ public class ShadowUserProcessor {
         propertiesMap.put(JsonKey.UPDATED_BY, shadowUser.getAddedBy());
         propertiesMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
         Response response = cassandraOperation.updateRecord(JsonKey.SUNBIRD, JsonKey.USER_ORG, propertiesMap);
-        ProjectLogger.log("ShadowUserProcessor:updateStatusInUserOrg:response from cassandra in updating user org ".concat(response.getResult() + ""),LoggerEnum.INFO.name());
+        ProjectLogger.log("ShadowUserProcessor:updateStatusInUserOrg:response from cassandra in updating user org ".concat(response + ""),LoggerEnum.INFO.name());
     }
 
     private List<Map<String, Object>> getUserMatchedIdentifierFromES(ShadowUser shadowUser) {
@@ -123,7 +123,7 @@ public class ShadowUserProcessor {
     private void updateUser(ShadowUser shadowUser) {
         try {
             List<Map<String, Object>> esUser = getUserMatchedIdentifierFromES(shadowUser);
-            ProjectLogger.log("ShadowUserProcessor:updateUser:GOT ES RESPONSE FOR USER WITH SIZE" + esUser.size(), LoggerEnum.INFO.name());
+            ProjectLogger.log("ShadowUserProcessor:updateUser:GOT ES RESPONSE FOR USER WITH SIZE " + esUser.size(), LoggerEnum.INFO.name());
             if (CollectionUtils.isNotEmpty(esUser)) {
                 if (esUser.size() == 1) {
                     ProjectLogger.log("ShadowUserProcessor:updateUser:Got single user:" + esUser, LoggerEnum.INFO.name());
@@ -283,6 +283,9 @@ public class ShadowUserProcessor {
             return false;
         }
         if (shadowUser.getUserStatus() != (int) (esUserMap.get(JsonKey.STATUS))) {
+            return false;
+        }
+        if(StringUtils.isBlank(orgId)){
             return false;
         }
         return true;

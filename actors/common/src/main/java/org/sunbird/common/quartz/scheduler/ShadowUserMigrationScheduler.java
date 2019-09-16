@@ -185,7 +185,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
             dbMap.put(JsonKey.CLAIM_STATUS,ClaimStatus.ORGEXTERNALIDMISMATCH.getValue());
         }
         Response response = cassandraOperation.insertRecord(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, dbMap);
-        ProjectLogger.log("ShadowUserMigrationScheduler:insertShadowUser: record status in cassandra ".concat(response.getResult() + ""), LoggerEnum.INFO.name());
+        ProjectLogger.log("ShadowUserMigrationScheduler:insertShadowUser: record status in cassandra ".concat(response+ ""), LoggerEnum.INFO.name());
 
     }
 
@@ -216,7 +216,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
             compositeKeysMap.put(JsonKey.CHANNEL, migrationUser.getChannel());
             compositeKeysMap.put(JsonKey.USER_EXT_ID,migrationUser.getUserExternalId());
             Response response = cassandraOperation.updateRecord(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, propertiesMap,compositeKeysMap);
-            ProjectLogger.log("ShadowUserMigrationScheduler:updateUserInShadowDb: record status in cassandra ".concat(response.getResult() + ""), LoggerEnum.INFO.name());
+            ProjectLogger.log("ShadowUserMigrationScheduler:updateUserInShadowDb: record status in cassandra ".concat(response+ ""), LoggerEnum.INFO.name());
             processorObject.processClaimedUser(getUpdatedShadowUser(compositeKeysMap));
         }
     }
@@ -249,7 +249,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
 
     private void updateBulkUserTable(Map<String, Object> propertiesMap) {
         Response response = cassandraOperation.updateRecord(bulkUploadDbInfo.getKeySpace(), bulkUploadDbInfo.getTableName(), propertiesMap);
-        ProjectLogger.log("ShadowUserMigrationScheduler:updateBulkUserTable: status update result".concat(response.getResult() + ""), LoggerEnum.INFO.name());
+        ProjectLogger.log("ShadowUserMigrationScheduler:updateBulkUserTable: status update result".concat(response+ ""), LoggerEnum.INFO.name());
     }
 
     private void updateMessageInBulkUserTable(String processId, String key, String value) {

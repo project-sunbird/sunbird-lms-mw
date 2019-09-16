@@ -32,7 +32,7 @@ public class ShadowUserProcessor {
     private Map<String, String> hashTagIdMap = new HashMap<>();
     private Map<String, String> extOrgIdMap = new HashMap<>();
     private Map<String,String>channelOrgIdMap=new HashMap<>();
-    private static String custodianOrgId;
+    private  String custodianOrgId;
 
     private EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(null);
     private ElasticSearchService elasticSearchService = EsClientFactory.getInstance(JsonKey.REST);
@@ -111,6 +111,7 @@ public class ShadowUserProcessor {
         request.put(JsonKey.FILTERS, filters);
         SearchDTO searchDTO = ElasticSearchHelper.createSearchDTO(request);
         Map<String, Object> response = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(elasticSearchService.search(searchDTO, JsonKey.USER));
+        ProjectLogger.log("ShadowUserProcessor:getUserMatchedIdentifierFromES:response got from elasticsearch is "+response,LoggerEnum.INFO.name());
         return (List<Map<String, Object>>) response.get(JsonKey.CONTENT);
     }
 
@@ -146,8 +147,10 @@ public class ShadowUserProcessor {
 
     private void updateUserOrg(String orgIdFromOrgExtId, String rootOrgId, Map<String, Object> userMap) {
         deleteUserOrganisations(userMap);
+        ProjectLogger.log("ShadowUserProcessor:updateUserOrg:deleting user organisation completed no started registering user to org",LoggerEnum.INFO.name());
         registerUserToOrg((String) userMap.get(JsonKey.ID), rootOrgId);
-        if (!StringUtils.equals(rootOrgId, orgIdFromOrgExtId)) {
+        if (StringUtils.isNotBlank(orgIdFromOrgExtId) && !StringUtils.equalsIgnoreCase(rootOrgId, orgIdFromOrgExtId)) {
+            ProjectLogger.log("ShadowUserProcessor:updateUserOrg:user also needs to register with suborg",LoggerEnum.INFO.name());
             registerUserToOrg((String) userMap.get(JsonKey.ID), orgIdFromOrgExtId);
         }
     }
@@ -169,7 +172,7 @@ public class ShadowUserProcessor {
         propertiesMap.put(JsonKey.CHANNEL, shadowUser.getChannel());
         propertiesMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
         Response response = cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), propertiesMap);
-        ProjectLogger.log("ShadowUserProcessor:updateUserInUserTable:user is updated ".concat(response.getResult() + ""));
+        ProjectLogger.log("ShadowUserProcessor:updateUserInUserTable:user is updated ".concat(response.getResult() + ""),LoggerEnum.INFO.name());
     }
 
 
@@ -212,7 +215,7 @@ public class ShadowUserProcessor {
      */
     private String getCustodianOrgId() {
         if (StringUtils.isNotBlank(custodianOrgId)) {
-            ProjectLogger.log("ShadowUserProcessor:getCustodianOrgId:No CUSTODIAN ORD ID FOUND in cache:"+custodianOrgId, LoggerEnum.ERROR.name());
+            ProjectLogger.log("ShadowUserProcessor:getCustodianOrgId:CUSTODIAN ORD ID FOUND in cache:"+custodianOrgId, LoggerEnum.INFO.name());
             return custodianOrgId;
         }
         Response response = cassandraOperation.getRecordById(JsonKey.SUNBIRD, JsonKey.SYSTEM_SETTINGS_DB, JsonKey.CUSTODIAN_ORG_ID);
@@ -294,9 +297,10 @@ public class ShadowUserProcessor {
             }
             Map<String, Object> request = new HashMap<>();
             Map<String, Object> filters = new HashMap<>();
-            filters.put(JsonKey.EXTERNAL_ID, shadowUser.getOrgExtId());
+            filters.put(JsonKey.EXTERNAL_ID, shadowUser.getOrgExtId().toLowerCase());
             filters.put(JsonKey.CHANNEL, shadowUser.getChannel());
             request.put(JsonKey.FILTERS, filters);
+            ProjectLogger.log("ShadowUserProcessor:getOrgId: request map prepared to query elasticsearch for org id :"+request,LoggerEnum.INFO.name());
             SearchDTO searchDTO = ElasticSearchHelper.createSearchDTO(request);
             Map<String, Object> response = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(elasticSearchService.search(searchDTO, ProjectUtil.EsType.organisation.getTypeName()));
             List<Map<String, Object>> orgData = ((List<Map<String, Object>>) response.get(JsonKey.CONTENT));
@@ -342,7 +346,7 @@ public class ShadowUserProcessor {
 
     private void deleteOrgFromUserOrg(String id) {
         Response response = cassandraOperation.deleteRecord(JsonKey.SUNBIRD, JsonKey.USER_ORG, id);
-        ProjectLogger.log("ShadowUserProcessor:deleteOrgFromUserOrg:user org is deleted ".concat(response.getResult() + ""));
+        ProjectLogger.log("ShadowUserProcessor:deleteOrgFromUserOrg:user org is deleted ".concat(response.getResult() + ""),LoggerEnum.INFO.name());
     }
 
 
@@ -365,7 +369,7 @@ public class ShadowUserProcessor {
         Util.DbInfo usrOrgDb = Util.dbInfoMap.get(JsonKey.USR_ORG_DB);
         try {
             Response response=cassandraOperation.insertRecord(usrOrgDb.getKeySpace(), usrOrgDb.getTableName(), reqMap);
-            ProjectLogger.log("ShadowUserProcessor:registerUserToOrg:user status whiel registration with org is:"+response.getResult(),LoggerEnum.INFO.name());
+            ProjectLogger.log("ShadowUserProcessor:registerUserToOrg:user status while registration with org is:"+response.getResult(),LoggerEnum.INFO.name());
 
         } catch (Exception e) {
             ProjectLogger.log("ShadowUserProcessor:registerUserToOrg:user is failed to register with org"+userId,LoggerEnum.ERROR.name());
@@ -383,6 +387,7 @@ public class ShadowUserProcessor {
         externalId.put(JsonKey.USER_ID, userId);
         externalId.put(JsonKey.CREATED_BY, shadowUser.getAddedBy());
         externalId.put(JsonKey.CREATED_ON, new Timestamp(System.currentTimeMillis()));
+        ProjectLogger.log("ShadowUserProcessor:createUserExternalId:map prepared for user externalid is "+externalId,LoggerEnum.INFO.name());
         saveUserExternalId(externalId);
     }
 
@@ -393,7 +398,7 @@ public class ShadowUserProcessor {
      */
     private void saveUserExternalId(Map<String, Object> externalId) {
         Response response = cassandraOperation.insertRecord(JsonKey.SUNBIRD, JsonKey.USR_EXT_IDNT_TABLE, externalId);
-        ProjectLogger.log("ShadowUserProcessor:createUserExternalId:response from cassandra ".concat(response.getResult() + ""));
+        ProjectLogger.log("ShadowUserProcessor:createUserExternalId:response from cassandra ".concat(response.getResult() + ""),LoggerEnum.INFO.name());
     }
 
 

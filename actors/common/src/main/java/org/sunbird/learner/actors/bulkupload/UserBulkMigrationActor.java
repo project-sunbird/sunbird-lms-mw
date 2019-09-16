@@ -143,7 +143,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
                     .setSupportedFields(columnsMap.get(JsonKey.SUPPORTED_COlUMNS))
                     .setValues(migrationUserList)
                     .validate();
-            ProjectLogger.log("UserBulkMigrationActor:validateRequestAndReturnMigrationUsers: the migration object formed ".concat(migration.toString()));
+            ProjectLogger.log("UserBulkMigrationActor:validateRequestAndReturnMigrationUsers: the migration object formed ".concat(migration.toString()),LoggerEnum.INFO.name());
             return migrationUserList;
     }
 
@@ -151,7 +151,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
         List<String[]>values=new ArrayList<>();
         try {
             csvReader = getCsvReader(fileData, ',', '"', 0);
-            ProjectLogger.log("UserBulkMigrationActor:readCsv:csvReader initialized ".concat(csvReader.toString()),LoggerEnum.ERROR.name());
+            ProjectLogger.log("UserBulkMigrationActor:readCsv:csvReader initialized ".concat(csvReader.toString()),LoggerEnum.INFO.name());
             values=csvReader.readAll();
         }
         catch (Exception ex) {

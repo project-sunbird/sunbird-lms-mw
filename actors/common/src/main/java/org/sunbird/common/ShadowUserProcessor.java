@@ -32,7 +32,7 @@ public class ShadowUserProcessor {
     private Map<String, String> hashTagIdMap = new HashMap<>();
     private Map<String, String> extOrgIdMap = new HashMap<>();
     private Map<String,String>channelOrgIdMap=new HashMap<>();
-    private static String custodianOrgId;
+    private  String custodianOrgId;
 
     private EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(null);
     private ElasticSearchService elasticSearchService = EsClientFactory.getInstance(JsonKey.REST);
@@ -111,6 +111,7 @@ public class ShadowUserProcessor {
         request.put(JsonKey.FILTERS, filters);
         SearchDTO searchDTO = ElasticSearchHelper.createSearchDTO(request);
         Map<String, Object> response = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(elasticSearchService.search(searchDTO, JsonKey.USER));
+        ProjectLogger.log("ShadowUserProcessor:getUserMatchedIdentifierFromES:response got from elasticsearch is "+response,LoggerEnum.INFO.name());
         return (List<Map<String, Object>>) response.get(JsonKey.CONTENT);
     }
 

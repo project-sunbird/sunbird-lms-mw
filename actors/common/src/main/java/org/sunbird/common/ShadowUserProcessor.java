@@ -109,6 +109,7 @@ public class ShadowUserProcessor {
         filters.put(JsonKey.ES_OR_OPERATION, or);
         filters.put(JsonKey.ROOT_ORG_ID, getCustodianOrgId());
         request.put(JsonKey.FILTERS, filters);
+        ProjectLogger.log("ShadowUserProcessor:getUserMatchedIdentifierFromES:the filter prepared for elasticsearch "+filters,LoggerEnum.INFO.name());
         SearchDTO searchDTO = ElasticSearchHelper.createSearchDTO(request);
         Map<String, Object> response = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(elasticSearchService.search(searchDTO, JsonKey.USER));
         ProjectLogger.log("ShadowUserProcessor:getUserMatchedIdentifierFromES:response got from elasticsearch is "+response,LoggerEnum.INFO.name());

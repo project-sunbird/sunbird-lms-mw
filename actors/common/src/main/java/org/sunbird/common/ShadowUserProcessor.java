@@ -299,6 +299,7 @@ public class ShadowUserProcessor {
             filters.put(JsonKey.EXTERNAL_ID, shadowUser.getOrgExtId().toLowerCase());
             filters.put(JsonKey.CHANNEL, shadowUser.getChannel());
             request.put(JsonKey.FILTERS, filters);
+            ProjectLogger.log("ShadowUserProcessor:getOrgId: request map prepared to query elasticsearch for org id :"+request,LoggerEnum.INFO.name());
             SearchDTO searchDTO = ElasticSearchHelper.createSearchDTO(request);
             Map<String, Object> response = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(elasticSearchService.search(searchDTO, ProjectUtil.EsType.organisation.getTypeName()));
             List<Map<String, Object>> orgData = ((List<Map<String, Object>>) response.get(JsonKey.CONTENT));

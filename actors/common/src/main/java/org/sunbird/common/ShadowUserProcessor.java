@@ -129,6 +129,7 @@ public class ShadowUserProcessor {
                     ProjectLogger.log("ShadowUserProcessor:updateUser:Got single user:" + esUser, LoggerEnum.INFO.name());
                     Map<String, Object> userMap = esUser.get(0);
                     if (!isSame(shadowUser, userMap)) {
+                        ProjectLogger.log("ShadowUserProcessor:updateUser: provided user details doesn't match with existing user details" + userMap, LoggerEnum.INFO.name());
                         String rootOrgId = getRootOrgIdFromChannel(shadowUser.getChannel());
                         updateUserInUserTable((String) userMap.get(JsonKey.ID), rootOrgId, shadowUser);
                         String orgIdFromOrgExtId = getOrgId(shadowUser);

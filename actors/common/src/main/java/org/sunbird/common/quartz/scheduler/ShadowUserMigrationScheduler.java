@@ -99,7 +99,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
             } else {
             ProjectLogger.log("ShadowUserMigrationScheduler:processSingleMigUser:existing user found with processId:"+processId,LoggerEnum.INFO.name());
             ShadowUser shadowUser = mapper.convertValue(existingUserDetails, ShadowUser.class);
-                updateUser(singleMigrationUser, shadowUser);
+            updateUser(processId,singleMigrationUser, shadowUser);
             }
     }
 
@@ -195,16 +195,16 @@ public class ShadowUserMigrationScheduler extends BaseJob{
         return ProjectUtil.Status.INACTIVE.getValue();
     }
 
-    private void updateUser(MigrationUser migrationUser, ShadowUser shadowUser) {
-        updateUserInShadowDb(migrationUser,shadowUser);
+    private void updateUser(String processId,MigrationUser migrationUser, ShadowUser shadowUser) {
+        updateUserInShadowDb(processId,migrationUser,shadowUser);
     }
 
-    private void updateUserInShadowDb(MigrationUser migrationUser, ShadowUser shadowUser) {
+    private void updateUserInShadowDb(String processId,MigrationUser migrationUser, ShadowUser shadowUser) {
         if(!isSame(shadowUser,migrationUser)){
             Map<String, Object> propertiesMap = new HashMap<>();
             propertiesMap.put(JsonKey.EMAIL, migrationUser.getEmail());
             propertiesMap.put(JsonKey.PHONE, migrationUser.getPhone());
-            propertiesMap.put(JsonKey.PROCESS_ID,shadowUser.getProcessId());
+            propertiesMap.put(JsonKey.PROCESS_ID,processId);
             propertiesMap.put(JsonKey.NAME, migrationUser.getName());
             propertiesMap.put(JsonKey.ORG_EXT_ID, migrationUser.getOrgExternalId());
             propertiesMap.put(JsonKey.UPDATED_ON, new Timestamp(System.currentTimeMillis()));

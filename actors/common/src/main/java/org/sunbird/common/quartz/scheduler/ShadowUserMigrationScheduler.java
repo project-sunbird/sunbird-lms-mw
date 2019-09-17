@@ -236,13 +236,13 @@ public class ShadowUserMigrationScheduler extends BaseJob{
 
     private void updateStatusInUserBulkTable(String processId, int statusVal) {
         try {
-            ProjectLogger.log("ShadowUserMigrationScheduler:updateStatusInUserBulkTable: got status to change in bulk upload table".concat(statusVal + ""), LoggerEnum.INFO.name());
+            ProjectLogger.log("ShadowUserMigrationScheduler:updateStatusInUserBulkTable: got status to change in bulk upload table".concat(statusVal + "")+"with processId"+processId, LoggerEnum.INFO.name());
             Map<String, Object> propertiesMap = new HashMap<>();
             propertiesMap.put(JsonKey.ID, processId);
             propertiesMap.put(JsonKey.STATUS, statusVal);
             updateBulkUserTable(propertiesMap);
         } catch (Exception e) {
-            ProjectLogger.log("ShadowUserMigrationScheduler:updateStatusInUserBulkTable: status update failed".concat(e + ""), LoggerEnum.ERROR.name());
+            ProjectLogger.log("ShadowUserMigrationScheduler:updateStatusInUserBulkTable: status update failed".concat(e + "")+"with processId"+processId, LoggerEnum.ERROR.name());
         }
     }
 

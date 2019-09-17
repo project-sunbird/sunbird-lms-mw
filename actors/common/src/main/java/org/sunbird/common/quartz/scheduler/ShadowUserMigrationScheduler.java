@@ -204,6 +204,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
             Map<String, Object> propertiesMap = new HashMap<>();
             propertiesMap.put(JsonKey.EMAIL, migrationUser.getEmail());
             propertiesMap.put(JsonKey.PHONE, migrationUser.getPhone());
+            propertiesMap.put(JsonKey.PROCESS_ID,shadowUser.getProcessId());
             propertiesMap.put(JsonKey.NAME, migrationUser.getName());
             propertiesMap.put(JsonKey.ORG_EXT_ID, migrationUser.getOrgExternalId());
             propertiesMap.put(JsonKey.UPDATED_ON, new Timestamp(System.currentTimeMillis()));

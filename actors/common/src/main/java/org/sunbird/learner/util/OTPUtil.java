@@ -22,6 +22,7 @@ import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.actors.otp.SendOTPActor;
 import org.sunbird.learner.actors.otp.service.OTPService;
 import org.sunbird.notification.sms.provider.ISmsProvider;
 import org.sunbird.notification.utils.SMSFactory;
@@ -124,14 +125,20 @@ public final class OTPUtil {
     return null;
   }
 
-  public static Request sendOTPViaEmail(Map<String, Object> emailTemplateMap) {
+  public static Request sendOTPViaEmail(Map<String, Object> emailTemplateMap, String otpType) {
     Request request = null;
     if ((StringUtils.isBlank((String) emailTemplateMap.get(JsonKey.EMAIL)))) {
       return request;
     }
     String envName = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME);
-    String welcomeSubject = ProjectUtil.getConfigValue(JsonKey.ONBOARDING_MAIL_SUBJECT);
-    emailTemplateMap.put(JsonKey.SUBJECT, ProjectUtil.formatMessage(welcomeSubject, envName));
+    String emailSubject = null;
+    if (SendOTPActor.RESET_PASSWORD.equalsIgnoreCase(otpType)) {
+      emailSubject = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_RESET_PASS_MAIL_SUBJECT);
+    } else {
+      // default fallback for all other otpType
+      emailSubject = ProjectUtil.getConfigValue(JsonKey.ONBOARDING_MAIL_SUBJECT);
+    }
+    emailTemplateMap.put(JsonKey.SUBJECT, ProjectUtil.formatMessage(emailSubject, envName));
     List<String> reciptientsMail = new ArrayList<>();
     reciptientsMail.add((String) emailTemplateMap.get(JsonKey.EMAIL));
     emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
@@ -141,6 +148,10 @@ public final class OTPUtil {
     request.setOperation(BackgroundOperations.emailService.name());
     request.put(JsonKey.EMAIL_REQUEST, emailTemplateMap);
     return request;
+  }
+
+  public static Request sendOTPViaEmail(Map<String, Object> emailTemplateMap) {
+    return sendOTPViaEmail(emailTemplateMap, null);
   }
 
   public static String getOTPExpirationInMinutes() {

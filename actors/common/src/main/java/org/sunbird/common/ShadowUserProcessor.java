@@ -106,7 +106,7 @@ public class ShadowUserProcessor {
         Map<String, Object> filters = new HashMap<>();
         Map<String, Object> or = new HashMap<>();
         if(StringUtils.isNotBlank(shadowUser.getEmail())) {
-            or.put(JsonKey.EMAIL,getEncryptedValue(shadowUser.getEmail()));
+            or.put(JsonKey.EMAIL,getEncryptedValue(shadowUser.getEmail().toLowerCase()));
         }
         if(StringUtils.isNotBlank(shadowUser.getPhone())) {
             or.put(JsonKey.PHONE,getEncryptedValue(shadowUser.getPhone()));

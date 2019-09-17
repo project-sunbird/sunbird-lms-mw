@@ -15,17 +15,17 @@ public class UserFlagUtil {
    */
   public static int getFlagValue(String userFlagType, boolean flagEnabled) {
     int decimalValue = 0;
-    //if phone is verified, value is set to true
+    //if phone is verified flag should be true then only return flagvalue
     if(userFlagType.equals(UserFlagEnum.PHONE_VERIFIED.getUserFlagType()) &&
-            flagEnabled == true) {
+            flagEnabled) {
       decimalValue = UserFlagEnum.PHONE_VERIFIED.getUserFlagValue();
     } else if (userFlagType.equals(UserFlagEnum.EMAIL_VERIFIED.getUserFlagType()) &&
-            flagEnabled == true) {
-      //if email is verified, value is set to true
+            flagEnabled) {
+      //if email is verified flag should be true then only return flagvalue
       decimalValue = UserFlagEnum.EMAIL_VERIFIED.getUserFlagValue();
     } else if (userFlagType.equals(UserFlagEnum.STATE_VALIDATED.getUserFlagType()) &&
-            flagEnabled == true) {
-      //if user is state-validated, value is set to true
+            flagEnabled) {
+      //if user is state-validated flag should be true then only return flagvalue
       decimalValue = UserFlagEnum.STATE_VALIDATED.getUserFlagValue();
     }
     return decimalValue;

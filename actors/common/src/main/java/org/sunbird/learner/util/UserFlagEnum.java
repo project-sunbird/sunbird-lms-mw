@@ -4,21 +4,20 @@ import org.sunbird.common.models.util.JsonKey;
 
 /**
  * UserFlagEnum provides all the flags of user type
- * It contains flagtype and corresponding boolean value, reason for value is to provide flexibility of providing
- * either true or false and maintaining purpose.
+ * It contains flagtype and corresponding value in decimal format
+ * value should be bit enabled and equivalent to decimal format.
+ * If any flag is added, please add value as 2 pow (position-1)
  */
 public enum UserFlagEnum {
-  PHONE_VERIFIED(JsonKey.PHONE_VERIFIED, true, 1),
-  EMAIL_VERIFIED(JsonKey.EMAIL_VERIFIED, true, 2),
-  STATE_VALIDATED(JsonKey.STATE_VALIDATED, true, 4);
+  PHONE_VERIFIED(JsonKey.PHONE_VERIFIED,1),
+  EMAIL_VERIFIED(JsonKey.EMAIL_VERIFIED,2),
+  STATE_VALIDATED(JsonKey.STATE_VALIDATED,4);
 
   private String userFlagType;
-  private boolean flagEnabled;
   private int userFlagValue;
 
-  UserFlagEnum(String userFlagType, boolean flagEnabled, int userFlagValue) {
+  UserFlagEnum(String userFlagType, int userFlagValue) {
     this.userFlagType = userFlagType;
-    this.flagEnabled = flagEnabled;
     this.userFlagValue = userFlagValue;
   }
 
@@ -28,10 +27,6 @@ public enum UserFlagEnum {
 
   public String getUserFlagType() {
     return userFlagType;
-  }
-
-  public boolean isFlagEnabled() {
-    return flagEnabled;
   }
 
 }

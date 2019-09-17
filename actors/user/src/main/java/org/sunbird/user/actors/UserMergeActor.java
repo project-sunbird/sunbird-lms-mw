@@ -85,9 +85,9 @@ public class UserMergeActor extends UserBaseActor {
               + mergerId,
           LoggerEnum.ERROR.name());
       throw new ProjectCommonException(
-          ResponseCode.internalError.getErrorCode(),
-          ProjectUtil.formatMessage(ResponseMessage.Message.INTERNAL_ERROR, mergeeId),
-          ResponseCode.SERVER_ERROR.getResponseCode());
+          ResponseCode.accountNotFound.getErrorCode(),
+          ResponseCode.accountNotFound.getErrorMessage(),
+          ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     if (!mergee.getIsDeleted()) {
       prepareMergeeAccountData(mergee, mergeeDBMap);

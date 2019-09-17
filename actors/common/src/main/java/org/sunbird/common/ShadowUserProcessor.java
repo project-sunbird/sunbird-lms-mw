@@ -66,11 +66,10 @@ public class ShadowUserProcessor {
         if (!((String) esUser.get(JsonKey.FIRST_NAME)).equalsIgnoreCase(shadowUser.getName()) || ((int) esUser.get(JsonKey.STATUS)) != shadowUser.getUserStatus()) {
             updateUserInUserTable(shadowUser.getUserId(), rootOrgId, shadowUser);
         }
-//        if (StringUtils.isNotBlank(orgId) && !getOrganisationIds(esUser).contains(orgId)) {
-//            updateOrganisationsOfUsers(shadowUser, rootOrgId, (List<Map<String, Object>>) esUser.get(JsonKey.ORGANISATIONS));
-//            registerUserToOrg(userId, orgId);
-//        }
-        updateUserOrg(orgId,rootOrgId,esUser);
+        deleteUserFromOrganisations(shadowUser, rootOrgId, (List<Map<String, Object>>) esUser.get(JsonKey.ORGANISATIONS));
+        if (StringUtils.isNotBlank(orgId) && !getOrganisationIds(esUser).contains(orgId)) {
+            registerUserToOrg(userId, orgId);
+        }
         syncUserToES(userId);
         updateUserInShadowDb(userId, shadowUser, ClaimStatus.CLAIMED.getValue(), null);
     }
@@ -82,7 +81,7 @@ public class ShadowUserProcessor {
         return false;
     }
 
-    private void updateOrganisationsOfUsers(ShadowUser shadowUser, String rootOrgId, List<Map<String, Object>> organisations) {
+    private void deleteUserFromOrganisations(ShadowUser shadowUser, String rootOrgId, List<Map<String, Object>> organisations) {
         organisations.stream().forEach(organisation -> {
             String orgId = (String) organisation.get(JsonKey.ORGANISATION_ID);
             if (!isRootOrgMatchedWithOrgId(rootOrgId, orgId)) {

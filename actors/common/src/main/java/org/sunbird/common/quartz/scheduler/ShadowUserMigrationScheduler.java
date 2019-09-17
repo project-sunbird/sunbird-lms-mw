@@ -37,7 +37,6 @@ public class ShadowUserMigrationScheduler extends BaseJob{
     private HashSet<String>verifiedChannelOrgExternalIdSet=new HashSet<>();
     private ElasticSearchService elasticSearchService = EsClientFactory.getInstance(JsonKey.REST);
     private DecryptionService decryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(null);
-    ShadowUserProcessor processorObject=new  ShadowUserProcessor();
 
 
 
@@ -85,6 +84,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
             }
         });
         ProjectLogger.log("ShadowUserMigrationScheduler:processRecords:started stage3__________________________-",LoggerEnum.INFO.name());
+        ShadowUserProcessor processorObject=new  ShadowUserProcessor();
         processorObject.process();
         ProjectLogger.log("ShadowUserMigrationScheduler:processRecords:Scheduler Job Ended for ShadowUser Migration",LoggerEnum.INFO.name());
 
@@ -217,7 +217,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
             compositeKeysMap.put(JsonKey.USER_EXT_ID,migrationUser.getUserExternalId());
             Response response = cassandraOperation.updateRecord(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, propertiesMap,compositeKeysMap);
             ProjectLogger.log("ShadowUserMigrationScheduler:updateUserInShadowDb: record status in cassandra ".concat(response+ ""), LoggerEnum.INFO.name());
-            processorObject.processClaimedUser(getUpdatedShadowUser(compositeKeysMap));
+            new ShadowUserProcessor().processClaimedUser(getUpdatedShadowUser(compositeKeysMap));
         }
     }
 

@@ -66,10 +66,11 @@ public class ShadowUserProcessor {
         if (!((String) esUser.get(JsonKey.FIRST_NAME)).equalsIgnoreCase(shadowUser.getName()) || ((int) esUser.get(JsonKey.STATUS)) != shadowUser.getUserStatus()) {
             updateUserInUserTable(shadowUser.getUserId(), rootOrgId, shadowUser);
         }
-        if (StringUtils.isNotBlank(orgId) && !getOrganisationIds(esUser).contains(orgId)) {
-            updateOrganisationsOfUsers(shadowUser, rootOrgId, (List<Map<String, Object>>) esUser.get(JsonKey.ORGANISATIONS));
-            registerUserToOrg(userId, orgId);
-        }
+//        if (StringUtils.isNotBlank(orgId) && !getOrganisationIds(esUser).contains(orgId)) {
+//            updateOrganisationsOfUsers(shadowUser, rootOrgId, (List<Map<String, Object>>) esUser.get(JsonKey.ORGANISATIONS));
+//            registerUserToOrg(userId, orgId);
+//        }
+        updateUserOrg(shadowUser.getOrgExtId(),rootOrgId,esUser);
         syncUserToES(userId);
         updateUserInShadowDb(userId, shadowUser, ClaimStatus.CLAIMED.getValue(), null);
     }

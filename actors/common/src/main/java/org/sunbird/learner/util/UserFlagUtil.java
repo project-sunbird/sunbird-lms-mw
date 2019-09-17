@@ -10,19 +10,22 @@ public class UserFlagUtil {
   /**
    * This method return int value of the boolean flag
    * @param userFlagType
-   * @param isFlagEnabled
+   * @param flagEnabled
    * @return
    */
-  public static int getFlagValue(String userFlagType, boolean isFlagEnabled) {
+  public static int getFlagValue(String userFlagType, boolean flagEnabled) {
     int decimalValue = 0;
+    //if phone is verified, value is set to true
     if(userFlagType.equals(UserFlagEnum.PHONE_VERIFIED.getUserFlagType()) &&
-            isFlagEnabled== UserFlagEnum.PHONE_VERIFIED.isFlagEnabled()) {
+            flagEnabled == true) {
       decimalValue = UserFlagEnum.PHONE_VERIFIED.getUserFlagValue();
     } else if (userFlagType.equals(UserFlagEnum.EMAIL_VERIFIED.getUserFlagType()) &&
-            isFlagEnabled== UserFlagEnum.EMAIL_VERIFIED.isFlagEnabled()) {
+            flagEnabled == true) {
+      //if email is verified, value is set to true
       decimalValue = UserFlagEnum.EMAIL_VERIFIED.getUserFlagValue();
     } else if (userFlagType.equals(UserFlagEnum.STATE_VALIDATED.getUserFlagType()) &&
-            isFlagEnabled== UserFlagEnum.STATE_VALIDATED.isFlagEnabled()) {
+            flagEnabled == true) {
+      //if user is state-validated, value is set to true
       decimalValue = UserFlagEnum.STATE_VALIDATED.getUserFlagValue();
     }
     return decimalValue;
@@ -37,11 +40,11 @@ public class UserFlagUtil {
     Map<String, Boolean> userFlagMap = new HashMap<>();
     setDefaultValues(userFlagMap);
     if((flagsValue & UserFlagEnum.PHONE_VERIFIED.getUserFlagValue())== UserFlagEnum.PHONE_VERIFIED.getUserFlagValue()) {
-      userFlagMap.put(UserFlagEnum.PHONE_VERIFIED.getUserFlagType(), UserFlagEnum.PHONE_VERIFIED.isFlagEnabled());
+      userFlagMap.put(UserFlagEnum.PHONE_VERIFIED.getUserFlagType(), true);
     } if((flagsValue &  UserFlagEnum.EMAIL_VERIFIED.getUserFlagValue())== UserFlagEnum.EMAIL_VERIFIED.getUserFlagValue()) {
-      userFlagMap.put(UserFlagEnum.EMAIL_VERIFIED.getUserFlagType(), UserFlagEnum.EMAIL_VERIFIED.isFlagEnabled());
+      userFlagMap.put(UserFlagEnum.EMAIL_VERIFIED.getUserFlagType(), true);
     } if((flagsValue &  UserFlagEnum.STATE_VALIDATED.getUserFlagValue())== UserFlagEnum.STATE_VALIDATED.getUserFlagValue()) {
-      userFlagMap.put(UserFlagEnum.STATE_VALIDATED.getUserFlagType(), UserFlagEnum.STATE_VALIDATED.isFlagEnabled());
+      userFlagMap.put(UserFlagEnum.STATE_VALIDATED.getUserFlagType(), true);
     }
     return userFlagMap;
   }

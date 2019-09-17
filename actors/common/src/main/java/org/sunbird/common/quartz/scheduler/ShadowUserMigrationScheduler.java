@@ -274,13 +274,17 @@ public class ShadowUserMigrationScheduler extends BaseJob{
      * @return boolean
      */
     private boolean isSame(ShadowUser shadowUser,MigrationUser migrationUser){
+
+        if(StringUtils.isBlank(migrationUser.getOrgExternalId())){
+            return false;
+        }
         if(!shadowUser.getName().equalsIgnoreCase(migrationUser.getName())){
         return false;
         }
         if(StringUtils.isNotBlank(migrationUser.getEmail()) && !shadowUser.getEmail().equalsIgnoreCase(migrationUser.getEmail())){
             return false;
         }
-        if(StringUtils.isNotBlank(migrationUser.getOrgExternalId()) && ! StringUtils.equalsIgnoreCase(shadowUser.getOrgExtId(),migrationUser.getOrgExternalId())){
+        if(! StringUtils.equalsIgnoreCase(shadowUser.getOrgExtId(),migrationUser.getOrgExternalId())){
             return false;
         }
         if(StringUtils.isNotBlank(migrationUser.getPhone()) && !shadowUser.getPhone().equalsIgnoreCase(migrationUser.getPhone()))

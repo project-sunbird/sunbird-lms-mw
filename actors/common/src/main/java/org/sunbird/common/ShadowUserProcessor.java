@@ -70,7 +70,7 @@ public class ShadowUserProcessor {
 //            updateOrganisationsOfUsers(shadowUser, rootOrgId, (List<Map<String, Object>>) esUser.get(JsonKey.ORGANISATIONS));
 //            registerUserToOrg(userId, orgId);
 //        }
-        updateUserOrg(shadowUser.getOrgExtId(),rootOrgId,esUser);
+        updateUserOrg(orgId,rootOrgId,esUser);
         syncUserToES(userId);
         updateUserInShadowDb(userId, shadowUser, ClaimStatus.CLAIMED.getValue(), null);
     }

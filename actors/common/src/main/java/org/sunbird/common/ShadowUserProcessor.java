@@ -64,7 +64,7 @@ public class ShadowUserProcessor {
         Map<String, Object> esUser = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(elasticSearchService.getDataByIdentifier(ProjectUtil.EsType.user.getTypeName(), shadowUser.getUserId()));
         String userId = (String) esUser.get(JsonKey.ID);
         String rootOrgId = (String) esUser.get(JsonKey.ROOT_ORG_ID);
-        int flagsValue=(int)esUser.get(JsonKey.FLAGS_VALUE);
+        int flagsValue=null!=esUser.get(JsonKey.FLAGS_VALUE)?(int)esUser.get(JsonKey.FLAGS_VALUE):0;   // since we are migrating the user from custodian org to non custodian org.
         if (!((String) esUser.get(JsonKey.FIRST_NAME)).equalsIgnoreCase(shadowUser.getName()) || ((int) esUser.get(JsonKey.STATUS)) != shadowUser.getUserStatus()) {
             updateUserInUserTable(flagsValue,shadowUser.getUserId(), rootOrgId, shadowUser);
         }
@@ -133,7 +133,7 @@ public class ShadowUserProcessor {
                     if (!isSame(shadowUser, userMap)) {
                         ProjectLogger.log("ShadowUserProcessor:updateUser: provided user details doesn't match with existing user details with processId"+shadowUser.getProcessId() + userMap, LoggerEnum.INFO.name());
                         String rootOrgId = getRootOrgIdFromChannel(shadowUser.getChannel());
-                        int flagsValue=(int)userMap.get(JsonKey.FLAGS_VALUE);
+                        int flagsValue=null!=userMap.get(JsonKey.FLAGS_VALUE)?(int)userMap.get(JsonKey.FLAGS_VALUE):0;   // since we are migrating the user from custodian org to non custodian org.
                         updateUserInUserTable(flagsValue,(String) userMap.get(JsonKey.ID), rootOrgId, shadowUser);
                         String orgIdFromOrgExtId = getOrgId(shadowUser);
                         updateUserOrg(orgIdFromOrgExtId, rootOrgId, userMap);
@@ -175,7 +175,7 @@ public class ShadowUserProcessor {
         Map<String, Object> propertiesMap = new HashMap<>();
         propertiesMap.put(JsonKey.FIRST_NAME, shadowUser.getName());
         propertiesMap.put(JsonKey.ID, userId);
-        propertiesMap.put(JsonKey.FLAGS_VALUE, flagValue+UserFlagEnum.STATE_VALIDATED.getUserFlagValue());
+        propertiesMap.put(JsonKey.FLAGS_VALUE, flagValue + UserFlagEnum.STATE_VALIDATED.getUserFlagValue());
         propertiesMap.put(JsonKey.UPDATED_BY, shadowUser.getAddedBy());
         propertiesMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
         if (shadowUser.getUserStatus() == ProjectUtil.Status.ACTIVE.getValue()) {

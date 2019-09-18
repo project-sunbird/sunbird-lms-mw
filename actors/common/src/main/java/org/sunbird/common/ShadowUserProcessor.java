@@ -18,6 +18,7 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.UserFlagEnum;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.UserType;
 import scala.concurrent.Future;
@@ -63,8 +64,9 @@ public class ShadowUserProcessor {
         Map<String, Object> esUser = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(elasticSearchService.getDataByIdentifier(ProjectUtil.EsType.user.getTypeName(), shadowUser.getUserId()));
         String userId = (String) esUser.get(JsonKey.ID);
         String rootOrgId = (String) esUser.get(JsonKey.ROOT_ORG_ID);
+        int flagsValue=(int)esUser.get(JsonKey.FLAGS_VALUE);
         if (!((String) esUser.get(JsonKey.FIRST_NAME)).equalsIgnoreCase(shadowUser.getName()) || ((int) esUser.get(JsonKey.STATUS)) != shadowUser.getUserStatus()) {
-            updateUserInUserTable(shadowUser.getUserId(), rootOrgId, shadowUser);
+            updateUserInUserTable(flagsValue,shadowUser.getUserId(), rootOrgId, shadowUser);
         }
         deleteUserFromOrganisations(shadowUser, rootOrgId, (List<Map<String, Object>>) esUser.get(JsonKey.ORGANISATIONS));
         if (StringUtils.isNotBlank(orgId) && !getOrganisationIds(esUser).contains(orgId)) {
@@ -131,7 +133,8 @@ public class ShadowUserProcessor {
                     if (!isSame(shadowUser, userMap)) {
                         ProjectLogger.log("ShadowUserProcessor:updateUser: provided user details doesn't match with existing user details with processId"+shadowUser.getProcessId() + userMap, LoggerEnum.INFO.name());
                         String rootOrgId = getRootOrgIdFromChannel(shadowUser.getChannel());
-                        updateUserInUserTable((String) userMap.get(JsonKey.ID), rootOrgId, shadowUser);
+                        int flagsValue=(int)userMap.get(JsonKey.FLAGS_VALUE);
+                        updateUserInUserTable(flagsValue,(String) userMap.get(JsonKey.ID), rootOrgId, shadowUser);
                         String orgIdFromOrgExtId = getOrgId(shadowUser);
                         updateUserOrg(orgIdFromOrgExtId, rootOrgId, userMap);
                         createUserExternalId((String) userMap.get(JsonKey.ID), shadowUser);
@@ -168,10 +171,11 @@ public class ShadowUserProcessor {
         }
     }
 
-    private void updateUserInUserTable(String userId, String rootOrgId, ShadowUser shadowUser) {
+    private void updateUserInUserTable(int flagValue,String userId, String rootOrgId, ShadowUser shadowUser) {
         Map<String, Object> propertiesMap = new HashMap<>();
         propertiesMap.put(JsonKey.FIRST_NAME, shadowUser.getName());
         propertiesMap.put(JsonKey.ID, userId);
+        propertiesMap.put(JsonKey.FLAGS_VALUE, flagValue+UserFlagEnum.STATE_VALIDATED.getUserFlagValue());
         propertiesMap.put(JsonKey.UPDATED_BY, shadowUser.getAddedBy());
         propertiesMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
         if (shadowUser.getUserStatus() == ProjectUtil.Status.ACTIVE.getValue()) {

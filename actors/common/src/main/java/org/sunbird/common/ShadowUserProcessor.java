@@ -19,6 +19,7 @@ import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.UserFlagEnum;
+import org.sunbird.learner.util.UserFlagUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.UserType;
 import scala.concurrent.Future;
@@ -175,7 +176,9 @@ public class ShadowUserProcessor {
         Map<String, Object> propertiesMap = new HashMap<>();
         propertiesMap.put(JsonKey.FIRST_NAME, shadowUser.getName());
         propertiesMap.put(JsonKey.ID, userId);
-        propertiesMap.put(JsonKey.FLAGS_VALUE, flagValue + UserFlagEnum.STATE_VALIDATED.getUserFlagValue());
+        if(!(UserFlagUtil.assignUserFlagValues(flagValue).get(JsonKey.STATE_VALIDATED))) {
+            propertiesMap.put(JsonKey.FLAGS_VALUE, flagValue + UserFlagEnum.STATE_VALIDATED.getUserFlagValue());
+        }
         propertiesMap.put(JsonKey.UPDATED_BY, shadowUser.getAddedBy());
         propertiesMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
         if (shadowUser.getUserStatus() == ProjectUtil.Status.ACTIVE.getValue()) {

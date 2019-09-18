@@ -150,23 +150,25 @@ public class UserManagementActor extends BaseActor {
       userMap.put(JsonKey.UPDATED_BY, actorMessage.getContext().get(JsonKey.REQUESTED_BY));
     }
     Map<String, Object> requestMap = UserUtil.encryptUserData(userMap);
-    validateRecoveryEmailPhone(userDbRecord,userMap);
+    validateRecoveryEmailPhone(userDbRecord, userMap);
     UserUtil.addMaskEmailAndMaskPhone(requestMap);
     removeUnwanted(requestMap);
     if (requestMap.containsKey(JsonKey.TNC_ACCEPTED_ON)) {
       requestMap.put(
           JsonKey.TNC_ACCEPTED_ON, new Timestamp((Long) requestMap.get(JsonKey.TNC_ACCEPTED_ON)));
     }
-    if( requestMap.containsKey(JsonKey.RECOVERY_EMAIL) && StringUtils.isBlank((String)requestMap.get(JsonKey.RECOVERY_EMAIL))){
-      requestMap.put(JsonKey.RECOVERY_EMAIL,null);
+    if (requestMap.containsKey(JsonKey.RECOVERY_EMAIL)
+        && StringUtils.isBlank((String) requestMap.get(JsonKey.RECOVERY_EMAIL))) {
+      requestMap.put(JsonKey.RECOVERY_EMAIL, null);
     }
-    if( requestMap.containsKey(JsonKey.RECOVERY_PHONE) && StringUtils.isBlank((String)requestMap.get(JsonKey.RECOVERY_PHONE))){
-      requestMap.put(JsonKey.RECOVERY_PHONE,null);
+    if (requestMap.containsKey(JsonKey.RECOVERY_PHONE)
+        && StringUtils.isBlank((String) requestMap.get(JsonKey.RECOVERY_PHONE))) {
+      requestMap.put(JsonKey.RECOVERY_PHONE, null);
     }
 
     Map<String, Boolean> userBooleanMap = updatedUserFlagsMap(userMap, userDbRecord);
     int userFlagValue = userFlagsToNum(userBooleanMap);
-    requestMap.put(JsonKey.FLAGS_VALUE,userFlagValue);
+    requestMap.put(JsonKey.FLAGS_VALUE, userFlagValue);
     Response response =
         cassandraOperation.updateRecord(
             usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
@@ -578,11 +580,11 @@ public class UserManagementActor extends BaseActor {
     userMap.put(JsonKey.ID, userId);
     userMap.put(JsonKey.USER_ID, userId);
     requestMap = UserUtil.encryptUserData(userMap);
-    UserUtil.addMaskEmailAndMaskPhone(userMap);
+    UserUtil.addMaskEmailAndMaskPhone(requestMap);
     removeUnwanted(requestMap);
     requestMap.put(JsonKey.IS_DELETED, false);
     Map<String, Boolean> userFlagsMap = new HashMap<>();
-    //checks if the user is belongs to state and sets a validation flag
+    // checks if the user is belongs to state and sets a validation flag
     setStateValidation(requestMap, userFlagsMap);
     userFlagsMap.put(JsonKey.EMAIL_VERIFIED, (Boolean) userMap.get(JsonKey.EMAIL_VERIFIED));
     userFlagsMap.put(JsonKey.PHONE_VERIFIED, (Boolean) userMap.get(JsonKey.PHONE_VERIFIED));
@@ -658,32 +660,43 @@ public class UserManagementActor extends BaseActor {
   private int userFlagsToNum(Map<String, Boolean> userBooleanMap) {
     int userFlagValue = 0;
     Set<Map.Entry<String, Boolean>> mapEntry = userBooleanMap.entrySet();
-    for(Map.Entry<String, Boolean> entry: mapEntry) {
-      if(StringUtils.isNotEmpty(entry.getKey())) {
+    for (Map.Entry<String, Boolean> entry : mapEntry) {
+      if (StringUtils.isNotEmpty(entry.getKey())) {
         userFlagValue += UserFlagUtil.getFlagValue(entry.getKey(), entry.getValue());
       }
     }
     return userFlagValue;
   }
 
-  private void setStateValidation(Map<String, Object> requestMap, Map<String, Boolean> userBooleanMap) {
+  private void setStateValidation(
+      Map<String, Object> requestMap, Map<String, Boolean> userBooleanMap) {
     String rootOrgId = (String) requestMap.get(JsonKey.ROOT_ORG_ID);
     String custodianRootOrgId = getCustodianRootOrgId();
-    //if the user is creating for non-custodian(i.e state) the value is set as true else false
+    // if the user is creating for non-custodian(i.e state) the value is set as true else false
     userBooleanMap.put(JsonKey.STATE_VALIDATED, !custodianRootOrgId.equals(rootOrgId));
   }
 
-  private Map<String, Boolean> updatedUserFlagsMap(Map<String, Object> userMap, Map<String, Object> userDbRecord) {
+  private Map<String, Boolean> updatedUserFlagsMap(
+      Map<String, Object> userMap, Map<String, Object> userDbRecord) {
     Map<String, Boolean> userBooleanMap = new HashMap<>();
-    boolean emailVerified = (boolean) (userMap.containsKey(JsonKey.EMAIL_VERIFIED) ?  userMap.get(JsonKey.EMAIL_VERIFIED) : userDbRecord.get(JsonKey.EMAIL_VERIFIED));
-    boolean phoneVerified = (boolean) (userMap.containsKey(JsonKey.PHONE_VERIFIED) ?  userMap.get(JsonKey.PHONE_VERIFIED) : userDbRecord.get(JsonKey.PHONE_VERIFIED));
-    //for existing users, it won't contain state-validation
-    //adding in release-2.4.0
-    //userDbRecord- record from es.
-    if(!userDbRecord.containsKey(JsonKey.STATE_VALIDATED)) {
-      setStateValidation(userDbRecord,userBooleanMap);
+    boolean emailVerified =
+        (boolean)
+            (userMap.containsKey(JsonKey.EMAIL_VERIFIED)
+                ? userMap.get(JsonKey.EMAIL_VERIFIED)
+                : userDbRecord.get(JsonKey.EMAIL_VERIFIED));
+    boolean phoneVerified =
+        (boolean)
+            (userMap.containsKey(JsonKey.PHONE_VERIFIED)
+                ? userMap.get(JsonKey.PHONE_VERIFIED)
+                : userDbRecord.get(JsonKey.PHONE_VERIFIED));
+    // for existing users, it won't contain state-validation
+    // adding in release-2.4.0
+    // userDbRecord- record from es.
+    if (!userDbRecord.containsKey(JsonKey.STATE_VALIDATED)) {
+      setStateValidation(userDbRecord, userBooleanMap);
     } else {
-      userBooleanMap.put(JsonKey.STATE_VALIDATED, (boolean) userDbRecord.get(JsonKey.STATE_VALIDATED));
+      userBooleanMap.put(
+          JsonKey.STATE_VALIDATED, (boolean) userDbRecord.get(JsonKey.STATE_VALIDATED));
     }
     userBooleanMap.put(JsonKey.EMAIL_VERIFIED, emailVerified);
     userBooleanMap.put(JsonKey.PHONE_VERIFIED, phoneVerified);
@@ -692,7 +705,7 @@ public class UserManagementActor extends BaseActor {
 
   private String getCustodianRootOrgId() {
     String custodianChannel =
-            userService.getCustodianChannel(new HashMap<>(), systemSettingActorRef);
+        userService.getCustodianChannel(new HashMap<>(), systemSettingActorRef);
     return userService.getRootOrgIdFromChannel(custodianChannel);
   }
 
@@ -832,55 +845,63 @@ public class UserManagementActor extends BaseActor {
     }
   }
 
-  private void throwRecoveryParamsMatchException(String type, String recoveryType){
-      ProjectLogger.log("UserManagementActor:throwParamMatchException:".concat(recoveryType+"")+"should not same as primary ".concat(type+""),LoggerEnum.ERROR.name());
-      ProjectCommonException.throwClientErrorException(
-              ResponseCode.recoveryParamsMatchException,
-              MessageFormat.format(ResponseCode.recoveryParamsMatchException.getErrorMessage(),recoveryType,type));
+  private void throwRecoveryParamsMatchException(String type, String recoveryType) {
+    ProjectLogger.log(
+        "UserManagementActor:throwParamMatchException:".concat(recoveryType + "")
+            + "should not same as primary ".concat(type + ""),
+        LoggerEnum.ERROR.name());
+    ProjectCommonException.throwClientErrorException(
+        ResponseCode.recoveryParamsMatchException,
+        MessageFormat.format(
+            ResponseCode.recoveryParamsMatchException.getErrorMessage(), recoveryType, type));
   }
 
-  private void validateRecoveryEmailPhone(Map<String,Object>userDbRecord,Map<String,Object>userReqMap){
-    String userPrimaryPhone=(String)userDbRecord.get(JsonKey.PHONE);
-    String userPrimaryEmail=(String) userDbRecord.get(JsonKey.EMAIL);
-    String recoveryEmail=(String)userReqMap.get(JsonKey.RECOVERY_EMAIL);
-    String recoveryPhone=(String)userReqMap.get(JsonKey.RECOVERY_PHONE);
-    if(StringUtils.isNotBlank(recoveryEmail) && Matcher.matchIdentifiers(userPrimaryEmail,recoveryEmail)){
-      throwRecoveryParamsMatchException(JsonKey.EMAIL,JsonKey.RECOVERY_EMAIL);
+  private void validateRecoveryEmailPhone(
+      Map<String, Object> userDbRecord, Map<String, Object> userReqMap) {
+    String userPrimaryPhone = (String) userDbRecord.get(JsonKey.PHONE);
+    String userPrimaryEmail = (String) userDbRecord.get(JsonKey.EMAIL);
+    String recoveryEmail = (String) userReqMap.get(JsonKey.RECOVERY_EMAIL);
+    String recoveryPhone = (String) userReqMap.get(JsonKey.RECOVERY_PHONE);
+    if (StringUtils.isNotBlank(recoveryEmail)
+        && Matcher.matchIdentifiers(userPrimaryEmail, recoveryEmail)) {
+      throwRecoveryParamsMatchException(JsonKey.EMAIL, JsonKey.RECOVERY_EMAIL);
     }
-    if(StringUtils.isNotBlank(recoveryPhone) && Matcher.matchIdentifiers(userPrimaryPhone,recoveryPhone)){
-      throwRecoveryParamsMatchException(JsonKey.PHONE,JsonKey.RECOVERY_PHONE);
+    if (StringUtils.isNotBlank(recoveryPhone)
+        && Matcher.matchIdentifiers(userPrimaryPhone, recoveryPhone)) {
+      throwRecoveryParamsMatchException(JsonKey.PHONE, JsonKey.RECOVERY_PHONE);
     }
-    validatePrimaryEmailOrPhone(userDbRecord,userReqMap);
+    validatePrimaryEmailOrPhone(userDbRecord, userReqMap);
     validatePrimaryAndRecoveryKeys(userReqMap);
   }
 
-
-  private void validatePrimaryEmailOrPhone(Map<String,Object>userDbRecord,Map<String,Object>userReqMap){
-    String userPrimaryPhone=(String)userReqMap.get(JsonKey.PHONE);
-    String userPrimaryEmail=(String) userReqMap.get(JsonKey.EMAIL);
-    String recoveryEmail=(String)userDbRecord.get(JsonKey.RECOVERY_EMAIL);
-    String recoveryPhone=(String)userDbRecord.get(JsonKey.RECOVERY_PHONE);
-    if(StringUtils.isNotBlank(userPrimaryEmail) && Matcher.matchIdentifiers(userPrimaryEmail,recoveryEmail)){
-      throwRecoveryParamsMatchException(JsonKey.EMAIL,JsonKey.RECOVERY_EMAIL);
+  private void validatePrimaryEmailOrPhone(
+      Map<String, Object> userDbRecord, Map<String, Object> userReqMap) {
+    String userPrimaryPhone = (String) userReqMap.get(JsonKey.PHONE);
+    String userPrimaryEmail = (String) userReqMap.get(JsonKey.EMAIL);
+    String recoveryEmail = (String) userDbRecord.get(JsonKey.RECOVERY_EMAIL);
+    String recoveryPhone = (String) userDbRecord.get(JsonKey.RECOVERY_PHONE);
+    if (StringUtils.isNotBlank(userPrimaryEmail)
+        && Matcher.matchIdentifiers(userPrimaryEmail, recoveryEmail)) {
+      throwRecoveryParamsMatchException(JsonKey.EMAIL, JsonKey.RECOVERY_EMAIL);
     }
-    if(StringUtils.isNotBlank(userPrimaryPhone) && Matcher.matchIdentifiers(userPrimaryPhone,recoveryPhone)){
-      throwRecoveryParamsMatchException(JsonKey.PHONE,JsonKey.RECOVERY_PHONE);
+    if (StringUtils.isNotBlank(userPrimaryPhone)
+        && Matcher.matchIdentifiers(userPrimaryPhone, recoveryPhone)) {
+      throwRecoveryParamsMatchException(JsonKey.PHONE, JsonKey.RECOVERY_PHONE);
     }
   }
 
-  private void validatePrimaryAndRecoveryKeys(Map<String,Object>userReqMap){
-    String userPhone=(String)userReqMap.get(JsonKey.PHONE);
-    String userEmail=(String) userReqMap.get(JsonKey.EMAIL);
-    String userRecoveryEmail=(String)userReqMap.get(JsonKey.RECOVERY_EMAIL);
-    String userRecoveryPhone=(String)userReqMap.get(JsonKey.RECOVERY_PHONE);
-    if(StringUtils.isNotBlank(userEmail) && Matcher.matchIdentifiers(userEmail,userRecoveryEmail)){
-      throwRecoveryParamsMatchException(JsonKey.EMAIL,JsonKey.RECOVERY_EMAIL);
+  private void validatePrimaryAndRecoveryKeys(Map<String, Object> userReqMap) {
+    String userPhone = (String) userReqMap.get(JsonKey.PHONE);
+    String userEmail = (String) userReqMap.get(JsonKey.EMAIL);
+    String userRecoveryEmail = (String) userReqMap.get(JsonKey.RECOVERY_EMAIL);
+    String userRecoveryPhone = (String) userReqMap.get(JsonKey.RECOVERY_PHONE);
+    if (StringUtils.isNotBlank(userEmail)
+        && Matcher.matchIdentifiers(userEmail, userRecoveryEmail)) {
+      throwRecoveryParamsMatchException(JsonKey.EMAIL, JsonKey.RECOVERY_EMAIL);
     }
-    if(StringUtils.isNotBlank(userPhone) && Matcher.matchIdentifiers(userPhone,userRecoveryPhone)){
-      throwRecoveryParamsMatchException(JsonKey.PHONE,JsonKey.RECOVERY_PHONE);
+    if (StringUtils.isNotBlank(userPhone)
+        && Matcher.matchIdentifiers(userPhone, userRecoveryPhone)) {
+      throwRecoveryParamsMatchException(JsonKey.PHONE, JsonKey.RECOVERY_PHONE);
     }
-
   }
-
-
 }

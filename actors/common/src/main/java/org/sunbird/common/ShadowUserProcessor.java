@@ -26,6 +26,9 @@ import scala.concurrent.Future;
 
 import java.sql.Timestamp;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ShadowUserProcessor {
     private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
@@ -35,6 +38,7 @@ public class ShadowUserProcessor {
     private Map<String, String> extOrgIdMap = new HashMap<>();
     private Map<String,String>channelOrgIdMap=new HashMap<>();
     private String custodianOrgId;
+    private static final int N_THREADS=10;
 
     private EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(null);
     private ElasticSearchService elasticSearchService = EsClientFactory.getInstance(JsonKey.REST);
@@ -129,7 +133,8 @@ public class ShadowUserProcessor {
     }
 
     private void updateUser(ShadowUser shadowUser) {
-            List<Map<String, Object>> esUser = getUserMatchedIdentifierFromES(shadowUser);
+        ExecutorService executor = Executors.newFixedThreadPool(N_THREADS);
+        List<Map<String, Object>> esUser = getUserMatchedIdentifierFromES(shadowUser);
             ProjectLogger.log("ShadowUserProcessor:updateUser:GOT ES RESPONSE FOR USER WITH SIZE " + esUser.size(), LoggerEnum.INFO.name());
             if (CollectionUtils.isNotEmpty(esUser)) {
                 if (esUser.size() == 1) {
@@ -139,12 +144,11 @@ public class ShadowUserProcessor {
                         ProjectLogger.log("ShadowUserProcessor:updateUser: provided user details doesn't match with existing user details with processId"+shadowUser.getProcessId() + userMap, LoggerEnum.INFO.name());
                         String rootOrgId = getRootOrgIdFromChannel(shadowUser.getChannel());
                         int flagsValue=null!=userMap.get(JsonKey.FLAGS_VALUE)?(int)userMap.get(JsonKey.FLAGS_VALUE):0;   // since we are migrating the user from custodian org to non custodian org.
-                        updateUserInUserTable(flagsValue,(String) userMap.get(JsonKey.ID), rootOrgId, shadowUser);
-                        String orgIdFromOrgExtId = getOrgId(shadowUser);
-                        updateUserOrg(orgIdFromOrgExtId, rootOrgId, userMap);
-                        createUserExternalId((String) userMap.get(JsonKey.ID), shadowUser);
-                        updateUserInShadowDb((String) userMap.get(JsonKey.ID), shadowUser, ClaimStatus.CLAIMED.getValue(), null);
-                        syncUserToES((String) userMap.get(JsonKey.ID));
+                        CompletableFuture.supplyAsync(()-> {updateProcessedShadowUser(flagsValue,userMap,rootOrgId,shadowUser);
+                        return null;},executor).thenApply(fn->{
+                            ProjectLogger.log("ShadowUserProcessor:updateUser: User Successfully Updated in Required Tables:"+shadowUser.getProcessId() + userMap, LoggerEnum.INFO.name());
+                            return null;
+                        });
                     }
                 } else if (esUser.size() >1) {
                     ProjectLogger.log("ShadowUserProcessor:updateUser:GOT response from ES :" + esUser, LoggerEnum.INFO.name());
@@ -164,6 +168,16 @@ public class ShadowUserProcessor {
             matchingUserIds.add((String) singleEsUser.get(JsonKey.ID));
         });
         return matchingUserIds;
+    }
+
+
+    private void updateProcessedShadowUser(int flagsValue,Map<String, Object> userMap,String rootOrgId,ShadowUser shadowUser){
+        updateUserInUserTable(flagsValue,(String) userMap.get(JsonKey.ID), rootOrgId, shadowUser);
+        String orgIdFromOrgExtId = getOrgId(shadowUser);
+        updateUserOrg(orgIdFromOrgExtId, rootOrgId, userMap);
+        createUserExternalId((String) userMap.get(JsonKey.ID), shadowUser);
+        updateUserInShadowDb((String) userMap.get(JsonKey.ID), shadowUser, ClaimStatus.CLAIMED.getValue(), null);
+        syncUserToES((String) userMap.get(JsonKey.ID));
     }
 
 

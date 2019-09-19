@@ -39,14 +39,17 @@ public class ShadowUserProcessor {
     private EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(null);
     private ElasticSearchService elasticSearchService = EsClientFactory.getInstance(JsonKey.REST);
 
-    public void process() {
-        ProjectLogger.log("ShadowUserProcessor:process:process started for updating users", LoggerEnum.INFO.name());
-        List<ShadowUser> shadowUserList = getShadowUserFromDb();
-        ProjectLogger.log("ShadowUserProcessor:process:list of shadow user got ".concat(shadowUserList.size() + ""), LoggerEnum.INFO.name());
-        shadowUserList.stream().forEach(singleShadowUser -> {
-            processSingleShadowUser(singleShadowUser);
+    public void process(List<String> unprocessedRecordIds) {
+        ProjectLogger.log("ShadowUserProcessor:process:process started for updating users with processIds size:"+unprocessedRecordIds.size(), LoggerEnum.INFO.name());
+        unprocessedRecordIds.stream().forEach(processId->{
+            List<ShadowUser> shadowUserList = getShadowUsersFromDb(processId);
+            ProjectLogger.log("ShadowUserProcessor:process:list of shadow user got ".concat(shadowUserList.size() + ""), LoggerEnum.INFO.name());
+            shadowUserList.stream().forEach(singleShadowUser -> {
+                processSingleShadowUser(singleShadowUser);
         });
-        ProjectLogger.log("ShadowUserProcessor:process:successfully processed shadow user ".concat(shadowUserList.size() + ""), LoggerEnum.INFO.name());
+            ProjectLogger.log("ShadowUserProcessor:process:successfully processed shadow user ".concat(shadowUserList.size() + ":with processId:"+processId), LoggerEnum.INFO.name());
+
+        });
     }
 
     private void processSingleShadowUser(ShadowUser shadowUser) {
@@ -95,7 +98,7 @@ public class ShadowUserProcessor {
     }
 
     private void updateStatusInUserOrg(ShadowUser shadowUser, String id) {
-        Map<String, Object> propertiesMap = new HashMap<>();
+        Map<String, Object> propertiesMap = new WeakHashMap<>();
         propertiesMap.put(JsonKey.ID, id);
         propertiesMap.put(JsonKey.IS_DELETED, true);
         propertiesMap.put(JsonKey.UPDATED_BY, shadowUser.getAddedBy());
@@ -105,9 +108,9 @@ public class ShadowUserProcessor {
     }
 
     private List<Map<String, Object>> getUserMatchedIdentifierFromES(ShadowUser shadowUser) {
-        Map<String, Object> request = new HashMap<>();
-        Map<String, Object> filters = new HashMap<>();
-        Map<String, Object> or = new HashMap<>();
+        Map<String, Object> request = new WeakHashMap<>();
+        Map<String, Object> filters = new WeakHashMap<>();
+        Map<String, Object> or = new WeakHashMap<>();
         if(StringUtils.isNotBlank(shadowUser.getEmail())) {
             or.put(JsonKey.EMAIL,getEncryptedValue(shadowUser.getEmail().toLowerCase()));
         }
@@ -119,8 +122,9 @@ public class ShadowUserProcessor {
         request.put(JsonKey.FILTERS, filters);
         ProjectLogger.log("ShadowUserProcessor:getUserMatchedIdentifierFromES:the filter prepared for elastic search with processId: "+shadowUser.getProcessId()+" :filters are:"+filters,LoggerEnum.INFO.name());
         SearchDTO searchDTO = ElasticSearchHelper.createSearchDTO(request);
+        searchDTO.setFields(new ArrayList<String>(Arrays.asList(JsonKey.ID,JsonKey.CHANNEL,JsonKey.EMAIL,JsonKey.PHONE,JsonKey.ROOT_ORG_ID,JsonKey.FLAGS_VALUE,JsonKey.ORGANISATIONS,JsonKey.IS_DELETED,JsonKey.STATUS)));
         Map<String, Object> response = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(elasticSearchService.search(searchDTO, JsonKey.USER));
-        ProjectLogger.log("ShadowUserProcessor:getUserMatchedIdentifierFromES:response got from elasticSearch is with processId: "+shadowUser.getProcessId()+" :respone is"+response,LoggerEnum.INFO.name());
+        ProjectLogger.log("ShadowUserProcessor:getUserMatchedIdentifierFromES:response got from elasticSearch is with processId: "+shadowUser.getProcessId()+" :response is"+response,LoggerEnum.INFO.name());
         return (List<Map<String, Object>>) response.get(JsonKey.CONTENT);
     }
 
@@ -149,6 +153,7 @@ public class ShadowUserProcessor {
             } else {
                 ProjectLogger.log("ShadowUserProcessor:updateUser:SKIPPING SHADOW USER:" + shadowUser.toString(), LoggerEnum.INFO.name());
             }
+            esUser.clear();
 
     }
 
@@ -173,7 +178,7 @@ public class ShadowUserProcessor {
     }
 
     private void updateUserInUserTable(int flagValue,String userId, String rootOrgId, ShadowUser shadowUser) {
-        Map<String, Object> propertiesMap = new HashMap<>();
+        Map<String, Object> propertiesMap = new WeakHashMap<>();
         propertiesMap.put(JsonKey.FIRST_NAME, shadowUser.getName());
         propertiesMap.put(JsonKey.ID, userId);
         if(!(UserFlagUtil.assignUserFlagValues(flagValue).get(JsonKey.STATE_VALIDATED))) {
@@ -203,8 +208,8 @@ public class ShadowUserProcessor {
             ProjectLogger.log("ShadowUserProcessor:getRootOrgIdFromChannel: found rootorgid in cache "+rootOrgId, LoggerEnum.INFO.name());
             return rootOrgId;
         }
-        Map<String, Object> request = new HashMap<>();
-        Map<String, Object> filters = new HashMap<>();
+        Map<String, Object> request = new WeakHashMap<>();
+        Map<String, Object> filters = new WeakHashMap<>();
         filters.put(JsonKey.CHANNEL, channel);
         filters.put(JsonKey.IS_ROOT_ORG, true);
         request.put(JsonKey.FILTERS, filters);
@@ -256,10 +261,11 @@ public class ShadowUserProcessor {
         return custodianOrgId;
     }
 
-    private List<ShadowUser> getShadowUserFromDb() {
-        List<Map<String, Object>> shadowUserList = getUnclaimedRowsFromShadowUserDb();
+    private List<ShadowUser> getShadowUsersFromDb(String processId) {
+        List<Map<String, Object>> shadowUserList = getUnclaimedRowsFromShadowUserDb(processId);
         List<ShadowUser> shadowUsers = mapper.convertValue(shadowUserList, new TypeReference<List<ShadowUser>>() {
         });
+        shadowUserList.clear();
         return shadowUsers;
     }
 
@@ -268,16 +274,18 @@ public class ShadowUserProcessor {
      *
      * @return list
      */
-    private List<Map<String, Object>> getUnclaimedRowsFromShadowUserDb() {
-        Map<String, Object> proertiesMap = new HashMap<>();
-        proertiesMap.put(JsonKey.CLAIM_STATUS, ClaimStatus.UNCLAIMED.getValue());
-        Response response = cassandraOperation.getRecordsByProperties(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, proertiesMap);
-        List<Map<String, Object>> result = new ArrayList<>();
+    private List<Map<String, Object>> getUnclaimedRowsFromShadowUserDb(String processId) {
+        Map<String, Object> propertiesMap = new WeakHashMap<>();
+        propertiesMap.put(JsonKey.CLAIM_STATUS, ClaimStatus.UNCLAIMED.getValue());
+        propertiesMap.put(JsonKey.PROCESS_ID,processId);
+        Response response = cassandraOperation.getRecordsByProperties(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, propertiesMap);
+        propertiesMap.clear();
         if (!((List) response.getResult().get(JsonKey.RESPONSE)).isEmpty()) {
-            result = ((List) response.getResult().get(JsonKey.RESPONSE));
+            ProjectLogger.log("ShadowUserMigrationScheduler:getRowsFromBulkUserDb:got rows from Bulk user table is:".concat(((List) response.getResult().get(JsonKey.RESPONSE)).size() + ""), LoggerEnum.INFO.name());
+            return ((List) response.getResult().get(JsonKey.RESPONSE));
         }
-        ProjectLogger.log("ShadowUserMigrationScheduler:getRowsFromBulkUserDb:got rows from Bulk user table is:".concat(result.size() + ""), LoggerEnum.INFO.name());
-        return result;
+        ProjectLogger.log("ShadowUserMigrationScheduler:getRowsFromBulkUserDb:got  0 rows from Bulk user table is", LoggerEnum.INFO.name());
+        return Collections.EMPTY_LIST;
     }
 
     private boolean isSame(ShadowUser shadowUser, Map<String, Object> esUserMap) {
@@ -404,7 +412,7 @@ public class ShadowUserProcessor {
     }
 
     private void createUserExternalId(String userId, ShadowUser shadowUser) {
-        Map<String, Object> externalId = new HashMap<>();
+        Map<String, Object> externalId = new WeakHashMap<>();
         externalId.put(JsonKey.ID_TYPE, shadowUser.getChannel().toLowerCase());
         externalId.put(JsonKey.PROVIDER, shadowUser.getChannel().toLowerCase());
         externalId.put(JsonKey.EXTERNAL_ID, shadowUser.getUserExtId().toLowerCase());

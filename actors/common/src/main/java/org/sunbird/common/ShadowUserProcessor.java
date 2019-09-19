@@ -54,8 +54,8 @@ public class ShadowUserProcessor {
         });
         ProjectLogger.log("ShadowUserProcessor:process:successfully migrated shadow user", LoggerEnum.INFO.name());
     }
-    private void processSingleShadowUser(ShadowUser shadowUser) {
-        updateUser(shadowUser);
+    private void processSingleShadowUser( ExecutorService executor,ShadowUser shadowUser) {
+        updateUser(executor,shadowUser);
     }
     /**
      * this method will be called when the user is already claimed need to update the user
@@ -128,8 +128,7 @@ public class ShadowUserProcessor {
         return (List<Map<String, Object>>) response.get(JsonKey.CONTENT);
     }
 
-    private void updateUser(ShadowUser shadowUser) {
-        ExecutorService executor = Executors.newFixedThreadPool(N_THREADS);
+    private void updateUser( ExecutorService executor,ShadowUser shadowUser) {
         List<Map<String, Object>> esUser = getUserMatchedIdentifierFromES(shadowUser);
             ProjectLogger.log("ShadowUserProcessor:updateUser:GOT ES RESPONSE FOR USER WITH SIZE " + esUser.size(), LoggerEnum.INFO.name());
             if (CollectionUtils.isNotEmpty(esUser)) {
@@ -290,12 +289,13 @@ public class ShadowUserProcessor {
             public void onSuccess(ResultSet result) {
                 Map<String, String> columnMap = CassandraUtil.fetchColumnsMapping(result);
                 try {
+                    ExecutorService executor = Executors.newFixedThreadPool(N_THREADS);
                     Iterator<Row> resultIterator = result.iterator();
                     while (resultIterator.hasNext()) {
                         Row row = resultIterator.next();
                         Map<String, Object> doc = syncDataForEachRow(row, columnMap);
                         ShadowUser singleShadowUser = mapper.convertValue(doc, ShadowUser.class);
-                        processSingleShadowUser(singleShadowUser);
+                        processSingleShadowUser(executor,singleShadowUser);
                         ProjectLogger.log("ShadowUserProcessor:getSyncCallback:SUCCESS:SYNC CALLBACK SUCCESSFULLY PROCESSED for Shadow user: "+singleShadowUser.toString(), LoggerEnum.INFO.name());
                     }
                     ProjectLogger.log("ShadowUserProcessor:getSyncCallback:SUCCESS:SYNC CALLBACK SUCCESSFULLY MIGRATED  ALL Shadow user", LoggerEnum.INFO.name());

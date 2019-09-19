@@ -9,8 +9,8 @@ package org.sunbird.bean;
 public enum ClaimStatus {
 
 
-    CLAIMED(0),
-    UNCLAIMED(1),
+    CLAIMED(1),
+    UNCLAIMED(0),
     REJECTED(2),
     FAILED(3),
     MULTIMATCH(4),

@@ -153,7 +153,6 @@ public class ShadowUserProcessor {
                 ProjectLogger.log("ShadowUserProcessor:updateUser:SKIPPING SHADOW USER:" + shadowUser.toString(), LoggerEnum.INFO.name());
             }
             esUser.clear();
-           executor.shutdown();
 
     }
 
@@ -288,8 +287,9 @@ public class ShadowUserProcessor {
             @Override
             public void onSuccess(ResultSet result) {
                 Map<String, String> columnMap = CassandraUtil.fetchColumnsMapping(result);
+                ExecutorService executor=null;
                 try {
-                    ExecutorService executor = Executors.newFixedThreadPool(N_THREADS);
+                   executor = Executors.newFixedThreadPool(N_THREADS);
                     Iterator<Row> resultIterator = result.iterator();
                     while (resultIterator.hasNext()) {
                         Row row = resultIterator.next();
@@ -302,6 +302,10 @@ public class ShadowUserProcessor {
 
                 } catch (Exception e) {
                     ProjectLogger.log("ShadowUserProcessor:getSyncCallback:SUCCESS:ERROR OCCURRED WHILE GETTING SYNC CALLBACKS"+e, LoggerEnum.ERROR.name());
+                }
+
+                finally {
+                    executor.shutdown();
                 }
             }
             @Override

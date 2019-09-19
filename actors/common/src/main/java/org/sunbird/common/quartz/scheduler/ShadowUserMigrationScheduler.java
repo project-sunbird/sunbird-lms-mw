@@ -116,7 +116,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
      * @return list
      */
     private List<String> getUnprocessedRecordIds() {
-        Response response = cassandraOperation.getRecordWithCondition(bulkUploadDbInfo.getKeySpace(), bulkUploadDbInfo.getTableName(),JsonKey.ID, JsonKey.STATUS, ProjectUtil.BulkProcessStatus.INTERRUPT.getValue());
+        Response response = cassandraOperation.getRecordByObjectType(bulkUploadDbInfo.getKeySpace(), bulkUploadDbInfo.getTableName(),JsonKey.ID, JsonKey.STATUS, ProjectUtil.BulkProcessStatus.INTERRUPT.getValue(),JsonKey.MIGRATION_USER_OBJECT);
         List<Map<String, Object>> result = new ArrayList<>();
         if (!((List) response.getResult().get(JsonKey.RESPONSE)).isEmpty()) {
             result = ((List) response.getResult().get(JsonKey.RESPONSE));

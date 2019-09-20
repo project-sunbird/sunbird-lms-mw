@@ -48,9 +48,12 @@ public class ShadowUserProcessor {
             ProjectLogger.log("ShadowUserProcessor:process:successfully processed shadow user ".concat(shadowUserList.size() + ":with processId:"+processId), LoggerEnum.INFO.name());
 
         });
+
+        ProjectLogger.log("ShadowUserProcessor:process:successfully processed shadow user Stage3 ended", LoggerEnum.INFO.name());
     }
 
     private void processSingleShadowUser(ShadowUser shadowUser) {
+        ProjectLogger.log("ShadowUserProcessor:processSingleShadowUser:started claming  shadow user with processId: "+shadowUser.getProcessId(),LoggerEnum.INFO.name());
         updateUser(shadowUser);
     }
 
@@ -67,6 +70,7 @@ public class ShadowUserProcessor {
         String userId = (String) esUser.get(JsonKey.ID);
         String rootOrgId = (String) esUser.get(JsonKey.ROOT_ORG_ID);
         int flagsValue=null!=esUser.get(JsonKey.FLAGS_VALUE)?(int)esUser.get(JsonKey.FLAGS_VALUE):0;   // since we are migrating the user from custodian org to non custodian org.
+        ProjectLogger.log("ShadowUserProcessor:processClaimedUser:Got Flag Value "+flagsValue,LoggerEnum.INFO.name());
         if (!((String) esUser.get(JsonKey.FIRST_NAME)).equalsIgnoreCase(shadowUser.getName()) || ((int) esUser.get(JsonKey.STATUS)) != shadowUser.getUserStatus()) {
             updateUserInUserTable(flagsValue,shadowUser.getUserId(), rootOrgId, shadowUser);
         }

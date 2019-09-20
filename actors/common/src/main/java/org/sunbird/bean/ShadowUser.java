@@ -28,27 +28,6 @@ public class ShadowUser {
     public ShadowUser() {
     }
 
-    @Override
-    public String toString() {
-        return "ShadowUser{" +
-                "claimedOn=" + claimedOn +
-                ", claimStatus=" + claimStatus +
-                ", createdOn=" + createdOn +
-                ", email='" + email + '\'' +
-                ", name='" + name + '\'' +
-                ", orgExtId='" + orgExtId + '\'' +
-                ", phone='" + phone + '\'' +
-                ", processId='" + processId + '\'' +
-                ", updatedOn=" + updatedOn +
-                ", userExtId='" + userExtId + '\'' +
-                ", userId='" + userId + '\'' +
-                ", userStatus=" + userStatus +
-                ", userIds=" + userIds +
-                ", channel='" + channel + '\'' +
-                ", addedBy='" + addedBy + '\'' +
-                '}';
-    }
-
     public ShadowUser(ShadowUserBuilder shadowUserBuilder) {
         this.claimedOn = shadowUserBuilder.claimedOn;
         this.claimStatus = shadowUserBuilder.claimStatus;

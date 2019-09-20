@@ -1,9 +1,7 @@
 package org.sunbird.common;
 
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.util.concurrent.FutureCallback;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -28,9 +26,6 @@ import scala.concurrent.Future;
 
 import java.sql.Timestamp;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class ShadowUserProcessor {
     private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
@@ -40,7 +35,6 @@ public class ShadowUserProcessor {
     private Map<String, String> extOrgIdMap = new HashMap<>();
     private Map<String,String>channelOrgIdMap=new HashMap<>();
     private String custodianOrgId;
-    private static final int N_THREADS=5;
 
     private EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(null);
     private ElasticSearchService elasticSearchService = EsClientFactory.getInstance(JsonKey.REST);
@@ -48,15 +42,21 @@ public class ShadowUserProcessor {
     public void process(List<String> unprocessedRecordIds) {
         ProjectLogger.log("ShadowUserProcessor:process:process started for updating users with processIds size:"+unprocessedRecordIds.size(), LoggerEnum.INFO.name());
         unprocessedRecordIds.stream().forEach(processId->{
-            ProjectLogger.log("ShadowUserProcessor:process:process started for updating users with processId:"+processId, LoggerEnum.INFO.name());
-            getUnclaimedRowsFromShadowUserDb(processId);
-            ProjectLogger.log("ShadowUserProcessor:process:process ended for updating users with processId:"+processId, LoggerEnum.INFO.name());
+            List<ShadowUser> shadowUserList = getShadowUsersFromDb(processId);
+            ProjectLogger.log("ShadowUserProcessor:process:list of shadow user got ".concat(shadowUserList.size() + ""), LoggerEnum.INFO.name());
+            shadowUserList.stream().forEach(singleShadowUser -> {
+                processSingleShadowUser(singleShadowUser);
         });
-        ProjectLogger.log("ShadowUserProcessor:process:successfully migrated shadow user", LoggerEnum.INFO.name());
+            ProjectLogger.log("ShadowUserProcessor:process:successfully processed shadow user ".concat(shadowUserList.size() + ":with processId:"+processId), LoggerEnum.INFO.name());
+
+        });
     }
-    private void processSingleShadowUser( ExecutorService executor,ShadowUser shadowUser) {
-        updateUser(executor,shadowUser);
+
+    private void processSingleShadowUser(ShadowUser shadowUser) {
+        updateUser(shadowUser);
     }
+
+
     /**
      * this method will be called when the user is already claimed need to update the user
      *
@@ -128,8 +128,8 @@ public class ShadowUserProcessor {
         return (List<Map<String, Object>>) response.get(JsonKey.CONTENT);
     }
 
-    private void updateUser( ExecutorService executor,ShadowUser shadowUser) {
-        List<Map<String, Object>> esUser = getUserMatchedIdentifierFromES(shadowUser);
+    private void updateUser(ShadowUser shadowUser) {
+            List<Map<String, Object>> esUser = getUserMatchedIdentifierFromES(shadowUser);
             ProjectLogger.log("ShadowUserProcessor:updateUser:GOT ES RESPONSE FOR USER WITH SIZE " + esUser.size(), LoggerEnum.INFO.name());
             if (CollectionUtils.isNotEmpty(esUser)) {
                 if (esUser.size() == 1) {
@@ -139,11 +139,12 @@ public class ShadowUserProcessor {
                         ProjectLogger.log("ShadowUserProcessor:updateUser: provided user details doesn't match with existing user details with processId"+shadowUser.getProcessId() + userMap, LoggerEnum.INFO.name());
                         String rootOrgId = getRootOrgIdFromChannel(shadowUser.getChannel());
                         int flagsValue=null!=userMap.get(JsonKey.FLAGS_VALUE)?(int)userMap.get(JsonKey.FLAGS_VALUE):0;   // since we are migrating the user from custodian org to non custodian org.
-                        CompletableFuture.supplyAsync(()-> {updateProcessedShadowUser(flagsValue,userMap,rootOrgId,shadowUser);
-                        return null;},executor).thenApply(fn->{
-                            ProjectLogger.log("ShadowUserProcessor:updateUser: User Successfully Updated in Required Tables:"+shadowUser.getProcessId() + userMap, LoggerEnum.INFO.name());
-                            return null;
-                        });
+                        updateUserInUserTable(flagsValue,(String) userMap.get(JsonKey.ID), rootOrgId, shadowUser);
+                        String orgIdFromOrgExtId = getOrgId(shadowUser);
+                        updateUserOrg(orgIdFromOrgExtId, rootOrgId, userMap);
+                        createUserExternalId((String) userMap.get(JsonKey.ID), shadowUser);
+                        updateUserInShadowDb((String) userMap.get(JsonKey.ID), shadowUser, ClaimStatus.CLAIMED.getValue(), null);
+                        syncUserToES((String) userMap.get(JsonKey.ID));
                     }
                 } else if (esUser.size() >1) {
                     ProjectLogger.log("ShadowUserProcessor:updateUser:GOT response from ES :" + esUser, LoggerEnum.INFO.name());
@@ -163,16 +164,6 @@ public class ShadowUserProcessor {
             matchingUserIds.add((String) singleEsUser.get(JsonKey.ID));
         });
         return matchingUserIds;
-    }
-
-
-    private void updateProcessedShadowUser(int flagsValue,Map<String, Object> userMap,String rootOrgId,ShadowUser shadowUser){
-        updateUserInUserTable(flagsValue,(String) userMap.get(JsonKey.ID), rootOrgId, shadowUser);
-        String orgIdFromOrgExtId = getOrgId(shadowUser);
-        updateUserOrg(orgIdFromOrgExtId, rootOrgId, userMap);
-        createUserExternalId((String) userMap.get(JsonKey.ID), shadowUser);
-        updateUserInShadowDb((String) userMap.get(JsonKey.ID), shadowUser, ClaimStatus.CLAIMED.getValue(), null);
-        syncUserToES((String) userMap.get(JsonKey.ID));
     }
 
 
@@ -269,61 +260,32 @@ public class ShadowUserProcessor {
         }
         return custodianOrgId;
     }
+
+    private List<ShadowUser> getShadowUsersFromDb(String processId) {
+        List<Map<String, Object>> shadowUserList = getUnclaimedRowsFromShadowUserDb(processId);
+        List<ShadowUser> shadowUsers = mapper.convertValue(shadowUserList, new TypeReference<List<ShadowUser>>() {
+        });
+        shadowUserList.clear();
+        return shadowUsers;
+    }
+
     /**
      * this method will read rows from the shadow_user table who has status unclaimed
      *
      * @return list
      */
-    private void getUnclaimedRowsFromShadowUserDb(String processId) {
+    private List<Map<String, Object>> getUnclaimedRowsFromShadowUserDb(String processId) {
         Map<String, Object> propertiesMap = new WeakHashMap<>();
         propertiesMap.put(JsonKey.CLAIM_STATUS, ClaimStatus.UNCLAIMED.getValue());
         propertiesMap.put(JsonKey.PROCESS_ID,processId);
-        cassandraOperation.applyOperationOnRecordsAsync(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, propertiesMap,null,getSyncCallback());
+        Response response = cassandraOperation.getRecordsByProperties(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, propertiesMap);
         propertiesMap.clear();
-    }
-
-    private FutureCallback<ResultSet> getSyncCallback() {
-        return new FutureCallback<ResultSet>() {
-            @Override
-            public void onSuccess(ResultSet result) {
-                Map<String, String> columnMap = CassandraUtil.fetchColumnsMapping(result);
-                ExecutorService executor=null;
-                try {
-                   executor = Executors.newFixedThreadPool(N_THREADS);
-                    Iterator<Row> resultIterator = result.iterator();
-                    while (resultIterator.hasNext()) {
-                        Row row = resultIterator.next();
-                        Map<String, Object> doc = syncDataForEachRow(row, columnMap);
-                        ShadowUser singleShadowUser = mapper.convertValue(doc, ShadowUser.class);
-                        processSingleShadowUser(executor,singleShadowUser);
-                        ProjectLogger.log("ShadowUserProcessor:getSyncCallback:SUCCESS:SYNC CALLBACK SUCCESSFULLY PROCESSED for Shadow user: "+singleShadowUser.toString(), LoggerEnum.INFO.name());
-                    }
-                    ProjectLogger.log("ShadowUserProcessor:getSyncCallback:SUCCESS:SYNC CALLBACK SUCCESSFULLY MIGRATED  ALL Shadow user", LoggerEnum.INFO.name());
-
-                } catch (Exception e) {
-                    ProjectLogger.log("ShadowUserProcessor:getSyncCallback:SUCCESS:ERROR OCCURRED WHILE GETTING SYNC CALLBACKS"+e, LoggerEnum.ERROR.name());
-                }
-
-                finally {
-                    executor.shutdown();
-                }
-            }
-            @Override
-            public void onFailure(Throwable t) {
-                ProjectLogger.log("ShadowUserProcessor:getSyncCallback:FAILURE:ERROR OCCURRED WHILE GETTING SYNC CALLBACKS"+t, LoggerEnum.ERROR.name());
-            }
-        };
-    }
-    private Map<String, Object> syncDataForEachRow(Row row, Map<String, String> columnMap) {
-        Map<String, Object> rowMap = new HashMap<>();
-        columnMap
-                .entrySet()
-                .forEach(entry -> {
-                            Object value = row.getObject(entry.getValue());
-                            rowMap.put(entry.getKey(), value);
-                        });
-        ProjectLogger.log("ShadowUserProcessor:syncDataForEachRow:row map returned "+rowMap, LoggerEnum.INFO.name());
-        return rowMap;
+        if (!((List) response.getResult().get(JsonKey.RESPONSE)).isEmpty()) {
+            ProjectLogger.log("ShadowUserMigrationScheduler:getRowsFromBulkUserDb:got rows from Bulk user table is:".concat(((List) response.getResult().get(JsonKey.RESPONSE)).size() + ""), LoggerEnum.INFO.name());
+            return ((List) response.getResult().get(JsonKey.RESPONSE));
+        }
+        ProjectLogger.log("ShadowUserMigrationScheduler:getRowsFromBulkUserDb:got  0 rows from Bulk user table is", LoggerEnum.INFO.name());
+        return Collections.EMPTY_LIST;
     }
 
     private boolean isSame(ShadowUser shadowUser, Map<String, Object> esUserMap) {

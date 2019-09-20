@@ -64,11 +64,12 @@ public class ShadowUserProcessor {
      * @param shadowUser
      */
     public void processClaimedUser(ShadowUser shadowUser) {
-        ProjectLogger.log("ShadowUserProcessor:processClaimedUser:started claming shadow user with processId:"+shadowUser.getProcessId()+":with shadow user:"+shadowUser.toString(),LoggerEnum.INFO.name());
+        ProjectLogger.log("ShadowUserProcessor:processClaimedUser:started claming shadow user with processId: "+shadowUser.getProcessId(),LoggerEnum.INFO.name());
         String orgId = getOrgId(shadowUser);
         Map<String, Object> esUser = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(elasticSearchService.getDataByIdentifier(ProjectUtil.EsType.user.getTypeName(), shadowUser.getUserId()));
         String userId = (String) esUser.get(JsonKey.ID);
         String rootOrgId = (String) esUser.get(JsonKey.ROOT_ORG_ID);
+        ProjectLogger.log("ShadowUserProcessor:processClaimedUser:started: flag value got from es "+esUser.get(JsonKey.FLAGS_VALUE) ,LoggerEnum.INFO.name());
         int flagsValue=null!=esUser.get(JsonKey.FLAGS_VALUE)?(int)esUser.get(JsonKey.FLAGS_VALUE):0;   // since we are migrating the user from custodian org to non custodian org.
         ProjectLogger.log("ShadowUserProcessor:processClaimedUser:Got Flag Value "+flagsValue,LoggerEnum.INFO.name());
         if (!((String) esUser.get(JsonKey.FIRST_NAME)).equalsIgnoreCase(shadowUser.getName()) || ((int) esUser.get(JsonKey.STATUS)) != shadowUser.getUserStatus()) {
@@ -141,6 +142,7 @@ public class ShadowUserProcessor {
                         ProjectLogger.log("ShadowUserProcessor:updateUser: provided user details doesn't match with existing user details with processId"+shadowUser.getProcessId() + userMap, LoggerEnum.INFO.name());
                         String rootOrgId = getRootOrgIdFromChannel(shadowUser.getChannel());
                         int flagsValue=null!=userMap.get(JsonKey.FLAGS_VALUE)?(int)userMap.get(JsonKey.FLAGS_VALUE):0;   // since we are migrating the user from custodian org to non custodian org.
+                        ProjectLogger.log("ShadowUserProcessor:processClaimedUser:Got Flag Value "+flagsValue,LoggerEnum.INFO.name());
                         updateUserInUserTable(flagsValue,(String) userMap.get(JsonKey.ID), rootOrgId, shadowUser);
                         String orgIdFromOrgExtId = getOrgId(shadowUser);
                         updateUserOrg(orgIdFromOrgExtId, rootOrgId, userMap);
@@ -201,7 +203,7 @@ public class ShadowUserProcessor {
         propertiesMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
         ProjectLogger.log("ShadowUserProcessor:updateUserInUserTable: properties map formed for user update: "+propertiesMap,LoggerEnum.INFO.name());
         Response response = cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), propertiesMap);
-        ProjectLogger.log("ShadowUserProcessor:updateUserInUserTable:user is updated with shadow user:"+shadowUser.toString()+":RESPONSE FROM CASSANDRA IS:"+response+":with processId:"+shadowUser.getProcessId(),LoggerEnum.INFO.name());
+        ProjectLogger.log("ShadowUserProcessor:updateUserInUserTable:user is updated with shadow user:RESPONSE FROM CASSANDRA IS:"+response.getResult(),LoggerEnum.INFO.name());
     }
 
 

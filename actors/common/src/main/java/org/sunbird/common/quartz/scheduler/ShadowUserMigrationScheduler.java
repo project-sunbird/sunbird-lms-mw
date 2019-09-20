@@ -59,7 +59,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
     public void startMigration(){
         List<String> unprocessedRecordIds = getUnprocessedRecordIds();
         ProjectLogger.log("ShadowUserMigrationScheduler:startMigration:Got Bulk Upload Db migrations started",LoggerEnum.INFO.name());
-        ProjectLogger.log("ShadowUserMigrationScheduler:startMigration:Got Bulk Upload Db unprocessed and failed records size is"+unprocessedRecordIds.size(),LoggerEnum.INFO.name());
+        ProjectLogger.log("ShadowUserMigrationScheduler:startMigration:Got Bulk Upload Db unprocessed and failed records size is:"+unprocessedRecordIds.size(),LoggerEnum.INFO.name());
         processRecords(unprocessedRecordIds);
         ShadowUserProcessor processorObject=new  ShadowUserProcessor();
         processorObject.process(unprocessedRecordIds);
@@ -191,6 +191,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
         Map<String, Object> dbMap = new WeakHashMap<>();
         dbMap.put(JsonKey.USER_EXT_ID,migrationUser.getUserExternalId());
         dbMap.put(JsonKey.ORG_EXT_ID,migrationUser.getOrgExternalId());
+        ProjectLogger.log("ShadowUserMigrationScheduler:insertShadowUser: email got  "+migrationUser.getEmail()+" "+migrationUser.getPhone(), LoggerEnum.INFO.name());
         dbMap.put(JsonKey.EMAIL,StringUtils.isNotBlank(migrationUser.getEmail())?getEncryptedValue(migrationUser.getEmail().toLowerCase()):migrationUser.getEmail());
         dbMap.put(JsonKey.PHONE,StringUtils.isNotBlank(migrationUser.getPhone())?getEncryptedValue(migrationUser.getPhone().toLowerCase()):migrationUser.getPhone());
         dbMap.put(JsonKey.ADDED_BY,createdBy);
@@ -358,6 +359,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
         try {
             return encryptionService.encryptData(key);
         } catch (Exception e) {
+            ProjectLogger.log("ShadowUserMigrationScheduler:getEncryptedValue: error occurred in encrypting value "+key,LoggerEnum.ERROR.name());
             return key;
         }
     }

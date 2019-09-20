@@ -58,7 +58,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
 
     public void startMigration(){
         List<String> unprocessedRecordIds = getUnprocessedRecordIds();
-        ProjectLogger.log("ShadowUserMigrationScheduler:startMigration:Got Bulk Upload Db Started Encrypting data",LoggerEnum.INFO.name());
+        ProjectLogger.log("ShadowUserMigrationScheduler:startMigration:Got Bulk Upload Db migrations started",LoggerEnum.INFO.name());
         ProjectLogger.log("ShadowUserMigrationScheduler:startMigration:Got Bulk Upload Db unprocessed and failed records size is"+unprocessedRecordIds.size(),LoggerEnum.INFO.name());
         processRecords(unprocessedRecordIds);
         ShadowUserProcessor processorObject=new  ShadowUserProcessor();

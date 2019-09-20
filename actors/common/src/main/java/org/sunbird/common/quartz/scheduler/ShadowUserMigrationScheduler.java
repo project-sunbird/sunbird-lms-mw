@@ -191,6 +191,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
         Map<String, Object> dbMap = new WeakHashMap<>();
         dbMap.put(JsonKey.USER_EXT_ID,migrationUser.getUserExternalId());
         dbMap.put(JsonKey.ORG_EXT_ID,migrationUser.getOrgExternalId());
+        ProjectLogger.log("ShadowUserMigrationScheduler:insertShadowUser: email got  "+migrationUser.getEmail()+" "+migrationUser.getPhone(), LoggerEnum.INFO.name());
         dbMap.put(JsonKey.EMAIL,StringUtils.isNotBlank(migrationUser.getEmail())?getEncryptedValue(migrationUser.getEmail().toLowerCase()):migrationUser.getEmail());
         dbMap.put(JsonKey.PHONE,StringUtils.isNotBlank(migrationUser.getPhone())?getEncryptedValue(migrationUser.getPhone().toLowerCase()):migrationUser.getPhone());
         dbMap.put(JsonKey.ADDED_BY,createdBy);

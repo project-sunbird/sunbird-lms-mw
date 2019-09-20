@@ -258,6 +258,9 @@ public final class SchedulerManager {
     ProjectLogger.log(
         "SchedulerManager:scheduleShadowUser:scheduleShadowUser scheduler started",
         LoggerEnum.INFO.name());
+    ProjectLogger.log(
+            "SchedulerManager:scheduleShadowUser:scheduleShadowUser scheduler started seconde log",
+            LoggerEnum.INFO.name());
     JobDetail migrateShadowUserJob =
         JobBuilder.newJob(ShadowUserMigrationScheduler.class)
             .requestRecovery(true)

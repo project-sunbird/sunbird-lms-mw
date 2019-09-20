@@ -21,6 +21,7 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
+import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.bulkupload.model.BulkMigrationUser;
@@ -37,6 +38,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
     private HashSet<String>verifiedChannelOrgExternalIdSet=new HashSet<>();
     private ElasticSearchService elasticSearchService = EsClientFactory.getInstance(JsonKey.REST);
     private DecryptionService decryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(null);
+    private EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(null);
 
 
 
@@ -63,7 +65,6 @@ public class ShadowUserMigrationScheduler extends BaseJob{
         unprocessedRecordIds.clear();
         ProjectLogger.log("ShadowUserMigrationScheduler:processRecords:Scheduler Job Ended for ShadowUser Migration",LoggerEnum.INFO.name());
         ProjectLogger.log("ShadowUserMigrationScheduler:execute:Scheduler Job ended for shadow user migration",LoggerEnum.INFO.name());
-
     }
 
     /**
@@ -189,8 +190,8 @@ public class ShadowUserMigrationScheduler extends BaseJob{
         Map<String, Object> dbMap = new WeakHashMap<>();
         dbMap.put(JsonKey.USER_EXT_ID,migrationUser.getUserExternalId());
         dbMap.put(JsonKey.ORG_EXT_ID,migrationUser.getOrgExternalId());
-        dbMap.put(JsonKey.EMAIL,migrationUser.getEmail());
-        dbMap.put(JsonKey.PHONE,migrationUser.getPhone());
+        dbMap.put(JsonKey.EMAIL,StringUtils.isNotBlank(migrationUser.getEmail())?getEncryptedValue(migrationUser.getEmail().toLowerCase()):migrationUser.getEmail());
+        dbMap.put(JsonKey.PHONE,StringUtils.isNotBlank(migrationUser.getPhone())?getEncryptedValue(migrationUser.getPhone().toLowerCase()):migrationUser.getPhone());
         dbMap.put(JsonKey.ADDED_BY,createdBy);
         dbMap.put(JsonKey.CHANNEL,migrationUser.getChannel());
         dbMap.put(JsonKey.NAME,migrationUser.getName());
@@ -351,4 +352,14 @@ public class ShadowUserMigrationScheduler extends BaseJob{
         response.clear();
         return false;
         }
+
+    private String getEncryptedValue(String key) {
+        try {
+            return encryptionService.encryptData(key);
+        } catch (Exception e) {
+            return key;
+        }
+    }
+
+
 }

@@ -141,6 +141,7 @@ public class ShadowUserProcessor {
                         ProjectLogger.log("ShadowUserProcessor:updateUser: provided user details doesn't match with existing user details with processId"+shadowUser.getProcessId() + userMap, LoggerEnum.INFO.name());
                         String rootOrgId = getRootOrgIdFromChannel(shadowUser.getChannel());
                         int flagsValue=null!=userMap.get(JsonKey.FLAGS_VALUE)?(int)userMap.get(JsonKey.FLAGS_VALUE):0;   // since we are migrating the user from custodian org to non custodian org.
+                        ProjectLogger.log("ShadowUserProcessor:processClaimedUser:Got Flag Value "+flagsValue,LoggerEnum.INFO.name());
                         updateUserInUserTable(flagsValue,(String) userMap.get(JsonKey.ID), rootOrgId, shadowUser);
                         String orgIdFromOrgExtId = getOrgId(shadowUser);
                         updateUserOrg(orgIdFromOrgExtId, rootOrgId, userMap);

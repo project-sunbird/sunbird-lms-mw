@@ -59,7 +59,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
     public void startMigration(){
         List<String> unprocessedRecordIds = getUnprocessedRecordIds();
         ProjectLogger.log("ShadowUserMigrationScheduler:startMigration:Got Bulk Upload Db migrations started",LoggerEnum.INFO.name());
-        ProjectLogger.log("ShadowUserMigrationScheduler:startMigration:Got Bulk Upload Db unprocessed and failed records size is"+unprocessedRecordIds.size(),LoggerEnum.INFO.name());
+        ProjectLogger.log("ShadowUserMigrationScheduler:startMigration:Got Bulk Upload Db unprocessed and failed records size is:"+unprocessedRecordIds.size(),LoggerEnum.INFO.name());
         processRecords(unprocessedRecordIds);
         ShadowUserProcessor processorObject=new  ShadowUserProcessor();
         processorObject.process(unprocessedRecordIds);
@@ -358,6 +358,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
         try {
             return encryptionService.encryptData(key);
         } catch (Exception e) {
+            ProjectLogger.log("ShadowUserMigrationScheduler:getEncryptedValue: error occurred in encrypting value "+key,LoggerEnum.ERROR.name());
             return key;
         }
     }

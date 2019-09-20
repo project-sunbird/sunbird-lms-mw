@@ -15,7 +15,6 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.UserFlagEnum;
@@ -36,7 +35,6 @@ public class ShadowUserProcessor {
     private Map<String,String>channelOrgIdMap=new HashMap<>();
     private String custodianOrgId;
 
-    private EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(null);
     private ElasticSearchService elasticSearchService = EsClientFactory.getInstance(JsonKey.REST);
 
     public void process(List<String> unprocessedRecordIds) {
@@ -112,10 +110,10 @@ public class ShadowUserProcessor {
         Map<String, Object> filters = new WeakHashMap<>();
         Map<String, Object> or = new WeakHashMap<>();
         if(StringUtils.isNotBlank(shadowUser.getEmail())) {
-            or.put(JsonKey.EMAIL,getEncryptedValue(shadowUser.getEmail().toLowerCase()));
+            or.put(JsonKey.EMAIL,shadowUser.getEmail());
         }
         if(StringUtils.isNotBlank(shadowUser.getPhone())) {
-            or.put(JsonKey.PHONE,getEncryptedValue(shadowUser.getPhone()));
+            or.put(JsonKey.PHONE,shadowUser.getPhone());
         }
         filters.put(JsonKey.ES_OR_OPERATION, or);
         filters.put(JsonKey.ROOT_ORG_ID, getCustodianOrgId());
@@ -182,6 +180,7 @@ public class ShadowUserProcessor {
         propertiesMap.put(JsonKey.FIRST_NAME, shadowUser.getName());
         propertiesMap.put(JsonKey.ID, userId);
         if(!(UserFlagUtil.assignUserFlagValues(flagValue).get(JsonKey.STATE_VALIDATED))) {
+            ProjectLogger.log("ShadowUserProcessor:updateUserInUserTable: updating Flag Value",LoggerEnum.INFO.name());
             propertiesMap.put(JsonKey.FLAGS_VALUE, flagValue + UserFlagEnum.STATE_VALIDATED.getUserFlagValue());
         }
         propertiesMap.put(JsonKey.UPDATED_BY, shadowUser.getAddedBy());
@@ -196,7 +195,7 @@ public class ShadowUserProcessor {
         propertiesMap.put(JsonKey.USER_TYPE, UserType.TEACHER.getTypeName());
         propertiesMap.put(JsonKey.CHANNEL, shadowUser.getChannel());
         propertiesMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
-        ProjectLogger.log("ShadowUserProcessor:updateUserInUserTable: properties map formed for user update:"+propertiesMap,LoggerEnum.INFO.name());
+        ProjectLogger.log("ShadowUserProcessor:updateUserInUserTable: properties map formed for user update: "+propertiesMap,LoggerEnum.INFO.name());
         Response response = cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), propertiesMap);
         ProjectLogger.log("ShadowUserProcessor:updateUserInUserTable:user is updated with shadow user:"+shadowUser.toString()+":RESPONSE FROM CASSANDRA IS:"+response+":with processId:"+shadowUser.getProcessId(),LoggerEnum.INFO.name());
     }
@@ -223,14 +222,6 @@ public class ShadowUserProcessor {
             return (String) esContent.get(JsonKey.ID);
         }
         return StringUtils.EMPTY;
-    }
-
-    private String getEncryptedValue(String key) {
-        try {
-            return encryptionService.encryptData(key);
-        } catch (Exception e) {
-            return key;
-        }
     }
 
 
@@ -321,7 +312,7 @@ public class ShadowUserProcessor {
         compositeKeysMap.put(JsonKey.CHANNEL, shadowUser.getChannel());
         compositeKeysMap.put(JsonKey.USER_EXT_ID, shadowUser.getUserExtId());
         Response response = cassandraOperation.updateRecord(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, propertiesMap, compositeKeysMap);
-        ProjectLogger.log("ShadowUserProcessor:updateUserInShadowDb:update:with processId:"+shadowUser.getProcessId()+":and response is:"+response, LoggerEnum.INFO.name());
+        ProjectLogger.log("ShadowUserProcessor:updateUserInShadowDb:update:with processId: "+shadowUser.getProcessId()+" :and response is:"+response, LoggerEnum.INFO.name());
     }
 
     private String getOrgId(ShadowUser shadowUser) {

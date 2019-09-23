@@ -40,7 +40,7 @@ public class ShadowUserProcessor {
     private ElasticSearchService elasticSearchService = EsClientFactory.getInstance(JsonKey.REST);
 
     public void process() {
-        getUnclaimedRowsFromShadowUserDb();
+        processAllUnclaimedUser();
         ProjectLogger.log("ShadowUserProcessor:process:successfully processed shadow user Stage3 ended", LoggerEnum.INFO.name());
     }
 
@@ -290,6 +290,14 @@ public class ShadowUserProcessor {
         return rowMap;
     }
 
+
+
+    private void processAllUnclaimedUser(){
+
+        ProjectLogger.log("ShadowUserProcessor:processAllUnclaimedUser:started processing all unclaimed user", LoggerEnum.INFO.name());
+        getUnclaimedRowsFromShadowUserDb();
+    }
+
     private void getUnclaimedRowsFromShadowUserDb() {
         Map<String, Object> propertiesMap = new WeakHashMap<>();
         propertiesMap.put(JsonKey.CLAIM_STATUS, ClaimStatus.UNCLAIMED.getValue());
@@ -445,7 +453,5 @@ public class ShadowUserProcessor {
         Response response = cassandraOperation.insertRecord(JsonKey.SUNBIRD, JsonKey.USR_EXT_IDNT_TABLE, externalId);
         ProjectLogger.log("ShadowUserProcessor:createUserExternalId:response from cassandra ".concat(response.getResult() + ""), LoggerEnum.INFO.name());
     }
-
-
 }
 

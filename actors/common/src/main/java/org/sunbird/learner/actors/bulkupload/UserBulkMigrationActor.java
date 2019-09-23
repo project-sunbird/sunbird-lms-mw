@@ -53,7 +53,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
     public static final String SHADOW_USER_UPLOAD="ShadowUserUpload";
     @Override
     public void onReceive(Request request) throws Throwable {
-        Util.initializeContext(request, TelemetryEnvKey.USER);
+        Util.initializeContext(request, SHADOW_USER_UPLOAD);
         ExecutionContext.setRequestId(request.getRequestId());
         String operation = request.getOperation();
         if (operation.equalsIgnoreCase(BulkUploadActorOperation.USER_BULK_MIGRATION.getValue())) {

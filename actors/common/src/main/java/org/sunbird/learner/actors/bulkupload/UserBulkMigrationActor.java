@@ -23,6 +23,7 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.bulkupload.model.BulkMigrationUser;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.systemsetting.SystemSetting;
+import org.sunbird.telemetry.util.TelemetryUtil;
 
 import java.io.IOException;
 import java.sql.Timestamp;
@@ -49,6 +50,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
     private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     private static ObjectMapper mapper=new ObjectMapper();
     private static SystemSetting systemSetting;
+    public static final String SHADOW_USER_UPLOAD="ShadowUserUpload";
     @Override
     public void onReceive(Request request) throws Throwable {
         Util.initializeContext(request, TelemetryEnvKey.USER);
@@ -72,6 +74,8 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
 
     private void processCsvBytes(Map<String,Object>data,Request request) throws IOException {
         Map<String,Object>values= mapper.readValue(systemSetting.getValue(),Map.class);
+        Map<String, Object> targetObject = null;
+        List<Map<String, Object>> correlatedObject = new ArrayList<>();
         String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
         long validationStartTime =System.currentTimeMillis();
         String userId=getCreatedBy(request);
@@ -84,6 +88,12 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
         BulkMigrationUser migrationUser=prepareRecord(request,processId,migrationUserList);
         ProjectLogger.log("UserBulkMigrationActor:processRecord:processing record for number of users ".concat(migrationUserList.size()+""));
         insertRecord(migrationUser);
+        TelemetryUtil.generateCorrelatedObject(processId, JsonKey.PROCESS_ID, null, correlatedObject);
+        TelemetryUtil.generateCorrelatedObject(migrationUser.getTaskCount()+"", JsonKey.TASK_COUNT, null, correlatedObject);
+        targetObject =
+                TelemetryUtil.generateTargetObject(
+                        processId, StringUtils.capitalize(JsonKey.MIGRATION_USER_OBJECT), SHADOW_USER_UPLOAD, null);
+        TelemetryUtil.telemetryProcessingCall(mapper.convertValue(migrationUser,Map.class), targetObject, correlatedObject);
     }
 
     private void insertRecord(BulkMigrationUser bulkMigrationUser){

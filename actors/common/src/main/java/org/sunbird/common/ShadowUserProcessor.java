@@ -21,6 +21,7 @@ import org.sunbird.learner.util.UserFlagEnum;
 import org.sunbird.learner.util.UserFlagUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.UserType;
+import org.sunbird.telemetry.util.TelemetryUtil;
 import scala.concurrent.Future;
 
 import java.sql.Timestamp;
@@ -161,6 +162,22 @@ public class ShadowUserProcessor {
 
     }
 
+
+    private void generateTelemetry(String userId,String rootOrgId,ShadowUser shadowUser){
+        ProjectLogger.log("ShadowUserProcessor:generateTelemetry:generate telemetry:" + shadowUser.toString(), LoggerEnum.INFO.name());
+        Map<String, Object> targetObject = new HashMap<>();
+        Map<String, String> rollUp = new HashMap<>();
+        rollUp.put("l1", rootOrgId);
+        TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
+        List<Map<String, Object>> correlatedObject = new ArrayList<>();
+        TelemetryUtil.generateCorrelatedObject(shadowUser.getProcessId(), JsonKey.PROCESS_ID, null, correlatedObject);
+        targetObject =
+                TelemetryUtil.generateTargetObject(
+                        userId, StringUtils.capitalize(JsonKey.USER), JsonKey.MIGRATION_USER_OBJECT, null);
+        TelemetryUtil.telemetryProcessingCall(mapper.convertValue(shadowUser,Map.class), targetObject, correlatedObject);
+    }
+
+
     private List<String> getMatchingUserIds(List<Map<String, Object>> esUser) {
         ProjectLogger.log("ShadowUserProcessor:getMatchingUserIds:GOT response from counting matchingUserIds:"+esUser.size(),LoggerEnum.INFO.name());
         List<String> matchingUserIds = new ArrayList<>();
@@ -204,6 +221,7 @@ public class ShadowUserProcessor {
         ProjectLogger.log("ShadowUserProcessor:updateUserInUserTable: properties map formed for user update: "+propertiesMap,LoggerEnum.INFO.name());
         Response response = cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), propertiesMap);
         ProjectLogger.log("ShadowUserProcessor:updateUserInUserTable:user is updated with shadow user:RESPONSE FROM CASSANDRA IS:"+response.getResult(),LoggerEnum.INFO.name());
+        generateTelemetry(userId,rootOrgId,shadowUser);
     }
 
 

@@ -11,6 +11,7 @@ import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.responsecode.ResponseCode;
 
 import java.sql.Timestamp;
+import java.util.Map;
 
 /**
  * @author anmolgupta
@@ -36,6 +37,8 @@ public class BulkMigrationUser {
     private Timestamp createdOn;
     private Timestamp lastUpdatedOn;
     private String storageDetails;
+    private Map<String,String> telemetryContext;
+
 
 
     public BulkMigrationUser(BulkMigrationUserBuilder builder) {
@@ -56,6 +59,7 @@ public class BulkMigrationUser {
         this.createdOn = builder.createdOn;
         this.lastUpdatedOn = builder.lastUpdatedOn;
         this.storageDetails = builder.storageDetails;
+        this.telemetryContext=builder.telemetryContext;
     }
 
     public BulkMigrationUser() {
@@ -130,6 +134,11 @@ public class BulkMigrationUser {
         return storageDetails;
     }
 
+
+    public Map<String, String> getTelemetryContext() {
+        return telemetryContext;
+    }
+
     public static class BulkMigrationUserBuilder {
         private EncryptionService encryptionService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(null);
         private String id;
@@ -149,6 +158,12 @@ public class BulkMigrationUser {
         private Timestamp createdOn;
         private Timestamp lastUpdatedOn;
         private String storageDetails;
+        private Map<String,String> telemetryContext;
+
+        public BulkMigrationUserBuilder setTelemetryContext(Map<String, String> telemetryContext) {
+            this.telemetryContext = telemetryContext;
+            return this;
+        }
 
         public BulkMigrationUserBuilder(String id, String data) {
             this.id = id;

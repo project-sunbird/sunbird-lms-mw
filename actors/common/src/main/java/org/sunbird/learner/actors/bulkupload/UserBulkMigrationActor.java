@@ -1,17 +1,16 @@
 package org.sunbird.learner.actors.bulkupload;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Iterables;
 import com.opencsv.CSVReader;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
-import org.sunbird.actorutil.org.OrganisationClient;
-import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
-import org.sunbird.bean.ShadowUserUpload;
 import org.sunbird.bean.MigrationUser;
+import org.sunbird.bean.ShadowUserUpload;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -23,13 +22,11 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.bulkupload.model.BulkMigrationUser;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.systemsetting.SystemSetting;
+import org.sunbird.telemetry.util.TelemetryUtil;
 
 import java.io.IOException;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 
 /**
@@ -49,11 +46,13 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
     private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     private static ObjectMapper mapper=new ObjectMapper();
     private static SystemSetting systemSetting;
+    public static final String SHADOW_USER_UPLOAD="ShadowUserUpload";
     @Override
     public void onReceive(Request request) throws Throwable {
-        Util.initializeContext(request, TelemetryEnvKey.USER);
+        Util.initializeContext(request, SHADOW_USER_UPLOAD);
         ExecutionContext.setRequestId(request.getRequestId());
         String operation = request.getOperation();
+        request.setContext( ExecutionContext.getCurrent().getRequestContext());
         if (operation.equalsIgnoreCase(BulkUploadActorOperation.USER_BULK_MIGRATION.getValue())) {
             uploadCsv(request);
         } else {
@@ -72,6 +71,8 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
 
     private void processCsvBytes(Map<String,Object>data,Request request) throws IOException {
         Map<String,Object>values= mapper.readValue(systemSetting.getValue(),Map.class);
+        Map<String, Object> targetObject = null;
+        List<Map<String, Object>> correlatedObject = new ArrayList<>();
         String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
         long validationStartTime =System.currentTimeMillis();
         String userId=getCreatedBy(request);
@@ -84,6 +85,12 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
         BulkMigrationUser migrationUser=prepareRecord(request,processId,migrationUserList);
         ProjectLogger.log("UserBulkMigrationActor:processRecord:processing record for number of users ".concat(migrationUserList.size()+""));
         insertRecord(migrationUser);
+        TelemetryUtil.generateCorrelatedObject(processId, JsonKey.PROCESS_ID, null, correlatedObject);
+        TelemetryUtil.generateCorrelatedObject(migrationUser.getTaskCount()+"", JsonKey.TASK_COUNT, null, correlatedObject);
+        targetObject =
+                TelemetryUtil.generateTargetObject(
+                        processId, StringUtils.capitalize(JsonKey.MIGRATION_USER_OBJECT), SHADOW_USER_UPLOAD, null);
+        TelemetryUtil.telemetryProcessingCall(mapper.convertValue(migrationUser,Map.class), targetObject, correlatedObject);
     }
 
     private void insertRecord(BulkMigrationUser bulkMigrationUser){
@@ -110,6 +117,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
                     .setCreatedBy(getCreatedBy(request))
                     .setUploadedBy(getCreatedBy(request))
                     .setOrganisationId((String)request.getRequest().get(JsonKey.ROOT_ORG_ID))
+                    .setTelemetryContext(getContextMap(processID,request))
                     .build();
                     return migrationUser;
         }catch (Exception e){
@@ -120,6 +128,15 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
                     ResponseCode.SERVER_ERROR.getErrorMessage(),
                     ResponseCode.SERVER_ERROR.getResponseCode());
         }
+    }
+
+    private Map<String,String>getContextMap(String processId,Request request){
+        Map<String, String> contextMap = (Map)request.getContext();
+        ProjectLogger.log("UserBulkMigrationActor:getContextMap:started preparing record for processId:"+processId+"with request context:"+contextMap,LoggerEnum.INFO.name());
+        contextMap.put(JsonKey.ACTOR_TYPE, StringUtils.capitalize(JsonKey.SYSTEM));
+        contextMap.put(JsonKey.ACTOR_ID,ProjectUtil.getUniqueIdFromTimestamp(0));
+        Iterables.removeIf(contextMap.values(),value->StringUtils.isBlank(value));
+        return contextMap;
     }
 
     private String getCreatedBy(Request request){

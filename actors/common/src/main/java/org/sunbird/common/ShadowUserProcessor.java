@@ -493,7 +493,6 @@ public class ShadowUserProcessor {
             telemetryContext.putAll(contextMap);
             processIdtelemetryCtxMap.put(processId,telemetryContext);
         }
-        ProjectLogger.log("ShadowUserProcessor:getTelemetryContextByProcessId:telemetry context got from processId is: "+telemetryContext, LoggerEnum.INFO.name());
         ProjectLogger.log("ShadowUserMigrationScheduler:getFullRecordFromProcessId:got single row data from bulk_upload_process with processId:"+processId,LoggerEnum.INFO.name());
         return telemetryContext;
     }

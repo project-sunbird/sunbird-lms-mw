@@ -107,9 +107,6 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
     }
     private BulkMigrationUser prepareRecord(Request request,String processID,List<MigrationUser>migrationUserList){
         try {
-            Map<String, String> contextMap = (Map)request.getContext();
-            Iterables.removeIf(contextMap.values(),value->StringUtils.isBlank(value));
-            ProjectLogger.log("UserBulkMigrationActor:prepareRecord:started preparing record for processId:"+processID+"with request context:"+contextMap,LoggerEnum.INFO.name());
             String decryptedData=mapper.writeValueAsString(migrationUserList);
             BulkMigrationUser migrationUser=new BulkMigrationUser.BulkMigrationUserBuilder(processID,decryptedData)
                     .setObjectType(JsonKey.MIGRATION_USER_OBJECT)
@@ -120,7 +117,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
                     .setCreatedBy(getCreatedBy(request))
                     .setUploadedBy(getCreatedBy(request))
                     .setOrganisationId((String)request.getRequest().get(JsonKey.ROOT_ORG_ID))
-                    .setTelemetryContext(contextMap)
+                    .setTelemetryContext(getContextMap(processID,request))
                     .build();
                     return migrationUser;
         }catch (Exception e){
@@ -131,6 +128,15 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
                     ResponseCode.SERVER_ERROR.getErrorMessage(),
                     ResponseCode.SERVER_ERROR.getResponseCode());
         }
+    }
+
+    private Map<String,String>getContextMap(String processId,Request request){
+        Map<String, String> contextMap = (Map)request.getContext();
+        ProjectLogger.log("UserBulkMigrationActor:getContextMap:started preparing record for processId:"+processId+"with request context:"+contextMap,LoggerEnum.INFO.name());
+        contextMap.put(JsonKey.ACTOR_TYPE, StringUtils.capitalize(JsonKey.SYSTEM));
+        contextMap.put(JsonKey.ACTOR_ID,ProjectUtil.getUniqueIdFromTimestamp(0));
+        Iterables.removeIf(contextMap.values(),value->StringUtils.isBlank(value));
+        return contextMap;
     }
 
     private String getCreatedBy(Request request){

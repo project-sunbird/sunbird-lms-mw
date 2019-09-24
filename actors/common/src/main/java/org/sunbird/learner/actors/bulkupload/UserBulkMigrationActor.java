@@ -1,17 +1,16 @@
 package org.sunbird.learner.actors.bulkupload;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Iterables;
 import com.opencsv.CSVReader;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
-import org.sunbird.actorutil.org.OrganisationClient;
-import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
-import org.sunbird.bean.ShadowUserUpload;
 import org.sunbird.bean.MigrationUser;
+import org.sunbird.bean.ShadowUserUpload;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -27,10 +26,7 @@ import org.sunbird.telemetry.util.TelemetryUtil;
 
 import java.io.IOException;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 
 /**
@@ -56,6 +52,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
         Util.initializeContext(request, SHADOW_USER_UPLOAD);
         ExecutionContext.setRequestId(request.getRequestId());
         String operation = request.getOperation();
+        request.setContext( ExecutionContext.getCurrent().getRequestContext());
         if (operation.equalsIgnoreCase(BulkUploadActorOperation.USER_BULK_MIGRATION.getValue())) {
             uploadCsv(request);
         } else {
@@ -110,6 +107,9 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
     }
     private BulkMigrationUser prepareRecord(Request request,String processID,List<MigrationUser>migrationUserList){
         try {
+            Map<String, String> contextMap = (Map)request.getContext();
+            Iterables.removeIf(contextMap.values(),value->StringUtils.isBlank(value));
+            ProjectLogger.log("UserBulkMigrationActor:prepareRecord:started preparing record for processId:"+processID+"with request context:"+contextMap,LoggerEnum.INFO.name());
             String decryptedData=mapper.writeValueAsString(migrationUserList);
             BulkMigrationUser migrationUser=new BulkMigrationUser.BulkMigrationUserBuilder(processID,decryptedData)
                     .setObjectType(JsonKey.MIGRATION_USER_OBJECT)
@@ -120,6 +120,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
                     .setCreatedBy(getCreatedBy(request))
                     .setUploadedBy(getCreatedBy(request))
                     .setOrganisationId((String)request.getRequest().get(JsonKey.ROOT_ORG_ID))
+                    .setTelemetryContext(contextMap)
                     .build();
                     return migrationUser;
         }catch (Exception e){

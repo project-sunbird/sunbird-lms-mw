@@ -47,7 +47,6 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
   private Util.DbInfo bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
   private int userDataSize = 0;
   private int orgDataSize = 0;
-  private int batchDataSize = 0;
   BulkUploadProcessTaskDao bulkUploadProcessTaskDao = new BulkUploadProcessTaskDaoImpl();
   private ObjectMapper mapper = new ObjectMapper();
   private String[] bulkUserAllowedFields = {
@@ -283,42 +282,9 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
       processBulkUserUpload(req, processId);
     } else if (((String) req.get(JsonKey.OBJECT_TYPE)).equals(JsonKey.ORGANISATION)) {
       processBulkOrgUpload(req, processId);
-    } else if (((String) req.get(JsonKey.OBJECT_TYPE)).equals(JsonKey.BATCH)) {
-      processBulkBatchEnrollment(req, processId);
     }
   }
 
-  private void processBulkBatchEnrollment(Map<String, Object> req, String processId)
-      throws IOException {
-    List<String[]> batchList = parseCsvFile((byte[]) req.get(JsonKey.FILE), processId);
-    if (null != batchList) {
-
-      if (null != PropertiesCache.getInstance().getProperty(JsonKey.BULK_UPLOAD_BATCH_DATA_SIZE)) {
-        batchDataSize =
-            (Integer.parseInt(
-                PropertiesCache.getInstance().getProperty(JsonKey.BULK_UPLOAD_BATCH_DATA_SIZE)));
-        ProjectLogger.log("bulk upload batch data size read from config file " + batchDataSize);
-      }
-      validateFileSizeAgainstLineNumbers(batchDataSize, batchList.size());
-      if (!batchList.isEmpty()) {
-        String[] columns = batchList.get(0);
-        validateBulkUploadFields(columns, bulkBatchAllowedFields, false);
-      } else {
-        throw new ProjectCommonException(
-            ResponseCode.csvError.getErrorCode(),
-            ResponseCode.csvError.getErrorMessage(),
-            ResponseCode.CLIENT_ERROR.getResponseCode());
-      }
-    } else {
-      throw new ProjectCommonException(
-          ResponseCode.csvError.getErrorCode(),
-          ResponseCode.csvError.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-    }
-    // save csv file to db
-    uploadCsvToDB(
-        batchList, processId, null, JsonKey.BATCH, (String) req.get(JsonKey.CREATED_BY), null);
-  }
 
   private void processBulkOrgUpload(Map<String, Object> req, String processId) throws IOException {
 

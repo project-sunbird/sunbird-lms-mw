@@ -30,7 +30,6 @@ import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.CourseBatchSchedulerUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.telemetry.util.TelemetryUtil;
 
@@ -592,8 +591,15 @@ public class BadgrServiceImpl implements BadgingService {
             + PropertiesCache.getInstance().getProperty("sunbird_content_read")
             + "/"
             + contentId;
-    try {
-      HttpUtilResponse response = HttpUtil.doGetRequest(url, CourseBatchSchedulerUtil.headerMap);
+     Map<String, String> headerMap = new HashMap<>();
+
+          String header = ProjectUtil.getConfigValue(JsonKey.EKSTEP_AUTHORIZATION);
+          header = JsonKey.BEARER + header;
+          headerMap.put(JsonKey.AUTHORIZATION, header);
+          headerMap.put("Content-Type", "application/json");
+
+      try {
+      HttpUtilResponse response = HttpUtil.doGetRequest(url,headerMap);
       if (response == null || response.getStatusCode() >= 300) {
         BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
             ResponseCode.RESOURCE_NOT_FOUND.getResponseCode(), null, BadgingJsonKey.CONTENT);

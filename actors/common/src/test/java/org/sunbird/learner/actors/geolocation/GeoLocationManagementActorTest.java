@@ -32,12 +32,11 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.ContentSearchUtil;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({ServiceFactory.class, Util.class, DataCacheHandler.class, ContentSearchUtil.class})
+@PrepareForTest({ServiceFactory.class, Util.class, DataCacheHandler.class})
 @PowerMockIgnore({"javax.management.*"})
 public class GeoLocationManagementActorTest {
 

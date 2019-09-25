@@ -2,13 +2,6 @@ package org.sunbird.learner.actors.search;
 
 import akka.dispatch.Mapper;
 import akka.pattern.Patterns;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -21,21 +14,13 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.response.ResponseParams;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
-import org.sunbird.common.models.util.PropertiesCache;
-import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.dto.SearchDTO;
-import org.sunbird.learner.actors.coursebatch.service.UserCoursesService;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
@@ -43,6 +28,8 @@ import org.sunbird.telemetry.util.TelemetryLmaxWriter;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
+
+import java.util.*;
 
 /**
  * This class will handle search operation for all different type of index and types
@@ -127,17 +114,6 @@ public class SearchHandlerActor extends BaseActor {
           }
           updateUserDetailsWithOrgName(requestedFields, userMapList);
         }
-        if (EsType.course.getTypeName().equalsIgnoreCase(filterObjectType)) {
-          if (JsonKey.PARTICIPANTS.equalsIgnoreCase(
-              (String) request.getContext().get(JsonKey.PARTICIPANTS))) {
-            List<Map<String, Object>> courseBatchList =
-                (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-            for (Map<String, Object> courseBatch : courseBatchList) {
-              courseBatch.put(
-                  JsonKey.PARTICIPANTS, getParticipantList((String) courseBatch.get(JsonKey.ID)));
-            }
-          }
-        }
         if (result != null) {
           response.put(JsonKey.RESPONSE, result);
         } else {
@@ -200,10 +176,6 @@ public class SearchHandlerActor extends BaseActor {
     }
   }
 
-  private List<String> getParticipantList(String id) {
-    UserCoursesService userCourseService = new UserCoursesService();
-    return userCourseService.getEnrolledUserFromBatch(id);
-  }
 
   @SuppressWarnings("unchecked")
   private void updateUserDetailsWithOrgName(

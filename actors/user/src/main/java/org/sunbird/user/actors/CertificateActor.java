@@ -302,6 +302,13 @@ public class CertificateActor extends UserBaseActor {
       List responseList = (List) record.get(JsonKey.RESPONSE);
       if (!responseList.isEmpty()) {
         responseDetails = (Map<String, Object>) responseList.get(0);
+        if(responseDetails.get(JsonKey.IS_DELETED) != null && (boolean)responseDetails.get(JsonKey.IS_DELETED)) {
+          ProjectLogger.log(
+                  "CertificateActor:getCertificate: certificate is deleted : ",
+                  LoggerEnum.ERROR.name());
+          ProjectCommonException.throwClientErrorException(
+                  ResponseCode.errorUnavailableCertificate, null);
+        }
       } else {
         ProjectLogger.log(
             "CertificateActor:getCertificate: cert id is incorrect : " + certificatedId,
@@ -317,18 +324,32 @@ public class CertificateActor extends UserBaseActor {
   }
 
   private void addCertificate(Request request) throws JsonProcessingException {
+    Response response = null;
     Map<String, String> storeMap = new HashMap<>();
+    Map<String, Object> telemetryMap = new HashMap();
     Map<String, Object> certAddReqMap = request.getRequest();
     String userId = (String) certAddReqMap.get(JsonKey.USER_ID);
+    String oldCertId = (String)certAddReqMap.get(JsonKey.OLD_ID);
     User user = userService.getUserById(userId);
     assureUniqueCertId((String) certAddReqMap.get(JsonKey.ID));
+    if(null != oldCertId) {
+      getCertificateDetails(oldCertId);
+    }
     populateStoreData(storeMap, certAddReqMap);
     certAddReqMap.put(JsonKey.STORE, storeMap);
     certAddReqMap = getRequiredRequest(certAddReqMap);
     certAddReqMap.put(JsonKey.CREATED_AT, getTimeStamp());
-    Response response =
-        cassandraOperation.insertRecord(
-            certDbInfo.getKeySpace(), certDbInfo.getTableName(), certAddReqMap);
+    if(StringUtils.isNotBlank(oldCertId)) {
+      HashMap<String, Object> certUpdatedMap = new HashMap<>(certAddReqMap);
+      response  = reIssueCert(certAddReqMap, certUpdatedMap);
+      telemetryMap.put(JsonKey.OLD_ID, oldCertId);
+    } else {
+      certAddReqMap.put(JsonKey.IS_DELETED,false);
+      response =
+              cassandraOperation.insertRecord(
+                      certDbInfo.getKeySpace(), certDbInfo.getTableName(), certAddReqMap);
+    }
+
     ProjectLogger.log(
         "CertificateActor:addCertificate:successfully added certificate in records with userId"
             + certAddReqMap.get(JsonKey.USER_ID)
@@ -336,11 +357,21 @@ public class CertificateActor extends UserBaseActor {
             + certAddReqMap.get(JsonKey.CERT_ID),
         LoggerEnum.INFO.name());
     sender().tell(response, self());
-    Map<String, Object> telemetryMap = new HashMap();
     telemetryMap.put(JsonKey.USER_ID, userId);
     telemetryMap.put(JsonKey.CERT_ID, certAddReqMap.get(JsonKey.ID));
     telemetryMap.put(JsonKey.ROOT_ORG_ID, user.getRootOrgId());
     triggerAddCertTelemetry(telemetryMap);
+  }
+
+  private Response reIssueCert(Map<String, Object> certAddReqMap, Map<String, Object> certUpdateReqMap) {
+    Map<String, Object> cassandraInput = new HashMap<>();
+    cassandraInput.put(JsonKey.INSERT, certAddReqMap);
+    certAddReqMap.put(JsonKey.IS_DELETED,false);
+    certUpdateReqMap.put(JsonKey.ID, certAddReqMap.get(JsonKey.OLD_ID));
+    certUpdateReqMap.remove(JsonKey.OLD_ID);
+    certUpdateReqMap.put(JsonKey.IS_DELETED,true);
+    cassandraInput.put(JsonKey.UPDATE, certUpdateReqMap);
+    return cassandraOperation.performBatchAction(certDbInfo.getKeySpace(), certDbInfo.getTableName(),cassandraInput);
   }
 
   private void populateStoreData(
@@ -437,6 +468,20 @@ public class CertificateActor extends UserBaseActor {
     return false;
   }
 
+  private boolean isIdentityDeleted(String certificateId) {
+    Response response =
+            cassandraOperation.getRecordById(
+                    certDbInfo.getKeySpace(), certDbInfo.getTableName(), certificateId);
+    Map<String, Object> record = response.getResult();
+    if (null != record && null != record.get(JsonKey.RESPONSE)) {
+      List responseList = (List) record.get(JsonKey.RESPONSE);
+      if (!responseList.isEmpty()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private void triggerMergeCertTelemetry(Map telemetryMap) {
     ProjectLogger.log(
         "UserMergeActor:triggerMergeCertTelemetry: generating telemetry event for merge certificate");
@@ -475,6 +520,10 @@ public class CertificateActor extends UserBaseActor {
     Map<String, String> rollUp = new HashMap<>();
     rollUp.put("l1", (String) telemetryMap.get(JsonKey.ROOT_ORG_ID));
     ExecutionContext.getCurrent().getRequestContext().put(JsonKey.ROLLUP, rollUp);
+    if((boolean)telemetryMap.get(JsonKey.OLD_ID)){
+      TelemetryUtil.generateCorrelatedObject(
+              (String) telemetryMap.get(JsonKey.OLD_ID), JsonKey.OLD_CERTIFICATE, null, correlatedObject);
+    }
     targetObject =
         TelemetryUtil.generateTargetObject(
             (String) telemetryMap.get(JsonKey.CERT_ID), JsonKey.CERTIFICATE, JsonKey.CREATE, null);

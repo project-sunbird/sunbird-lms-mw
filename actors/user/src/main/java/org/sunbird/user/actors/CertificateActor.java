@@ -520,7 +520,7 @@ public class CertificateActor extends UserBaseActor {
     Map<String, String> rollUp = new HashMap<>();
     rollUp.put("l1", (String) telemetryMap.get(JsonKey.ROOT_ORG_ID));
     ExecutionContext.getCurrent().getRequestContext().put(JsonKey.ROLLUP, rollUp);
-    if((boolean)telemetryMap.get(JsonKey.OLD_ID)){
+    if(null != telemetryMap.get(JsonKey.OLD_ID)){
       TelemetryUtil.generateCorrelatedObject(
               (String) telemetryMap.get(JsonKey.OLD_ID), JsonKey.OLD_CERTIFICATE, null, correlatedObject);
     }

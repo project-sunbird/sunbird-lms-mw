@@ -10,23 +10,21 @@ import org.sunbird.learner.util.Util;
 public class Application {
 
   public static void main(String[] args) {
-   // SunbirdMWService.init();
-     checkCassandraConnection();
-      ShadowUserMigrationScheduler s=new ShadowUserMigrationScheduler();
-      s.startMigration();
+    SunbirdMWService.init();
+    checkCassandraConnection();
   }
 
   public static void checkCassandraConnection() {
     Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
     Util.checkCassandraDbConnections(JsonKey.SUNBIRD_PLUGIN);
-//    SchedulerManager.schedule();
-//    new Thread(
-//            new Runnable() {
-//              @Override
-//              public void run() {
-//                org.sunbird.common.quartz.scheduler.SchedulerManager.getInstance();
-//              }
-//            })
-//        .start();
+    SchedulerManager.schedule();
+    new Thread(
+            new Runnable() {
+              @Override
+              public void run() {
+                org.sunbird.common.quartz.scheduler.SchedulerManager.getInstance();
+              }
+            })
+        .start();
   }
 }

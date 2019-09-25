@@ -338,7 +338,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
         checkSupportedColumns(csvHeaders,supportedHeaders);
     }
     private void checkMandatoryColumns(List<String>csvHeaders,List<String>mandatoryHeaders){
-        ProjectLogger.log("UserBulkMigrationRequestValidator:checkMandatoryColumns:mandatory columns got "+ ArrayUtils.stringifyContents(mandatoryHeaders.toArray()),LoggerEnum.INFO.name());
+        ProjectLogger.log("UserBulkMigrationRequestValidator:checkMandatoryColumns:mandatory columns got "+ mandatoryHeaders,LoggerEnum.INFO.name());
         mandatoryHeaders.forEach(
                 column->{
                     if(!csvHeaders.contains(column)){
@@ -354,7 +354,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
     }
 
     private void checkSupportedColumns(List<String>csvHeaders,List<String>supportedHeaders){
-        ProjectLogger.log("UserBulkMigrationRequestValidator:checkSupportedColumns:mandatory columns got "+ ArrayUtils.stringifyContents(supportedHeaders.toArray()),LoggerEnum.INFO.name());
+        ProjectLogger.log("UserBulkMigrationRequestValidator:checkSupportedColumns:mandatory columns got "+ supportedHeaders,LoggerEnum.INFO.name());
         csvHeaders.forEach(suppColumn->{
             if(!supportedHeaders.contains(suppColumn)){
                 ProjectLogger.log("UserBulkMigrationRequestValidator:supportedColumns: supported column is not present".concat(suppColumn+""), LoggerEnum.ERROR.name());

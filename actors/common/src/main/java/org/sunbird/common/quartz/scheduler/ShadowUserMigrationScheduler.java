@@ -372,7 +372,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
             migrationUser.setEmail(encryptValue(migrationUser.getEmail().toLowerCase()));
         }
         if(StringUtils.isNotBlank(migrationUser.getPhone())){
-            migrationUser.setPhone(encryptValue(migrationUser.getPhone().toLowerCase()));
+            migrationUser.setPhone(encryptValue(migrationUser.getPhone()));
         }
     }
 }

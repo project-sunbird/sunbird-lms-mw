@@ -504,47 +504,4 @@ public abstract class BaseMetricsActor extends BaseActor {
     return searchDTO;
   }
 
-  protected void calculateCourseProgressPercentage(List<Map<String, Object>> esContent) {
-    for (Map<String, Object> map : esContent) {
-      Integer leafNodeCount = (Integer) map.get(JsonKey.LEAF_NODE_COUNT);
-      if (leafNodeCount == null) leafNodeCount = Integer.valueOf("0");
-      calculateCourseProgressPercentage(map, leafNodeCount);
-      map.remove(JsonKey.LEAF_NODE_COUNT);
-    }
-  }
-
-  protected void calculateCourseProgressPercentage(
-      Map<String, Object> batchMap, int leafNodeCount) {
-    Integer progress = (Integer) batchMap.get(JsonKey.PROGRESS);
-    Integer progressPercentage = Integer.valueOf("0");
-    if (leafNodeCount == 0) {
-      progressPercentage = Integer.valueOf("100");
-    } else if (null != progress && progress > 0) {
-      // making percentage as round of value.
-      progressPercentage = (int) Math.round((progress * 100.0) / leafNodeCount);
-    }
-    batchMap.put(JsonKey.PROGRESS, progressPercentage);
-  }
-
-  /**
-   * This method will convert incoming time period to start and end date. Possible values for period
-   * is {"7d","14d","5w"} ,This method will return a map with key as STARTDATE and ENDDATE.
-   * STARTDATE will always be currentDate-1, Date format will be YYY_MM_DD_FORMATTER
-   *
-   * @param period Date range in format of {"7d","14d","5w"} EX: 7d
-   * @return map having key as STARTDATE and ENDDATE.
-   */
-  protected Map<String, String> getDateRange(String period) {
-    if (StringUtils.isBlank(period)) {
-      throw new ProjectCommonException(
-          ResponseCode.invalidPeriod.getErrorCode(),
-          ResponseCode.invalidPeriod.getErrorMessage(),
-          ResponseCode.CLIENT_ERROR.getResponseCode());
-    }
-    period = period.toLowerCase();
-    int noOfDays = getDaysByPeriod(period);
-    ProjectLogger.log(
-        "BaseMetricsActor:getDateRange Number of days = " + noOfDays, LoggerEnum.INFO.name());
-    return ProjectUtil.getDateRange(noOfDays);
-  }
 }

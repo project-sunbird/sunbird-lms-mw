@@ -1,17 +1,17 @@
 package org.sunbird.learner.actors.bulkupload;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Iterables;
+import com.mchange.v1.util.ArrayUtils;
 import com.opencsv.CSVReader;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
-import org.sunbird.actorutil.org.OrganisationClient;
-import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
-import org.sunbird.bean.ShadowUserUpload;
 import org.sunbird.bean.MigrationUser;
+import org.sunbird.bean.ShadowUserUpload;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -23,13 +23,11 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.bulkupload.model.BulkMigrationUser;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.systemsetting.SystemSetting;
+import org.sunbird.telemetry.util.TelemetryUtil;
 
 import java.io.IOException;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 
 /**
@@ -49,11 +47,13 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
     private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     private static ObjectMapper mapper=new ObjectMapper();
     private static SystemSetting systemSetting;
+    public static final String SHADOW_USER_UPLOAD="ShadowUserUpload";
     @Override
     public void onReceive(Request request) throws Throwable {
-        Util.initializeContext(request, TelemetryEnvKey.USER);
+        Util.initializeContext(request, SHADOW_USER_UPLOAD);
         ExecutionContext.setRequestId(request.getRequestId());
         String operation = request.getOperation();
+        request.setContext( ExecutionContext.getCurrent().getRequestContext());
         if (operation.equalsIgnoreCase(BulkUploadActorOperation.USER_BULK_MIGRATION.getValue())) {
             uploadCsv(request);
         } else {
@@ -72,6 +72,8 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
 
     private void processCsvBytes(Map<String,Object>data,Request request) throws IOException {
         Map<String,Object>values= mapper.readValue(systemSetting.getValue(),Map.class);
+        Map<String, Object> targetObject = null;
+        List<Map<String, Object>> correlatedObject = new ArrayList<>();
         String processId = ProjectUtil.getUniqueIdFromTimestamp(1);
         long validationStartTime =System.currentTimeMillis();
         String userId=getCreatedBy(request);
@@ -82,13 +84,19 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
         ProjectLogger.log("UserBulkMigrationActor:processRecord: time taken to validate records of size ".concat(migrationUserList.size()+"")+"is(ms): ".concat((System.currentTimeMillis()-validationStartTime)+""),LoggerEnum.INFO.name());
         request.getRequest().put(JsonKey.ROOT_ORG_ID,rootOrgId);
         BulkMigrationUser migrationUser=prepareRecord(request,processId,migrationUserList);
-        ProjectLogger.log("UserBulkMigrationActor:processRecord:processing record for number of users ".concat(migrationUserList.size()+""));
+        ProjectLogger.log("UserBulkMigrationActor:processRecord:processing record for number of users ".concat(migrationUserList.size()+""),LoggerEnum.INFO.name());
         insertRecord(migrationUser);
+        TelemetryUtil.generateCorrelatedObject(processId, JsonKey.PROCESS_ID, null, correlatedObject);
+        TelemetryUtil.generateCorrelatedObject(migrationUser.getTaskCount()+"", JsonKey.TASK_COUNT, null, correlatedObject);
+        targetObject =
+                TelemetryUtil.generateTargetObject(
+                        processId, StringUtils.capitalize(JsonKey.MIGRATION_USER_OBJECT), SHADOW_USER_UPLOAD, null);
+        TelemetryUtil.telemetryProcessingCall(mapper.convertValue(migrationUser,Map.class), targetObject, correlatedObject);
     }
 
     private void insertRecord(BulkMigrationUser bulkMigrationUser){
         long insertStartTime=System.currentTimeMillis();
-        ProjectLogger.log("UserBulkMigrationActor:insertRecord:record started inserting with ".concat(bulkMigrationUser.getId()+""));
+        ProjectLogger.log("UserBulkMigrationActor:insertRecord:record started inserting with ".concat(bulkMigrationUser.getId()+""),LoggerEnum.INFO.name());
         Map<String,Object>record=mapper.convertValue(bulkMigrationUser,Map.class);
         long createdOn=System.currentTimeMillis();
         record.put(JsonKey.CREATED_ON,new Timestamp(createdOn));
@@ -110,6 +118,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
                     .setCreatedBy(getCreatedBy(request))
                     .setUploadedBy(getCreatedBy(request))
                     .setOrganisationId((String)request.getRequest().get(JsonKey.ROOT_ORG_ID))
+                    .setTelemetryContext(getContextMap(processID,request))
                     .build();
                     return migrationUser;
         }catch (Exception e){
@@ -122,6 +131,15 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
         }
     }
 
+    private Map<String,String>getContextMap(String processId,Request request){
+        Map<String, String> contextMap = (Map)request.getContext();
+        ProjectLogger.log("UserBulkMigrationActor:getContextMap:started preparing record for processId:"+processId+"with request context:"+contextMap,LoggerEnum.INFO.name());
+        contextMap.put(JsonKey.ACTOR_TYPE, StringUtils.capitalize(JsonKey.SYSTEM));
+        contextMap.put(JsonKey.ACTOR_ID,ProjectUtil.getUniqueIdFromTimestamp(0));
+        Iterables.removeIf(contextMap.values(),value->StringUtils.isBlank(value));
+        return contextMap;
+    }
+
     private String getCreatedBy(Request request){
         Map<String,String>data=(Map<String, String>) request.getRequest().get(JsonKey.DATA);
         return MapUtils.isNotEmpty(data)?data.get(JsonKey.CREATED_BY):null;
@@ -131,6 +149,11 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
             Map<String, List<String>> columnsMap = (Map<String, List<String>>) fieldsMap.get(JsonKey.FILE_TYPE_CSV);
             List<String[]> csvData=readCsv(fileData);
             List<String>csvHeaders=getCsvHeadersAsList(csvData);
+            List<String>mandatoryHeaders=columnsMap.get(JsonKey.MANDATORY_FIELDS);
+            List<String>supportedHeaders=columnsMap.get(JsonKey.SUPPORTED_COlUMNS);
+            mandatoryHeaders.replaceAll(String::toLowerCase);
+            supportedHeaders.replaceAll(String::toLowerCase);
+            checkCsvHeader(csvHeaders,mandatoryHeaders,supportedHeaders);
             List<String>mappedCsvHeaders=mapCsvColumn(csvHeaders);
             List<MigrationUser>migrationUserList=parseCsvRows(channel,getCsvRowsAsList(csvData),mappedCsvHeaders);
             ShadowUserUpload migration = new ShadowUserUpload.ShadowUserUploadBuilder()
@@ -213,8 +236,16 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
     private List<MigrationUser> parseCsvRows(String channel,List<String[]> values,List<String>mappedHeaders){
         List<MigrationUser> migrationUserList=new ArrayList<>();
         values.stream().forEach(row->{
+            int index=values.indexOf(row);
             MigrationUser migrationUser=new MigrationUser();
             for(int i=0;i<row.length;i++){
+                if(row.length>mappedHeaders.size()){
+                        throw new ProjectCommonException(
+                                ResponseCode.errorUnsupportedField.getErrorCode(),
+                                ResponseCode.errorUnsupportedField.getErrorMessage(),
+                                ResponseCode.CLIENT_ERROR.getResponseCode(),
+                                "Invalid provided ROW:"+(index+1));
+                }
                 String columnName=getColumnNameByIndex(mappedHeaders,i);
                 setFieldToMigrationUserObject(migrationUser,columnName,trimValue(row[i]));
             }
@@ -301,4 +332,37 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
         Map<String,Object>result=((Map)((List)response.getResult().get(JsonKey.RESPONSE)).get(0));
         return result;
     }
-}
+
+    private void checkCsvHeader(List<String>csvHeaders,List<String>mandatoryHeaders,List<String>supportedHeaders){
+        checkMandatoryColumns(csvHeaders,mandatoryHeaders);
+        checkSupportedColumns(csvHeaders,supportedHeaders);
+    }
+    private void checkMandatoryColumns(List<String>csvHeaders,List<String>mandatoryHeaders){
+        ProjectLogger.log("UserBulkMigrationRequestValidator:checkMandatoryColumns:mandatory columns got "+ mandatoryHeaders,LoggerEnum.INFO.name());
+        mandatoryHeaders.forEach(
+                column->{
+                    if(!csvHeaders.contains(column)){
+                        ProjectLogger.log("UserBulkMigrationRequestValidator:mandatoryColumns: mandatory column is not present".concat(column+""), LoggerEnum.ERROR.name());
+                        throw new ProjectCommonException(
+                                ResponseCode.mandatoryParamsMissing.getErrorCode(),
+                                ResponseCode.mandatoryParamsMissing.getErrorMessage(),
+                                ResponseCode.CLIENT_ERROR.getResponseCode(),
+                                column);
+                    }
+                }
+        );
+    }
+
+    private void checkSupportedColumns(List<String>csvHeaders,List<String>supportedHeaders){
+        ProjectLogger.log("UserBulkMigrationRequestValidator:checkSupportedColumns:mandatory columns got "+ supportedHeaders,LoggerEnum.INFO.name());
+        csvHeaders.forEach(suppColumn->{
+            if(!supportedHeaders.contains(suppColumn)){
+                ProjectLogger.log("UserBulkMigrationRequestValidator:supportedColumns: supported column is not present".concat(suppColumn+""), LoggerEnum.ERROR.name());
+                throw new ProjectCommonException(
+                        ResponseCode.errorUnsupportedField.getErrorCode(),
+                        ResponseCode.errorUnsupportedField.getErrorMessage(),
+                        ResponseCode.CLIENT_ERROR.getResponseCode(),
+                        "Invalid provided column:".concat(suppColumn).concat(":supported headers are:").concat(ArrayUtils.stringifyContents(supportedHeaders.toArray())));
+            }
+        });
+}}

@@ -679,6 +679,16 @@ public class UserManagementActor extends BaseActor {
   private Map<String, Boolean> updatedUserFlagsMap(
       Map<String, Object> userMap, Map<String, Object> userDbRecord) {
     Map<String, Boolean> userBooleanMap = new HashMap<>();
+    if(userDbRecord.get(JsonKey.EMAIL) != null && userDbRecord.get(JsonKey.EMAIL_VERIFIED) == null) {
+      userDbRecord.put(JsonKey.EMAIL_VERIFIED, true);
+    } else {
+      userDbRecord.put(JsonKey.EMAIL_VERIFIED, false);
+    }
+    if(userDbRecord.get(JsonKey.PHONE) != null && userDbRecord.get(JsonKey.PHONE_VERIFIED) == null) {
+      userDbRecord.put(JsonKey.PHONE_VERIFIED, true);
+    } else {
+      userDbRecord.put(JsonKey.PHONE_VERIFIED, false);
+    }
     boolean emailVerified =
         (boolean)
             (userMap.containsKey(JsonKey.EMAIL_VERIFIED)

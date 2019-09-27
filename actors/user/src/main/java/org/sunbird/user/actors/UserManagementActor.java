@@ -679,6 +679,8 @@ public class UserManagementActor extends BaseActor {
   private Map<String, Boolean> updatedUserFlagsMap(
       Map<String, Object> userMap, Map<String, Object> userDbRecord) {
     Map<String, Boolean> userBooleanMap = new HashMap<>();
+    setUserFlagValue(userDbRecord, JsonKey.EMAIL, JsonKey.EMAIL_VERIFIED);
+    setUserFlagValue(userDbRecord, JsonKey.PHONE, JsonKey.PHONE_VERIFIED);
     boolean emailVerified =
         (boolean)
             (userMap.containsKey(JsonKey.EMAIL_VERIFIED)
@@ -701,6 +703,23 @@ public class UserManagementActor extends BaseActor {
     userBooleanMap.put(JsonKey.EMAIL_VERIFIED, emailVerified);
     userBooleanMap.put(JsonKey.PHONE_VERIFIED, phoneVerified);
     return userBooleanMap;
+  }
+
+
+  /** This method set the default value of the user-flag if it is not present in userDbRecord
+   * @param userDbRecord
+   * @param flagType
+   * @param verifiedFlagType
+   * @return
+   */
+  public Map<String, Object> setUserFlagValue(Map<String, Object> userDbRecord, String flagType, String verifiedFlagType) {
+    if(userDbRecord.get(flagType) != null && (userDbRecord.get(verifiedFlagType) == null
+            || (boolean)userDbRecord.get(verifiedFlagType))) {
+      userDbRecord.put(verifiedFlagType, true);
+    } else {
+      userDbRecord.put(verifiedFlagType, false);
+    }
+    return userDbRecord;
   }
 
   private String getCustodianRootOrgId() {

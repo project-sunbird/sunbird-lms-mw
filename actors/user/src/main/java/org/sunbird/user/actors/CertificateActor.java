@@ -468,20 +468,6 @@ public class CertificateActor extends UserBaseActor {
     return false;
   }
 
-  private boolean isIdentityDeleted(String certificateId) {
-    Response response =
-            cassandraOperation.getRecordById(
-                    certDbInfo.getKeySpace(), certDbInfo.getTableName(), certificateId);
-    Map<String, Object> record = response.getResult();
-    if (null != record && null != record.get(JsonKey.RESPONSE)) {
-      List responseList = (List) record.get(JsonKey.RESPONSE);
-      if (!responseList.isEmpty()) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   private void triggerMergeCertTelemetry(Map telemetryMap) {
     ProjectLogger.log(
         "UserMergeActor:triggerMergeCertTelemetry: generating telemetry event for merge certificate");

@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -56,6 +57,11 @@ public class CourseBatchManagementActor extends BaseActor {
   private CourseBatchDao courseBatchDao = new CourseBatchDaoImpl();
   private UserCoursesService userCoursesService = new UserCoursesService();
   private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
+
+  static {
+    DATE_FORMAT.setTimeZone(
+        TimeZone.getTimeZone(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_TIMEZONE)));
+  }
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -462,6 +468,12 @@ public class CourseBatchManagementActor extends BaseActor {
     try {
       Date todayDate = DATE_FORMAT.parse(DATE_FORMAT.format(new Date()));
       Date requestedStartDate = DATE_FORMAT.parse(startDate);
+      ProjectLogger.log(
+          "CourseBatchManagementActor:setCourseBatchStatus: todayDate="
+              + todayDate
+              + ", requestedStartDate="
+              + requestedStartDate,
+          LoggerEnum.INFO);
       if (todayDate.compareTo(requestedStartDate) == 0) {
         return ProgressStatus.STARTED.getValue();
       } else {

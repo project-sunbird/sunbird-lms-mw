@@ -18,10 +18,10 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.Util;
 import org.sunbird.user.util.UserActorOperations;
 
 @ActorConfig(
@@ -31,6 +31,9 @@ import org.sunbird.user.util.UserActorOperations;
 public class UserExternalIdManagementActor extends BaseActor {
 
   private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private static DecryptionService service =
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
+          null);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -200,10 +203,8 @@ public class UserExternalIdManagementActor extends BaseActor {
   private static Map<String, Object> upsertUserExternalIdentityData(
       Map<String, String> extIdsMap, Map<String, Object> requestMap, String operation) {
     Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.EXTERNAL_ID, Util.encryptData(extIdsMap.get(JsonKey.ID)));
-    map.put(
-        JsonKey.ORIGINAL_EXTERNAL_ID,
-        Util.encryptData(extIdsMap.get(JsonKey.ORIGINAL_EXTERNAL_ID)));
+    map.put(JsonKey.EXTERNAL_ID, extIdsMap.get(JsonKey.ID));
+    map.put(JsonKey.ORIGINAL_EXTERNAL_ID, extIdsMap.get(JsonKey.ORIGINAL_EXTERNAL_ID));
     map.put(JsonKey.PROVIDER, extIdsMap.get(JsonKey.PROVIDER));
     map.put(JsonKey.ORIGINAL_PROVIDER, extIdsMap.get(JsonKey.ORIGINAL_PROVIDER));
     map.put(JsonKey.ID_TYPE, extIdsMap.get(JsonKey.ID_TYPE));

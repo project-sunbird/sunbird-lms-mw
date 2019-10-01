@@ -15,15 +15,16 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.ProjectUtil.EsIndex;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.ReportTrackingStatus;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
@@ -31,6 +32,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
+import scala.concurrent.Future;
 
 @ActorConfig(
   tasks = {
@@ -46,6 +48,7 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
   private static ObjectMapper mapper = new ObjectMapper();
   private static final String view = "org";
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
   private Util.DbInfo reportTrackingdbInfo = Util.dbInfoMap.get(JsonKey.REPORT_TRACKING_DB);
   private DecryptionService decryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
@@ -101,9 +104,10 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
     String orgId = (String) actorMessage.get(JsonKey.ORG_ID);
     String period = (String) actorMessage.get(JsonKey.PERIOD);
 
+    Future<Map<String, Object>> requestedByInfoF =
+        esUtil.getDataByIdentifier(EsType.user.getTypeName(), requestedBy);
     Map<String, Object> requestedByInfo =
-        ElasticSearchUtil.getDataByIdentifier(
-            EsIndex.sunbird.getIndexName(), EsType.user.getTypeName(), requestedBy);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(requestedByInfoF);
     if (ProjectUtil.isNull(requestedByInfo)
         || StringUtils.isBlank((String) requestedByInfo.get(JsonKey.FIRST_NAME))) {
       throw new ProjectCommonException(
@@ -697,11 +701,10 @@ public class OrganisationMetricsActor extends BaseMetricsActor {
 
   private Map<String, Object> validateOrg(String orgId) {
     try {
+      Future<Map<String, Object>> resultF =
+          esUtil.getDataByIdentifier(ProjectUtil.EsType.organisation.getTypeName(), orgId);
       Map<String, Object> result =
-          ElasticSearchUtil.getDataByIdentifier(
-              ProjectUtil.EsIndex.sunbird.getIndexName(),
-              ProjectUtil.EsType.organisation.getTypeName(),
-              orgId);
+          (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
       if (null == result || result.isEmpty()) {
         return null;
       }

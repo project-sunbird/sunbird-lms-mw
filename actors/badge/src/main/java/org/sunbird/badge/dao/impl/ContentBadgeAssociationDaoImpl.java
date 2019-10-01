@@ -4,7 +4,8 @@ import java.util.List;
 import java.util.Map;
 import org.sunbird.badge.dao.ContentBadgeAssociationDao;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -17,6 +18,7 @@ public class ContentBadgeAssociationDaoImpl implements ContentBadgeAssociationDa
   private static final String KEYSPACE = "sunbird" + "";
   private static final String TABLE_NAME = "content_badge_association";
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public Response insertBadgeAssociation(List<Map<String, Object>> contentInfo) {
@@ -30,8 +32,7 @@ public class ContentBadgeAssociationDaoImpl implements ContentBadgeAssociationDa
 
   @Override
   public void createDataToES(Map<String, Object> badgeMap) {
-    ElasticSearchUtil.createData(
-        ProjectUtil.EsIndex.sunbird.getIndexName(),
+    esUtil.save(
         ProjectUtil.EsType.badgeassociations.getTypeName(),
         (String) badgeMap.get(JsonKey.ID),
         badgeMap);
@@ -44,8 +45,7 @@ public class ContentBadgeAssociationDaoImpl implements ContentBadgeAssociationDa
             + (String) badgeMap.get(JsonKey.ID),
         LoggerEnum.INFO);
     try {
-      ElasticSearchUtil.updateData(
-          ProjectUtil.EsIndex.sunbird.getIndexName(),
+      esUtil.update(
           ProjectUtil.EsType.badgeassociations.getTypeName(),
           (String) badgeMap.get(JsonKey.ID),
           badgeMap);

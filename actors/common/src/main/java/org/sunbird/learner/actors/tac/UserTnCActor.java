@@ -14,8 +14,10 @@ import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -28,6 +30,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.telemetry.util.TelemetryUtil;
+import scala.concurrent.Future;
 
 @ActorConfig(
   tasks = {"userTnCAccept"},
@@ -36,6 +39,7 @@ import org.sunbird.telemetry.util.TelemetryUtil;
 public class UserTnCActor extends BaseActor {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -67,11 +71,10 @@ public class UserTnCActor extends BaseActor {
               ResponseCode.invalidParameterValue.getErrorMessage(), acceptedTnC, JsonKey.VERSION));
     }
     // Search user account in ES
+    Future<Map<String, Object>> resultF =
+        esService.getDataByIdentifier(ProjectUtil.EsType.user.getTypeName(), userId);
     Map<String, Object> result =
-        ElasticSearchUtil.getDataByIdentifier(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.user.getTypeName(),
-            userId);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     if (result == null || result.size() == 0) {
       throw new ProjectCommonException(
           ResponseCode.userNotFound.getErrorCode(),

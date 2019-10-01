@@ -20,8 +20,9 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -32,7 +33,7 @@ import scala.concurrent.duration.FiniteDuration;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
-  ElasticSearchUtil.class,
+  ElasticSearchTcpImpl.class,
   CassandraOperationImpl.class,
   ServiceFactory.class,
 })
@@ -48,6 +49,7 @@ public class SystemSettingsActorTest {
   private static String ROOT_ORG_ID = "defaultRootOrgId";
   private static String FIELD = "someField";
   private static String VALUE = "someValue";
+  private ElasticSearchTcpImpl esUtil;
 
   @Before
   public void setUp() {
@@ -59,6 +61,8 @@ public class SystemSettingsActorTest {
     props = Props.create(SystemSettingsActor.class);
     subject = system.actorOf(props);
     actorMessage = new Request();
+    PowerMockito.mockStatic(EsClientFactory.class);
+    esUtil = PowerMockito.mock(ElasticSearchTcpImpl.class);
   }
 
   @Test

@@ -282,7 +282,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
         }
 
         if(columnAttribute.equalsIgnoreCase(JsonKey.FIRST_NAME)){
-            migrationUser.setName((String)value);
+            migrationUser.setName(StringUtils.trim((String)value));
         }
         if(columnAttribute.equalsIgnoreCase(JsonKey.INPUT_STATUS))
         {

@@ -16,6 +16,7 @@ import org.sunbird.error.IErrorDispatcher;
 import org.sunbird.error.factory.ErrorDispatcherFactory;
 
 import java.util.HashSet;
+import java.util.regex.Pattern;
 
 /**
  * this class will validate the csv file for shadow db
@@ -29,7 +30,7 @@ public class UserBulkMigrationRequestValidator {
     private HashSet<String> userExternalIdsSet=new HashSet<>();
     private CsvError csvRowsErrors=new CsvError();
     private static final int MAX_ROW_SUPPORTED=20000;
-
+    private static final String NAME_REGX_MATCHER="[0-9a-zA-Z][0-9a-zA-Z\\. ]*";
 
     private UserBulkMigrationRequestValidator(ShadowUserUpload migration) {
         this.shadowUserMigration = migration;
@@ -155,6 +156,13 @@ public class UserBulkMigrationRequestValidator {
     }
 
     private void checkName(String name,int index) {
+        if(StringUtils.isNotBlank(name) && !(Pattern.matches(NAME_REGX_MATCHER, name))){
+            CsvRowErrorDetails errorDetails=new CsvRowErrorDetails();
+            errorDetails.setRowId(index);
+            errorDetails.setHeader(JsonKey.NAME);
+            errorDetails.setErrorEnum(ErrorEnum.invalid);
+            addErrorToList(errorDetails);
+        }
         checkValue(name,index,JsonKey.NAME);
     }
 
@@ -183,5 +191,4 @@ public class UserBulkMigrationRequestValidator {
             addErrorToList(errorDetails);
         }
     }
-
 }

@@ -1,4 +1,4 @@
-package org.sunbird.learner.actors.bulkupload;
+package org.sunbird.learner.actors.textbook;
 
 import static java.io.File.separator;
 import static java.util.Arrays.asList;
@@ -71,6 +71,7 @@ import org.apache.commons.io.input.BOMInputStream;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -78,7 +79,6 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.TextbookActorOperation;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.content.textbook.FileExtension;
@@ -91,11 +91,12 @@ import org.sunbird.services.sso.SSOServiceFactory;
   tasks = {"textbookTocUpload", "textbookTocUrl", "textbookTocUpdate"},
   asyncTasks = {}
 )
-public class TextbookTocActor extends BaseBulkUploadActor {
+public class TextbookTocActor extends BaseActor {
 
   private SSOManager ssoManager = SSOServiceFactory.getInstance();
   private Instant startTime = null;
   private Map<String, Object> frameCategories = null;
+  private ObjectMapper mapper = new ObjectMapper();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -936,7 +937,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
     String mandatoryFields = getConfigValue(JsonKey.TEXTBOOK_TOC_MANDATORY_FIELDS);
     Map<String, String> mandatoryFieldsMap =
         mapper.readValue(mandatoryFields, new TypeReference<Map<String, String>>() {});
-    String textbookName = (String) textbook.get(JsonKey.NAME);
+    String textbookName = textbook.get(JsonKey.NAME)!=null?((String) textbook.get(JsonKey.NAME)).trim():(String) textbook.get(JsonKey.NAME);
 
     validateTextBook(textbook, mode);
 
@@ -955,7 +956,7 @@ public class TextbookTocActor extends BaseBulkUploadActor {
       }
       Map<String, Object> hierarchy = (Map<String, Object>) row.get(JsonKey.HIERARCHY);
 
-      String name = (String) hierarchy.getOrDefault(StringUtils.capitalize(JsonKey.TEXTBOOK), "");
+      String name = ((String) hierarchy.getOrDefault(StringUtils.capitalize(JsonKey.TEXTBOOK), "")).trim();
       if (isBlank(name) || !StringUtils.equalsIgnoreCase(name, textbookName)) {
         log(
             "Name mismatch. Content has: " + name + " but, file has: " + textbookName,

@@ -27,6 +27,8 @@ public class CourseBatch implements Serializable {
   private List<String> createdFor;
   private String description;
   private String endDate;
+  @JsonInclude(JsonInclude.Include.ALWAYS)
+  private String enrollmentEndDate;
   private String enrollmentType;
   private String hashTagId;
   private List<String> mentors;
@@ -148,6 +150,17 @@ public class CourseBatch implements Serializable {
     this.enrollmentType = enrollmentType;
   }
 
+<<<<<<< HEAD
+=======
+  public String getEnrollmentEndDate() {
+    return enrollmentEndDate;
+  }
+
+  public void setEnrollmentEndDate(String enrollmentEndDate) {
+    this.enrollmentEndDate = enrollmentEndDate;
+  }
+
+>>>>>>> b4ce8576e35e680fb8812510cbb40d7665d7e171
   public String getHashTagId() {
     return hashTagId;
   }

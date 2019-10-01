@@ -23,7 +23,7 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -35,7 +35,7 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.EkStepRequestUtil;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({EkStepRequestUtil.class, ServiceFactory.class, ElasticSearchUtil.class})
+@PrepareForTest({EkStepRequestUtil.class, ServiceFactory.class, ElasticSearchHelper.class})
 @PowerMockIgnore("javax.management.*")
 public class CourseEnrollmentActorTest {
 
@@ -64,7 +64,7 @@ public class CourseEnrollmentActorTest {
     Mockito.reset(cassandraOperation);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
 
-    PowerMockito.mockStatic(ElasticSearchUtil.class);
+    PowerMockito.mockStatic(ElasticSearchHelper.class);
   }
 
   @Test

@@ -23,7 +23,7 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
@@ -45,9 +45,9 @@ import org.sunbird.user.util.UserActorOperations;
   PageManagementActor.class,
   ContentSearchUtil.class,
   org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.class,
-  ElasticSearchUtil.class,
   EmailTemplateDaoImpl.class,
-  Util.class
+  Util.class,
+  EsClientFactory.class
 })
 @PowerMockIgnore({"javax.management.*"})
 public class UserExternalIdManagementActorTest {
@@ -62,6 +62,7 @@ public class UserExternalIdManagementActorTest {
     PowerMockito.mockStatic(ServiceFactory.class);
     PowerMockito.mockStatic(EmailTemplateDaoImpl.class);
     PowerMockito.mockStatic(org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.class);
+    PowerMockito.mockStatic(EsClientFactory.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
   }
 

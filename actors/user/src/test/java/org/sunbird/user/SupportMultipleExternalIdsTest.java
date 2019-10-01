@@ -20,7 +20,6 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
-import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
@@ -33,7 +32,6 @@ import org.sunbird.models.user.User;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
-  ElasticSearchUtil.class,
   CassandraOperationImpl.class,
   ServiceFactory.class,
   EncryptionService.class,
@@ -76,7 +74,7 @@ public class SupportMultipleExternalIdsTest {
     externalIdReqMap.put(JsonKey.ID_TYPE, "someIdType");
     externalIdReqMap.put(JsonKey.USER_ID, "reqUserId");
     externalIdReqMap.put(JsonKey.EXTERNAL_ID, "someExternalId");
-    
+
     externalIds.add(externalIdReqMap);
     user = new User();
     user.setExternalIds(externalIds);
@@ -111,8 +109,6 @@ public class SupportMultipleExternalIdsTest {
     }
   }
 
- 
-
   @Test
   public void testCheckExternalIdUniquenessSuccessWithUpdateOperation() {
 
@@ -124,12 +120,13 @@ public class SupportMultipleExternalIdsTest {
       assertEquals(ResponseCode.externalIdNotFound.getErrorCode(), e.getCode());
     }
   }
+
   @Test
   public void testCheckExternalIdUniquenessSuccessForUpdate() {
 
     try {
       user.setUserId("someUserId2");
-      user.getExternalIds().get(0).remove(JsonKey.OPERATION );
+      user.getExternalIds().get(0).remove(JsonKey.OPERATION);
       Util.checkExternalIdUniqueness(user, JsonKey.UPDATE);
     } catch (ProjectCommonException e) {
       assertEquals(ResponseCode.externalIdAssignedToOtherUser.getErrorCode(), e.getCode());

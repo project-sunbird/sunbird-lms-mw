@@ -4,16 +4,21 @@ import static org.junit.Assert.assertTrue;
 import static org.powermock.api.mockito.PowerMockito.when;
 
 import akka.actor.ActorRef;
-import java.util.*;
+import akka.dispatch.Futures;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
-import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.DataCacheHandler;
+import scala.concurrent.Promise;
 
 public class UserManagementActorTest extends UserManagementActorTestBase {
 
@@ -132,10 +137,10 @@ public class UserManagementActorTest extends UserManagementActorTestBase {
 
   @Test
   public void testCreateUserFailureWithInvalidOrg() {
-
-    when(ElasticSearchUtil.getDataByIdentifier(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(null);
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(null);
+    when(esService.getDataByIdentifier(Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(promise.future());
     boolean result =
         testScenario(
             getRequest(

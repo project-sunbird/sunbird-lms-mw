@@ -10,8 +10,10 @@ import org.json.JSONObject;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.HttpUtil;
@@ -26,6 +28,7 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.CourseBatchSchedulerUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
+import scala.concurrent.Future;
 
 /**
  * This class will handle all the background job. Example when ever course is published then this
@@ -65,6 +68,7 @@ public class BackgroundJobManager extends BaseActor {
   }
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -168,11 +172,11 @@ public class BackgroundJobManager extends BaseActor {
     List<String> roles = (List<String>) actorMessage.getRequest().get(JsonKey.ROLES);
     String type = (String) actorMessage.get(JsonKey.TYPE);
     String orgId = (String) actorMessage.get(JsonKey.ORGANISATION_ID);
+    Future<Map<String, Object>> resultF =
+        esService.getDataByIdentifier(
+            ProjectUtil.EsType.user.getTypeName(), (String) actorMessage.get(JsonKey.USER_ID));
     Map<String, Object> result =
-        ElasticSearchUtil.getDataByIdentifier(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.user.getTypeName(),
-            (String) actorMessage.get(JsonKey.USER_ID));
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     if (type.equals(JsonKey.USER)) {
       result.put(JsonKey.ROLES, roles);
     } else if (type.equals(JsonKey.ORGANISATION)) {
@@ -220,11 +224,11 @@ public class BackgroundJobManager extends BaseActor {
   @SuppressWarnings("unchecked")
   private void removeUserOrgInfoToEs(Request actorMessage) {
     Map<String, Object> orgMap = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
+    Future<Map<String, Object>> resultF =
+        esService.getDataByIdentifier(
+            ProjectUtil.EsType.user.getTypeName(), (String) orgMap.get(JsonKey.USER_ID));
     Map<String, Object> result =
-        ElasticSearchUtil.getDataByIdentifier(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.user.getTypeName(),
-            (String) orgMap.get(JsonKey.USER_ID));
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     if (result.containsKey(JsonKey.ORGANISATIONS) && null != result.get(JsonKey.ORGANISATIONS)) {
       List<Map<String, Object>> orgMapList =
           (List<Map<String, Object>>) result.get(JsonKey.ORGANISATIONS);
@@ -251,11 +255,11 @@ public class BackgroundJobManager extends BaseActor {
   @SuppressWarnings("unchecked")
   private void updateUserOrgInfoToEs(Request actorMessage) {
     Map<String, Object> orgMap = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
+    Future<Map<String, Object>> resultF =
+        esService.getDataByIdentifier(
+            ProjectUtil.EsType.user.getTypeName(), (String) orgMap.get(JsonKey.USER_ID));
     Map<String, Object> result =
-        ElasticSearchUtil.getDataByIdentifier(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.user.getTypeName(),
-            (String) orgMap.get(JsonKey.USER_ID));
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     if (result.containsKey(JsonKey.ORGANISATIONS) && null != result.get(JsonKey.ORGANISATIONS)) {
       List<Map<String, Object>> orgMapList =
           (List<Map<String, Object>>) result.get(JsonKey.ORGANISATIONS);
@@ -350,7 +354,8 @@ public class BackgroundJobManager extends BaseActor {
 
   private boolean updateDataToElastic(
       String indexName, String typeName, String identifier, Map<String, Object> data) {
-    boolean response = ElasticSearchUtil.updateData(indexName, typeName, identifier, data);
+    Future<Boolean> responseF = esService.update(typeName, identifier, data);
+    boolean response = (boolean) ElasticSearchHelper.getResponseFromFuture(responseF);
     if (response) {
       return true;
     }
@@ -548,9 +553,11 @@ public class BackgroundJobManager extends BaseActor {
      * ProfileCompletenessFactory.getInstance(); Map<String, Object> responsemap =
      * service.computeProfile(data); data.putAll(responsemap); }
      */
-    String response = ElasticSearchUtil.createData(index, type, identifier, data);
+
+    Future<String> responseF = esService.save(type, identifier, data);
+    String response = (String) ElasticSearchHelper.getResponseFromFuture(responseF);
     ProjectLogger.log(
-        "Getting ES save response for type , identiofier=="
+        "Getting  ********** ES save response for type , identiofier=="
             + type
             + "  "
             + identifier

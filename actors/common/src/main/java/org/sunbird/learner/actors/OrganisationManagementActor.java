@@ -17,8 +17,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
+import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.EsIndex;
@@ -35,6 +37,7 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.validator.location.LocationRequestValidator;
+import scala.concurrent.Future;
 
 /**
  * This actor will handle organisation related operation .
@@ -63,6 +66,7 @@ public class OrganisationManagementActor extends BaseActor {
   private final EncryptionService encryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
           null);
+  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -482,11 +486,10 @@ public class OrganisationManagementActor extends BaseActor {
     filters.put(JsonKey.HASHTAGID, hashTagId);
     SearchDTO searchDto = new SearchDTO();
     searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filters);
+    Future<Map<String, Object>> resultF =
+        esService.search(searchDto, ProjectUtil.EsType.organisation.getTypeName());
     Map<String, Object> result =
-        ElasticSearchUtil.complexSearch(
-            searchDto,
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.organisation.getTypeName());
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     List<Map<String, Object>> dataMapList = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
     if (opType.equalsIgnoreCase(JsonKey.CREATE)) {
       if (!dataMapList.isEmpty()) {
@@ -1244,11 +1247,10 @@ public class OrganisationManagementActor extends BaseActor {
       return;
     }
     String orgId = (String) request.get(JsonKey.ORGANISATION_ID);
+    Future<Map<String, Object>> resultF =
+        esService.getDataByIdentifier(ProjectUtil.EsType.organisation.getTypeName(), orgId);
     Map<String, Object> result =
-        ElasticSearchUtil.getDataByIdentifier(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.organisation.getTypeName(),
-            orgId);
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
 
     if (MapUtils.isEmpty(result)) {
       throw new ProjectCommonException(
@@ -1477,12 +1479,10 @@ public class OrganisationManagementActor extends BaseActor {
     }
     SearchDTO searchDTO = new SearchDTO();
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, requestDbMap);
+    Future<Map<String, Object>> esResponseF =
+        esService.search(searchDTO, ProjectUtil.EsType.organisation.getTypeName());
     Map<String, Object> esResponse =
-        ElasticSearchUtil.complexSearch(
-            searchDTO,
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
-            ProjectUtil.EsType.organisation.getTypeName());
-
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(esResponseF);
     List<Map<String, Object>> list = (List<Map<String, Object>>) esResponse.get(JsonKey.CONTENT);
     if (null == list || list.isEmpty()) {
 
@@ -1692,7 +1692,10 @@ public class OrganisationManagementActor extends BaseActor {
     SearchDTO searchDTO = new SearchDTO();
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
 
-    return ElasticSearchUtil.complexSearch(searchDTO, index, type);
+    Future<Map<String, Object>> resultF = esService.search(searchDTO, type);
+    Map<String, Object> esResponse =
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
+    return esResponse;
   }
 
   /**
@@ -1830,11 +1833,10 @@ public class OrganisationManagementActor extends BaseActor {
 
       SearchDTO searchDTO = new SearchDTO();
       searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filterMap);
+      Future<Map<String, Object>> esResponseF =
+          esService.search(searchDTO, ProjectUtil.EsType.organisation.getTypeName());
       Map<String, Object> esResponse =
-          ElasticSearchUtil.complexSearch(
-              searchDTO,
-              ProjectUtil.EsIndex.sunbird.getIndexName(),
-              ProjectUtil.EsType.organisation.getTypeName());
+          (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(esResponseF);
 
       List<Map<String, Object>> list = (List<Map<String, Object>>) esResponse.get(JsonKey.CONTENT);
       if (CollectionUtils.isNotEmpty(list)) {

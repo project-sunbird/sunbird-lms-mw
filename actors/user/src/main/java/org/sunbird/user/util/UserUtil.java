@@ -29,8 +29,6 @@ import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.common.services.ProfileCompletenessService;
 import org.sunbird.common.services.impl.ProfileCompletenessFactory;
 import org.sunbird.dto.SearchDTO;
-import org.sunbird.extension.user.UserExtension;
-import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.SocialMediaType;
@@ -146,16 +144,6 @@ public class UserUtil {
       }
     }
     return user;
-  }
-
-  public static void updateUserToRegistry(Map<String, Object> userMap, String registryId) {
-    UserExtension userExtension = new UserProviderRegistryImpl();
-    if (StringUtils.isNotBlank(registryId)) {
-      userMap.put(JsonKey.REGISTRY_ID, registryId);
-      userExtension.update(userMap);
-    } else {
-      userExtension.create(userMap);
-    }
   }
 
   @SuppressWarnings("unchecked")

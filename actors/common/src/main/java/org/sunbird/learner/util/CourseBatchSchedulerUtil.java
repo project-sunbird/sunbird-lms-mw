@@ -205,6 +205,10 @@ public final class CourseBatchSchedulerUtil {
     map.put(JsonKey.STATUS, status);
     map.put(counterAttribute, false);
     dto.addAdditionalProperty(JsonKey.FILTERS, map);
+    Map<String, Object> sortMap = new HashMap<>();
+    sortMap.put(dateAttribute, JsonKey.DESC);
+    dto.setSortBy(sortMap);
+    dto.setLimit(500);
     return searchContent(dto);
   }
 

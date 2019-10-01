@@ -3,8 +3,6 @@ package org.sunbird.user.actors;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.commons.collections.MapUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.ElasticSearchUtil;
@@ -13,8 +11,6 @@ import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
-import org.sunbird.extension.user.UserExtension;
-import org.sunbird.extension.user.impl.UserProviderRegistryImpl;
 import org.sunbird.models.user.User;
 import org.sunbird.user.util.UserUtil;
 
@@ -119,7 +115,6 @@ public class UserBackgroundJobActor extends BaseActor {
     userDetails.remove(JsonKey.PASSWORD);
     User user = mapper.convertValue(userDetails, User.class);
     userDetails = mapper.convertValue(user, Map.class);
-    userDetails = getUserDetailsFromRegistry(userDetails);
     upsertDataToElastic(
         ProjectUtil.EsIndex.sunbird.getIndexName(),
         ProjectUtil.EsType.user.getTypeName(),
@@ -135,28 +130,5 @@ public class UserBackgroundJobActor extends BaseActor {
         LoggerEnum.INFO.name());
   }
 
-  private static Map<String, Object> getUserDetailsFromRegistry(Map<String, Object> userMap) {
-    String registryId = (String) userMap.get(JsonKey.REGISTRY_ID);
-    if (StringUtils.isNotBlank(registryId)
-        && "true"
-            .equalsIgnoreCase(
-                ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE))) {
-      Map<String, Object> reqMap = new HashMap<>();
-      try {
-        UserExtension userExtension = new UserProviderRegistryImpl();
-        reqMap.put(JsonKey.REGISTRY_ID, registryId);
-        reqMap = userExtension.read(reqMap);
-        reqMap.putAll(userMap);
-      } catch (Exception ex) {
-        ProjectLogger.log(
-            "getUserDetailsFromRegistry: Failed to fetch registry details for registryId : "
-                + registryId,
-            ex);
-        reqMap.clear();
-      }
-      return MapUtils.isNotEmpty(reqMap) ? reqMap : userMap;
-    } else {
-      return userMap;
-    }
-  }
+
 }

@@ -15,7 +15,6 @@ import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.InterServiceCommunication;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchUtil;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;

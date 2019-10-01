@@ -150,8 +150,6 @@ public class CourseBatch implements Serializable {
     this.enrollmentType = enrollmentType;
   }
 
-<<<<<<< HEAD
-=======
   public String getEnrollmentEndDate() {
     return enrollmentEndDate;
   }
@@ -160,7 +158,6 @@ public class CourseBatch implements Serializable {
     this.enrollmentEndDate = enrollmentEndDate;
   }
 
->>>>>>> b4ce8576e35e680fb8812510cbb40d7665d7e171
   public String getHashTagId() {
     return hashTagId;
   }

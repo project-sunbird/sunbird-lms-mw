@@ -31,6 +31,8 @@ public class UserBulkMigrationRequestValidator {
     private CsvError csvRowsErrors=new CsvError();
     private static final int MAX_ROW_SUPPORTED=20000;
     private static final String NAME_REGX_MATCHER="[0-9a-zA-Z][0-9a-zA-Z\\. ]*";
+    private static final boolean EMAIL_DUPLICATE_CHECK=false;
+    private static final boolean PHONE_DUPLICATE_CHECK=false;
 
     private UserBulkMigrationRequestValidator(ShadowUserUpload migration) {
         this.shadowUserMigration = migration;
@@ -39,7 +41,8 @@ public class UserBulkMigrationRequestValidator {
         return new UserBulkMigrationRequestValidator(migration);
     }
     public void validate()
-    { ProjectLogger.log("UserBulkMigrationRequestValidator:validate:start validating migration users", LoggerEnum.INFO.name());
+    {   ProjectLogger.log("UserBulkMigrationRequestValidator:validate:PHONE_DUPLICATE_CHECK:"+PHONE_DUPLICATE_CHECK+":EMAIL_DUPLICATE_CHECK:"+EMAIL_DUPLICATE_CHECK,LoggerEnum.INFO.name());
+        ProjectLogger.log("UserBulkMigrationRequestValidator:validate:start validating migration users", LoggerEnum.INFO.name());
         checkCsvRows();
     }
     private void checkCsvRows(){
@@ -111,7 +114,7 @@ public class UserBulkMigrationRequestValidator {
         if(!isEmailValid){
             errorDetails.setErrorEnum(ErrorEnum.invalid);
         }
-        if(isEmailValid) {
+        if(isEmailValid && EMAIL_DUPLICATE_CHECK) {
             if (!emailSet.add(email)) {
                 errorDetails.setErrorEnum(ErrorEnum.duplicate);
             }
@@ -130,7 +133,7 @@ public class UserBulkMigrationRequestValidator {
         if(!isPhoneValid){
             errorDetails.setErrorEnum(ErrorEnum.invalid);
         }
-        if(isPhoneValid){
+        if(isPhoneValid && PHONE_DUPLICATE_CHECK){
             if(!phoneSet.add(phone)) {
                 errorDetails.setErrorEnum(ErrorEnum.duplicate);
             }

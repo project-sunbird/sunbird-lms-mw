@@ -8,19 +8,31 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.background.BackgroundOperations;
+import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.actors.otp.SendOTPActor;
 import org.sunbird.learner.actors.otp.service.OTPService;
 import org.sunbird.notification.sms.provider.ISmsProvider;
 import org.sunbird.notification.utils.SMSFactory;
 
 public final class OTPUtil {
 
+  private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private static DecryptionService decService =
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
+          null);
   private static final int MINIMUM_OTP_LENGTH = 6;
   private static final int SECONDS_IN_MINUTES = 60;
 
@@ -88,14 +100,45 @@ public final class OTPUtil {
     }
   }
 
-  public static Request sendOTPViaEmail(Map<String, Object> emailTemplateMap) {
+  /**
+   * This method will return either email or phone value of user based on the asked type in request
+   *
+   * @param userId
+   * @param type value can be email, phone, prevUsedEmail or prevUsedPhone
+   * @return
+   */
+  public static String getEmailPhoneByUserId(String userId, String type) {
+    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+    Response response =
+        cassandraOperation.getRecordById(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userId);
+    List<Map<String, Object>> userList = (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
+    if (CollectionUtils.isNotEmpty(userList)) {
+      Map<String, Object> user = userList.get(0);
+      String emailPhone = decService.decryptData((String) user.get(type));
+      if (StringUtils.isBlank(emailPhone)) {
+        ProjectCommonException.throwClientErrorException(ResponseCode.invalidRequestData);
+      }
+      return emailPhone;
+    } else {
+      ProjectCommonException.throwClientErrorException(ResponseCode.userNotFound);
+    }
+    return null;
+  }
+
+  public static Request sendOTPViaEmail(Map<String, Object> emailTemplateMap, String otpType) {
     Request request = null;
     if ((StringUtils.isBlank((String) emailTemplateMap.get(JsonKey.EMAIL)))) {
       return request;
     }
     String envName = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME);
-    String welcomeSubject = ProjectUtil.getConfigValue(JsonKey.ONBOARDING_MAIL_SUBJECT);
-    emailTemplateMap.put(JsonKey.SUBJECT, ProjectUtil.formatMessage(welcomeSubject, envName));
+    String emailSubject = null;
+    if (SendOTPActor.RESET_PASSWORD.equalsIgnoreCase(otpType)) {
+      emailSubject = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_RESET_PASS_MAIL_SUBJECT);
+    } else {
+      // default fallback for all other otpType
+      emailSubject = ProjectUtil.getConfigValue(JsonKey.ONBOARDING_MAIL_SUBJECT);
+    }
+    emailTemplateMap.put(JsonKey.SUBJECT, ProjectUtil.formatMessage(emailSubject, envName));
     List<String> reciptientsMail = new ArrayList<>();
     reciptientsMail.add((String) emailTemplateMap.get(JsonKey.EMAIL));
     emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
@@ -105,6 +148,10 @@ public final class OTPUtil {
     request.setOperation(BackgroundOperations.emailService.name());
     request.put(JsonKey.EMAIL_REQUEST, emailTemplateMap);
     return request;
+  }
+
+  public static Request sendOTPViaEmail(Map<String, Object> emailTemplateMap) {
+    return sendOTPViaEmail(emailTemplateMap, null);
   }
 
   public static String getOTPExpirationInMinutes() {

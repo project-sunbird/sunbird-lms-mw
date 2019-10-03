@@ -40,7 +40,6 @@ import org.sunbird.user.util.KafkaConfigConstants;
 )
 public class UserMergeActor extends UserBaseActor {
   String topic = null;
-  String BOOTSTRAP_SERVERS = null;
   Producer<Long, String> producer = null;
   private ObjectMapper objectMapper = new ObjectMapper();
   private UserService userService = UserServiceImpl.getInstance();
@@ -276,18 +275,12 @@ public class UserMergeActor extends UserBaseActor {
   /** Initialises Kafka producer required for dispatching messages on Kafka. */
   private void initKafkaClient() {
     Config config = ConfigUtil.getConfig();
-    BOOTSTRAP_SERVERS =
-        config.getString(KafkaConfigConstants.SUNBIRD_USER_CERT_KAFKA_SERVICE_CONFIG);
     topic = config.getString(KafkaConfigConstants.SUNBIRD_USER_CERT_KAFKA_TOPIC);
-
-    ProjectLogger.log(
-        "KafkaTelemetryDispatcherActor:initKafkaClient: Bootstrap servers = " + BOOTSTRAP_SERVERS,
-        LoggerEnum.INFO.name());
     ProjectLogger.log("UserMergeActor:initKafkaClient: topic = " + topic, LoggerEnum.INFO.name());
     try {
       producer = KafkaClient.getProducer();
     } catch (Exception e) {
-      ProjectLogger.log("UserMergeActor:initKafkaClient: An exception occurred.", e);
+      ProjectLogger.log("UserMergeActor:initKafkaClient: An exception occurred." +e , LoggerEnum.ERROR.name());
     }
   }
 }

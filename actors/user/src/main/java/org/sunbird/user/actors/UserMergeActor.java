@@ -274,6 +274,7 @@ public class UserMergeActor extends UserBaseActor {
 
   /** Initialises Kafka producer required for dispatching messages on Kafka. */
   private void initKafkaClient() {
+    ProjectLogger.log("UserMergeActor:initKafkaClient: starts = ", LoggerEnum.INFO.name());
     Config config = ConfigUtil.getConfig();
     topic = config.getString(KafkaConfigConstants.SUNBIRD_USER_CERT_KAFKA_TOPIC);
     ProjectLogger.log("UserMergeActor:initKafkaClient: topic = " + topic, LoggerEnum.INFO.name());

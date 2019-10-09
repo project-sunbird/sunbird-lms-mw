@@ -334,14 +334,12 @@ public class CertificateActor extends UserBaseActor {
     String oldCertId = (String)certAddReqMap.get(JsonKey.OLD_ID);
     User user = userService.getUserById(userId);
     assureUniqueCertId((String) certAddReqMap.get(JsonKey.ID));
-    if(StringUtils.isNotBlank(oldCertId)) {
-      getCertificateDetails(oldCertId);
-    }
     populateStoreData(storeMap, certAddReqMap);
     certAddReqMap.put(JsonKey.STORE, storeMap);
     certAddReqMap = getRequiredRequest(certAddReqMap);
     certAddReqMap.put(JsonKey.CREATED_AT, getTimeStamp());
     if(StringUtils.isNotBlank(oldCertId)) {
+      getCertificateDetails(oldCertId);
       HashMap<String, Object> certUpdatedMap = new HashMap<>(certAddReqMap);
       response  = reIssueCert(certAddReqMap, certUpdatedMap);
       telemetryMap.put(JsonKey.OLD_ID, oldCertId);

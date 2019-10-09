@@ -58,10 +58,11 @@ public class ShadowUserMigrationScheduler extends BaseJob{
 
     public void startMigration(){
         List<String> unprocessedRecordIds = getUnprocessedRecordIds();
-        ProjectLogger.log("ShadowUserMigrationScheduler:startMigration:Got Bulk Upload Db unprocessed and failed records size is"+unprocessedRecordIds.size(),LoggerEnum.INFO.name());
+        ProjectLogger.log("ShadowUserMigrationScheduler:startMigration:Got Bulk Upload Db migrations started",LoggerEnum.INFO.name());
+        ProjectLogger.log("ShadowUserMigrationScheduler:startMigration:Got Bulk Upload Db unprocessed and failed records size is:"+unprocessedRecordIds.size(),LoggerEnum.INFO.name());
         processRecords(unprocessedRecordIds);
         ShadowUserProcessor processorObject=new  ShadowUserProcessor();
-        processorObject.process(unprocessedRecordIds);
+        processorObject.process();
         unprocessedRecordIds.clear();
         ProjectLogger.log("ShadowUserMigrationScheduler:processRecords:Scheduler Job Ended for ShadowUser Migration",LoggerEnum.INFO.name());
         ProjectLogger.log("ShadowUserMigrationScheduler:execute:Scheduler Job ended for shadow user migration",LoggerEnum.INFO.name());
@@ -87,6 +88,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
                 updateStatusInUserBulkTable(bulkMigrationUser.getId(), ProjectUtil.BulkProcessStatus.IN_PROGRESS.getValue());
                 List<MigrationUser> migrationUserList = getMigrationUserAsList(bulkMigrationUser);
                 migrationUserList.parallelStream().forEach(singleMigrationUser -> {
+                    encryptEmailAndPhone(singleMigrationUser);
                     processSingleMigUser(bulkMigrationUser.getCreatedBy(),bulkMigrationUser.getId(), singleMigrationUser);
                 });
                 updateMessageInBulkUserTable(bulkMigrationUser.getId(), JsonKey.SUCCESS_RESULT, JsonKey.SUCCESS);
@@ -190,8 +192,9 @@ public class ShadowUserMigrationScheduler extends BaseJob{
         Map<String, Object> dbMap = new WeakHashMap<>();
         dbMap.put(JsonKey.USER_EXT_ID,migrationUser.getUserExternalId());
         dbMap.put(JsonKey.ORG_EXT_ID,migrationUser.getOrgExternalId());
-        dbMap.put(JsonKey.EMAIL,StringUtils.isNotBlank(migrationUser.getEmail())?getEncryptedValue(migrationUser.getEmail().toLowerCase()):migrationUser.getEmail());
-        dbMap.put(JsonKey.PHONE,StringUtils.isNotBlank(migrationUser.getPhone())?getEncryptedValue(migrationUser.getPhone().toLowerCase()):migrationUser.getPhone());
+        ProjectLogger.log("ShadowUserMigrationScheduler:insertShadowUser: email got  "+migrationUser.getEmail()+" "+migrationUser.getPhone(), LoggerEnum.INFO.name());
+        dbMap.put(JsonKey.EMAIL,migrationUser.getEmail());
+        dbMap.put(JsonKey.PHONE,migrationUser.getPhone());
         dbMap.put(JsonKey.ADDED_BY,createdBy);
         dbMap.put(JsonKey.CHANNEL,migrationUser.getChannel());
         dbMap.put(JsonKey.NAME,migrationUser.getName());
@@ -221,8 +224,8 @@ public class ShadowUserMigrationScheduler extends BaseJob{
     private void updateUserInShadowDb(String processId,MigrationUser migrationUser, ShadowUser shadowUser) {
         if(!isSame(shadowUser,migrationUser)){
             Map<String, Object> propertiesMap = new WeakHashMap<>();
-            propertiesMap.put(JsonKey.EMAIL, migrationUser.getEmail());
-            propertiesMap.put(JsonKey.PHONE, migrationUser.getPhone());
+            propertiesMap.put(JsonKey.EMAIL,migrationUser.getEmail());
+            propertiesMap.put(JsonKey.PHONE,migrationUser.getPhone());
             propertiesMap.put(JsonKey.PROCESS_ID,processId);
             propertiesMap.put(JsonKey.NAME, migrationUser.getName());
             propertiesMap.put(JsonKey.ORG_EXT_ID, migrationUser.getOrgExternalId());
@@ -353,13 +356,23 @@ public class ShadowUserMigrationScheduler extends BaseJob{
         return false;
         }
 
-    private String getEncryptedValue(String key) {
+    private String encryptValue(String key) {
         try {
             return encryptionService.encryptData(key);
         } catch (Exception e) {
+            ProjectLogger.log("ShadowUserMigrationScheduler:getEncryptedValue: error occurred in encrypting value "+key,LoggerEnum.ERROR.name());
             return key;
         }
     }
 
+    private void encryptEmailAndPhone(MigrationUser migrationUser){
 
+
+        if(StringUtils.isNotBlank(migrationUser.getEmail())){
+            migrationUser.setEmail(encryptValue(migrationUser.getEmail().toLowerCase()));
+        }
+        if(StringUtils.isNotBlank(migrationUser.getPhone())){
+            migrationUser.setPhone(encryptValue(migrationUser.getPhone()));
+        }
+    }
 }

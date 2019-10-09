@@ -1,9 +1,8 @@
 package org.sunbird.validator.user;
 
-import com.mchange.v1.util.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.sunbird.bean.ShadowUserUpload;
 import org.sunbird.bean.MigrationUser;
+import org.sunbird.bean.ShadowUserUpload;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -12,11 +11,12 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.error.CsvError;
 import org.sunbird.error.CsvRowErrorDetails;
-import org.sunbird.error.IErrorDispatcher;
 import org.sunbird.error.ErrorEnum;
+import org.sunbird.error.IErrorDispatcher;
 import org.sunbird.error.factory.ErrorDispatcherFactory;
 
 import java.util.HashSet;
+import java.util.regex.Pattern;
 
 /**
  * this class will validate the csv file for shadow db
@@ -25,12 +25,10 @@ import java.util.HashSet;
 public class UserBulkMigrationRequestValidator {
 
     private ShadowUserUpload shadowUserMigration;
-    private HashSet<String> emailSet=new HashSet<>();
-    private HashSet<String> phoneSet=new HashSet<>();
     private HashSet<String> userExternalIdsSet=new HashSet<>();
     private CsvError csvRowsErrors=new CsvError();
     private static final int MAX_ROW_SUPPORTED=20000;
-
+    private static final String NAME_REGX_MATCHER="[0-9a-zA-Z][0-9a-zA-Z\\. ]*";
 
     private UserBulkMigrationRequestValidator(ShadowUserUpload migration) {
         this.shadowUserMigration = migration;
@@ -39,44 +37,9 @@ public class UserBulkMigrationRequestValidator {
         return new UserBulkMigrationRequestValidator(migration);
     }
     public void validate()
-    {
-        checkCsvHeader();
+    {        ProjectLogger.log("UserBulkMigrationRequestValidator:validate:start validating migration users", LoggerEnum.INFO.name());
         checkCsvRows();
     }
-    private void checkCsvHeader(){
-        checkMandatoryColumns();
-        checkSupportedColumns();
-    }
-    private void checkMandatoryColumns(){
-        shadowUserMigration.getMandatoryFields().forEach(
-                column->{
-                    if(!shadowUserMigration.getHeaders().contains(column.toLowerCase())){
-                        ProjectLogger.log("UserBulkMigrationRequestValidator:mandatoryColumns: mandatory column is not present".concat(column+""), LoggerEnum.ERROR.name());
-                        throw new ProjectCommonException(
-                                ResponseCode.mandatoryParamsMissing.getErrorCode(),
-                                ResponseCode.mandatoryParamsMissing.getErrorMessage(),
-                                ResponseCode.CLIENT_ERROR.getResponseCode(),
-                                column);
-                    }
-                }
-        );
-        }
-
-    private void checkSupportedColumns(){
-        shadowUserMigration.getHeaders().forEach(suppColumn->{
-            if(!shadowUserMigration.getSupportedFields().contains(suppColumn.toLowerCase())){
-                ProjectLogger.log("UserBulkMigrationRequestValidator:supportedColumns: supported column is not present".concat(suppColumn+""), LoggerEnum.ERROR.name());
-                throw new ProjectCommonException(
-                        ResponseCode.errorUnsupportedField.getErrorCode(),
-                        ResponseCode.errorUnsupportedField.getErrorMessage(),
-                        ResponseCode.CLIENT_ERROR.getResponseCode(),
-                        "Invalid provided column:".concat(suppColumn).concat(":supported headers are:").concat(ArrayUtils.stringifyContents(shadowUserMigration.getSupportedFields().toArray())));
-            }
-        });
-    }
-
-
-
     private void checkCsvRows(){
         validateRowsCount();
         shadowUserMigration.getValues().stream().forEach(onCsvRow -> {
@@ -105,6 +68,7 @@ public class UserBulkMigrationRequestValidator {
         }
     }
     private void validateMigrationUser(MigrationUser migrationUser,int index) {
+
         checkEmailAndPhone(migrationUser.getEmail(),migrationUser.getPhone(),index);
         checkUserExternalId(migrationUser.getUserExternalId(),index);
         checkName(migrationUser.getName(),index);
@@ -145,11 +109,6 @@ public class UserBulkMigrationRequestValidator {
         if(!isEmailValid){
             errorDetails.setErrorEnum(ErrorEnum.invalid);
         }
-        if(isEmailValid) {
-            if (!emailSet.add(email)) {
-                errorDetails.setErrorEnum(ErrorEnum.duplicate);
-            }
-        }
         if(errorDetails.getErrorEnum()!=null) {
             addErrorToList(errorDetails);
         }
@@ -163,11 +122,6 @@ public class UserBulkMigrationRequestValidator {
         boolean isPhoneValid=ProjectUtil.validatePhoneNumber(phone);
         if(!isPhoneValid){
             errorDetails.setErrorEnum(ErrorEnum.invalid);
-        }
-        if(isPhoneValid){
-            if(!phoneSet.add(phone)) {
-                errorDetails.setErrorEnum(ErrorEnum.duplicate);
-            }
         }
         if(errorDetails.getErrorEnum()!=null) {
         addErrorToList(errorDetails);
@@ -190,21 +144,32 @@ public class UserBulkMigrationRequestValidator {
     }
 
     private void checkName(String name,int index) {
+        if(StringUtils.isNotBlank(name) && !(Pattern.matches(NAME_REGX_MATCHER, name))){
+            CsvRowErrorDetails errorDetails=new CsvRowErrorDetails();
+            errorDetails.setRowId(index);
+            errorDetails.setHeader(JsonKey.NAME);
+            errorDetails.setErrorEnum(ErrorEnum.invalid);
+            addErrorToList(errorDetails);
+        }
         checkValue(name,index,JsonKey.NAME);
     }
 
 
-    private void checkInputStatus(String inputStatus,int index) {
-        checkValue(inputStatus,index,JsonKey.INPUT_STATUS);
-        if (!(inputStatus.equalsIgnoreCase(JsonKey.ACTIVE) ||
+    private void checkInputStatus(String inputStatus, int index) {
+        CsvRowErrorDetails errorDetails = new CsvRowErrorDetails();
+        errorDetails.setRowId(index);
+        if (StringUtils.isBlank(inputStatus)) {
+            errorDetails.setHeader(JsonKey.INPUT_STATUS);
+            errorDetails.setErrorEnum(ErrorEnum.missing);
+            addErrorToList(errorDetails);
+
+        } else if (!(inputStatus.equalsIgnoreCase(JsonKey.ACTIVE) ||
                 inputStatus.equalsIgnoreCase(JsonKey.INACTIVE))) {
-            CsvRowErrorDetails errorDetails=new CsvRowErrorDetails();
-            errorDetails.setRowId(index);
             errorDetails.setHeader(JsonKey.INPUT_STATUS);
             errorDetails.setErrorEnum(ErrorEnum.invalid);
             addErrorToList(errorDetails);
         }
-    }
+}
     private void checkValue(String column, int rowIndex, String header){
         if(StringUtils.isBlank(column)) {
             CsvRowErrorDetails errorDetails=new CsvRowErrorDetails();

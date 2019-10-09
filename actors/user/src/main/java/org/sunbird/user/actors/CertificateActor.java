@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.sql.Timestamp;
 import java.text.MessageFormat;
 import java.util.*;
+
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.background.BackgroundOperations;
@@ -300,7 +302,7 @@ public class CertificateActor extends UserBaseActor {
     Map<String, Object> record = response.getResult();
     if (null != record && null != record.get(JsonKey.RESPONSE)) {
       List responseList = (List) record.get(JsonKey.RESPONSE);
-      if (!responseList.isEmpty()) {
+      if (CollectionUtils.isNotEmpty(responseList)) {
         responseDetails = (Map<String, Object>) responseList.get(0);
         if(responseDetails.get(JsonKey.IS_DELETED) != null && (boolean)responseDetails.get(JsonKey.IS_DELETED)) {
           ProjectLogger.log(
@@ -332,7 +334,7 @@ public class CertificateActor extends UserBaseActor {
     String oldCertId = (String)certAddReqMap.get(JsonKey.OLD_ID);
     User user = userService.getUserById(userId);
     assureUniqueCertId((String) certAddReqMap.get(JsonKey.ID));
-    if(null != oldCertId) {
+    if(StringUtils.isNotBlank(oldCertId)) {
       getCertificateDetails(oldCertId);
     }
     populateStoreData(storeMap, certAddReqMap);

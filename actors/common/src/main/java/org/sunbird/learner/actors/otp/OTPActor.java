@@ -80,6 +80,10 @@ public class OTPActor extends BaseActor {
         return JsonKey.EMAIL;
       case JsonKey.PHONE:
         return JsonKey.PHONE;
+      case JsonKey.RECOVERY_EMAIL:
+        return JsonKey.EMAIL;
+      case JsonKey.RECOVERY_PHONE:
+        return JsonKey.PHONE;
       default:
         return null;
     }

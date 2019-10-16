@@ -110,6 +110,21 @@ public class OrgManagementActorTest {
     PowerMockito.mockStatic(LocationRequestValidator.class);
   }
 
+  // @Test
+  public void testUpdateOrgStatus() {
+    Request reqObj = new Request();
+    Map<String, Object> requestData = new HashMap<>();
+    requestData.put(JsonKey.REQUESTED_BY, "as23-12asd234-123");
+    requestData.put(JsonKey.ORGANISATION_ID, "orgId");
+    reqObj.setRequest(requestData);
+    reqObj.setOperation(ActorOperations.UPDATE_ORG_STATUS.getValue());
+    when(cassandraOperation.getRecordById(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(getRecordsByProperty(false));
+    boolean result = testScenario(reqObj, null);
+    assertTrue(result);
+  }
+
   @Test
   public void testAddUserToOrgSuccessWithUserIdAndOrgId() {
 

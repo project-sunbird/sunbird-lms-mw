@@ -19,6 +19,7 @@ public class Certificate implements Serializable {
     private String userId;
     private Map<String,String>store;
     private String otherLink;
+    private String oldId;
 
 
     public String getId() {
@@ -91,5 +92,13 @@ public class Certificate implements Serializable {
                 ", store=" + store +
                 ", otherLink='" + otherLink + '\'' +
                 '}';
+    }
+
+    public String getOldId() {
+        return oldId;
+    }
+
+    public void setOldId(String oldId) {
+        this.oldId = oldId;
     }
 }

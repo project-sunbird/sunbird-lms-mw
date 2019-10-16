@@ -1,19 +1,10 @@
 package org.sunbird.learner.actors;
 
-import static akka.testkit.JavaTestKit.duration;
-import static org.powermock.api.mockito.PowerMockito.mock;
-import static org.powermock.api.mockito.PowerMockito.mockStatic;
-import static org.powermock.api.mockito.PowerMockito.when;
-
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.dispatch.Futures;
 import akka.testkit.javadsl.TestKit;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -35,16 +26,22 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.actors.coursebatch.dao.UserCoursesDao;
-import org.sunbird.learner.actors.coursebatch.dao.impl.UserCoursesDaoImpl;
 import org.sunbird.learner.actors.search.SearchHandlerActor;
 import scala.concurrent.Promise;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static akka.testkit.JavaTestKit.duration;
+import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
   ServiceFactory.class,
   ElasticSearchRestHighImpl.class,
-  UserCoursesDaoImpl.class,
   EsClientFactory.class
 })
 @PowerMockIgnore({"javax.management.*"})
@@ -52,7 +49,6 @@ public class SearchHandlerActorTest {
 
   private static ActorSystem system;
   private static final Props props = Props.create(SearchHandlerActor.class);
-  private static UserCoursesDao userCoursesDao;
   private static CassandraOperationImpl cassandraOperation;
   private static ElasticSearchService esService;
 
@@ -61,9 +57,6 @@ public class SearchHandlerActorTest {
     system = ActorSystem.create("system");
     PowerMockito.mockStatic(ServiceFactory.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
-    mockStatic(UserCoursesDaoImpl.class);
-    userCoursesDao = PowerMockito.mock(UserCoursesDaoImpl.class);
-    when(UserCoursesDaoImpl.getInstance()).thenReturn(userCoursesDao);
   }
 
   @Before
@@ -137,32 +130,6 @@ public class SearchHandlerActorTest {
     Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
-  @Test
-  public void searchCourse() {
-    TestKit probe = new TestKit(system);
-    ActorRef subject = system.actorOf(props);
-
-    Request reqObj = new Request();
-    reqObj.setOperation(ActorOperations.COMPOSITE_SEARCH.getValue());
-    HashMap<String, Object> innerMap = new HashMap<>();
-    innerMap.put(JsonKey.QUERY, "");
-    Map<String, Object> filters = new HashMap<>();
-    List<String> objectType = new ArrayList<String>();
-    objectType.add("cbatch");
-    filters.put(JsonKey.OBJECT_TYPE, objectType);
-    filters.put(JsonKey.ROOT_ORG_ID, "ORG_001");
-    innerMap.put(JsonKey.FILTERS, filters);
-    innerMap.put(JsonKey.LIMIT, 1);
-    reqObj.setRequest(innerMap);
-
-    Map<String, Object> contextMap = new HashMap<>();
-    contextMap.put(JsonKey.PARTICIPANTS, JsonKey.PARTICIPANTS);
-    reqObj.setContext(contextMap);
-
-    subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
-    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
-  }
 
   @Test
   public void testInvalidOperation() {

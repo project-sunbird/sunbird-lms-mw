@@ -35,7 +35,9 @@ public class FuzzyMatcher {
               .setThreshold(getFuzzyThreshold())
               .createDocument();
     } catch (UnsupportedEncodingException e) {
-      ProjectLogger.log("FuzzyMatcher:matchDoc: Error occured dueing encoding of data " + e);
+      ProjectLogger.log(
+          "FuzzyMatcher:matchDoc: Error occured dueing encoding of data " + e,
+          LoggerEnum.ERROR.name());
     }
     return match(doc, prepareDocumentFromSearchMap(attributesValueMap));
   }
@@ -87,7 +89,9 @@ public class FuzzyMatcher {
                                   .createElement())
                           .createDocument());
                 } catch (UnsupportedEncodingException e) {
-                  ProjectLogger.log("Error occured during prepareDocumentFromSearchMap " + e);
+                  ProjectLogger.log(
+                      "Error occured during prepareDocumentFromSearchMap " + e,
+                      LoggerEnum.ERROR.name());
                 }
               }
             });

@@ -5,6 +5,8 @@ import com.intuit.fuzzymatcher.domain.Document;
 import com.intuit.fuzzymatcher.domain.Element;
 import com.intuit.fuzzymatcher.domain.ElementType;
 import com.intuit.fuzzymatcher.domain.Match;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -17,18 +19,26 @@ import org.sunbird.common.models.util.PropertiesCache;
 public class FuzzyMatcher {
 
   private static final String nameToBeMatchedId = "0";
+  private static final String ENCODING = "UTF-8";
 
   public static List<String> matchDoc(
       String nameToBeMatched, Map<String, String> attributesValueMap) {
-    Document doc =
-        new Document.Builder(nameToBeMatchedId)
-            .addElement(
-                new Element.Builder()
-                    .setType(ElementType.TEXT)
-                    .setValue(nameToBeMatched)
-                    .createElement())
-            .setThreshold(getFuzzyThreshold())
-            .createDocument();
+    Document doc = null;
+    try {
+      doc =
+          new Document.Builder(nameToBeMatchedId)
+              .addElement(
+                  new Element.Builder()
+                      .setType(ElementType.TEXT)
+                      .setValue(URLEncoder.encode(nameToBeMatched, ENCODING))
+                      .createElement())
+              .setThreshold(getFuzzyThreshold())
+              .createDocument();
+    } catch (UnsupportedEncodingException e) {
+      ProjectLogger.log(
+          "FuzzyMatcher:matchDoc: Error occured dueing encoding of data " + e,
+          LoggerEnum.ERROR.name());
+    }
     return match(doc, prepareDocumentFromSearchMap(attributesValueMap));
   }
 
@@ -69,14 +79,20 @@ public class FuzzyMatcher {
                       .concat("spliited name size is " + attributes.length),
                   LoggerEnum.INFO.name());
               for (int i = 0; i < attributes.length; i++) {
-                docList.add(
-                    new Document.Builder(result.getKey())
-                        .addElement(
-                            new Element.Builder()
-                                .setType(ElementType.TEXT)
-                                .setValue(attributes[i].trim())
-                                .createElement())
-                        .createDocument());
+                try {
+                  docList.add(
+                      new Document.Builder(result.getKey())
+                          .addElement(
+                              new Element.Builder()
+                                  .setType(ElementType.TEXT)
+                                  .setValue(URLEncoder.encode(attributes[i].trim(), ENCODING))
+                                  .createElement())
+                          .createDocument());
+                } catch (UnsupportedEncodingException e) {
+                  ProjectLogger.log(
+                      "Error occured during prepareDocumentFromSearchMap " + e,
+                      LoggerEnum.ERROR.name());
+                }
               }
             });
     ProjectLogger.log(

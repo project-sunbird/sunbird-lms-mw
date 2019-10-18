@@ -30,7 +30,7 @@ public class UserBulkMigrationRequestValidator {
     private HashSet<String> userExternalIdsSet=new HashSet<>();
     private CsvError csvRowsErrors=new CsvError();
     private static final int MAX_ROW_SUPPORTED=20000;
-    private static final String NAME_REGX_MATCHER="^[^.][^^;\\-()<>|!=’%_#$]+";
+    private static final String NAME_REG_MATCHER="^[^.][^^;\\-()<>|!=’%_#$]+";
 
     private UserBulkMigrationRequestValidator(ShadowUserUpload migration) {
         this.shadowUserMigration = migration;
@@ -146,7 +146,7 @@ public class UserBulkMigrationRequestValidator {
     }
 
     private void checkName(String name,int index) {
-        if(StringUtils.isNotBlank(name) && !(Pattern.matches(NAME_REGX_MATCHER, name))){
+        if(StringUtils.isNotBlank(name) && !(Pattern.matches(NAME_REG_MATCHER, name))){
             CsvRowErrorDetails errorDetails=new CsvRowErrorDetails();
             errorDetails.setRowId(index);
             errorDetails.setHeader(JsonKey.NAME);

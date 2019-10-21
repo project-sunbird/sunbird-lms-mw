@@ -74,7 +74,7 @@ public class MigrationActor extends BaseActor {
 
 
     private boolean isUserAgreed(Request request) {
-        if ((int) request.getRequest().get(JsonKey.ACTION) == ProjectUtil.ACTION.YES.getValue()) {
+        if ((int) request.getRequest().get(JsonKey.ACTION) == ProjectUtil.Action.YES.getValue()) {
             return true;
         }
         return false;

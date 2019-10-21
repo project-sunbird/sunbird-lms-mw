@@ -240,7 +240,10 @@ public class ShadowUserMigrationScheduler extends BaseJob{
             Response response = cassandraOperation.updateRecord(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, propertiesMap,compositeKeysMap);
             ProjectLogger.log("ShadowUserMigrationScheduler:updateUserInShadowDb: record status in cassandra ".concat(response+ ""), LoggerEnum.INFO.name());
             propertiesMap.clear();
-            new ShadowUserProcessor().processClaimedUser(getUpdatedShadowUser(compositeKeysMap));
+            ShadowUser newShadowUser=getUpdatedShadowUser(compositeKeysMap);
+            if(newShadowUser.getClaimStatus()==ClaimStatus.CLAIMED.getValue()) {
+                new ShadowUserProcessor().processClaimedUser(newShadowUser);
+            }
         }
     }
 

@@ -22,6 +22,10 @@ public class OTPService {
     otpDao.insertOTPDetails(type, key, otp);
   }
 
+  public void deleteOtp(String type,String key){
+    otpDao.deleteOtp(type,key);
+  }
+
   public static String getOTPSMSBody(Map<String, String> smsTemplate) {
     try {
       Properties props = new Properties();

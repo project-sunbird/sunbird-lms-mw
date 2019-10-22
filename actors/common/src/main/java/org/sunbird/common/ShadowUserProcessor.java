@@ -75,7 +75,9 @@ public class ShadowUserProcessor {
             registerUserToOrg(userId, orgId);
         }
         syncUserToES(userId);
-        updateUserInShadowDb(userId, shadowUser, ClaimStatus.CLAIMED.getValue(), new ArrayList<>());
+        List<String>userIds=new ArrayList<>();
+        userIds.add(userId);
+        updateUserInShadowDb(userId, shadowUser, ClaimStatus.CLAIMED.getValue(), userIds);
     }
 
     private boolean isRootOrgMatchedWithOrgId(String rootOrgId, String orgId) {
@@ -135,7 +137,9 @@ public class ShadowUserProcessor {
                 Map<String, Object> userMap = esUser.get(0);
                 if (!isSame(shadowUser, userMap)) {
                     ProjectLogger.log("ShadowUserProcessor:updateUser: provided user details doesn't match with existing user details with processId" + shadowUser.getProcessId() + userMap, LoggerEnum.INFO.name());
-                    updateUserInShadowDb((String) userMap.get(JsonKey.ID), shadowUser, ClaimStatus.ELIGIBLE.getValue(), new ArrayList<>());
+                    List<String>userIds=new ArrayList<>();
+                    userIds.add((String) userMap.get(JsonKey.ID));
+                    updateUserInShadowDb(null, shadowUser, ClaimStatus.ELIGIBLE.getValue(),userIds);
                 }
             } else if (esUser.size() > 1) {
                 ProjectLogger.log("ShadowUserProcessor:updateUser:GOT response from ES :" + esUser, LoggerEnum.INFO.name());
@@ -308,9 +312,7 @@ public class ShadowUserProcessor {
         propertiesMap.put(JsonKey.CLAIM_STATUS, claimStatus);
         propertiesMap.put(JsonKey.PROCESS_ID, shadowUser.getProcessId());
         propertiesMap.put(JsonKey.USER_ID, userId);
-        if (null != matchingUserIds) {
-            propertiesMap.put(JsonKey.USER_IDs, matchingUserIds);
-        }
+        propertiesMap.put(JsonKey.USER_IDs, matchingUserIds);
         Map<String, Object> compositeKeysMap = new HashMap<>();
         compositeKeysMap.put(JsonKey.CHANNEL, shadowUser.getChannel());
         compositeKeysMap.put(JsonKey.USER_EXT_ID, shadowUser.getUserExtId());

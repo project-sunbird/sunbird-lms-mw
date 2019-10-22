@@ -231,7 +231,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
             propertiesMap.put(JsonKey.ORG_EXT_ID, migrationUser.getOrgExternalId());
             propertiesMap.put(JsonKey.UPDATED_ON, new Timestamp(System.currentTimeMillis()));
             propertiesMap.put(JsonKey.USER_STATUS,getInputStatus(migrationUser.getInputStatus()));
-            if(!isOrgExternalIdValid(migrationUser)) {
+            if(shadowUser.getClaimStatus()!=ClaimStatus.CLAIMED.getValue() && !isOrgExternalIdValid(migrationUser)) {
                 propertiesMap.put(JsonKey.CLAIM_STATUS, ClaimStatus.ORGEXTERNALIDMISMATCH.getValue());
             }
             Map<String,Object>compositeKeysMap=new HashMap<>();

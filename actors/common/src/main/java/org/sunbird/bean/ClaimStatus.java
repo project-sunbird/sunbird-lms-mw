@@ -14,7 +14,8 @@ public enum ClaimStatus {
     REJECTED(2),
     FAILED(3),
     MULTIMATCH(4),
-    ORGEXTERNALIDMISMATCH(5);
+    ORGEXTERNALIDMISMATCH(5),
+    ELIGIBLE(6);
 
     private int value;
     ClaimStatus(int value) {

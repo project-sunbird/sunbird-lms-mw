@@ -221,6 +221,13 @@ public class ShadowUserMigrationScheduler extends BaseJob{
         updateUserInShadowDb(processId,migrationUser,shadowUser);
     }
 
+
+    /**
+     * will update the record in shadow table and only update the record in user table only when user is VALIDATED.
+     * @param processId
+     * @param migrationUser
+     * @param shadowUser
+     */
     private void updateUserInShadowDb(String processId,MigrationUser migrationUser, ShadowUser shadowUser) {
         if(!isSame(shadowUser,migrationUser)){
             Map<String, Object> propertiesMap = new WeakHashMap<>();
@@ -231,7 +238,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
             propertiesMap.put(JsonKey.ORG_EXT_ID, migrationUser.getOrgExternalId());
             propertiesMap.put(JsonKey.UPDATED_ON, new Timestamp(System.currentTimeMillis()));
             propertiesMap.put(JsonKey.USER_STATUS,getInputStatus(migrationUser.getInputStatus()));
-            if(!isOrgExternalIdValid(migrationUser)) {
+            if(shadowUser.getClaimStatus()!=ClaimStatus.CLAIMED.getValue() && !isOrgExternalIdValid(migrationUser)) {
                 propertiesMap.put(JsonKey.CLAIM_STATUS, ClaimStatus.ORGEXTERNALIDMISMATCH.getValue());
             }
             Map<String,Object>compositeKeysMap=new HashMap<>();
@@ -240,7 +247,10 @@ public class ShadowUserMigrationScheduler extends BaseJob{
             Response response = cassandraOperation.updateRecord(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, propertiesMap,compositeKeysMap);
             ProjectLogger.log("ShadowUserMigrationScheduler:updateUserInShadowDb: record status in cassandra ".concat(response+ ""), LoggerEnum.INFO.name());
             propertiesMap.clear();
-            new ShadowUserProcessor().processClaimedUser(getUpdatedShadowUser(compositeKeysMap));
+            ShadowUser newShadowUser=getUpdatedShadowUser(compositeKeysMap);
+            if(newShadowUser.getClaimStatus()==ClaimStatus.CLAIMED.getValue()) {
+                new ShadowUserProcessor().processClaimedUser(newShadowUser);
+            }
         }
     }
 

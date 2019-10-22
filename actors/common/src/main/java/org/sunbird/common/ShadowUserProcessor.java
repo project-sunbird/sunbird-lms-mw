@@ -37,7 +37,6 @@ public class ShadowUserProcessor {
     private Map<String, String> hashTagIdMap = new HashMap<>();
     private Util.DbInfo bulkUploadDbInfo = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
     private Map<String, String> extOrgIdMap = new HashMap<>();
-    private Map<String, String> channelOrgIdMap = new HashMap<>();
     private String custodianOrgId;
     private Map<String,Map<String,Object>>processIdtelemetryCtxMap=new HashMap<>();
 
@@ -136,15 +135,7 @@ public class ShadowUserProcessor {
                 Map<String, Object> userMap = esUser.get(0);
                 if (!isSame(shadowUser, userMap)) {
                     ProjectLogger.log("ShadowUserProcessor:updateUser: provided user details doesn't match with existing user details with processId" + shadowUser.getProcessId() + userMap, LoggerEnum.INFO.name());
-                    String rootOrgId = getRootOrgIdFromChannel(shadowUser.getChannel());
-                    int flagsValue = null != userMap.get(JsonKey.FLAGS_VALUE) ? (int) userMap.get(JsonKey.FLAGS_VALUE) : 0;   // since we are migrating the user from custodian org to non custodian org.
-                    ProjectLogger.log("ShadowUserProcessor:processClaimedUser:Got Flag Value " + flagsValue, LoggerEnum.INFO.name());
-                    updateUserInUserTable(flagsValue, (String) userMap.get(JsonKey.ID), rootOrgId, shadowUser);
-                    String orgIdFromOrgExtId = getOrgId(shadowUser);
-                    updateUserOrg(orgIdFromOrgExtId, rootOrgId, userMap);
-                    createUserExternalId((String) userMap.get(JsonKey.ID), shadowUser);
-                    updateUserInShadowDb((String) userMap.get(JsonKey.ID), shadowUser, ClaimStatus.CLAIMED.getValue(), null);
-                    syncUserToES((String) userMap.get(JsonKey.ID));
+                    updateUserInShadowDb((String) userMap.get(JsonKey.ID), shadowUser, ClaimStatus.ELIGIBLE.getValue(), null);
                 }
             } else if (esUser.size() > 1) {
                 ProjectLogger.log("ShadowUserProcessor:updateUser:GOT response from ES :" + esUser, LoggerEnum.INFO.name());
@@ -184,15 +175,6 @@ public class ShadowUserProcessor {
     }
 
 
-    private void updateUserOrg(String orgIdFromOrgExtId, String rootOrgId, Map<String, Object> userMap) {
-        deleteUserOrganisations(userMap);
-        ProjectLogger.log("ShadowUserProcessor:updateUserOrg:deleting user organisation completed no started registering user to org", LoggerEnum.INFO.name());
-        registerUserToOrg((String) userMap.get(JsonKey.ID), rootOrgId);
-        if (StringUtils.isNotBlank(orgIdFromOrgExtId) && !StringUtils.equalsIgnoreCase(rootOrgId, orgIdFromOrgExtId)) {
-            ProjectLogger.log("ShadowUserProcessor:updateUserOrg:user also needs to register with sub org", LoggerEnum.INFO.name());
-            registerUserToOrg((String) userMap.get(JsonKey.ID), orgIdFromOrgExtId);
-        }
-    }
 
     private void updateUserInUserTable(int flagValue, String userId, String rootOrgId, ShadowUser shadowUser) {
         Map<String, Object> propertiesMap = new WeakHashMap<>();
@@ -218,30 +200,6 @@ public class ShadowUserProcessor {
         Response response = cassandraOperation.updateRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), propertiesMap);
         ProjectLogger.log("ShadowUserProcessor:updateUserInUserTable:user is updated with shadow user:RESPONSE FROM CASSANDRA IS:"+response.getResult(),LoggerEnum.INFO.name());
         generateTelemetry(userId,rootOrgId,shadowUser);
-    }
-
-
-    private String getRootOrgIdFromChannel(String channel) {
-        String rootOrgId = channelOrgIdMap.get(channel);
-        if (StringUtils.isNotBlank(rootOrgId)) {
-            ProjectLogger.log("ShadowUserProcessor:getRootOrgIdFromChannel: found rootorgid in cache " + rootOrgId, LoggerEnum.INFO.name());
-            return rootOrgId;
-        }
-        Map<String, Object> request = new WeakHashMap<>();
-        Map<String, Object> filters = new WeakHashMap<>();
-        filters.put(JsonKey.CHANNEL, channel);
-        filters.put(JsonKey.IS_ROOT_ORG, true);
-        request.put(JsonKey.FILTERS, filters);
-        SearchDTO searchDTO = ElasticSearchHelper.createSearchDTO(request);
-        searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
-        Future<Map<String, Object>> esResultF = elasticSearchService.search(searchDTO, ProjectUtil.EsType.organisation.getTypeName());
-        Map<String, Object> esResult = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(esResultF);
-        if (MapUtils.isNotEmpty(esResult) && CollectionUtils.isNotEmpty((List) esResult.get(JsonKey.CONTENT))) {
-            Map<String, Object> esContent = ((List<Map<String, Object>>) esResult.get(JsonKey.CONTENT)).get(0);
-            channelOrgIdMap.put(channel, (String) esContent.get(JsonKey.ID));
-            return (String) esContent.get(JsonKey.ID);
-        }
-        return StringUtils.EMPTY;
     }
 
 
@@ -410,20 +368,6 @@ public class ShadowUserProcessor {
         }
     }
 
-
-    private void deleteUserOrganisations(Map<String, Object> esUserMap) {
-        ((List<Map<String, Object>>) esUserMap.get(JsonKey.ORGANISATIONS)).stream().forEach(organisation -> {
-            String id = (String) organisation.get(JsonKey.ID);
-            deleteOrgFromUserOrg(id);
-        });
-    }
-
-    private void deleteOrgFromUserOrg(String id) {
-        Response response = cassandraOperation.deleteRecord(JsonKey.SUNBIRD, JsonKey.USER_ORG, id);
-        ProjectLogger.log("ShadowUserProcessor:deleteOrgFromUserOrg:user org is deleted ".concat(response.getResult() + ""), LoggerEnum.INFO.name());
-    }
-
-
     private void registerUserToOrg(String userId, String organisationId) {
         Map<String, Object> reqMap = new WeakHashMap<>();
         List<String> roles = new ArrayList<>();
@@ -449,34 +393,6 @@ public class ShadowUserProcessor {
             ProjectLogger.log("ShadowUserProcessor:registerUserToOrg:user is failed to register with org" + userId, LoggerEnum.ERROR.name());
         }
     }
-
-    private void createUserExternalId(String userId, ShadowUser shadowUser) {
-        Map<String, Object> externalId = new WeakHashMap<>();
-        externalId.put(JsonKey.ID_TYPE, shadowUser.getChannel().toLowerCase());
-        externalId.put(JsonKey.PROVIDER, shadowUser.getChannel().toLowerCase());
-        externalId.put(JsonKey.EXTERNAL_ID, shadowUser.getUserExtId().toLowerCase());
-        externalId.put(JsonKey.ORIGINAL_EXTERNAL_ID, externalId.get(JsonKey.EXTERNAL_ID));
-        externalId.put(JsonKey.ORIGINAL_PROVIDER, externalId.get(JsonKey.PROVIDER));
-        externalId.put(JsonKey.ORIGINAL_ID_TYPE, externalId.get(JsonKey.ID_TYPE));
-        externalId.put(JsonKey.USER_ID, userId);
-        externalId.put(JsonKey.CREATED_BY, shadowUser.getAddedBy());
-        externalId.put(JsonKey.CREATED_ON, new Timestamp(System.currentTimeMillis()));
-        ProjectLogger.log("ShadowUserProcessor:createUserExternalId:map prepared for user externalid is " + externalId + "with processId" + shadowUser.getProcessId(), LoggerEnum.INFO.name());
-        saveUserExternalId(externalId);
-    }
-
-
-    /**
-     * this method will save user data in usr_external_identity table
-     *
-     * @param externalId
-     */
-    private void saveUserExternalId(Map<String, Object> externalId) {
-        Response response = cassandraOperation.insertRecord(JsonKey.SUNBIRD, JsonKey.USR_EXT_IDNT_TABLE, externalId);
-        ProjectLogger.log("ShadowUserProcessor:createUserExternalId:response from cassandra ".concat(response.getResult() + ""), LoggerEnum.INFO.name());
-    }
-
-
     private Map<String,Object> getTelemetryContextByProcessId(String processId){
 
         if(MapUtils.isNotEmpty(processIdtelemetryCtxMap.get(processId))){

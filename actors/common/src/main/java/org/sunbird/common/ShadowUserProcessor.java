@@ -75,7 +75,7 @@ public class ShadowUserProcessor {
             registerUserToOrg(userId, orgId);
         }
         syncUserToES(userId);
-        updateUserInShadowDb(userId, shadowUser, ClaimStatus.CLAIMED.getValue(), null);
+        updateUserInShadowDb(userId, shadowUser, ClaimStatus.CLAIMED.getValue(), new ArrayList<>());
     }
 
     private boolean isRootOrgMatchedWithOrgId(String rootOrgId, String orgId) {
@@ -135,7 +135,7 @@ public class ShadowUserProcessor {
                 Map<String, Object> userMap = esUser.get(0);
                 if (!isSame(shadowUser, userMap)) {
                     ProjectLogger.log("ShadowUserProcessor:updateUser: provided user details doesn't match with existing user details with processId" + shadowUser.getProcessId() + userMap, LoggerEnum.INFO.name());
-                    updateUserInShadowDb((String) userMap.get(JsonKey.ID), shadowUser, ClaimStatus.ELIGIBLE.getValue(), null);
+                    updateUserInShadowDb((String) userMap.get(JsonKey.ID), shadowUser, ClaimStatus.ELIGIBLE.getValue(), new ArrayList<>());
                 }
             } else if (esUser.size() > 1) {
                 ProjectLogger.log("ShadowUserProcessor:updateUser:GOT response from ES :" + esUser, LoggerEnum.INFO.name());
@@ -307,11 +307,14 @@ public class ShadowUserProcessor {
         Map<String, Object> propertiesMap = new HashMap<>();
         propertiesMap.put(JsonKey.CLAIM_STATUS, claimStatus);
         propertiesMap.put(JsonKey.PROCESS_ID, shadowUser.getProcessId());
+        if (claimStatus == ClaimStatus.ELIGIBLE.getValue()){
+            propertiesMap.put(JsonKey.USER_ID, userId);
+        }
         if (claimStatus == ClaimStatus.CLAIMED.getValue()) {
             propertiesMap.put(JsonKey.CLAIMED_ON, new Timestamp(System.currentTimeMillis()));
             propertiesMap.put(JsonKey.USER_ID, userId);
         }
-        if (null != matchingUserIds && CollectionUtils.isNotEmpty(matchingUserIds)) {
+        if (null != matchingUserIds) {
             propertiesMap.put(JsonKey.USER_IDs, matchingUserIds);
         }
         Map<String, Object> compositeKeysMap = new HashMap<>();

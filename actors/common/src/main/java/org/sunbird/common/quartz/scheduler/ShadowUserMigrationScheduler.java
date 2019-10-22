@@ -319,13 +319,13 @@ public class ShadowUserMigrationScheduler extends BaseJob{
         if(!shadowUser.getName().equalsIgnoreCase(migrationUser.getName())){
         return false;
         }
-        if(StringUtils.isNotBlank(migrationUser.getEmail()) && !shadowUser.getEmail().equalsIgnoreCase(migrationUser.getEmail())){
+        if(!StringUtils.equalsIgnoreCase(shadowUser.getEmail(),migrationUser.getEmail())){
             return false;
         }
         if(! StringUtils.equalsIgnoreCase(shadowUser.getOrgExtId(),migrationUser.getOrgExternalId())){
             return false;
         }
-        if(StringUtils.isNotBlank(migrationUser.getPhone()) && !shadowUser.getPhone().equalsIgnoreCase(migrationUser.getPhone()))
+        if(!StringUtils.equalsIgnoreCase(shadowUser.getPhone(),migrationUser.getPhone()))
         {
             return false;
         }

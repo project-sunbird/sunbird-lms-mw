@@ -48,7 +48,7 @@ public class ShadowUserProcessor {
     }
 
     private void processSingleShadowUser(ShadowUser shadowUser) {
-        ProjectLogger.log("ShadowUserProcessor:processSingleShadowUser:started claming  shadow user with processId: " + shadowUser.getProcessId(), LoggerEnum.INFO.name());
+        ProjectLogger.log("ShadowUserProcessor:processSingleShadowUser:started claiming  shadow user with processId: " + shadowUser.getProcessId(), LoggerEnum.INFO.name());
         updateUser(shadowUser);
     }
 
@@ -307,13 +307,7 @@ public class ShadowUserProcessor {
         Map<String, Object> propertiesMap = new HashMap<>();
         propertiesMap.put(JsonKey.CLAIM_STATUS, claimStatus);
         propertiesMap.put(JsonKey.PROCESS_ID, shadowUser.getProcessId());
-        if (claimStatus == ClaimStatus.ELIGIBLE.getValue()){
-            propertiesMap.put(JsonKey.USER_ID, userId);
-        }
-        if (claimStatus == ClaimStatus.CLAIMED.getValue()) {
-            propertiesMap.put(JsonKey.CLAIMED_ON, new Timestamp(System.currentTimeMillis()));
-            propertiesMap.put(JsonKey.USER_ID, userId);
-        }
+        propertiesMap.put(JsonKey.USER_ID, userId);
         if (null != matchingUserIds) {
             propertiesMap.put(JsonKey.USER_IDs, matchingUserIds);
         }
@@ -335,7 +329,7 @@ public class ShadowUserProcessor {
             filters.put(JsonKey.EXTERNAL_ID, shadowUser.getOrgExtId().toLowerCase());
             filters.put(JsonKey.CHANNEL, shadowUser.getChannel());
             request.put(JsonKey.FILTERS, filters);
-            ProjectLogger.log("ShadowUserProcessor:getOrgId: request map prepared to query elasticsearch for org id :" + filters + "with processId" + shadowUser.getProcessId(), LoggerEnum.INFO.name());
+            ProjectLogger.log("ShadowUserProcessor:getOrgId: request map prepared to query ElasticSearch for org id :" + filters + "with processId" + shadowUser.getProcessId(), LoggerEnum.INFO.name());
             SearchDTO searchDTO = ElasticSearchHelper.createSearchDTO(request);
             Map<String, Object> response = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(elasticSearchService.search(searchDTO, ProjectUtil.EsType.organisation.getTypeName()));
             List<Map<String, Object>> orgData = ((List<Map<String, Object>>) response.get(JsonKey.CONTENT));

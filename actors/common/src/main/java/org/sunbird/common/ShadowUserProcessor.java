@@ -204,9 +204,9 @@ public class ShadowUserProcessor {
 
 
     /**
-     * this method
+     * this method will return the custodianRootOrgId
      *
-     * @return
+     * @return string
      */
     private String getCustodianOrgId() {
         if (StringUtils.isNotBlank(custodianOrgId)) {

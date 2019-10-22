@@ -223,7 +223,8 @@ public class ShadowUserMigrationScheduler extends BaseJob{
 
 
     /**
-     * will update the record in shadow table and only update the record in user table only when user is VALIDATED.
+     * This method will overwrite the user record in shadow_user also will not update the claimStatus of shadow_user if user is already VALIDATED/CLAIMED.
+     * if user is not VALIDATED/CLAIMED then it can set claimStatus to 5 if provided ext org id is incorrect.
      * @param processId
      * @param migrationUser
      * @param shadowUser

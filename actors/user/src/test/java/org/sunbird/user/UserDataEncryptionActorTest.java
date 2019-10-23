@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -22,6 +23,8 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.user.actors.UserDataEncryptionActor;
 
+
+@Ignore
 public class UserDataEncryptionActorTest {
 
   private TestKit probe;

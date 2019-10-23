@@ -22,7 +22,9 @@ public class MigrationUtils {
 
     public static ShadowUser getRecordByUserId(String userId) {
         ShadowUser shadowUser=null;
-        Response response = cassandraOperation.searchValueInList(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, JsonKey.USERIDS, userId);
+        Map<String, Object> propertiesMap = new HashMap<>();
+        propertiesMap.put(JsonKey.USER_ID,userId);
+        Response response = cassandraOperation.getRecordsByProperties(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, propertiesMap, null);
         if(!((List) response.getResult().get(JsonKey.RESPONSE)).isEmpty()) {
             shadowUser = mapper.convertValue(((List) response.getResult().get(JsonKey.RESPONSE)).get(0), ShadowUser.class);
         }

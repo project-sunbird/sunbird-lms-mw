@@ -8,7 +8,6 @@ import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
 import java.util.*;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
@@ -23,7 +22,6 @@ public class UserTypeActorTest {
   private static final Props props = Props.create(UserTypeActor.class);
 
   @Test
-  @Ignore
   public void testGetUserTypesSuccess() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);

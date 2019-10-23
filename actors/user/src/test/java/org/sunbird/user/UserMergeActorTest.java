@@ -9,10 +9,11 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
+import com.typesafe.config.Config;
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.kafka.clients.producer.Producer;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -27,18 +28,24 @@ import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.common.util.ConfigUtil;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.kafka.client.KafkaClient;
 import org.sunbird.models.user.User;
 import org.sunbird.user.actors.UserMergeActor;
 import org.sunbird.user.dao.impl.UserDaoImpl;
 import org.sunbird.user.service.impl.UserServiceImpl;
+import org.sunbird.user.util.KafkaConfigConstants;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
   UserServiceImpl.class,
   UserDaoImpl.class,
   ServiceFactory.class,
-  CassandraOperationImpl.class
+  CassandraOperationImpl.class,
+  ConfigUtil.class,
+  Config.class,
+  KafkaClient.class
 })
 @PowerMockIgnore({"javax.management.*"})
 public class UserMergeActorTest {
@@ -46,20 +53,31 @@ public class UserMergeActorTest {
   private static ActorSystem system = ActorSystem.create("system");
   public static UserServiceImpl userService;
   public static UserDaoImpl userDao;
+  public static Config config;
+  public static Producer producer;
+  public static KafkaClient kafkaClient;
   public static CassandraOperationImpl cassandraOperation;
 
   @Before
   public void beforeEachTest() {
     PowerMockito.mockStatic(UserServiceImpl.class);
     PowerMockito.mockStatic(UserDaoImpl.class);
+    PowerMockito.mockStatic(ConfigUtil.class);
+    PowerMockito.mockStatic(KafkaClient.class);
     userService = mock(UserServiceImpl.class);
     userDao = mock(UserDaoImpl.class);
+    config = mock(Config.class);
+    kafkaClient = mock(KafkaClient.class);
+    producer = mock(Producer.class);
+    when(ConfigUtil.getConfig()).thenReturn(config);
+    when(config.getString(KafkaConfigConstants.SUNBIRD_USER_CERT_KAFKA_TOPIC)).thenReturn("topic");
     when(UserServiceImpl.getInstance()).thenReturn(userService);
     when(UserDaoImpl.getInstance()).thenReturn(userDao);
+    when(KafkaClient.getProducer()).thenReturn(producer);
     cassandraOperation = mock(CassandraOperationImpl.class);
   }
 
-  @Ignore
+  // @Ignore
   @Test
   public void testMergeUserIsAlreadyDeleted() {
     when(userService.getUserById(Mockito.anyString())).thenReturn(getUserDetails(true));
@@ -68,7 +86,7 @@ public class UserMergeActorTest {
     assertTrue(result);
   }
 
-  @Ignore
+  //  @Ignore
   @Test
   public void testValidMergeUser() {
     when(userService.getUserById(Mockito.anyString())).thenReturn(getUserDetails(false));

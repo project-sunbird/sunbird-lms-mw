@@ -24,8 +24,7 @@ import org.sunbird.learner.util.Util.DbInfo;
 import scala.concurrent.Future;
 
 /**
- * This class will handle all the background job. Example when ever course is published then this
- * job will collect course related data from EKStep and update with Sunbird.
+ * This class will handle all the background job.
  *
  * @author Manzarul
  * @author Amit Kumar
@@ -68,19 +67,17 @@ public class BackgroundJobManager extends BaseActor {
     if (operation.equalsIgnoreCase(ActorOperations.UPDATE_USER_INFO_ELASTIC.getValue())) {
       ProjectLogger.log("Update user info to ES called.", LoggerEnum.INFO.name());
       updateUserInfoToEs(request);
-    }  else if (operation.equalsIgnoreCase(ActorOperations.UPDATE_USER_COUNT.getValue())) {
-      updateUserCount(request);
     } else if (operation.equalsIgnoreCase(ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue())) {
       updateOrgInfoToEs(request);
     } else if (operation.equalsIgnoreCase(ActorOperations.INSERT_ORG_INFO_ELASTIC.getValue())) {
       insertOrgInfoToEs(request);
-    }  else if (operation.equalsIgnoreCase(ActorOperations.UPDATE_USER_ORG_ES.getValue())) {
+    } else if (operation.equalsIgnoreCase(ActorOperations.UPDATE_USER_ORG_ES.getValue())) {
       updateUserOrgInfoToEs(request);
     } else if (operation.equalsIgnoreCase(ActorOperations.REMOVE_USER_ORG_ES.getValue())) {
       removeUserOrgInfoToEs(request);
     } else if (operation.equalsIgnoreCase(ActorOperations.UPDATE_USER_ROLES_ES.getValue())) {
       updateUserRoleToEs(request);
-    }  else if (operation.equalsIgnoreCase(ActorOperations.ADD_USER_BADGE_BKG.getValue())) {
+    } else if (operation.equalsIgnoreCase(ActorOperations.ADD_USER_BADGE_BKG.getValue())) {
       addBadgeToUserprofile(request);
     } else if (operation.equalsIgnoreCase(ActorOperations.INSERT_USER_NOTES_ES.getValue())) {
       insertUserNotesToEs(request);
@@ -172,8 +169,6 @@ public class BackgroundJobManager extends BaseActor {
         result);
   }
 
-
-
   @SuppressWarnings("unchecked")
   private void removeUserOrgInfoToEs(Request actorMessage) {
     Map<String, Object> orgMap = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
@@ -229,7 +224,6 @@ public class BackgroundJobManager extends BaseActor {
         result);
   }
 
-
   @SuppressWarnings("unchecked")
   private void insertOrgInfoToEs(Request actorMessage) {
     Map<String, String> headerMap = new HashMap<>();
@@ -239,14 +233,14 @@ public class BackgroundJobManager extends BaseActor {
     headerMap.put("Content-Type", "application/json");
     ProjectLogger.log("Calling method to save inside Es==");
     Map<String, Object> orgMap =
-            (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
+        (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION);
     if (ProjectUtil.isNotNull(orgMap)) {
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
       String id = (String) orgMap.get(JsonKey.ID);
       Response orgResponse =
-              cassandraOperation.getRecordById(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), id);
+          cassandraOperation.getRecordById(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), id);
       List<Map<String, Object>> orgList =
-              (List<Map<String, Object>>) orgResponse.getResult().get(JsonKey.RESPONSE);
+          (List<Map<String, Object>>) orgResponse.getResult().get(JsonKey.RESPONSE);
       Map<String, Object> esMap = new HashMap<>();
       if (!(orgList.isEmpty())) {
         esMap = orgList.get(0);
@@ -266,12 +260,12 @@ public class BackgroundJobManager extends BaseActor {
         hashOrgId = id;
       }
       // making call to register tag
-      registertag(hashOrgId, "{}",headerMap);
+      registertag(hashOrgId, "{}", headerMap);
       insertDataToElastic(
-              ProjectUtil.EsIndex.sunbird.getIndexName(),
-              ProjectUtil.EsType.organisation.getTypeName(),
-              id,
-              esMap);
+          ProjectUtil.EsIndex.sunbird.getIndexName(),
+          ProjectUtil.EsType.organisation.getTypeName(),
+          id,
+          esMap);
     }
   }
 
@@ -312,41 +306,6 @@ public class BackgroundJobManager extends BaseActor {
         userId,
         userDetails);
   }
-
-  /** Method to update the user count . */
-  @SuppressWarnings("unchecked")
-  private void updateUserCount(Request actorMessage) {
-    String courseId = (String) actorMessage.get(JsonKey.COURSE_ID);
-    Map<String, Object> updateRequestMap = actorMessage.getRequest();
-
-    Response result =
-        cassandraOperation.getPropertiesValueById(
-            dbInfo.getKeySpace(), dbInfo.getTableName(), courseId, JsonKey.USER_COUNT);
-    Map<String, Object> responseMap = null;
-    if (null != (result.get(JsonKey.RESPONSE))
-        && (!((List<Map<String, Object>>) result.get(JsonKey.RESPONSE)).isEmpty())) {
-      responseMap = ((List<Map<String, Object>>) result.get(JsonKey.RESPONSE)).get(0);
-    }
-    int userCount =
-        (int)
-            (responseMap.get(JsonKey.USER_COUNT) != null ? responseMap.get(JsonKey.USER_COUNT) : 0);
-    updateRequestMap.put(JsonKey.USER_COUNT, userCount + 1);
-    updateRequestMap.put(JsonKey.ID, courseId);
-    updateRequestMap.remove(JsonKey.OPERATION);
-    updateRequestMap.remove(JsonKey.COURSE_ID);
-    Response resposne =
-        cassandraOperation.updateRecord(
-            dbInfo.getKeySpace(), dbInfo.getTableName(), updateRequestMap);
-    if (resposne.get(JsonKey.RESPONSE).equals(JsonKey.SUCCESS)) {
-      ProjectLogger.log("USER COUNT UPDATED SUCCESSFULLY IN COURSE MGMT TABLE");
-    } else {
-      ProjectLogger.log("USER COUNT NOT UPDATED SUCCESSFULLY IN COURSE MGMT TABLE");
-    }
-  }
-
-
-
-
 
   /**
    * Method to cache the course data .

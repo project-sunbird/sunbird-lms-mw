@@ -22,4 +22,11 @@ public interface OTPDao {
    */
   void insertOTPDetails(String type, String key, String otp);
 
+  /**
+   * this method will be used to delete the Otp
+   * @param type
+   * @param key
+   */
+  void deleteOtp(String type,String key);
+
 }

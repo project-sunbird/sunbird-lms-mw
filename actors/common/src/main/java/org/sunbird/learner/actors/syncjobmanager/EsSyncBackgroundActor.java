@@ -142,8 +142,6 @@ public class EsSyncBackgroundActor extends BaseActor {
     while (itr.hasNext()) {
       if (objectType.equals(JsonKey.ORGANISATION)) {
         result.add(getOrgDetails(itr.next()));
-      } else if (objectType.equals(JsonKey.BATCH) || objectType.equals(JsonKey.USER_COURSE)) {
-        result.add((Map<String, Object>) (itr.next().getValue()));
       }
     }
 
@@ -191,10 +189,6 @@ public class EsSyncBackgroundActor extends BaseActor {
       type = ProjectUtil.EsType.user.getTypeName();
     } else if (objectType.equals(JsonKey.ORGANISATION)) {
       type = ProjectUtil.EsType.organisation.getTypeName();
-    } else if (objectType.equals(JsonKey.BATCH)) {
-      type = ProjectUtil.EsType.course.getTypeName();
-    } else if (objectType.equals(JsonKey.USER_COURSE)) {
-      type = ProjectUtil.EsType.usercourses.getTypeName();
     }
     return type;
   }

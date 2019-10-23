@@ -140,8 +140,9 @@ public class ShadowUserProcessor {
                     List<String>userIds=new ArrayList<>();
                     userIds.add((String) userMap.get(JsonKey.ID));
                     List<ShadowUser>multiMatchRecords=getMultiMatchRecords((String) userMap.get(JsonKey.ID));
-                    if(CollectionUtils.isNotEmpty(multiMatchRecords)){
-                        changeStatusToMultiMatch(multiMatchRecords);
+                    List<ShadowUser>filterRecords=filterByChannel(shadowUser.getChannel(),multiMatchRecords);
+                    if(CollectionUtils.isNotEmpty(filterRecords)){
+                        changeStatusToMultiMatch(filterRecords);
                         updateUserInShadowDb(null, shadowUser, ClaimStatus.MULTIMATCH.getValue(), userIds);
                     }
                     else {
@@ -456,7 +457,26 @@ public class ShadowUserProcessor {
     }
 
 
+    /**
+     * This filtering will be needed to avaoid update of claimStatus to MULTIMATCH
+     * of same user while updating.
+     *
+     * @param channel
+     * @param shadowUserList
+     */
+    private List<ShadowUser> filterByChannel(String channel, List<ShadowUser> shadowUserList) {
 
+        List<ShadowUser> filterShadowUser = new ArrayList<>();
+        if (CollectionUtils.isNotEmpty(shadowUserList)) {
+
+            shadowUserList.stream().forEach(singleShadowUser -> {
+                if (!StringUtils.equalsIgnoreCase(singleShadowUser.getChannel(), channel)) {
+                    filterShadowUser.add(singleShadowUser);
+                }
+            });
+        }
+        return filterShadowUser;
+    }
 }
 
 

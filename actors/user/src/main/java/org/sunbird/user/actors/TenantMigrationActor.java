@@ -97,7 +97,7 @@ public class TenantMigrationActor extends BaseActor {
         rejectMigration(request);
         break;
       case "migrateUser":
-        migrateByChoice(request);
+        selfMigrate(request);
         break;
       default:
         onReceiveUnsupportedOperation("TenantMigrationActor");
@@ -411,26 +411,24 @@ public class TenantMigrationActor extends BaseActor {
   }
 
 
-  private void migrateByChoice(Request request) {
+  private void selfMigrate(Request request) {
     String userId = (String) request.getRequest().get(JsonKey.USER_ID);
-    String extUserId = (String) request.getRequest().get(JsonKey.EXTERNAL_USER_ID);
+    String extUserId = (String) request.getRequest().get(JsonKey.USER_EXT_ID);
     ShadowUser shadowUser = MigrationUtils.getRecordByUserId(userId);
-    if (null != shadowUser && StringUtils.equalsIgnoreCase(shadowUser.getUserExtId(), extUserId) && shadowUser.getClaimStatus() != ClaimStatus.CLAIMED.getValue()) {
-      Map<String, Object> reqMap = new HashMap<>();
-      reqMap.put(JsonKey.USER_ID, userId);
-      reqMap.put(JsonKey.CHANNEL, shadowUser.getChannel());
-      List<Map<String, String>> externalIds = new ArrayList<>();
-      Map<String, String> externalIdsMap = new HashMap<>();
-      externalIdsMap.put(JsonKey.ID, extUserId);
-      externalIdsMap.put(JsonKey.ID_TYPE, shadowUser.getChannel());
-      externalIdsMap.put(JsonKey.PROVIDER, shadowUser.getChannel());
-      externalIds.add(externalIdsMap);
-      reqMap.put(JsonKey.EXTERNAL_IDS, externalIdsMap);
-      request.setRequest(reqMap);
+    if(null==shadowUser){
+      ProjectCommonException.throwClientErrorException(ResponseCode.invalidUserId);
+    }
+    if(shadowUser.getClaimStatus() == ClaimStatus.CLAIMED.getValue()){
+      ProjectCommonException.throwClientErrorException(ResponseCode.unAuthorized);
+    }
+     if (StringUtils.equalsIgnoreCase(shadowUser.getUserExtId(), extUserId)) {
+      prepareMigrationRequest(request,shadowUser,userId,extUserId);
+      ProjectLogger.log("TenantMigrationActor:selfMigrate:request prepared for user migration:"+request.getRequest(),LoggerEnum.INFO.name());
       migrateUser(request);
       Map<String, Object> propertiesMap = new HashMap<>();
       propertiesMap.put(JsonKey.CLAIM_STATUS, ClaimStatus.CLAIMED.getValue());
       propertiesMap.put(JsonKey.UPDATED_ON, new Timestamp(System.currentTimeMillis()));
+      propertiesMap.put(JsonKey.USER_ID,userId);
       MigrationUtils.updateRecord(propertiesMap, shadowUser.getChannel(), shadowUser.getUserExtId());
       Response response = new Response();
       response.put(JsonKey.SUCCESS, true);
@@ -464,5 +462,20 @@ public class TenantMigrationActor extends BaseActor {
     response.put(JsonKey.REMAINING_ATTEMPT,remainingAttempt);
     response.put(JsonKey.MESSAGE, MessageFormat.format(ResponseCode.invalidUserExternalId.getErrorMessage(),extUserId));
     return response;
+  }
+
+  private static void prepareMigrationRequest(Request request,ShadowUser shadowUser,String userId,String extUserId){
+    Map<String, Object> reqMap = new HashMap<>();
+    reqMap.put(JsonKey.USER_ID, userId);
+    reqMap.put(JsonKey.CHANNEL, shadowUser.getChannel());
+    reqMap.put(JsonKey.ORG_EXTERNAL_ID,shadowUser.getOrgExtId());
+    List<Map<String,String>>extUserIds=new ArrayList<>();
+    Map<String, String> externalIdMap = new HashMap<>();
+    externalIdMap.put(JsonKey.ID, extUserId);
+    externalIdMap.put(JsonKey.ID_TYPE, shadowUser.getChannel());
+    externalIdMap.put(JsonKey.PROVIDER, shadowUser.getChannel());
+    extUserIds.add(externalIdMap);
+    reqMap.put(JsonKey.EXTERNAL_IDS, extUserIds);
+    request.setRequest(reqMap);
   }
 }

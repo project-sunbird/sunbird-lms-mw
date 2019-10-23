@@ -22,7 +22,6 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.user.actors.UserDataEncryptionActor;
 
-
 public class UserDataEncryptionActorTest {
 
   private TestKit probe;

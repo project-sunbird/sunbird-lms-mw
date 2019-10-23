@@ -139,7 +139,15 @@ public class ShadowUserProcessor {
                     ProjectLogger.log("ShadowUserProcessor:updateUser: provided user details doesn't match with existing user details with processId" + shadowUser.getProcessId() + userMap, LoggerEnum.INFO.name());
                     List<String>userIds=new ArrayList<>();
                     userIds.add((String) userMap.get(JsonKey.ID));
-                    updateUserInShadowDb(null, shadowUser, ClaimStatus.ELIGIBLE.getValue(),userIds);
+                    List<ShadowUser>multiMatchRecords=getMultiMatchRecords((String) userMap.get(JsonKey.ID));
+                    if(CollectionUtils.isNotEmpty(multiMatchRecords)){
+                        changeStatusToMultiMatch(multiMatchRecords);
+                        updateUserInShadowDb(null, shadowUser, ClaimStatus.MULTIMATCH.getValue(), userIds);
+                    }
+                    else {
+                        updateUserInShadowDb(null, shadowUser, ClaimStatus.ELIGIBLE.getValue(), userIds);
+                        //TODO ENTRY OF USER IN ALERTS TABLE
+                    }
                 }
             } else if (esUser.size() > 1) {
                 ProjectLogger.log("ShadowUserProcessor:updateUser:GOT response from ES :" + esUser, LoggerEnum.INFO.name());
@@ -411,5 +419,45 @@ public class ShadowUserProcessor {
         ProjectLogger.log("ShadowUserMigrationScheduler:getFullRecordFromProcessId:got single row data from bulk_upload_process with processId:"+processId,LoggerEnum.INFO.name());
         return telemetryContext;
     }
+
+
+    /**
+     * METHOD WILL RETURN THE LIST OF SHADOW USER WHICH IS PRE EXISTING WITH USERID
+     * this method will give all the record which is not claimed failed and rejected
+     * @param userId
+     * @return
+     */
+    public  List<ShadowUser> getMultiMatchRecords(String userId) {
+        List<ShadowUser>shadowUsersList=new ArrayList<>();
+        Response response = cassandraOperation.searchValueInList(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, JsonKey.USERIDS, userId);
+        if(!((List) response.getResult().get(JsonKey.RESPONSE)).isEmpty()) {
+            ((List) response.getResult().get(JsonKey.RESPONSE)).stream().forEach(shadowMap->{
+                ShadowUser shadowUser=mapper.convertValue(shadowMap,ShadowUser.class);
+                if(shadowUser.getClaimStatus()!=ClaimStatus.CLAIMED.getValue() && shadowUser.getClaimStatus()!=ClaimStatus.REJECTED.getValue() && shadowUser.getClaimStatus()!=ClaimStatus.FAILED.getValue()) {
+                    shadowUsersList.add(shadowUser);
+                }
+            });
+        }
+        return shadowUsersList;
+    }
+
+    /**
+     * userExtId, channel , userIds, claimStatus
+     * @param shadowUserList
+     */
+    private void changeStatusToMultiMatch(List<ShadowUser>shadowUserList){
+        shadowUserList.stream().forEach(shadowUser -> {
+            if(shadowUser.getClaimStatus()!=ClaimStatus.CLAIMED.getValue()) {
+                updateUserInShadowDb(null, shadowUser, ClaimStatus.MULTIMATCH.getValue(), shadowUser.getUserIds());
+                // TODO DELETE ENTRY FROM ALERTS TABLE
+            }
+        });
+
+    }
+
+
+
 }
+
+
 

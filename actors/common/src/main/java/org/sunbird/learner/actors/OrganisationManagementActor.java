@@ -403,6 +403,7 @@ public class OrganisationManagementActor extends BaseActor {
         }
       } else {
         request.put(JsonKey.IS_ROOT_ORG, false);
+        request.put(JsonKey.IS_SSO_ROOTORG_ENABLED, false);
       }
 
       // This will remove all extra unnecessary parameter from request
@@ -874,6 +875,7 @@ public class OrganisationManagementActor extends BaseActor {
           }
         } else {
           updateOrgDao.put(JsonKey.SLUG, slug);
+          updateOrgDao.put(JsonKey.IS_SSO_ROOTORG_ENABLED, false);
         }
       }
 

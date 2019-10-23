@@ -13,6 +13,7 @@ import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.InterServiceCommunication;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
+import org.sunbird.bean.ShadowUser;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -39,6 +40,7 @@ import org.sunbird.models.user.User;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
+import org.sunbird.user.util.MigrationUtils;
 import org.sunbird.user.util.UserActorOperations;
 import org.sunbird.user.util.UserUtil;
 import scala.concurrent.Future;
@@ -50,7 +52,7 @@ import scala.concurrent.Future;
  * @author Amit Kumar
  */
 @ActorConfig(
-  tasks = {"userTenantMigrate"},
+  tasks = {"userTenantMigrate","rejectMigration"},
   asyncTasks = {}
 )
 public class TenantMigrationActor extends BaseActor {
@@ -85,6 +87,9 @@ public class TenantMigrationActor extends BaseActor {
     switch (operation) {
       case "userTenantMigrate":
         migrateUser(request);
+        break;
+      case "rejectMigration":
+        rejectMigration(request);
         break;
       default:
         onReceiveUnsupportedOperation("TenantMigrationActor");
@@ -378,5 +383,22 @@ public class TenantMigrationActor extends BaseActor {
     userRequest.put(JsonKey.FLAGS_VALUE, request.getRequest().get(JsonKey.FLAGS_VALUE));
     userRequest.put(JsonKey.USER_TYPE, JsonKey.TEACHER);
     return userRequest;
+  }
+
+
+  private void rejectMigration(Request request) {
+    String userId = (String) request.getContext().get(JsonKey.USER_ID);
+    ProjectLogger.log("TenantMigrationActor:rejectMigration: started rejecting Migration with userId:"+userId, LoggerEnum.INFO.name());
+    if (StringUtils.isBlank(userId)) {
+      ProjectCommonException.throwClientErrorException(ResponseCode.invalidUserId);
+    }
+    ShadowUser shadowUser = MigrationUtils.getRecordByUserId(userId);
+    if (null == shadowUser) {
+      ProjectCommonException.throwClientErrorException(ResponseCode.invalidUserId);
+    }
+    MigrationUtils.markUserAsRejected(shadowUser);
+    Response response = new Response();
+    response.put(JsonKey.SUCCESS, true);
+    sender().tell(response, self());
   }
 }

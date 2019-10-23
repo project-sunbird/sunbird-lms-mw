@@ -15,7 +15,6 @@ import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.content.service.ContentService;
 import org.sunbird.learner.util.Util;
 
 /** @author Mahesh Kumar Gangula */
@@ -65,12 +64,6 @@ public class BadgeNotifier extends BaseActor {
         case "USER:REVOKEBADGEMESSAGE":
           request.setOperation(BadgeOperations.revokeBadgeFromUser.name());
           response = notifyUser(request);
-          break;
-        case "CONTENT:ASSIGNBADGEMESSAGE":
-          response = ContentService.assignBadge(request);
-          break;
-        case "CONTENT:REVOKEBADGEMESSAGE":
-          response = ContentService.revokeBadge(request);
           break;
         default:
           response = invalidObjectType(INVALID_BADGE_NOTIFICATION_REQUEST, objectType);

@@ -9,6 +9,8 @@ import org.apache.commons.collections.CollectionUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.otp.dao.OTPDao;
@@ -56,6 +58,15 @@ public class OTPDaoImpl implements OTPDao {
         PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_OTP_EXPIRATION);
     int ttl = Integer.valueOf(expirationInSeconds);
     cassandraOperation.insertRecordWithTTL(Util.KEY_SPACE_NAME, TABLE_NAME, request, ttl);
+  }
+
+  @Override
+  public void deleteOtp(String type, String key) {
+    Map<String,String>compositeKeyMap=new HashMap<>();
+    compositeKeyMap.put(JsonKey.TYPE,type);
+    compositeKeyMap.put(JsonKey.KEY,key);
+    cassandraOperation.deleteRecord(JsonKey.SUNBIRD,TABLE_NAME,compositeKeyMap);
+    ProjectLogger.log("OTPDaoImpl:deleteOtp:otp deleted", LoggerEnum.INFO.name());
   }
 
 }

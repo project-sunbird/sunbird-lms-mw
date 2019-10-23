@@ -24,6 +24,7 @@ public class ShadowUser {
     private List<String>userIds;
     private String channel;
     private String addedBy;
+    private int attemptedCount;
 
     public ShadowUser() {
     }
@@ -44,7 +45,14 @@ public class ShadowUser {
         this.channel=shadowUserBuilder.channel;
         this.addedBy=shadowUserBuilder.addedBy;
         this.userIds=shadowUserBuilder.userIds;
+        this.attemptedCount=shadowUserBuilder.attemptedCount;
     }
+
+
+    public int getAttemptedCount() {
+        return attemptedCount;
+    }
+
     public Timestamp getClaimedOn() {
         return claimedOn;
     }
@@ -123,6 +131,12 @@ public class ShadowUser {
         private String channel;
         private String addedBy;
         private List<String>userIds;
+        private int attemptedCount;
+
+        public ShadowUserBuilder setAttemptedCount(int attemptedCount) {
+            this.attemptedCount = attemptedCount;
+            return this;
+        }
 
         public ShadowUserBuilder setUserIds(List<String> userIds) {
             this.userIds = userIds;

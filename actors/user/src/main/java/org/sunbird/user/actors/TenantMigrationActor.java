@@ -2,6 +2,8 @@ package org.sunbird.user.actors;
 
 import akka.actor.ActorRef;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.sql.Timestamp;
 import java.text.MessageFormat;
 import java.util.*;
 
@@ -13,6 +15,7 @@ import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.InterServiceCommunication;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
+import org.sunbird.bean.ClaimStatus;
 import org.sunbird.bean.ShadowUser;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
@@ -32,6 +35,7 @@ import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.organisation.external.identity.service.OrgExternalService;
 import org.sunbird.learner.util.UserFlagEnum;
@@ -52,7 +56,7 @@ import scala.concurrent.Future;
  * @author Amit Kumar
  */
 @ActorConfig(
-  tasks = {"userTenantMigrate","rejectMigration"},
+  tasks = {"userTenantMigrate","rejectMigration","migrateUser"},
   asyncTasks = {}
 )
 public class TenantMigrationActor extends BaseActor {
@@ -69,6 +73,7 @@ public class TenantMigrationActor extends BaseActor {
   private ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
   private static final String ACCOUNT_MERGE_EMAIL_TEMPLATE = "accountMerge";
   private static final String MASK_IDENTIFIER = "maskIdentifier";
+  private static final int MAX_MIGRATION_ATTEMPT=2;
   DecryptionService decryptionService =
           org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
                   "");
@@ -90,6 +95,9 @@ public class TenantMigrationActor extends BaseActor {
         break;
       case "rejectMigration":
         rejectMigration(request);
+        break;
+      case "migrateUser":
+        migrateByChoice(request);
         break;
       default:
         onReceiveUnsupportedOperation("TenantMigrationActor");
@@ -400,5 +408,61 @@ public class TenantMigrationActor extends BaseActor {
     Response response = new Response();
     response.put(JsonKey.SUCCESS, true);
     sender().tell(response, self());
+  }
+
+
+  private void migrateByChoice(Request request) {
+    String userId = (String) request.getRequest().get(JsonKey.USER_ID);
+    String extUserId = (String) request.getRequest().get(JsonKey.EXTERNAL_USER_ID);
+    ShadowUser shadowUser = MigrationUtils.getRecordByUserId(userId);
+    if (null != shadowUser && StringUtils.equalsIgnoreCase(shadowUser.getUserExtId(), extUserId) && shadowUser.getClaimStatus() != ClaimStatus.CLAIMED.getValue()) {
+      Map<String, Object> reqMap = new HashMap<>();
+      reqMap.put(JsonKey.USER_ID, userId);
+      reqMap.put(JsonKey.CHANNEL, shadowUser.getChannel());
+      List<Map<String, String>> externalIds = new ArrayList<>();
+      Map<String, String> externalIdsMap = new HashMap<>();
+      externalIdsMap.put(JsonKey.ID, extUserId);
+      externalIdsMap.put(JsonKey.ID_TYPE, shadowUser.getChannel());
+      externalIdsMap.put(JsonKey.PROVIDER, shadowUser.getChannel());
+      externalIds.add(externalIdsMap);
+      reqMap.put(JsonKey.EXTERNAL_IDS, externalIdsMap);
+      request.setRequest(reqMap);
+      migrateUser(request);
+      Map<String, Object> propertiesMap = new HashMap<>();
+      propertiesMap.put(JsonKey.CLAIM_STATUS, ClaimStatus.CLAIMED.getValue());
+      propertiesMap.put(JsonKey.UPDATED_ON, new Timestamp(System.currentTimeMillis()));
+      MigrationUtils.updateRecord(propertiesMap, shadowUser.getChannel(), shadowUser.getUserExtId());
+      Response response = new Response();
+      response.put(JsonKey.SUCCESS, true);
+      sender().tell(response, self());
+    }
+    else {
+      int remainingAttempt = MAX_MIGRATION_ATTEMPT - shadowUser.getAttemptedCount();
+      if (remainingAttempt == 0) {
+        Map<String, Object> propertiesMap = new HashMap<>();
+        propertiesMap.put(JsonKey.CLAIM_STATUS, ClaimStatus.FAILED.getValue());
+        propertiesMap.put(JsonKey.UPDATED_ON, new Timestamp(System.currentTimeMillis()));
+        MigrationUtils.updateRecord(propertiesMap, shadowUser.getChannel(), shadowUser.getUserExtId());
+        ProjectCommonException.throwClientErrorException(ResponseCode.userMigrationFiled);
+        // TODO DELETE ENTRY FROM ALERT TABLE
+      } else {
+        Map<String, Object> propertiesMap = new HashMap<>();
+        propertiesMap.put(JsonKey.ATTEMPTED_COUNT, shadowUser.getAttemptedCount()+1);
+        propertiesMap.put(JsonKey.UPDATED_ON, new Timestamp(System.currentTimeMillis()));
+        MigrationUtils.updateRecord(propertiesMap, shadowUser.getChannel(), shadowUser.getUserExtId());
+        sender().tell(prepareFailureResponse(extUserId, remainingAttempt), self());
+      }
+    }
+  }
+
+
+  private Response prepareFailureResponse(String extUserId,int remainingAttempt){
+    Response response=new Response();
+    response.setResponseCode(ResponseCode.CLIENT_ERROR);
+    response.put(JsonKey.ERROR,true);
+    response.put(JsonKey.MAX_ATTEMPT,MAX_MIGRATION_ATTEMPT);
+    response.put(JsonKey.REMAINING_ATTEMPT,remainingAttempt);
+    response.put(JsonKey.MESSAGE, MessageFormat.format(ResponseCode.invalidUserExternalId.getErrorMessage(),extUserId));
+    return response;
   }
 }

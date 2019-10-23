@@ -199,6 +199,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
         dbMap.put(JsonKey.CHANNEL,migrationUser.getChannel());
         dbMap.put(JsonKey.NAME,migrationUser.getName());
         dbMap.put(JsonKey.PROCESS_ID,processId);
+        dbMap.put(JsonKey.ATTEMPTED_COUNT,0);
         dbMap.put(JsonKey.CLAIM_STATUS,ClaimStatus.UNCLAIMED.getValue());
         dbMap.put(JsonKey.USER_STATUS,getInputStatus(migrationUser.getInputStatus()));
         dbMap.put(JsonKey.CREATED_ON, new Timestamp(System.currentTimeMillis()));

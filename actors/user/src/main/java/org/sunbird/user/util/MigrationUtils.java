@@ -46,4 +46,13 @@ public class MigrationUtils {
         updateRecord(propertiesMap, shadowUser.getChannel(), shadowUser.getUserExtId());
         ProjectLogger.log("MigrationUtils:markUserAsRejected:update in cassandra  with userExtId" + shadowUser.getUserExtId(),LoggerEnum.INFO.name());
     }
+
+    public static ShadowUser getRecord(String userId,String extUserId) {
+        Map<String, Object> propertiesMap = new HashMap<>();
+        propertiesMap.put(JsonKey.USER_EXT_ID, extUserId);
+        propertiesMap.put(JsonKey.USER_ID, userId);
+        Response response = cassandraOperation.getRecordsByProperties(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, propertiesMap, null);
+        ShadowUser shadowUser = mapper.convertValue(((List) response.getResult().get(JsonKey.RESPONSE)).get(0), ShadowUser.class);
+        return shadowUser;
+    }
 }

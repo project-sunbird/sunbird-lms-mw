@@ -2,6 +2,7 @@ package org.sunbird.learner.actors.search;
 
 import akka.dispatch.Mapper;
 import akka.pattern.Patterns;
+import java.util.*;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -28,8 +29,6 @@ import org.sunbird.telemetry.util.TelemetryLmaxWriter;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
-
-import java.util.*;
 
 /**
  * This class will handle search operation for all different type of index and types
@@ -71,8 +70,6 @@ public class SearchHandlerActor extends BaseActor {
         if (EsType.user.getTypeName().equalsIgnoreCase(type)) {
           filterObjectType = EsType.user.getTypeName();
           UserUtility.encryptUserSearchFilterQueryData(searchQueryMap);
-        } else if (EsType.course.getTypeName().equalsIgnoreCase(type)) {
-          filterObjectType = EsType.course.getTypeName();
         } else if (EsType.organisation.getTypeName().equalsIgnoreCase(type)) {
           filterObjectType = EsType.organisation.getTypeName();
         }
@@ -93,14 +90,20 @@ public class SearchHandlerActor extends BaseActor {
         result = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
         Response response = new Response();
         // this fuzzy search Logic
-        if(((List<Map<String, Object>>)result.get(JsonKey.CONTENT)).size()!=0 && isFuzzySearchRequired(searchQueryMap)){
-          List<Map<String,Object>>responseList=getResponseOnFuzzyRequest(getFuzzyFilterMap(searchQueryMap),(List<Map<String, Object>>)result.get(JsonKey.CONTENT));
-          if(responseList.size()!=0){
-            result.replace(JsonKey.COUNT,responseList.size());
-            result.replace(JsonKey.CONTENT,responseList);
-          }
-          else{
-            throw new ProjectCommonException(ResponseCode.PARTIAL_SUCCESS_RESPONSE.getErrorCode(), String.format(ResponseMessage.Message.PARAM_NOT_MATCH, JsonKey.NAME.toUpperCase()),ResponseCode.PARTIAL_SUCCESS_RESPONSE.getResponseCode());
+        if (((List<Map<String, Object>>) result.get(JsonKey.CONTENT)).size() != 0
+            && isFuzzySearchRequired(searchQueryMap)) {
+          List<Map<String, Object>> responseList =
+              getResponseOnFuzzyRequest(
+                  getFuzzyFilterMap(searchQueryMap),
+                  (List<Map<String, Object>>) result.get(JsonKey.CONTENT));
+          if (responseList.size() != 0) {
+            result.replace(JsonKey.COUNT, responseList.size());
+            result.replace(JsonKey.CONTENT, responseList);
+          } else {
+            throw new ProjectCommonException(
+                ResponseCode.PARTIAL_SUCCESS_RESPONSE.getErrorCode(),
+                String.format(ResponseMessage.Message.PARAM_NOT_MATCH, JsonKey.NAME.toUpperCase()),
+                ResponseCode.PARTIAL_SUCCESS_RESPONSE.getResponseCode());
           }
         }
         // Decrypt the data
@@ -175,7 +178,6 @@ public class SearchHandlerActor extends BaseActor {
           LoggerEnum.ERROR.name());
     }
   }
-
 
   @SuppressWarnings("unchecked")
   private void updateUserDetailsWithOrgName(
@@ -360,24 +362,21 @@ public class SearchHandlerActor extends BaseActor {
     }
   }
 
-  private boolean  isFuzzySearchRequired(Map<String,Object>searchQueryMap){
-    Map<String, Object> fuzzyFilterMap =getFuzzyFilterMap(searchQueryMap);
-    if(MapUtils.isEmpty(fuzzyFilterMap)){
+  private boolean isFuzzySearchRequired(Map<String, Object> searchQueryMap) {
+    Map<String, Object> fuzzyFilterMap = getFuzzyFilterMap(searchQueryMap);
+    if (MapUtils.isEmpty(fuzzyFilterMap)) {
       return false;
     }
     return true;
   }
 
-  private   List<Map<String,Object>> getResponseOnFuzzyRequest(Map<String,Object>fuzzyFilterMap,List<Map<String,Object>>searchMap){
-    return FuzzySearchManager.getInstance(fuzzyFilterMap,searchMap).startFuzzySearch();
+  private List<Map<String, Object>> getResponseOnFuzzyRequest(
+      Map<String, Object> fuzzyFilterMap, List<Map<String, Object>> searchMap) {
+    return FuzzySearchManager.getInstance(fuzzyFilterMap, searchMap).startFuzzySearch();
   }
 
-  private Map<String,Object>getFuzzyFilterMap(Map<String,Object>searchQueryMap){
+  private Map<String, Object> getFuzzyFilterMap(Map<String, Object> searchQueryMap) {
     return (Map<String, Object>)
-                    ((Map<String, Object>) (searchQueryMap.get(JsonKey.FILTERS)))
-                            .get(JsonKey.SEARCH_FUZZY);
-
+        ((Map<String, Object>) (searchQueryMap.get(JsonKey.FILTERS))).get(JsonKey.SEARCH_FUZZY);
   }
-
-
 }

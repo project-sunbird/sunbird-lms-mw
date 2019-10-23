@@ -20,11 +20,6 @@ public class ContentStoreUtil {
     return headers;
   }
 
-  public static Map<String, Object> readChannel(String channel) {
-    ProjectLogger.log("ContentStoreUtil:readChannel: channel = " + channel, LoggerEnum.INFO.name());
-    return handleReadRequest(channel, JsonKey.SUNBIRD_CHANNEL_READ_API);
-  }
-
   public static Map<String, Object> readFramework(String frameworkId) {
     ProjectLogger.log(
         "ContentStoreUtil:readFramework: frameworkId = " + frameworkId, LoggerEnum.INFO.name());

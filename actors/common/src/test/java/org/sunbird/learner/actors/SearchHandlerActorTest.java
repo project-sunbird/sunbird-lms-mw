@@ -120,6 +120,31 @@ public class SearchHandlerActorTest {
     filters.put(JsonKey.ROOT_ORG_ID, "ORG_001");
     innerMap.put(JsonKey.FILTERS, filters);
     innerMap.put(JsonKey.LIMIT, 1);
+    Map<String, Object> contextMap = new HashMap<>();
+    contextMap.put(JsonKey.FIELDS, JsonKey.ORG_NAME);
+    reqObj.setContext(contextMap);
+    reqObj.setRequest(innerMap);
+    subject.tell(reqObj, probe.getRef());
+    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
+  }
+
+  @Test
+  public void searchUserWithObjectTypeAsOrg() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.COMPOSITE_SEARCH.getValue());
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.QUERY, "");
+    Map<String, Object> filters = new HashMap<>();
+    List<String> objectType = new ArrayList<String>();
+    objectType.add("org");
+    filters.put(JsonKey.OBJECT_TYPE, objectType);
+    filters.put(JsonKey.ROOT_ORG_ID, "ORG_001");
+    innerMap.put(JsonKey.FILTERS, filters);
+    innerMap.put(JsonKey.LIMIT, 1);
 
     Map<String, Object> contextMap = new HashMap<>();
     contextMap.put(JsonKey.FIELDS, JsonKey.ORG_NAME);

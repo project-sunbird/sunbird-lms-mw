@@ -10,6 +10,7 @@ import akka.actor.Props;
 import akka.dispatch.Futures;
 import akka.testkit.javadsl.TestKit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -83,14 +84,18 @@ public class UserSkillManagementActorTest {
   public void testAddSkillSuccess() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
-
     Response insertResponse = createCassandraSuccessResponse();
+    when(cassandraOperation.getRecordById(Mockito.anyString(), Mockito.anyString(), Mockito.anyMap())).
+            thenReturn(createGetUserSuccessResponse());
+    when(cassandraOperation.getRecordsByProperty(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+            .thenReturn(createGetSkillsSuccessResponse());
     when(cassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
         .thenReturn(insertResponse);
     mockCassandraRequestForGetUser(false);
     subject.tell(
-        createAddSkillRequest(USER_ID, ENDORSED_USER_ID, Collections.emptyList()), probe.getRef());
+        createAddSkillRequest(USER_ID, ENDORSED_USER_ID, Arrays.asList(ENDORSED_SKILL_NAME)), probe.getRef());
     Response response = probe.expectMsgClass(duration, Response.class);
     Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
   }
@@ -129,6 +134,26 @@ public class UserSkillManagementActorTest {
     Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
   }
 
+
+  @Test
+  public void testUpdateUserSkillSuccess() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request actorMessage = createUpdateSkillRequest(USER_ID, Arrays.asList(ENDORSED_SKILL_NAME));
+    when(cassandraOperation.getRecordById(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+            .thenReturn(createGetUserSuccessResponse());
+    when(cassandraOperation.getRecordsByProperty(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+            .thenReturn(createGetSkillsSuccessResponse());
+
+    mockGetSkillEmptyResponse(ENDORSED_USER_ID);
+    subject.tell(actorMessage, probe.getRef());
+    Response response = probe.expectMsgClass(duration, Response.class);
+    Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
+  }
+
   @Test
   public void testUpdateSkillFailureWithInvalidUserId() {
 
@@ -151,6 +176,16 @@ public class UserSkillManagementActorTest {
     subject.tell(createGetSkillRequest(USER_ID, ENDORSED_USER_ID), probe.getRef());
     Response response = probe.expectMsgClass(duration, Response.class);
     Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
+  }
+
+  @Test
+  public void testGetSkillWithEmptyEndorsedUserId() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+    mockGetSkillResponse(USER_ID);
+    subject.tell(createGetSkillRequest(USER_ID, null), probe.getRef());
+    ProjectCommonException ex = probe.expectMsgClass(duration, ProjectCommonException.class);
+    Assert.assertTrue(null != ex);
   }
 
   @Ignore
@@ -222,7 +257,6 @@ public class UserSkillManagementActorTest {
             && exception.getResponseCode() == ResponseCode.CLIENT_ERROR.getResponseCode());
   }
 
-  @Ignore
   @Test
   public void testAddSkillEndorsementSuccess() {
 
@@ -306,6 +340,20 @@ public class UserSkillManagementActorTest {
     return response;
   }
 
+
+  private Map<String, Object> createGetSkillEmptyContentResponse() {
+    HashMap<String, Object> response = new HashMap<>();
+    List<Map<String, Object>> content = new ArrayList<>();
+    List<Map<String, Object>> skillList = new ArrayList<>();
+    HashMap<String, Object> skillMap = new HashMap<>();
+    skillMap.put(JsonKey.SKILL_NAME, "some-skill");
+    skillList.add(skillMap);
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.SKILLS, skillList);
+    response.put(JsonKey.CONTENT, content);
+    return response;
+  }
+
   private Response createGetSkillsSuccessResponse() {
     Response response = new Response();
     Map<String, Object> userMap = new HashMap<>();
@@ -339,6 +387,7 @@ public class UserSkillManagementActorTest {
     userMap.put(JsonKey.ID, USER_ID);
     userMap.put(JsonKey.ROOT_ORG_ID, ROOT_ORG_ID);
     userMap.put(JsonKey.ENDORSERS_LIST, new ArrayList<>());
+    userMap.put(JsonKey.ENDORSEMENT_COUNT, 2);
     List<Map<String, Object>> result = new ArrayList<>();
     result.add(userMap);
     response.put(JsonKey.RESPONSE, result);
@@ -376,6 +425,30 @@ public class UserSkillManagementActorTest {
     when(ElasticSearchHelper.getResponseFromFuture(promise.future()))
         .thenReturn(createGetSkillResponse());
   }
+  private void mockGetSkillEmptyResponse(String userId) {
+    Map<String, Object> esDtoMap = new HashMap<>();
+    Map<String, Object> filters = new HashMap<>();
+    filters.put(JsonKey.USER_ID, userId);
+    esDtoMap.put(JsonKey.FILTERS, filters);
+    List<String> fields = new ArrayList<>();
+    fields.add(JsonKey.SKILLS);
+    esDtoMap.put(JsonKey.FIELDS, fields);
+    Promise<Map<String, Object>> promise = Futures.promise();
+    promise.success(createGetSkillResponse());
+    when(esService.search(
+            Mockito.eq(ElasticSearchHelper.createSearchDTO(esDtoMap)),
+            Mockito.eq(ProjectUtil.EsType.user.getTypeName())))
+            .thenReturn(promise.future());
+    Promise<Map<String, Object>> promise_esDtoMap = Futures.promise();
+    promise_esDtoMap.success(esDtoMap);
+    when(esService.getDataByIdentifier(
+            Mockito.eq(ProjectUtil.EsType.user.getTypeName()), Mockito.eq(userId)))
+            .thenReturn(promise_esDtoMap.future());
+    when(ElasticSearchHelper.getResponseFromFuture(promise_esDtoMap.future())).thenReturn(esDtoMap);
+    when(ElasticSearchHelper.getResponseFromFuture(promise.future()))
+            .thenReturn(createGetSkillEmptyContentResponse());
+  }
+
 
   private Response endorsementSkillResponse() {
     Response response = new Response();

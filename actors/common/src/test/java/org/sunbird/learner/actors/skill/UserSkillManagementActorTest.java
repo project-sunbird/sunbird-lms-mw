@@ -63,14 +63,9 @@ public class UserSkillManagementActorTest {
   private FiniteDuration duration = duration("10 second");
   private ElasticSearchService esService;
 
-  @BeforeClass
-  public static void setUp() {
-    system = ActorSystem.create("system");
-    PowerMockito.mockStatic(ElasticSearchHelper.class);
-  }
-
   @Before
   public void beforeEachTest() {
+    system = ActorSystem.create("system");
     PowerMockito.mockStatic(ServiceFactory.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);

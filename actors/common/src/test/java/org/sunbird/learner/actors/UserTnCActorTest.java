@@ -120,7 +120,7 @@ public class UserTnCActorTest {
             .thenReturn(promise_recipientSearchQuery.future());
     ProjectCommonException response =
             setRequest(ACCEPTED_CORRECT_VERSION).expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    System.out.println(response.getMessage());
+    Assert.assertEquals(ResponseCode.userAccountlocked.getErrorCode(), response.getCode());
     Assert.assertEquals("User account has been blocked .", response.getMessage());
   }
 

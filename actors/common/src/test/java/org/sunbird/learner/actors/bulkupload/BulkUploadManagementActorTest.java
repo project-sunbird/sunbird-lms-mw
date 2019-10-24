@@ -33,6 +33,7 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
@@ -138,7 +139,9 @@ public class BulkUploadManagementActorTest {
         reqObj.getRequest().put(JsonKey.DATA, innerMap);
         subject.tell(reqObj, probe.getRef());
         ProjectCommonException res = probe.expectMsgClass(duration("10 second"),  ProjectCommonException.class);
-        Assert.assertTrue(null != res);
+        Assert.assertNotNull(res);
+        Assert.assertEquals(ResponseCode.csvError.getErrorCode(), res.getCode());
+        Assert.assertEquals(ResponseCode.csvError.getErrorMessage(), res.getMessage());
     }
 
   @Test
@@ -276,6 +279,9 @@ public class BulkUploadManagementActorTest {
     subject.tell(reqObj, probe.getRef());
     ProjectCommonException ex = probe.expectMsgClass(duration("10 seconds"), ProjectCommonException.class);
     Assert.assertTrue(null != ex);
+    Assert.assertEquals(ResponseCode.invalidColumns.getErrorCode(), ex.getCode());
+    Assert.assertEquals("Invalid column: password. Valid columns are: firstName, lastName, phone, countryCode, email, userName, phoneVerified, emailVerified, roles, position, grade, location, dob, gender, language, profileSummary, subject, webPages, externalIdProvider, externalId, externalIdType, externalIds."
+            , ex.getMessage());
   }
 
   @Test

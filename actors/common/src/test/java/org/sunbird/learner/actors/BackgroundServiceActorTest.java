@@ -22,7 +22,6 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-@Ignore
 public class BackgroundServiceActorTest {
 
   private static ActorSystem system;
@@ -45,7 +44,11 @@ public class BackgroundServiceActorTest {
 
   @Test
   public void updateUserCountTest() {
-
+    Map<String, Object> locnMap = new HashMap<String, Object>();
+    locnMap.put(JsonKey.ID, locnId);
+    locnMap.put(JsonKey.USER_COUNT, 0);
+    cassandraOperation.updateRecord(
+            geoLocationDbInfo.getKeySpace(), geoLocationDbInfo.getTableName(), locnMap);
     List<Object> locnIdList = new ArrayList<>();
     locnIdList.add(locnId);
 

@@ -230,7 +230,7 @@ public class UserSkillManagementActorTest {
 
     mockCassandraRequestForGetUser(true);
     subject.tell(
-        createSkillEndorsementRequest(USER_ID, ENDORSED_USER_ID, "java"),
+        createSkillEndorsementRequest(USER_ID, ENDORSED_USER_ID, ENDORSED_SKILL_NAME),
         probe.getRef());
     ProjectCommonException result = probe.expectMsgClass(duration, ProjectCommonException.class);
     Assert.assertTrue(

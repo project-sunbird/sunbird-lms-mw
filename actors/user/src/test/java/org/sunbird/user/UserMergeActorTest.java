@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.apache.kafka.clients.producer.Producer;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -36,7 +37,7 @@ import org.sunbird.user.actors.UserMergeActor;
 import org.sunbird.user.dao.impl.UserDaoImpl;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.KafkaConfigConstants;
-
+@Ignore
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
   UserServiceImpl.class,
@@ -77,7 +78,7 @@ public class UserMergeActorTest {
     cassandraOperation = mock(CassandraOperationImpl.class);
   }
 
-  // @Ignore
+  @Ignore
   @Test
   public void testMergeUserIsAlreadyDeleted() {
     when(userService.getUserById(Mockito.anyString())).thenReturn(getUserDetails(true));
@@ -86,7 +87,7 @@ public class UserMergeActorTest {
     assertTrue(result);
   }
 
-  //  @Ignore
+  @Ignore
   @Test
   public void testValidMergeUser() {
     when(userService.getUserById(Mockito.anyString())).thenReturn(getUserDetails(false));

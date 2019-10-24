@@ -154,7 +154,6 @@ public class SearchHandlerActorTest {
 
 
   @Test
-  @Ignore
   public void testInvalidOperation() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);

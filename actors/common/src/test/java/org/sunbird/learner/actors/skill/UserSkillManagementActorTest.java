@@ -63,14 +63,9 @@ public class UserSkillManagementActorTest {
   private FiniteDuration duration = duration("10 second");
   private ElasticSearchService esService;
 
-  @BeforeClass
-  public static void setUp() {
-    system = ActorSystem.create("system");
-    PowerMockito.mockStatic(ElasticSearchHelper.class);
-  }
-
   @Before
   public void beforeEachTest() {
+    system = ActorSystem.create("system");
     PowerMockito.mockStatic(ServiceFactory.class);
     cassandraOperation = mock(CassandraOperationImpl.class);
     when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
@@ -235,7 +230,7 @@ public class UserSkillManagementActorTest {
 
     mockCassandraRequestForGetUser(true);
     subject.tell(
-        createSkillEndorsementRequest(USER_ID, ENDORSED_USER_ID, ENDORSED_SKILL_NAME),
+        createSkillEndorsementRequest(USER_ID, ENDORSED_USER_ID, "java"),
         probe.getRef());
     ProjectCommonException result = probe.expectMsgClass(duration, ProjectCommonException.class);
     Assert.assertTrue(

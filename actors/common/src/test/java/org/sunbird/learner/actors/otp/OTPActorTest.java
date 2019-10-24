@@ -63,6 +63,8 @@ public class OTPActorTest {
 
   @Before
   public void beforeEachTestCase() {
+  PowerMockito.mockStatic(ServiceFactory.class);
+    when(ServiceFactory.getInstance()).thenReturn(mockCassandraOperation);
     probe = new TestKit(system);
     subject = system.actorOf(props);
   }
@@ -184,7 +186,6 @@ public class OTPActorTest {
   }
 
   @Test
-  @Ignore
   public void generateOtpForEmailSuccessForUser() {
     Request request;
     request = createOtpRequest(EMAIL_TYPE, EMAIL_KEY, USER_ID);

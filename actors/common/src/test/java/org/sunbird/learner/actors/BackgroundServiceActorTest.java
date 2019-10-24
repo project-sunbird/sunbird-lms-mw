@@ -43,6 +43,7 @@ public class BackgroundServiceActorTest {
   }
 
   @Test
+  @Ignore
   public void updateUserCountTest() {
     Map<String, Object> locnMap = new HashMap<String, Object>();
     locnMap.put(JsonKey.ID, locnId);
@@ -78,6 +79,7 @@ public class BackgroundServiceActorTest {
   }
 
   @Test
+  @Ignore
   public void updateUserCountTest2() {
 
     Map<String, Object> locnMap = new HashMap<String, Object>();
@@ -115,6 +117,7 @@ public class BackgroundServiceActorTest {
   }
 
   @Test
+  @Ignore
   public void updateUserCountTest3() {
 
     Map<String, Object> locnMap = new HashMap<String, Object>();

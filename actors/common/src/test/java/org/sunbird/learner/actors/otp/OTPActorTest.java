@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -65,6 +66,8 @@ public class OTPActorTest {
 
   @Before
   public void beforeEachTestCase() {
+  PowerMockito.mockStatic(ServiceFactory.class);
+    when(ServiceFactory.getInstance()).thenReturn(mockCassandraOperation);
     probe = new TestKit(system);
     subject = system.actorOf(props);
   }
@@ -246,6 +249,7 @@ public class OTPActorTest {
     map.put(JsonKey.USER_ID, USER_ID);
     map.put(JsonKey.CHANNEL, "anyChannel");
     map.put(JsonKey.EMAIL, EMAIL_KEY);
+    map.put(JsonKey.OTP, REQUEST_OTP);
     userList.add(map);
     response.put(JsonKey.RESPONSE, userList);
     return response;

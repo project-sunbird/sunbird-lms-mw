@@ -118,7 +118,7 @@ public class BulkUploadManagementActorTest {
     subject.tell(reqObj, probe.getRef());
     Response res = probe.expectMsgClass(duration("10 second"), Response.class);
     String uploadProcessId = (String) res.get(JsonKey.PROCESS_ID);
-    Assert.assertTrue(null != uploadProcessId);
+    Assert.assertNotNull(uploadProcessId);
   }
 
     @Test
@@ -168,7 +168,7 @@ public class BulkUploadManagementActorTest {
     subject.tell(reqObj, probe.getRef());
     ProjectCommonException res =
         probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    Assert.assertTrue(null != res);
+    Assert.assertNotNull(res);
   }
 
   @Test
@@ -188,7 +188,7 @@ public class BulkUploadManagementActorTest {
     if (!list.isEmpty()) {
       Map<String, Object> map = list.get(0);
       String processId = (String) map.get(JsonKey.PROCESS_ID);
-      Assert.assertTrue(null != processId);
+      Assert.assertNotNull(processId);
     }
   }
 
@@ -221,7 +221,7 @@ public class BulkUploadManagementActorTest {
     subject.tell(reqObj, probe.getRef());
     Response res = probe.expectMsgClass(duration("10 seconds"), Response.class);
     String processId = (String) res.get(JsonKey.PROCESS_ID);
-    Assert.assertTrue(null != processId);
+    Assert.assertNotNull(processId);
   }
 
   @Ignore
@@ -278,7 +278,7 @@ public class BulkUploadManagementActorTest {
     reqObj.getRequest().put(JsonKey.DATA, innerMap);
     subject.tell(reqObj, probe.getRef());
     ProjectCommonException ex = probe.expectMsgClass(duration("10 seconds"), ProjectCommonException.class);
-    Assert.assertTrue(null != ex);
+    Assert.assertNotNull(ex);
     Assert.assertEquals(ResponseCode.invalidColumns.getErrorCode(), ex.getCode());
     Assert.assertEquals("Invalid column: password. Valid columns are: firstName, lastName, phone, countryCode, email, userName, phoneVerified, emailVerified, roles, position, grade, location, dob, gender, language, profileSummary, subject, webPages, externalIdProvider, externalId, externalIdType, externalIds."
             , ex.getMessage());
@@ -317,7 +317,7 @@ public class BulkUploadManagementActorTest {
     subject.tell(reqObj, probe.getRef());
     ProjectCommonException res =
         probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-    Assert.assertTrue(null != res);
+    Assert.assertNotNull(res);
   }
 
 

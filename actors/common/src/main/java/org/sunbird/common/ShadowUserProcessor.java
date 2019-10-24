@@ -128,6 +128,15 @@ public class ShadowUserProcessor {
         return (List<Map<String, Object>>) response.get(JsonKey.CONTENT);
     }
 
+
+    /**
+     *
+     * this method will search in ES with phone/email, if multiple user's found(cond: if a user provide email of himself and phone of other user) it will mark user claimStatus to multimatch.
+     * else it will get the user_id from ES response and then it will fetch all the record from shadow_user table who are not claimed, rejected and failed with same user_id.
+     * if found multiple records after removing the users of same channel from multiMatchRecords (cond: to avoid changing of claimStatus to MULTIMATCH if respective user update happened )then  will update respective and rest of the user's claimStatus to MULTIMATCH.
+     * else if filterRecords is empty then the respective user claimStatus will be marked as ELIGIBLE IN shadow_user table
+     * @param shadowUser
+     */
     private void updateUser(ShadowUser shadowUser) {
         List<Map<String, Object>> esUser = getUserMatchedIdentifierFromES(shadowUser);
         ProjectLogger.log("ShadowUserProcessor:updateUser:GOT ES RESPONSE FOR USER WITH SIZE " + esUser.size(), LoggerEnum.INFO.name());
@@ -140,7 +149,7 @@ public class ShadowUserProcessor {
                     List<String>userIds=new ArrayList<>();
                     userIds.add((String) userMap.get(JsonKey.ID));
                     List<ShadowUser>multiMatchRecords=getMultiMatchRecords((String) userMap.get(JsonKey.ID));
-                    List<ShadowUser>filterRecords=filterByChannel(shadowUser.getChannel(),multiMatchRecords);
+                    List<ShadowUser>filterRecords=getDiffChannelUsers(shadowUser.getChannel(),multiMatchRecords);
                     if(CollectionUtils.isNotEmpty(filterRecords)){
                         changeStatusToMultiMatch(filterRecords);
                         updateUserInShadowDb(null, shadowUser, ClaimStatus.MULTIMATCH.getValue(), userIds);
@@ -178,6 +187,11 @@ public class ShadowUserProcessor {
     }
 
 
+    /**
+     * this method will be used to get all the userIds got from  ES response by searching with phone/email + custoRootOrgId
+     * @param esUser
+     * @return
+     */
     private List<String> getMatchingUserIds(List<Map<String, Object>> esUser) {
         ProjectLogger.log("ShadowUserProcessor:getMatchingUserIds:GOT response from counting matchingUserIds:" + esUser.size(), LoggerEnum.INFO.name());
         List<String> matchingUserIds = new ArrayList<>();
@@ -424,7 +438,8 @@ public class ShadowUserProcessor {
 
     /**
      * METHOD WILL RETURN THE LIST OF SHADOW USER WHICH IS PRE EXISTING WITH USERID
-     * this method will give all the record which is not claimed failed and rejected
+     * this method will give all the record which are not claimed failed and rejected
+     * i.e will update the claim status of the user who are ELIGIBLE.
      * @param userId
      * @return
      */
@@ -444,6 +459,7 @@ public class ShadowUserProcessor {
 
     /**
      * userExtId, channel , userIds, claimStatus
+     * all the user found with same id in shadow_user table there claim status will be updated to multimatch
      * @param shadowUserList
      */
     private void changeStatusToMultiMatch(List<ShadowUser>shadowUserList){
@@ -458,17 +474,17 @@ public class ShadowUserProcessor {
 
 
     /**
-     * This filtering will be needed to avaoid update of claimStatus to MULTIMATCH
+     * this method will return all the user who doesn't belong to the same provided channel
+     * This filtering will be needed to avoid update of claimStatus to MULTIMATCH
      * of same user while updating.
      *
      * @param channel
      * @param shadowUserList
      */
-    private List<ShadowUser> filterByChannel(String channel, List<ShadowUser> shadowUserList) {
+    private List<ShadowUser> getDiffChannelUsers(String channel, List<ShadowUser> shadowUserList) {
 
         List<ShadowUser> filterShadowUser = new ArrayList<>();
         if (CollectionUtils.isNotEmpty(shadowUserList)) {
-
             shadowUserList.stream().forEach(singleShadowUser -> {
                 if (!StringUtils.equalsIgnoreCase(singleShadowUser.getChannel(), channel)) {
                     filterShadowUser.add(singleShadowUser);

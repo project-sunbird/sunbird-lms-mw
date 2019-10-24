@@ -71,6 +71,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
     /**
      * - fetch rows from bulk upload table whose status is less than 2
      * - update the bulk upload table row status to processing
+     * - encrypting email and phone
      * - start processing single row
      * - fetch the single row data
      * - Get List of Migration(csv) user from the row
@@ -224,8 +225,10 @@ public class ShadowUserMigrationScheduler extends BaseJob{
 
 
     /**
-     * This method will overwrite the user record in shadow_user also will not update the claimStatus of shadow_user if user is already VALIDATED/CLAIMED.
-     * if user is not VALIDATED/CLAIMED then it can set claimStatus to 5 if provided ext org id is incorrect.
+     * This method will overwrite the user record in shadow_user also will not update the claimStatus of shadow_user if user is already VALIDATED/CLAIMED REJECTED AND FAILED.
+     * if user is not VALIDATED/CLAIMED, REJECTED AND FAILED then it can set claimStatus to 5 if provided ext org id is incorrect.
+     * else will set the claim status to UNCLAIMED so will check the multimatch condition again
+     * ALSO this method will allow only CLAIMED user record to be updated in diksha db.
      * @param processId
      * @param migrationUser
      * @param shadowUser

@@ -415,13 +415,9 @@ public class TenantMigrationActor extends BaseActor {
   private void selfMigrate(Request request) {
     String userId = (String) request.getRequest().get(JsonKey.USER_ID);
     String extUserId = (String) request.getRequest().get(JsonKey.USER_EXT_ID);
-    List<ShadowUser> shadowUserList = MigrationUtils.getEligibleUsersById(userId);
-    if(CollectionUtils.isEmpty(shadowUserList)){
-      ProjectCommonException.throwClientErrorException(ResponseCode.invalidUserId);
-    }
-    ShadowUser shadowUser = identifyMatchingUser(shadowUserList,extUserId);
+    ShadowUser shadowUser = MigrationUtils.getRecordByUserId(userId);
     if (null == shadowUser) {
-      throw new ProjectCommonException(ResponseCode.CLIENT_ERROR.getErrorCode(),MessageFormat.format(ResponseCode.invalidUserExternalId.getErrorMessage(), extUserId),ResponseCode.CLIENT_ERROR.getResponseCode());
+      throw new ProjectCommonException(ResponseCode.CLIENT_ERROR.getErrorCode(), ResponseCode.invalidUserId.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
     }
     if (shadowUser.getClaimStatus() == ClaimStatus.CLAIMED.getValue()) {
       ProjectCommonException.throwClientErrorException(ResponseCode.unAuthorized);
@@ -441,14 +437,14 @@ public class TenantMigrationActor extends BaseActor {
     } else {
       int remainingAttempt = MAX_MIGRATION_ATTEMPT - shadowUser.getAttemptedCount();
       if (remainingAttempt == 0) {
-        Map<String, Object> propertiesMap = new HashMap<>();
+        Map<String, Object> propertiesMap = new WeakHashMap<>();
         propertiesMap.put(JsonKey.CLAIM_STATUS, ClaimStatus.FAILED.getValue());
         propertiesMap.put(JsonKey.UPDATED_ON, new Timestamp(System.currentTimeMillis()));
         MigrationUtils.updateRecord(propertiesMap, shadowUser.getChannel(), shadowUser.getUserExtId());
         ProjectCommonException.throwClientErrorException(ResponseCode.userMigrationFiled);
         // TODO DELETE ENTRY FROM ALERT TABLE
       } else {
-        Map<String, Object> propertiesMap = new HashMap<>();
+        Map<String, Object> propertiesMap = new WeakHashMap<>();
         propertiesMap.put(JsonKey.ATTEMPTED_COUNT, shadowUser.getAttemptedCount() + 1);
         propertiesMap.put(JsonKey.UPDATED_ON, new Timestamp(System.currentTimeMillis()));
         MigrationUtils.updateRecord(propertiesMap, shadowUser.getChannel(), shadowUser.getUserExtId());
@@ -469,28 +465,17 @@ public class TenantMigrationActor extends BaseActor {
   }
 
   private static void prepareMigrationRequest(Request request, ShadowUser shadowUser, String userId, String extUserId) {
-    Map<String, Object> reqMap = new HashMap<>();
+    Map<String, Object> reqMap = new WeakHashMap<>();
     reqMap.put(JsonKey.USER_ID, userId);
     reqMap.put(JsonKey.CHANNEL, shadowUser.getChannel());
     reqMap.put(JsonKey.ORG_EXTERNAL_ID, shadowUser.getOrgExtId());
     List<Map<String, String>> extUserIds = new ArrayList<>();
-    Map<String, String> externalIdMap = new HashMap<>();
+    Map<String, String> externalIdMap = new WeakHashMap<>();
     externalIdMap.put(JsonKey.ID, extUserId);
     externalIdMap.put(JsonKey.ID_TYPE, shadowUser.getChannel());
     externalIdMap.put(JsonKey.PROVIDER, shadowUser.getChannel());
     extUserIds.add(externalIdMap);
     reqMap.put(JsonKey.EXTERNAL_IDS, extUserIds);
     request.setRequest(reqMap);
-  }
-
-  private ShadowUser identifyMatchingUser(List<ShadowUser> shadowUserList, String extUserId) {
-    if (CollectionUtils.isNotEmpty(shadowUserList)) {
-      for (ShadowUser singleShadowUser : shadowUserList) {
-        if (StringUtils.equalsIgnoreCase(singleShadowUser.getUserExtId(), extUserId)) {
-          return singleShadowUser;
-        }
-      }
-    }
-    return null;
   }
 }

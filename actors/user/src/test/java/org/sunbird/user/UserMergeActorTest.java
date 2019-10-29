@@ -5,7 +5,6 @@ import static org.junit.Assert.assertTrue;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.when;
 
-import akka.actor.ActorPath;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
@@ -15,7 +14,6 @@ import java.util.HashMap;
 import java.util.Map;
 import org.apache.kafka.clients.producer.Producer;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -25,8 +23,6 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.core.classloader.annotations.SuppressStaticInitializationFor;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.actor.core.BaseActor;
-import org.sunbird.actorutil.systemsettings.SystemSettingClient;
-import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -38,7 +34,6 @@ import org.sunbird.common.util.ConfigUtil;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.kafka.client.KafkaClient;
 import org.sunbird.learner.util.DataCacheHandler;
-import org.sunbird.models.systemsetting.SystemSetting;
 import org.sunbird.models.user.User;
 import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.services.sso.impl.KeyCloakServiceImpl;
@@ -57,7 +52,7 @@ import org.sunbird.user.util.KafkaConfigConstants;
   CassandraOperationImpl.class,
   ConfigUtil.class,
   Config.class,
-  KafkaClient.class,
+  KafkaClient.class
 })
 @PowerMockIgnore({"javax.management.*"})
 @SuppressStaticInitializationFor("org.sunbird.kafka.client.KafkaClient")

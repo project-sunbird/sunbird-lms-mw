@@ -33,13 +33,13 @@ public class SendOTPActor extends BaseActor {
     String type = (String) request.getRequest().get(JsonKey.TYPE);
     String key = (String) request.getRequest().get(JsonKey.KEY);
     String otp = (String) request.getRequest().get(JsonKey.OTP);
-    if (JsonKey.EMAIL.equalsIgnoreCase(type) || JsonKey.PREV_USED_EMAIL.equalsIgnoreCase(type)) {
+    if (JsonKey.EMAIL.equalsIgnoreCase(type) || JsonKey.PREV_USED_EMAIL.equalsIgnoreCase(type)|| JsonKey.RECOVERY_EMAIL.equalsIgnoreCase(type)) {
       String userId = (String) request.get(JsonKey.USER_ID);
       ProjectLogger.log(
           "SendOTPActor:sendOTP userId found for send otp " + userId, LoggerEnum.INFO.name());
       sendOTPViaEmail(key, otp, userId);
     } else if (JsonKey.PHONE.equalsIgnoreCase(type)
-        || JsonKey.PREV_USED_PHONE.equalsIgnoreCase(type)) {
+        || JsonKey.PREV_USED_PHONE.equalsIgnoreCase(type) || JsonKey.RECOVERY_PHONE.equalsIgnoreCase(type)) {
       sendOTPViaSMS(key, otp);
     }
   }

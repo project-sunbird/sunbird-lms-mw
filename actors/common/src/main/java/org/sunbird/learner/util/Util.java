@@ -1469,7 +1469,9 @@ public final class Util {
       // save masked email and phone number
       addMaskEmailAndPhone(userDetails);
       checkProfileCompleteness(userDetails);
-      checkUserProfileVisibility(userDetails, actorRef);
+      if(actorRef!=null) {
+        checkUserProfileVisibility(userDetails, actorRef);
+      }
       userDetails.remove(JsonKey.PASSWORD);
       addEmailAndPhone(userDetails);
       checkEmailAndPhoneVerified(userDetails);
@@ -1488,12 +1490,9 @@ public final class Util {
   }
 
   public static void checkEmailAndPhoneVerified(Map<String, Object> userDetails) {
-    if (StringUtils.isBlank((String) userDetails.get(JsonKey.EMAIL))) {
-      userDetails.put(JsonKey.EMAIL_VERIFIED, false);
-    }
-    if (StringUtils.isBlank((String) userDetails.get(JsonKey.PHONE))) {
-      userDetails.put(JsonKey.PHONE_VERIFIED, false);
-    }
+    int flagsValue = Integer.parseInt(userDetails.get(JsonKey.FLAGS_VALUE).toString());
+    Map<String, Boolean> userFlagMap = UserFlagUtil.assignUserFlagValues(flagsValue);
+    userDetails.putAll(userFlagMap);
   }
 
   public static void checkProfileCompleteness(Map<String, Object> userMap) {

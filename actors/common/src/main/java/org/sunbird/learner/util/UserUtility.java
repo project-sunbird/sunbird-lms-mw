@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.datasecurity.DataMaskingService;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
@@ -19,24 +21,17 @@ import org.sunbird.common.models.util.datasecurity.impl.ServiceFactory;
  */
 public final class UserUtility {
 
-  private static List<String> userKeyToEncrypt = new ArrayList<>();
-  private static List<String> addressKeyToEncrypt = new ArrayList<>();
-  private static List<String> userKeyToDecrypt = new ArrayList<>();
-
-  private static DecryptionService decryptionService =
-      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
-          null);
-  private static DataMaskingService maskingService =
-      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance(
-          null);
+  private static List<String> userKeyToEncrypt;
+  private static List<String> addressKeyToEncrypt;
+  private static List<String> userKeyToDecrypt;
+  private static List<String>userKeysToMasked;
+  private static DecryptionService decryptionService;
+  private static DataMaskingService maskingService;
+  private static List<String>phoneMaskedAttributes;
+  private static List<String>emailMaskedAttributes;
 
   static {
-    String userKey = PropertiesCache.getInstance().getProperty("userkey.encryption");
-    userKeyToEncrypt = new ArrayList<>(Arrays.asList(userKey.split(",")));
-    String addressKey = PropertiesCache.getInstance().getProperty("addresskey.encryption");
-    addressKeyToEncrypt = new ArrayList<>(Arrays.asList(addressKey.split(",")));
-    String userKeyDecrypt = PropertiesCache.getInstance().getProperty("userkey.decryption");
-    userKeyToDecrypt = new ArrayList<>(Arrays.asList(userKeyDecrypt.split(",")));
+    init();
   }
 
   private UserUtility() {}
@@ -118,7 +113,7 @@ public final class UserUtility {
     // Decrypt user basic info
     for (String key : userKeyToDecrypt) {
       if (userMap.containsKey(key)) {
-        if (JsonKey.EMAIL.equalsIgnoreCase(key) || JsonKey.PHONE.equalsIgnoreCase(key) || JsonKey.PREV_USED_EMAIL.equalsIgnoreCase(key)|| JsonKey.PREV_USED_PHONE.equalsIgnoreCase(key)) {
+        if (userKeysToMasked.contains(key)) {
           userMap.put(key, maskEmailOrPhone((String) userMap.get(key), key));
         } else {
           userMap.put(key, service.decryptData((String) userMap.get(key)));
@@ -184,11 +179,37 @@ public final class UserUtility {
     if (StringUtils.isEmpty(encryptedEmailOrPhone)) {
       return StringUtils.EMPTY;
     }
-    if (JsonKey.PHONE.equals(type) || JsonKey.PREV_USED_PHONE.equals(type)) {
+    if (phoneMaskedAttributes.contains(type)) {
       return maskingService.maskPhone(decryptionService.decryptData(encryptedEmailOrPhone));
-    } else if (JsonKey.EMAIL.equals(type) || JsonKey.PREV_USED_EMAIL.equals(type)) {
+    } else if (emailMaskedAttributes.contains(type)) {
       return maskingService.maskEmail(decryptionService.decryptData(encryptedEmailOrPhone));
     }
     return StringUtils.EMPTY;
+  }
+
+  private static void init(){
+    decryptionService =
+            org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
+                    null);
+    maskingService =
+            org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance(
+                    null);
+    String userKey = PropertiesCache.getInstance().getProperty("userkey.encryption");
+    userKeyToEncrypt = new ArrayList<>(Arrays.asList(userKey.split(",")));
+    ProjectLogger.log("UserUtility:init:user encrypt  attributes got".concat(userKey+""), LoggerEnum.INFO.name());
+    String addressKey = PropertiesCache.getInstance().getProperty("addresskey.encryption");
+    ProjectLogger.log("UserUtility:init:user address encrypt  attributes got".concat(addressKey+""), LoggerEnum.INFO.name());
+    addressKeyToEncrypt = new ArrayList<>(Arrays.asList(addressKey.split(",")));
+    String userKeyDecrypt = PropertiesCache.getInstance().getProperty("userkey.decryption");
+    String userKeyToMasked=PropertiesCache.getInstance().getProperty("userkey.masked");
+    userKeyToDecrypt = new ArrayList<>(Arrays.asList(userKeyDecrypt.split(",")));
+    userKeysToMasked=new ArrayList<>(Arrays.asList(userKeyToMasked.split(",")));
+    String emailTypeAttributeKey=PropertiesCache.getInstance().getProperty("userkey.emailtypeattributes");
+    String phoneTypeAttributeKey=PropertiesCache.getInstance().getProperty("userkey.phonetypeattributes");
+    emailMaskedAttributes=new ArrayList<>(Arrays.asList(emailTypeAttributeKey.split(",")));
+    ProjectLogger.log("UserUtility:init:email masked attributes got".concat(emailTypeAttributeKey+""), LoggerEnum.INFO.name());
+    phoneMaskedAttributes=new ArrayList<>(Arrays.asList(phoneTypeAttributeKey.split(",")));
+    ProjectLogger.log("UserUtility:init:phone masked attributes got".concat(phoneTypeAttributeKey+""),LoggerEnum.INFO.name());
+
   }
 }

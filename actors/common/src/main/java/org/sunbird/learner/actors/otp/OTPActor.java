@@ -80,6 +80,10 @@ public class OTPActor extends BaseActor {
         return JsonKey.EMAIL;
       case JsonKey.PHONE:
         return JsonKey.PHONE;
+      case JsonKey.RECOVERY_EMAIL:
+        return JsonKey.EMAIL;
+      case JsonKey.RECOVERY_PHONE:
+        return JsonKey.PHONE;
       default:
         return null;
     }
@@ -97,16 +101,14 @@ public class OTPActor extends BaseActor {
     }
 
     Map<String, Object> otpDetails = otpService.getOTPDetails(type, key);
-
     if (MapUtils.isEmpty(otpDetails)) {
       ProjectLogger.log(
           "OTPActor:verifyOTP: Details not found for type = " + type + " key = " + key,
           LoggerEnum.DEBUG);
       ProjectCommonException.throwClientErrorException(ResponseCode.errorInvalidOTP);
     }
-
+    otpService.deleteOtp(type,key);
     String otpInDB = (String) otpDetails.get(JsonKey.OTP);
-
     if (otpInDB == null || otpInRequest == null || !otpInRequest.equals(otpInDB)) {
       ProjectLogger.log(
           "OTPActor:verifyOTP: OTP mismatch otpInRequest = "

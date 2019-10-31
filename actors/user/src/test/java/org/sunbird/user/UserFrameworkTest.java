@@ -119,6 +119,7 @@ public class UserFrameworkTest extends UserManagementActorTestBase {
     request.put(JsonKey.USER, innerMap);
     request.put(JsonKey.USER_ID, userId);
     request.put(JsonKey.FRAMEWORK, frameworkMap);
+    getUpdateRequestWithDefaultFlags(request);
     reqObj.setRequest(request);
     Map<String, Object> context = new HashMap<>();
     context.put(JsonKey.REQUESTED_BY, "someValue");

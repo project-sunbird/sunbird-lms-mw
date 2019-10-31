@@ -162,7 +162,7 @@ public class UserMergeActorTest {
     Map reqMap = new HashMap<>();
     Map contextMap = new HashMap<>();
     Map header = new HashMap<>();
-    String[] authToken = {"authUserToken"};
+    String authToken = "authUserToken";
     reqMap.put(JsonKey.FROM_ACCOUNT_ID, "anyUserId");
     reqMap.put(JsonKey.TO_ACCOUNT_ID, "anyUserId");
     header.put(JsonKey.X_AUTHENTICATED_USER_TOKEN, authToken);

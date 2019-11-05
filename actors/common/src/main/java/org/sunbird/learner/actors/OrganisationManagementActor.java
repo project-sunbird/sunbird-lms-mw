@@ -4,7 +4,6 @@ import static org.sunbird.learner.util.Util.isNotNull;
 import static org.sunbird.learner.util.Util.isNull;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.math.BigInteger;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -599,7 +598,7 @@ public class OrganisationManagementActor extends BaseActor {
       }
 
       Integer currentStatus = (Integer) orgDao.get(JsonKey.STATUS);
-      Integer nextStatus = ((BigInteger) request.get(JsonKey.STATUS)).intValue();
+      Integer nextStatus = (Integer) request.get(JsonKey.STATUS);
       if (!(Util.checkOrgStatusTransition(currentStatus, nextStatus))) {
 
         ProjectLogger.log("Invalid Org State transation");

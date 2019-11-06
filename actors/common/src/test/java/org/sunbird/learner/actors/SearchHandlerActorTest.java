@@ -5,10 +5,7 @@ import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.dispatch.Futures;
 import akka.testkit.javadsl.TestKit;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
@@ -120,13 +117,38 @@ public class SearchHandlerActorTest {
     filters.put(JsonKey.ROOT_ORG_ID, "ORG_001");
     innerMap.put(JsonKey.FILTERS, filters);
     innerMap.put(JsonKey.LIMIT, 1);
+    Map<String, Object> contextMap = new HashMap<>();
+    contextMap.put(JsonKey.FIELDS, JsonKey.ORG_NAME);
+    reqObj.setContext(contextMap);
+    reqObj.setRequest(innerMap);
+    subject.tell(reqObj, probe.getRef());
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
+    Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
+  }
+
+  @Test
+  public void searchUserWithObjectTypeAsOrg() {
+    TestKit probe = new TestKit(system);
+    ActorRef subject = system.actorOf(props);
+
+    Request reqObj = new Request();
+    reqObj.setOperation(ActorOperations.COMPOSITE_SEARCH.getValue());
+    HashMap<String, Object> innerMap = new HashMap<>();
+    innerMap.put(JsonKey.QUERY, "");
+    Map<String, Object> filters = new HashMap<>();
+    List<String> objectType = new ArrayList<String>();
+    objectType.add("org");
+    filters.put(JsonKey.OBJECT_TYPE, objectType);
+    filters.put(JsonKey.ROOT_ORG_ID, "ORG_001");
+    innerMap.put(JsonKey.FILTERS, filters);
+    innerMap.put(JsonKey.LIMIT, 1);
 
     Map<String, Object> contextMap = new HashMap<>();
     contextMap.put(JsonKey.FIELDS, JsonKey.ORG_NAME);
     reqObj.setContext(contextMap);
     reqObj.setRequest(innerMap);
     subject.tell(reqObj, probe.getRef());
-    Response res = probe.expectMsgClass(duration("200 second"), Response.class);
+    Response res = probe.expectMsgClass(duration("10 second"), Response.class);
     Assert.assertTrue(null != res.get(JsonKey.RESPONSE));
   }
 
@@ -140,7 +162,7 @@ public class SearchHandlerActorTest {
     reqObj.setOperation("INVALID_OPERATION");
 
     subject.tell(reqObj, probe.getRef());
-    ProjectCommonException exc = probe.expectMsgClass(ProjectCommonException.class);
+    ProjectCommonException exc = probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
     Assert.assertTrue(null != exc);
   }
 }

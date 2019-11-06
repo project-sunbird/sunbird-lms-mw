@@ -62,6 +62,7 @@ public class MigrationUtils {
         ProjectLogger.log("MigrationUtils:markUserAsRejected:update in cassandra  with userExtId" + shadowUser.getUserExtId(),LoggerEnum.INFO.name());
     }
 
+
     /**
      * this method will return all the ELIGIBLE user with same userId in shadow_user table
      * @param userId

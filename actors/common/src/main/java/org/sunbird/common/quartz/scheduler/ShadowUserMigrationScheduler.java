@@ -223,7 +223,6 @@ public class ShadowUserMigrationScheduler extends BaseJob{
         updateUserInShadowDb(processId,migrationUser,shadowUser);
     }
 
-
     /**
      * This method will overwrite the user record in shadow_user also will not update the claimStatus of shadow_user if user is already VALIDATED/CLAIMED REJECTED AND FAILED.
      * if user is not VALIDATED/CLAIMED, REJECTED AND FAILED then it can set claimStatus to 5 if provided ext org id is incorrect.
@@ -322,7 +321,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
             return false;
         }
         if(!shadowUser.getName().equalsIgnoreCase(migrationUser.getName())){
-        return false;
+            return false;
         }
         if(!StringUtils.equalsIgnoreCase(shadowUser.getEmail(),migrationUser.getEmail())){
             return false;
@@ -343,7 +342,6 @@ public class ShadowUserMigrationScheduler extends BaseJob{
         }
         return true;
     }
-
 
     /**
      * this method will check weather the provided orgExternalId is correct or not

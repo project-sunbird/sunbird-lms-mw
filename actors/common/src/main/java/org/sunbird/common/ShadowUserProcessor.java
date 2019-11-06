@@ -27,7 +27,6 @@ import org.sunbird.models.user.UserType;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import scala.concurrent.Future;
 
-import java.sql.Timestamp;
 import java.util.*;
 
 public class ShadowUserProcessor {
@@ -75,9 +74,7 @@ public class ShadowUserProcessor {
             registerUserToOrg(userId, orgId);
         }
         syncUserToES(userId);
-        List<String>userIds=new ArrayList<>();
-        userIds.add(userId);
-        updateUserInShadowDb(userId, shadowUser, ClaimStatus.CLAIMED.getValue(), userIds);
+        updateUserInShadowDb(userId, shadowUser, ClaimStatus.CLAIMED.getValue(), null);
     }
 
     private boolean isRootOrgMatchedWithOrgId(String rootOrgId, String orgId) {
@@ -231,9 +228,9 @@ public class ShadowUserProcessor {
 
 
     /**
-     * this method will return the custodianRootOrgId
+     * this method
      *
-     * @return string
+     * @return
      */
     private String getCustodianOrgId() {
         if (StringUtils.isNotBlank(custodianOrgId)) {
@@ -354,7 +351,7 @@ public class ShadowUserProcessor {
             filters.put(JsonKey.EXTERNAL_ID, shadowUser.getOrgExtId().toLowerCase());
             filters.put(JsonKey.CHANNEL, shadowUser.getChannel());
             request.put(JsonKey.FILTERS, filters);
-            ProjectLogger.log("ShadowUserProcessor:getOrgId: request map prepared to query ElasticSearch for org id :" + filters + "with processId" + shadowUser.getProcessId(), LoggerEnum.INFO.name());
+            ProjectLogger.log("ShadowUserProcessor:getOrgId: request map prepared to query elasticsearch for org id :" + filters + "with processId" + shadowUser.getProcessId(), LoggerEnum.INFO.name());
             SearchDTO searchDTO = ElasticSearchHelper.createSearchDTO(request);
             Map<String, Object> response = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(elasticSearchService.search(searchDTO, ProjectUtil.EsType.organisation.getTypeName()));
             List<Map<String, Object>> orgData = ((List<Map<String, Object>>) response.get(JsonKey.CONTENT));
@@ -435,7 +432,6 @@ public class ShadowUserProcessor {
         return telemetryContext;
     }
 
-
     /**
      * METHOD WILL RETURN THE LIST OF SHADOW USER WHICH IS PRE EXISTING WITH USERID
      * this method will give all the record which are not claimed failed and rejected
@@ -494,6 +490,4 @@ public class ShadowUserProcessor {
         return filterShadowUser;
     }
 }
-
-
 

@@ -12,6 +12,9 @@
 	<artifactId>mw-actors</artifactId>
 	<packaging>pom</packaging>
 	<name>Middleware Actors</name>
+	<properties>
+		<learner.akka.version>2.5.19</learner.akka.version>
+	</properties>
 	<modules>
 		<module>common</module>
 		<module>user</module>

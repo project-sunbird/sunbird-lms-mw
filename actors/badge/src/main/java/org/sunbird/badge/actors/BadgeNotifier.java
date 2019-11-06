@@ -1,7 +1,5 @@
 package org.sunbird.badge.actors;
 
-import java.util.Arrays;
-import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -16,6 +14,9 @@ import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.Util;
+
+import java.util.Arrays;
+import java.util.List;
 
 /** @author Mahesh Kumar Gangula */
 @ActorConfig(

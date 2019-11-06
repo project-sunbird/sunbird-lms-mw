@@ -13,13 +13,10 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Properties;
-import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
@@ -544,17 +541,8 @@ public final class Util {
               (Collection<? extends Map<String, Object>>) searchQueryMap.get(JsonKey.GROUP_QUERY));
     }
     if (searchQueryMap.containsKey(JsonKey.SOFT_CONSTRAINTS)) {
-      // Play is converting int value to bigInt so need to cnvert back those data to iny
-      // SearchDto soft constraints expect Map<String, Integer>
-      Map<String, Integer> constraintsMap = new HashMap<>();
-      Set<Entry<String, BigInteger>> entrySet =
-          ((Map<String, BigInteger>) searchQueryMap.get(JsonKey.SOFT_CONSTRAINTS)).entrySet();
-      Iterator<Entry<String, BigInteger>> itr = entrySet.iterator();
-      while (itr.hasNext()) {
-        Entry<String, BigInteger> entry = itr.next();
-        constraintsMap.put(entry.getKey(), entry.getValue().intValue());
-      }
-      search.setSoftConstraints(constraintsMap);
+      search.setSoftConstraints(
+          (Map<String, Integer>) searchQueryMap.get(JsonKey.SOFT_CONSTRAINTS));
     }
     return search;
   }

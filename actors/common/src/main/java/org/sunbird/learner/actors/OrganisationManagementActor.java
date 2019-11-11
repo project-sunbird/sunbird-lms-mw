@@ -256,7 +256,7 @@ public class OrganisationManagementActor extends BaseActor {
   /** Method to create an Organisation . */
   @SuppressWarnings("unchecked")
   private void createOrg(Request actorMessage) {
-    ProjectLogger.log("OrgManagementActor: Create org method call start", LoggerEnum.INFO);
+    ProjectLogger.log("OrgManagementActor: Create org method call start", LoggerEnum.INFO.name());
     // object of telemetry event...
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
@@ -391,6 +391,11 @@ public class OrganisationManagementActor extends BaseActor {
 
       if (null != isRootOrg && isRootOrg) {
         boolean bool = Util.registerChannel(request);
+        request.put(
+            JsonKey.IS_SSO_ROOTORG_ENABLED,
+            request.containsKey(JsonKey.IS_SSO_ROOTORG_ENABLED)
+                ? request.get(JsonKey.IS_SSO_ROOTORG_ENABLED)
+                : false);
         if (!bool) {
           ProjectCommonException exception =
               new ProjectCommonException(
@@ -417,7 +422,8 @@ public class OrganisationManagementActor extends BaseActor {
         createOrgExternalIdRecord(channel, passedExternalId, uniqueId);
       }
       ProjectLogger.log(
-          "OrgManagementActor : CreateOrg : Org data saved into cassandra.", LoggerEnum.INFO);
+          "OrgManagementActor : CreateOrg : Org data saved into cassandra.",
+          LoggerEnum.INFO.name());
       // create org_map if parentOrgId is present in request
       if (isValidParent) {
         upsertOrgMap(
@@ -455,13 +461,13 @@ public class OrganisationManagementActor extends BaseActor {
         ProjectLogger.log(
             "OrganisationManagementActor:createOrg: Calling background job to sync org data "
                 + uniqueId,
-            LoggerEnum.INFO);
+            LoggerEnum.INFO.name());
         tellToAnother(orgReq);
       }
     } catch (ProjectCommonException e) {
       ProjectLogger.log(
           "OrganisationManagementActor:createOrg: Error occurred = " + e.getMessage(),
-          LoggerEnum.INFO);
+          LoggerEnum.INFO.name());
       sender().tell(e, self());
       return;
     }
@@ -881,13 +887,14 @@ public class OrganisationManagementActor extends BaseActor {
       if (null != orgDao.get(JsonKey.IS_ROOT_ORG) && (boolean) orgDao.get(JsonKey.IS_ROOT_ORG)) {
         String channel = (String) orgDao.get(JsonKey.CHANNEL);
         String updateOrgDaoChannel = (String) updateOrgDao.get(JsonKey.CHANNEL);
-        if (null != updateOrgDaoChannel
-            && null != channel
-            && !(updateOrgDaoChannel.equals(channel))) {
+        String license = (String) request.get(JsonKey.LICENSE);
+        if (null != updateOrgDaoChannel && null != channel && !(updateOrgDaoChannel.equals(channel))
+            || StringUtils.isNotBlank(license)) {
           Map<String, Object> tempMap = new HashMap<>();
           tempMap.put(JsonKey.CHANNEL, updateOrgDaoChannel);
           tempMap.put(JsonKey.HASHTAGID, orgDao.get(JsonKey.HASHTAGID));
           tempMap.put(JsonKey.DESCRIPTION, orgDao.get(JsonKey.DESCRIPTION));
+          tempMap.put(JsonKey.LICENSE, license);
           boolean bool = Util.updateChannel(tempMap);
           if (!bool) {
             ProjectCommonException exception =

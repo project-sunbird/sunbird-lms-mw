@@ -765,7 +765,7 @@ public final class Util {
       channelMap.put(JsonKey.CODE, req.get(JsonKey.HASHTAGID));
       if (req.containsKey(JsonKey.LICENSE)
           && StringUtils.isNotBlank((String) req.get(JsonKey.LICENSE))) {
-        channelMap.put(JsonKey.LICENSE, req.get(JsonKey.LICENSE));
+        channelMap.put(JsonKey.DEFAULT_LICENSE, req.get(JsonKey.LICENSE));
       }
 
       String defaultFramework = (String) req.get(JsonKey.DEFAULT_FRAMEWORK);
@@ -829,7 +829,7 @@ public final class Util {
       channelMap.put(JsonKey.CODE, req.get(JsonKey.HASHTAGID));
       String license = (String) req.get(JsonKey.LICENSE);
       if (StringUtils.isNotBlank(license)) {
-        reqMap.put(JsonKey.LICENSE, license);
+        reqMap.put(JsonKey.DEFAULT_LICENSE, license);
       }
       reqMap.put(JsonKey.CHANNEL, channelMap);
       map.put(JsonKey.REQUEST, reqMap);

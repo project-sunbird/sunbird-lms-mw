@@ -10,19 +10,7 @@ import java.util.Map;
 
 /**
  * @author anmolgupta
- * Table name : user_feed or user_notifcation
- *  id (pk) - text auto generated
- *  userId - text identity of user
- *  category - int (enum of category value) // this will define message tyep
- *  priority - int  // importance of this message
- *  createdOn - timestamp
- *  createdBy - (userId or System)
- *  feedAction - int (read/unread)
- *  expireOn - timestamp
- *  feedData  - text (value will be like this: [{"message": "text message" ,"order":1,"closeable":true,"userExtId":"Teacher id"},{"message":"","order":2,"closeable": true}])
- *  updatedOn : timestamp
- *  updatedBy : text userId
- *  "channel/rootOrgId": text
+ * Pojo class for user_feed table.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)

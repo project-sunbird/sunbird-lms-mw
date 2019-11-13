@@ -1,10 +1,13 @@
 package org.sunbird.models;
 
-import org.sunbird.common.models.util.JsonKey;
 
+/**
+ * @author anmolgupta
+ * this class will be used to define the Category for the feeds
+ */
 public enum  Category {
 
-    MIGRATION_USER(JsonKey.MIGRATION_USER_OBJECT);
+    USER_EXTERNAL_ID_VALIDATION("USER_EXTERNAL_ID_VALIDATION");
     private String value;
     Category(String value) {
         this.value = value;

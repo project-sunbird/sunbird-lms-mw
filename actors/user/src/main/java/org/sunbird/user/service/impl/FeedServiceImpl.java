@@ -3,9 +3,9 @@ package org.sunbird.user.service.impl;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.models.user.Feed;
-import org.sunbird.user.service.FeedService;
+import org.sunbird.user.service.IFeedService;
 
-public class FeedServiceImpl implements FeedService {
+public class FeedServiceImpl implements IFeedService {
     @Override
     public Response save(Feed feed) {
         return null;
@@ -17,7 +17,8 @@ public class FeedServiceImpl implements FeedService {
     }
 
     @Override
-    public void delete(String id) {
-
+    public boolean delete(String id) {
+        return false;
     }
+
 }

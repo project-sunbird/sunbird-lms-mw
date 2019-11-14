@@ -398,7 +398,10 @@ public class TenantMigrationActor extends BaseActor {
     return userRequest;
   }
 
-
+  /**
+   * this method will be used when user reject the migration
+   * @param userId
+   */
   private void rejectMigration(String userId) {
     ProjectLogger.log("TenantMigrationActor:rejectMigration: started rejecting Migration with userId:" + userId, LoggerEnum.INFO.name());
     List<ShadowUser>shadowUserList=MigrationUtils.getEligibleUsersById(userId,null);
@@ -448,6 +451,12 @@ public class TenantMigrationActor extends BaseActor {
   }
 
 
+  /**
+   * this method will return the index from the shadowUserList whose user ext id is matching with provided one
+   * @param shadowUserList
+   * @param extUserId
+   * @return
+   */
   private int getIndexOfShadowUser(List<ShadowUser> shadowUserList, String extUserId) {
     int index = IntStream.range(0, shadowUserList.size())
             .filter(i -> Objects.nonNull(shadowUserList.get(i)))
@@ -459,6 +468,12 @@ public class TenantMigrationActor extends BaseActor {
   }
 
 
+  /**
+   * this method will return the shadow user based on channel and userId
+   * @param channel
+   * @param userId
+   * @return
+   */
   private List<ShadowUser> getShadowUsers(String channel,String userId){
     Map<String,Object>propsMap=new HashMap<>();
     propsMap.put(JsonKey.CHANNEL,channel);
@@ -467,8 +482,15 @@ public class TenantMigrationActor extends BaseActor {
   }
 
 
+  /**
+   * this method will migrate the user from custodian channel to non-custodian channel.
+   * @param request
+   * @param userId
+   * @param extUserId
+   * @param shadowUser
+   */
   private void selfMigrate(Request request,String userId,String extUserId,ShadowUser shadowUser) {
-        prepareMigrationRequest(request, shadowUser, userId, extUserId);
+        request.setRequest(prepareMigrationRequest(shadowUser, userId, extUserId));
         ProjectLogger.log("TenantMigrationActor:selfMigrate:request prepared for user migration:" + request.getRequest(), LoggerEnum.INFO.name());
         migrateUser(request);
         Map<String, Object> propertiesMap = new HashMap<>();
@@ -483,6 +505,12 @@ public class TenantMigrationActor extends BaseActor {
     }
 
 
+  /**
+   * this method will prepare the failure response will return the remainingCount if provided user ext id in incorrect
+   * @param extUserId
+   * @param remainingAttempt
+   * @return
+   */
   private Response prepareFailureResponse(String extUserId, int remainingAttempt) {
     Response response = new Response();
     response.setResponseCode(ResponseCode.invalidUserExternalId);
@@ -493,7 +521,13 @@ public class TenantMigrationActor extends BaseActor {
     return response;
   }
 
-  private static void prepareMigrationRequest(Request request, ShadowUser shadowUser, String userId, String extUserId) {
+  /**
+   * this method will prepare the migration request.
+   * @param shadowUser
+   * @param userId
+   * @param extUserId
+   */
+  private static Map<String,Object> prepareMigrationRequest(ShadowUser shadowUser, String userId, String extUserId) {
     Map<String, Object> reqMap = new WeakHashMap<>();
     reqMap.put(JsonKey.USER_ID, userId);
     reqMap.put(JsonKey.CHANNEL, shadowUser.getChannel());
@@ -506,7 +540,7 @@ public class TenantMigrationActor extends BaseActor {
     externalIdMap.put(JsonKey.PROVIDER, shadowUser.getChannel());
     extUserIds.add(externalIdMap);
     reqMap.put(JsonKey.EXTERNAL_IDS, extUserIds);
-    request.setRequest(reqMap);
+    return reqMap;
   }
 
 
@@ -522,6 +556,11 @@ public class TenantMigrationActor extends BaseActor {
     }
   }
 
+  /**
+   * this method will increase the attemptCount of the remaining user found with same channel
+   * @param shadowUserList
+   * @param isFailed
+   */
   private void increaseBulkAttemptCount(List<ShadowUser>shadowUserList,boolean isFailed){
     shadowUserList.stream().forEach(shadowUser -> {
       increaseAttemptCount(shadowUser,isFailed);

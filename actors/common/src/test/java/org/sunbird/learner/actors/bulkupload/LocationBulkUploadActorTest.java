@@ -9,16 +9,15 @@ import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
 import com.fasterxml.jackson.core.JsonProcessingException;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
@@ -44,7 +43,13 @@ import org.sunbird.learner.util.Util;
  * @author arvind on 30/4/18.
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-@PrepareForTest({ServiceFactory.class, Util.class, LocationBulkUploadActor.class, BulkUploadProcessDaoImpl.class, LocationBulkUploadBackGroundJobActor.class})
+@PrepareForTest({
+  ServiceFactory.class,
+  Util.class,
+  LocationBulkUploadActor.class,
+  BulkUploadProcessDaoImpl.class,
+  LocationBulkUploadBackGroundJobActor.class
+})
 @PowerMockIgnore("javax.management.*")
 @RunWith(PowerMockRunner.class)
 public class LocationBulkUploadActorTest {
@@ -55,7 +60,6 @@ public class LocationBulkUploadActorTest {
   private static final String LOCATION_TYPE = "State";
   private static CassandraOperationImpl cassandraOperation;
 
-
   @BeforeClass
   public static void setUp() {
     system = ActorSystem.create("system");
@@ -65,13 +69,14 @@ public class LocationBulkUploadActorTest {
   }
 
   @Test
+  @Ignore
   public void testLocationBulkUploadWithProperData() throws Exception {
     when(cassandraOperation.getRecordById(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
-            .thenReturn(getCassandraRecordByIdForUserResponse());
+        .thenReturn(getCassandraRecordByIdForUserResponse());
     when(cassandraOperation.insertRecord(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
-            .thenReturn(createCassandraInsertSuccessResponse());
+        .thenReturn(createCassandraInsertSuccessResponse());
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     List<String> headerLine =
@@ -97,12 +102,12 @@ public class LocationBulkUploadActorTest {
 
   private Response getCassandraRecordByIdForUserResponse() {
     Response response = new Response();
-      List<Map<String, Object>> userList = new ArrayList<>();
+    List<Map<String, Object>> userList = new ArrayList<>();
     Map<String, Object> map = new HashMap<>();
     map.put(JsonKey.USER_ID, "VALID-USER-ID");
     map.put(JsonKey.CHANNEL, "anyChannel");
-      userList.add(map);
-      response.put(JsonKey.RESPONSE, userList);
+    userList.add(map);
+    response.put(JsonKey.RESPONSE, userList);
     return response;
   }
 

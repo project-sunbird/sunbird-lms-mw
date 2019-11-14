@@ -1165,23 +1165,6 @@ public class OrganisationManagementActor extends BaseActor {
     cassandraOperation.upsertRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), addressReq);
   }
 
-  /** Checks whether the parent Organisation exists */
-  @SuppressWarnings("unchecked")
-  public Boolean isValidParent(String parentId) {
-    Util.DbInfo userdbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-    Response result =
-        cassandraOperation.getRecordById(
-            userdbInfo.getKeySpace(), userdbInfo.getTableName(), parentId);
-    List<Map<String, Object>> list = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
-    if (!(list.isEmpty())) {
-      return true;
-    }
-    throw new ProjectCommonException(
-        ResponseCode.invalidParentId.getErrorCode(),
-        ResponseCode.invalidParentId.getErrorMessage(),
-        ResponseCode.CLIENT_ERROR.getResponseCode());
-  }
-
   /**
    * validates if the Organisation and parent Organisation has the same root Organisation else
    * throws error

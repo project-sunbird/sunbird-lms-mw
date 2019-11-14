@@ -389,7 +389,12 @@ public class TenantMigrationActor extends BaseActor {
     userRequest.put(JsonKey.CHANNEL, request.getRequest().get(JsonKey.CHANNEL));
     userRequest.put(JsonKey.ROOT_ORG_ID, request.getRequest().get(JsonKey.ROOT_ORG_ID));
     userRequest.put(JsonKey.FLAGS_VALUE, request.getRequest().get(JsonKey.FLAGS_VALUE));
+    userRequest.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
     userRequest.put(JsonKey.USER_TYPE, JsonKey.TEACHER);
+    if(request.getRequest().containsKey(JsonKey.STATUS)){
+      userRequest.put(JsonKey.STATUS,request.getRequest().get(JsonKey.STATUS));
+      userRequest.put(JsonKey.IS_DELETED,(int)request.getRequest().get(JsonKey.STATUS)==ProjectUtil.Status.ACTIVE.getValue()?false:true);
+    }
     return userRequest;
   }
 
@@ -414,8 +419,8 @@ public class TenantMigrationActor extends BaseActor {
     String extUserId = (String) request.getRequest().get(JsonKey.USER_EXT_ID);
     String channel = (String) request.getRequest().get(JsonKey.CHANNEL);
     String action = (String) request.getRequest().get(JsonKey.ACTION);
-    String feedId = (String) request.getRequest().get("feedId");
-    if (action.equalsIgnoreCase("reject")) {
+    String feedId = (String) request.getRequest().get(JsonKey.FEED_ID);   // will be used with messaging table
+    if (StringUtils.equalsIgnoreCase(action,JsonKey.REJECT)) {
       rejectMigration(userId);
     } else {
       List<ShadowUser> shadowUserList = getShadowUsers(channel, userId);
@@ -493,6 +498,7 @@ public class TenantMigrationActor extends BaseActor {
     reqMap.put(JsonKey.USER_ID, userId);
     reqMap.put(JsonKey.CHANNEL, shadowUser.getChannel());
     reqMap.put(JsonKey.ORG_EXTERNAL_ID, shadowUser.getOrgExtId());
+    reqMap.put(JsonKey.STATUS,shadowUser.getUserStatus());
     List<Map<String, String>> extUserIds = new ArrayList<>();
     Map<String, String> externalIdMap = new WeakHashMap<>();
     externalIdMap.put(JsonKey.ID, extUserId);

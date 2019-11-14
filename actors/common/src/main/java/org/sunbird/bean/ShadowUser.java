@@ -114,6 +114,28 @@ public class ShadowUser {
         return channel;
     }
 
+    @Override
+    public String toString() {
+        return "ShadowUser{" +
+                "claimedOn=" + claimedOn +
+                ", claimStatus=" + claimStatus +
+                ", createdOn=" + createdOn +
+                ", email='" + email + '\'' +
+                ", name='" + name + '\'' +
+                ", orgExtId='" + orgExtId + '\'' +
+                ", phone='" + phone + '\'' +
+                ", processId='" + processId + '\'' +
+                ", updatedOn=" + updatedOn +
+                ", userExtId='" + userExtId + '\'' +
+                ", userId='" + userId + '\'' +
+                ", userStatus=" + userStatus +
+                ", userIds=" + userIds +
+                ", channel='" + channel + '\'' +
+                ", addedBy='" + addedBy + '\'' +
+                ", attemptedCount=" + attemptedCount +
+                '}';
+    }
+
     public static class ShadowUserBuilder{
 
         private Timestamp claimedOn;

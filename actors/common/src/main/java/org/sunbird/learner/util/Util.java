@@ -815,7 +815,7 @@ public final class Util {
     String regStatus = "";
     try {
       ProjectLogger.log(
-          "start call for registering the channel for hashTag id ==" + req.get(JsonKey.HASHTAGID),
+          "start call for updateChannel for hashTag id ==" + req.get(JsonKey.HASHTAGID),
           LoggerEnum.INFO.name());
       String ekStepBaseUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
       if (StringUtils.isBlank(ekStepBaseUrl)) {
@@ -829,7 +829,7 @@ public final class Util {
       channelMap.put(JsonKey.CODE, req.get(JsonKey.HASHTAGID));
       String license = (String) req.get(JsonKey.LICENSE);
       if (StringUtils.isNotBlank(license)) {
-        reqMap.put(JsonKey.DEFAULT_LICENSE, license);
+        channelMap.put(JsonKey.DEFAULT_LICENSE, license);
       }
       reqMap.put(JsonKey.CHANNEL, channelMap);
       map.put(JsonKey.REQUEST, reqMap);
@@ -846,11 +846,11 @@ public final class Util {
               reqString,
               headerMap);
       ProjectLogger.log(
-          "end call for channel registration for hashTag id ==" + req.get(JsonKey.HASHTAGID),
+          "end call for channel update for hashTag id ==" + req.get(JsonKey.HASHTAGID),
           LoggerEnum.INFO.name());
     } catch (Exception e) {
       ProjectLogger.log(
-          "Exception occurred while registarting channel in ekstep. " + e.getMessage(),
+          "Exception occurred while updating channel in ekstep. " + e.getMessage(),
           LoggerEnum.ERROR.name());
     }
 

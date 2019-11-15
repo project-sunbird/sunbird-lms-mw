@@ -143,18 +143,11 @@ public class ShadowUserProcessor {
                 Map<String, Object> userMap = esUser.get(0);
                 if (!isSame(shadowUser, userMap)) {
                     ProjectLogger.log("ShadowUserProcessor:updateUser: provided user details doesn't match with existing user details with processId" + shadowUser.getProcessId() + userMap, LoggerEnum.INFO.name());
-                    List<String>userIds=new ArrayList<>();
+                    List<String> userIds = new ArrayList<>();
                     userIds.add((String) userMap.get(JsonKey.ID));
-                    List<ShadowUser>multiMatchRecords=getMultiMatchRecords((String) userMap.get(JsonKey.ID));
-                    List<ShadowUser>filterRecords=getDiffChannelUsers(shadowUser.getChannel(),multiMatchRecords);
-                    if(CollectionUtils.isNotEmpty(filterRecords)){
-                        changeStatusToMultiMatch(filterRecords);
-                        updateUserInShadowDb(null, shadowUser, ClaimStatus.MULTIMATCH.getValue(), userIds);
-                    }
-                    else {
-                        updateUserInShadowDb(null, shadowUser, ClaimStatus.ELIGIBLE.getValue(), userIds);
-                        //TODO ENTRY OF USER IN ALERTS TABLE
-                    }
+                    updateUserInShadowDb(null, shadowUser, ClaimStatus.ELIGIBLE.getValue(), userIds);
+                    //TODO ENTRY OF USER IN ALERTS TABLE
+
                 }
             } else if (esUser.size() > 1) {
                 ProjectLogger.log("ShadowUserProcessor:updateUser:GOT response from ES :" + esUser, LoggerEnum.INFO.name());
@@ -441,7 +434,7 @@ public class ShadowUserProcessor {
      */
     public  List<ShadowUser> getMultiMatchRecords(String userId) {
         List<ShadowUser>shadowUsersList=new ArrayList<>();
-        Response response = cassandraOperation.searchValueInList(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, JsonKey.USERIDS, userId);
+        Response response = cassandraOperation.searchValueInList(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, JsonKey.USERIDS, userId,null);
         if(!((List) response.getResult().get(JsonKey.RESPONSE)).isEmpty()) {
             ((List) response.getResult().get(JsonKey.RESPONSE)).stream().forEach(shadowMap->{
                 ShadowUser shadowUser=mapper.convertValue(shadowMap,ShadowUser.class);

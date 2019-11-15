@@ -404,6 +404,7 @@ public class TenantMigrationActor extends BaseActor {
    */
   private void rejectMigration(String userId) {
     ProjectLogger.log("TenantMigrationActor:rejectMigration: started rejecting Migration with userId:" + userId, LoggerEnum.INFO.name());
+    System.out.println("the userId got"+userId);
     List<ShadowUser>shadowUserList=MigrationUtils.getEligibleUsersById(userId,null);
     if (shadowUserList.isEmpty()) {
       ProjectCommonException.throwClientErrorException(ResponseCode.invalidUserId);
@@ -425,10 +426,11 @@ public class TenantMigrationActor extends BaseActor {
     String feedId = (String) request.getRequest().get(JsonKey.FEED_ID);   // will be used with messaging table
     if (StringUtils.equalsIgnoreCase(action,JsonKey.REJECT)) {
       rejectMigration(userId);
-    } else {
+    }
+    else {
       List<ShadowUser> shadowUserList = getShadowUsers(channel, userId);
-      if (shadowUserList.isEmpty()) {
-        throw new ProjectCommonException(ResponseCode.CLIENT_ERROR.getErrorCode(), ResponseCode.invalidUserId.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+      if (CollectionUtils.isEmpty(shadowUserList)) {
+        ProjectCommonException.throwClientErrorException(ResponseCode.invalidUserId);
       }
       int index = getIndexOfShadowUser(shadowUserList, extUserId);
       if (index == -1) {

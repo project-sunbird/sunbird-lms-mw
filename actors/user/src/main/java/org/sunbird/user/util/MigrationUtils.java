@@ -11,10 +11,7 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.helper.ServiceFactory;
 
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class MigrationUtils {
 
@@ -28,7 +25,7 @@ public class MigrationUtils {
      */
     public static ShadowUser getRecordByUserId(String userId) {
         ShadowUser shadowUser=null;
-        Response response = cassandraOperation.searchValueInList(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, JsonKey.USERIDS, userId,null);
+        Response response = cassandraOperation.searchValueInList(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, JsonKey.USERIDS, userId);
         if(!((List) response.getResult().get(JsonKey.RESPONSE)).isEmpty()) {
             shadowUser = mapper.convertValue(((List) response.getResult().get(JsonKey.RESPONSE)).get(0), ShadowUser.class);
         }
@@ -69,7 +66,7 @@ public class MigrationUtils {
      * @param shadowUser
      */
     public static boolean updateClaimStatus(ShadowUser shadowUser,int claimStatus) {
-        Map<String, Object> propertiesMap = new HashMap<>();
+        Map<String, Object> propertiesMap = new WeakHashMap<>();
         propertiesMap.put(JsonKey.CLAIM_STATUS, claimStatus);
         propertiesMap.put(JsonKey.UPDATED_ON, new Timestamp(System.currentTimeMillis()));
         updateRecord(propertiesMap, shadowUser.getChannel(), shadowUser.getUserExtId());
@@ -79,13 +76,32 @@ public class MigrationUtils {
 
 
     /**
-     * this method will return all the ELIGIBLE user with same userId in shadow_user table
+     * this method will return all the ELIGIBLE(claimStatus 6) user with same userId and properties from  shadow_user table
      * @param userId
+     * @param propsMap
      * @return
      */
     public static List<ShadowUser> getEligibleUsersById(String userId,Map<String, Object> propsMap) {
         List<ShadowUser>shadowUsersList=new ArrayList<>();
         Response response = cassandraOperation.searchValueInList(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, JsonKey.USERIDS, userId,propsMap);
+        if(!((List) response.getResult().get(JsonKey.RESPONSE)).isEmpty()) {
+            ((List) response.getResult().get(JsonKey.RESPONSE)).stream().forEach(shadowMap->{
+                ShadowUser shadowUser=mapper.convertValue(shadowMap,ShadowUser.class);
+                if(shadowUser.getClaimStatus()==ClaimStatus.ELIGIBLE.getValue()) {
+                    shadowUsersList.add(shadowUser);
+                }
+            });
+        }
+        return shadowUsersList;
+    }
+    /**
+     * this method will return all the ELIGIBLE(claimStatus 6) user with same userId from  shadow_user table
+     * @param userId
+     * @return
+     */
+    public static List<ShadowUser> getEligibleUsersById(String userId) {
+        List<ShadowUser>shadowUsersList=new ArrayList<>();
+        Response response = cassandraOperation.searchValueInList(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, JsonKey.USERIDS, userId);
         if(!((List) response.getResult().get(JsonKey.RESPONSE)).isEmpty()) {
             ((List) response.getResult().get(JsonKey.RESPONSE)).stream().forEach(shadowMap->{
                 ShadowUser shadowUser=mapper.convertValue(shadowMap,ShadowUser.class);

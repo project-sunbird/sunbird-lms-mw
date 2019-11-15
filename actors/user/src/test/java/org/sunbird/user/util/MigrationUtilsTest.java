@@ -41,10 +41,9 @@ public class MigrationUtilsTest {
         PowerMockito.mockStatic(ServiceFactory.class);
         cassandraOperationImpl = mock(CassandraOperationImpl.class);
         when(ServiceFactory.getInstance()).thenReturn(cassandraOperationImpl);
-        when(cassandraOperationImpl.searchValueInList(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, JsonKey.USER_IDs, "DEF",null)).thenReturn(getRecordsById(false),getRecordsById(true),getRecordsById(false));
+        when(cassandraOperationImpl.searchValueInList(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, JsonKey.USER_IDs, "DEF")).thenReturn(getRecordsById(false),getRecordsById(true),getRecordsById(false));
         when(cassandraOperationImpl.searchValueInList(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, JsonKey.USER_IDs, "ABC",new HashMap<>())).thenReturn(getRecordsById(false),getRecordsById(true));
         when(cassandraOperationImpl.searchValueInList(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, JsonKey.USER_IDs, "EFG",new HashMap<>())).thenReturn(getRecordsByIdFailure());
-
     }
 
     @Test
@@ -114,6 +113,11 @@ public class MigrationUtilsTest {
     public void testGetEligibleUserByIds(){
         List<ShadowUser>shadowUserList= MigrationUtils.getEligibleUsersById("EFG",new HashMap<>());
         Assert.assertEquals(0,shadowUserList.size());
+    }
+    @Test
+    public void testGetEligibleUserByIdsWithoutProps(){
+        List<ShadowUser>shadowUserList= MigrationUtils.getEligibleUsersById("DEF");
+        Assert.assertEquals(1,shadowUserList.size());
     }
 
 

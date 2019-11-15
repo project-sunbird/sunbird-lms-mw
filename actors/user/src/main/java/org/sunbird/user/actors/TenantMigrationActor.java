@@ -7,7 +7,6 @@ import java.sql.Timestamp;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
@@ -37,7 +36,6 @@ import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
-import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.organisation.external.identity.service.OrgExternalService;
 import org.sunbird.learner.util.UserFlagEnum;
@@ -76,6 +74,7 @@ public class TenantMigrationActor extends BaseActor {
   private static final String ACCOUNT_MERGE_EMAIL_TEMPLATE = "accountMerge";
   private static final String MASK_IDENTIFIER = "maskIdentifier";
   private static final int MAX_MIGRATION_ATTEMPT = 2;
+  public static final int USER_EXTERNAL_ID_MISMATCH=-1;
   DecryptionService decryptionService =
           org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
                   "");
@@ -96,7 +95,7 @@ public class TenantMigrationActor extends BaseActor {
         migrateUser(request);
         break;
       case "migrateUser":
-        shadowUserMigrate(request);
+        processShadowUserMigrate(request);
         break;
       default:
         onReceiveUnsupportedOperation("TenantMigrationActor");
@@ -402,57 +401,91 @@ public class TenantMigrationActor extends BaseActor {
    * this method will be used when user reject the migration
    * @param userId
    */
-  private void rejectMigration(String userId) {
+  private boolean rejectMigration(String userId) {
     ProjectLogger.log("TenantMigrationActor:rejectMigration: started rejecting Migration with userId:" + userId, LoggerEnum.INFO.name());
-    System.out.println("the userId got"+userId);
-    List<ShadowUser>shadowUserList=MigrationUtils.getEligibleUsersById(userId,null);
+    List<ShadowUser>shadowUserList=MigrationUtils.getEligibleUsersById(userId);
     if (shadowUserList.isEmpty()) {
       ProjectCommonException.throwClientErrorException(ResponseCode.invalidUserId);
     }
     shadowUserList.forEach(shadowUser->{
     MigrationUtils.markUserAsRejected(shadowUser);
     });
-    Response response = new Response();
-    response.put(JsonKey.SUCCESS, true);
-    sender().tell(response, self());
+    return true;
   }
 
-
-  private void shadowUserMigrate(Request request) {
+  private void processShadowUserMigrate(Request request) throws Exception {
     String userId = (String) request.getRequest().get(JsonKey.USER_ID);
     String extUserId = (String) request.getRequest().get(JsonKey.USER_EXT_ID);
     String channel = (String) request.getRequest().get(JsonKey.CHANNEL);
     String action = (String) request.getRequest().get(JsonKey.ACTION);
-    String feedId = (String) request.getRequest().get(JsonKey.FEED_ID);   // will be used with messaging table
-    if (StringUtils.equalsIgnoreCase(action,JsonKey.REJECT)) {
+    String feedId = (String) request.getRequest().get(JsonKey.FEED_ID);   // will be used with user_feed table
+    Response response = new Response();
+    response.put(JsonKey.SUCCESS, true);
+    response.put(JsonKey.USER_ID, userId);
+    if (StringUtils.equalsIgnoreCase(action, JsonKey.REJECT)) {
       rejectMigration(userId);
     }
-    else {
+
+    else if(StringUtils.equalsIgnoreCase(action,JsonKey.ACCEPT)) {
       List<ShadowUser> shadowUserList = getShadowUsers(channel, userId);
-      if (CollectionUtils.isEmpty(shadowUserList)) {
-        ProjectCommonException.throwClientErrorException(ResponseCode.invalidUserId);
-      }
+      checkUserId(shadowUserList);
       int index = getIndexOfShadowUser(shadowUserList, extUserId);
-      if (index == -1) {
-        int remainingAttempt = MAX_MIGRATION_ATTEMPT - shadowUserList.get(0).getAttemptedCount();
-        if (remainingAttempt == 0) {
-          increaseBulkAttemptCount(shadowUserList, true);
-          ProjectCommonException.throwClientErrorException(ResponseCode.userMigrationFiled);
-        } else {
-          sender().tell(prepareFailureResponse(extUserId, remainingAttempt), self());
-          increaseBulkAttemptCount(shadowUserList, false);
-        }
-      } else {
+      if (!isIndexValid(index)) {
+        response=modifyAttemptCount(response,shadowUserList,extUserId);
+      }
+      else {
         selfMigrate(request, userId, extUserId, shadowUserList.get(index));
         shadowUserList.remove(index);
-        shadowUserList.stream().forEach(shadowUser -> {
-          MigrationUtils.markUserAsRejected(shadowUser);
-        });
+        rejectRemainingUser(shadowUserList);
       }
+    }
+    else {
+      unSupportedMessage();
+    }
+    sender().tell(response, self());
+
+  }
+
+  private Response modifyAttemptCount(Response response,List<ShadowUser>shadowUserList,String extUserId){
+    int remainingAttempt = MAX_MIGRATION_ATTEMPT - shadowUserList.get(0).getAttemptedCount();
+    if (remainingAttempt == 0) {
+      increaseBulkAttemptCount(shadowUserList, true);
+      ProjectCommonException.throwClientErrorException(ResponseCode.userMigrationFiled);
+    }
+    response=prepareFailureResponse(extUserId, remainingAttempt);
+    increaseBulkAttemptCount(shadowUserList, false);
+    return response;
+  }
+
+
+  /**
+   * this method will throw exception  if no record found with provided userId and channel.
+   * @param shadowUserList
+   */
+  private void checkUserId(List<ShadowUser>shadowUserList){
+    if (CollectionUtils.isEmpty(shadowUserList)) {
+      ProjectCommonException.throwClientErrorException(ResponseCode.invalidUserId);
     }
   }
 
 
+  private boolean isIndexValid(int index){
+    if(index==USER_EXTERNAL_ID_MISMATCH){
+      return false;
+    }
+    return true;
+  }
+
+
+  /**
+   * this method will reject the remaining user found with the same channel in shadow_user table
+   * @param shadowUserList
+   */
+  private void rejectRemainingUser(List<ShadowUser>shadowUserList){
+    shadowUserList.stream().forEach(shadowUser -> {
+      MigrationUtils.markUserAsRejected(shadowUser);
+    });
+  }
   /**
    * this method will return the index from the shadowUserList whose user ext id is matching with provided one
    * @param shadowUserList
@@ -464,7 +497,7 @@ public class TenantMigrationActor extends BaseActor {
             .filter(i -> Objects.nonNull(shadowUserList.get(i)))
             .filter(i -> StringUtils.equalsIgnoreCase(extUserId,shadowUserList.get(i).getUserExtId()))
             .findFirst()
-            .orElse(-1);
+            .orElse(USER_EXTERNAL_ID_MISMATCH);
     return index;
 
   }
@@ -500,9 +533,6 @@ public class TenantMigrationActor extends BaseActor {
         propertiesMap.put(JsonKey.UPDATED_ON, new Timestamp(System.currentTimeMillis()));
         propertiesMap.put(JsonKey.USER_ID, userId);
         MigrationUtils.updateRecord(propertiesMap, shadowUser.getChannel(), shadowUser.getUserExtId());
-        Response response = new Response();
-        response.put(JsonKey.SUCCESS, true);
-        sender().tell(response, self());
         // TODO DELETE ENTRY FROM ALERT TABLE
     }
 

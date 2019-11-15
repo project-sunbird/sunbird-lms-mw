@@ -42,7 +42,7 @@ import static org.powermock.api.mockito.PowerMockito.when;
         SystemSettingClientImpl.class
 })
 @PowerMockIgnore({"javax.management.*"})
-public class TenantMigrationActorTest extends UserManagementActorTestBase{
+public class TenantMigrationActorTest extends UserManagementActorTestBase {
     Props props = Props.create(TenantMigrationActor.class);
     ActorSystem system = ActorSystem.create("system");
 
@@ -65,24 +65,24 @@ public class TenantMigrationActorTest extends UserManagementActorTestBase{
 
     @Test
     public void testUserMigrateRejectWhenUserFound() {
-        when(MigrationUtils.getEligibleUsersById(Mockito.anyString(),Mockito.anyMap())).thenReturn(getShadowUserAsList(StringUtils.EMPTY,0));
-        boolean result = testScenario(getMigrateReq(ActorOperations.MIGRATE_USER,JsonKey.REJECT), null,ResponseCode.OK);
+        when(MigrationUtils.getEligibleUsersById(Mockito.anyString())).thenReturn(getShadowUserAsList(StringUtils.EMPTY, 0));
+        boolean result = testScenario(getMigrateReq(ActorOperations.MIGRATE_USER, JsonKey.REJECT), null, ResponseCode.OK);
         assertTrue(result);
     }
 
     @Test
     public void testUserMigrateRejectWhenUserNotFound() {
         List<ShadowUser> shadowUserList = new ArrayList<>();
-        when(MigrationUtils.getEligibleUsersById(Mockito.anyString(),Mockito.anyMap())).thenReturn(shadowUserList);
-        boolean result = testScenario(getMigrateReq(ActorOperations.MIGRATE_USER,JsonKey.REJECT), ResponseCode.invalidUserId,null);
+        when(MigrationUtils.getEligibleUsersById(Mockito.anyString(), Mockito.anyMap())).thenReturn(shadowUserList);
+        boolean result = testScenario(getMigrateReq(ActorOperations.MIGRATE_USER, JsonKey.REJECT), ResponseCode.invalidUserId, null);
         assertTrue(result);
     }
 
     @Test
-    public void testUserMigrationAcceptWhenUserNotFound(){
+    public void testUserMigrationAcceptWhenUserNotFound() {
         List<ShadowUser> shadowUserList = new ArrayList<>();
-        when(MigrationUtils.getEligibleUsersById(Mockito.anyString(),Mockito.anyMap())).thenReturn(shadowUserList);
-        boolean result = testScenario(getMigrateReq(ActorOperations.MIGRATE_USER,JsonKey.ACCEPT), ResponseCode.invalidUserId,null);
+        when(MigrationUtils.getEligibleUsersById(Mockito.anyString(), Mockito.anyMap())).thenReturn(shadowUserList);
+        boolean result = testScenario(getMigrateReq(ActorOperations.MIGRATE_USER, JsonKey.ACCEPT), ResponseCode.invalidUserId, null);
         assertTrue(result);
     }
 
@@ -90,19 +90,19 @@ public class TenantMigrationActorTest extends UserManagementActorTestBase{
      * AC->ATTEMPT COUNT, e.g AC1-> Attempt Count 1
      */
     @Test
-    public void testUserMigrationAcceptWhenUserFoundWithInCorrectExtIdAC2(){
-        when(MigrationUtils.getEligibleUsersById(Mockito.anyString(),Mockito.anyMap())).thenReturn(getShadowUserAsList("wrongAnyUserExtId",2));
-        boolean result = testScenario(getMigrateReq(ActorOperations.MIGRATE_USER,JsonKey.ACCEPT), ResponseCode.userMigrationFiled,null);
+    public void testUserMigrationAcceptWhenUserFoundWithInCorrectExtIdAC1() {
+        when(MigrationUtils.getEligibleUsersById(Mockito.anyString(), Mockito.anyMap())).thenReturn(getShadowUserAsList("wrongAnyUserExtId", 1));
+        boolean result = testScenario(getMigrateReq(ActorOperations.MIGRATE_USER, JsonKey.ACCEPT), null, ResponseCode.invalidUserExternalId);
         assertTrue(result);
     }
+
+
     @Test
-    public void testUserMigrationAcceptWhenUserFoundWithInCorrectExtIdAC1(){
-        when(MigrationUtils.getEligibleUsersById(Mockito.anyString(),Mockito.anyMap())).thenReturn(getShadowUserAsList("wrongAnyUserExtId",1));
-        boolean result = testScenario(getMigrateReq(ActorOperations.MIGRATE_USER,JsonKey.ACCEPT), null,ResponseCode.invalidUserExternalId);
+    public void testUserMigrationAcceptWhenUserFoundWithInCorrectExtIdAC2() {
+        when(MigrationUtils.getEligibleUsersById(Mockito.anyString(), Mockito.anyMap())).thenReturn(getShadowUserAsList("wrongAnyUserExtId", 2));
+        boolean result = testScenario(getMigrateReq(ActorOperations.MIGRATE_USER, JsonKey.ACCEPT), ResponseCode.userMigrationFiled, null);
         assertTrue(result);
     }
-
-
 
 
 
@@ -113,12 +113,11 @@ public class TenantMigrationActorTest extends UserManagementActorTestBase{
 
         if (responseCode != null) {
             Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-            System.out.println(res.getResponseCode()+"result");
             return null != res && res.getResponseCode() == responseCode;
-        } if(errorCode!=null) {
+        }
+        if (errorCode != null) {
             ProjectCommonException res =
                     probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-            System.out.println(res.getCode()+":error code:"+errorCode.getErrorCode());
             return res.getCode().equals(errorCode.getErrorCode())
                     || res.getResponseCode() == errorCode.getResponseCode();
         }
@@ -126,7 +125,7 @@ public class TenantMigrationActorTest extends UserManagementActorTestBase{
     }
 
 
-    public Request getMigrateReq(ActorOperations actorOperation,String action) {
+    public Request getMigrateReq(ActorOperations actorOperation, String action) {
         Request reqObj = new Request();
         Map reqMap = new HashMap<>();
         reqMap.put(JsonKey.USER_ID, "anyUserId");
@@ -140,24 +139,20 @@ public class TenantMigrationActorTest extends UserManagementActorTestBase{
         return reqObj;
     }
 
-
-    private List<ShadowUser> getShadowUserAsList(String userExtId,int attemptCount){
+    private List<ShadowUser> getShadowUserAsList(String userExtId, int attemptCount) {
         List<ShadowUser> shadowUserList = new ArrayList<>();
-        shadowUserList.add(getShadowUser(userExtId,attemptCount));
+        shadowUserList.add(getShadowUser(userExtId, attemptCount));
         return shadowUserList;
     }
 
-
-    private ShadowUser getShadowUser(String userExtId,int attemptCount){
+    private ShadowUser getShadowUser(String userExtId, int attemptCount) {
         ShadowUser shadowUser = new ShadowUser.ShadowUserBuilder()
                 .setChannel("anyChannel")
-                .setUserExtId(StringUtils.isNotEmpty(userExtId)?userExtId:"anyUserExtId")
+                .setUserExtId(StringUtils.isNotEmpty(userExtId) ? userExtId : "anyUserExtId")
                 .setUserId("anyUserId")
                 .setAttemptedCount(attemptCount)
                 .setUserStatus(ProjectUtil.Status.ACTIVE.getValue())
                 .build();
         return shadowUser;
     }
-
-
 }

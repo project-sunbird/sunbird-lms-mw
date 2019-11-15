@@ -4,6 +4,7 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -19,6 +20,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.user.UserManagementActorTestBase;
@@ -63,8 +65,8 @@ public class TenantMigrationActorTest extends UserManagementActorTestBase{
 
     @Test
     public void testUserMigrateRejectWhenUserFound() {
-        when(MigrationUtils.getEligibleUsersById(Mockito.anyString(),Mockito.anyMap())).thenReturn(getShadowUserList());
-        boolean result = testScenario(getMigrateReq(ActorOperations.MIGRATE_USER,JsonKey.REJECT), null);
+        when(MigrationUtils.getEligibleUsersById(Mockito.anyString(),Mockito.anyMap())).thenReturn(getShadowUserAsList(StringUtils.EMPTY,0));
+        boolean result = testScenario(getMigrateReq(ActorOperations.MIGRATE_USER,JsonKey.REJECT), null,ResponseCode.OK);
         assertTrue(result);
     }
 
@@ -72,7 +74,7 @@ public class TenantMigrationActorTest extends UserManagementActorTestBase{
     public void testUserMigrateRejectWhenUserNotFound() {
         List<ShadowUser> shadowUserList = new ArrayList<>();
         when(MigrationUtils.getEligibleUsersById(Mockito.anyString(),Mockito.anyMap())).thenReturn(shadowUserList);
-        boolean result = testScenario(getMigrateReq(ActorOperations.MIGRATE_USER,JsonKey.REJECT), ResponseCode.invalidUserId);
+        boolean result = testScenario(getMigrateReq(ActorOperations.MIGRATE_USER,JsonKey.REJECT), ResponseCode.invalidUserId,null);
         assertTrue(result);
     }
 
@@ -80,13 +82,23 @@ public class TenantMigrationActorTest extends UserManagementActorTestBase{
     public void testUserMigrationAcceptWhenUserNotFound(){
         List<ShadowUser> shadowUserList = new ArrayList<>();
         when(MigrationUtils.getEligibleUsersById(Mockito.anyString(),Mockito.anyMap())).thenReturn(shadowUserList);
-        boolean result = testScenario(getMigrateReq(ActorOperations.MIGRATE_USER,JsonKey.ACCEPT), ResponseCode.invalidUserId);
+        boolean result = testScenario(getMigrateReq(ActorOperations.MIGRATE_USER,JsonKey.ACCEPT), ResponseCode.invalidUserId,null);
+        assertTrue(result);
+    }
+
+    /**
+     * AC->ATTEMPT COUNT, e.g AC1-> Attempt Count 1
+     */
+    @Test
+    public void testUserMigrationAcceptWhenUserFoundWithInCorrectExtIdAC2(){
+        when(MigrationUtils.getEligibleUsersById(Mockito.anyString(),Mockito.anyMap())).thenReturn(getShadowUserAsList("wrongAnyUserExtId",2));
+        boolean result = testScenario(getMigrateReq(ActorOperations.MIGRATE_USER,JsonKey.ACCEPT), ResponseCode.userMigrationFiled,null);
         assertTrue(result);
     }
     @Test
-    public void testUserMigrationAcceptWhenUserFound(){
-        when(MigrationUtils.getEligibleUsersById(Mockito.anyString(),Mockito.anyMap())).thenReturn(getShadowUserList());
-        boolean result = testScenario(getMigrateReq(ActorOperations.MIGRATE_USER,JsonKey.ACCEPT), ResponseCode.invalidUserId);
+    public void testUserMigrationAcceptWhenUserFoundWithInCorrectExtIdAC1(){
+        when(MigrationUtils.getEligibleUsersById(Mockito.anyString(),Mockito.anyMap())).thenReturn(getShadowUserAsList("wrongAnyUserExtId",1));
+        boolean result = testScenario(getMigrateReq(ActorOperations.MIGRATE_USER,JsonKey.ACCEPT), null,ResponseCode.invalidUserExternalId);
         assertTrue(result);
     }
 
@@ -94,21 +106,23 @@ public class TenantMigrationActorTest extends UserManagementActorTestBase{
 
 
 
-    public boolean testScenario(Request reqObj, ResponseCode errorCode) {
+    public boolean testScenario(Request reqObj, ResponseCode errorCode, ResponseCode responseCode) {
         TestKit probe = new TestKit(system);
         ActorRef subject = system.actorOf(props);
         subject.tell(reqObj, probe.getRef());
 
-        if (errorCode == null) {
+        if (responseCode != null) {
             Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-            return null != res && res.getResponseCode() == ResponseCode.OK;
-        } else {
+            System.out.println(res.getResponseCode()+"result");
+            return null != res && res.getResponseCode() == responseCode;
+        } if(errorCode!=null) {
             ProjectCommonException res =
                     probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
             System.out.println(res.getCode()+":error code:"+errorCode.getErrorCode());
             return res.getCode().equals(errorCode.getErrorCode())
                     || res.getResponseCode() == errorCode.getResponseCode();
         }
+        return true;
     }
 
 
@@ -126,16 +140,23 @@ public class TenantMigrationActorTest extends UserManagementActorTestBase{
         return reqObj;
     }
 
-    private List<ShadowUser> getShadowUserList(){
+
+    private List<ShadowUser> getShadowUserAsList(String userExtId,int attemptCount){
+        List<ShadowUser> shadowUserList = new ArrayList<>();
+        shadowUserList.add(getShadowUser(userExtId,attemptCount));
+        return shadowUserList;
+    }
+
+
+    private ShadowUser getShadowUser(String userExtId,int attemptCount){
         ShadowUser shadowUser = new ShadowUser.ShadowUserBuilder()
                 .setChannel("anyChannel")
-                .setUserExtId("anyUserExtId")
+                .setUserExtId(StringUtils.isNotEmpty(userExtId)?userExtId:"anyUserExtId")
                 .setUserId("anyUserId")
+                .setAttemptedCount(attemptCount)
+                .setUserStatus(ProjectUtil.Status.ACTIVE.getValue())
                 .build();
-        List<ShadowUser> shadowUserList = new ArrayList<>();
-        shadowUserList.add(shadowUser);
-        return shadowUserList;
-
+        return shadowUser;
     }
 
 

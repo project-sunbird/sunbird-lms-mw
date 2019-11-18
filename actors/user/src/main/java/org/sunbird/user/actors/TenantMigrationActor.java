@@ -470,7 +470,7 @@ public class TenantMigrationActor extends BaseActor {
 
 
   private boolean isIndexValid(int index){
-    return (index==USER_EXTERNAL_ID_MISMATCH);
+    return (index!=USER_EXTERNAL_ID_MISMATCH);
   }
 
 

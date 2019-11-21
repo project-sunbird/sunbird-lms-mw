@@ -10,18 +10,15 @@ import java.util.Map;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class Feed implements Serializable {
-
   private String id;
   private String userId;
   private String category;
   private int priority;
   private String createdBy;
-  private String feedAction;
-  private Map<String, Object> feedData;
+  private String status;
+  private Map<String, Object> data;
   private String updatedBy;
-  private String channel;
   private Timestamp expireOn;
-  private boolean closeable;
   private Timestamp updatedOn;
   private Timestamp createdOn;
 
@@ -31,12 +28,10 @@ public class Feed implements Serializable {
     this.category = builder.category;
     this.priority = builder.priority;
     this.createdBy = builder.createdBy;
-    this.feedAction = builder.feedAction;
-    this.feedData = builder.feedData;
+    this.status = builder.status;
+    this.data = builder.data;
     this.updatedBy = builder.updatedBy;
-    this.channel = builder.channel;
     this.expireOn = builder.expireOn;
-    this.closeable = builder.closeable;
     this.updatedOn = builder.updatedOn;
     this.createdOn = builder.createdOn;
   }
@@ -61,28 +56,20 @@ public class Feed implements Serializable {
     return createdBy;
   }
 
-  public String getFeedAction() {
-    return feedAction;
+  public String getStatus() {
+    return status;
   }
 
-  public Map<String, Object> getFeedData() {
-    return feedData;
+  public Map<String, Object> getData() {
+    return data;
   }
 
   public String getUpdatedBy() {
     return updatedBy;
   }
 
-  public String getChannel() {
-    return channel;
-  }
-
   public Timestamp getExpireOn() {
     return expireOn;
-  }
-
-  public boolean isCloseable() {
-    return closeable;
   }
 
   public Timestamp getUpdatedOn() {
@@ -99,12 +86,10 @@ public class Feed implements Serializable {
     private String category;
     private int priority;
     private String createdBy;
-    private String feedAction;
-    private Map<String, Object> feedData;
+    private String status;
+    private Map<String, Object> data;
     private String updatedBy;
-    private String channel;
     private Timestamp expireOn;
-    private boolean closeable;
     private Timestamp updatedOn;
     private Timestamp createdOn;
 
@@ -133,13 +118,13 @@ public class Feed implements Serializable {
       return this;
     }
 
-    public Builder setFeedAction(String feedAction) {
-      this.feedAction = feedAction;
+    public Builder setStatus(String status) {
+      this.status = status;
       return this;
     }
 
-    public Builder setFeedData(Map<String, Object> feedData) {
-      this.feedData = feedData;
+    public Builder setData(Map<String, Object> Data) {
+      this.data = data;
       return this;
     }
 
@@ -148,17 +133,8 @@ public class Feed implements Serializable {
       return this;
     }
 
-    public Builder setChannel(String channel) {
-      this.channel = channel;
-      return this;
-    }
-
     public void setExpireOn(Timestamp expireOn) {
       this.expireOn = expireOn;
-    }
-
-    public void setCloseable(boolean closeable) {
-      this.closeable = closeable;
     }
 
     public void setUpdatedOn(Timestamp updatedOn) {

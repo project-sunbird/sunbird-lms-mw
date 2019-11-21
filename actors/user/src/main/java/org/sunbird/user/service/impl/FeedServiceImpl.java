@@ -77,7 +77,7 @@ public class FeedServiceImpl implements IFeedService {
           ex);
     }
     List<String> userChannel = (List<String>) feedDataMap.get(JsonKey.CHANNEL);
-    userChannel.addAll((List<String>) feed.getFeedData().get(JsonKey.CHANNEL));
+    userChannel.addAll((List<String>) feed.getData().get(JsonKey.CHANNEL));
     userFeed.put(JsonKey.UPDATED_ON, new Timestamp(Calendar.getInstance().getTimeInMillis()));
     userFeed.put(JsonKey.FEED_DATA, mapper.convertValue(feedDataMap, String.class));
     Response userFeedResponse = saveFeed(userFeed);

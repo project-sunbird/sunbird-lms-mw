@@ -44,6 +44,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
 
     @Override
     public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
+        ProjectLogger.log("ShadowUserMigrationScheduler:execute:checking scheduler workflow",LoggerEnum.INFO.name());
         ProjectLogger.log(
                 "ShadowUserMigrationScheduler:execute:Running Shadow User Upload Scheduler Job at: "
                         + Calendar.getInstance().getTime()

@@ -190,6 +190,7 @@ public final class Util {
         BadgingJsonKey.USER_BADGE_ASSERTION_DB,
         getDbInfoObject(KEY_SPACE_NAME, "user_badge_assertion"));
     dbInfoMap.put(JsonKey.USER_CERT, getDbInfoObject(KEY_SPACE_NAME, JsonKey.USER_CERT));
+    dbInfoMap.put(JsonKey.USER_FEED, getDbInfoObject(KEY_SPACE_NAME, JsonKey.USER_FEED));
   }
 
   /**

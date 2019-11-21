@@ -447,8 +447,8 @@ public class TenantMigrationActor extends BaseActor {
   }
 
   private Response modifyAttemptCount(Response response,List<ShadowUser>shadowUserList,String extUserId){
-    int remainingAttempt = MAX_MIGRATION_ATTEMPT - shadowUserList.get(0).getAttemptedCount();
-    if (remainingAttempt == 0) {
+    int remainingAttempt = MAX_MIGRATION_ATTEMPT - shadowUserList.get(0).getAttemptedCount()-1;
+    if (remainingAttempt <= 0) {
       increaseBulkAttemptCount(shadowUserList, true);
       ProjectCommonException.throwClientErrorException(ResponseCode.userMigrationFiled);
     }
@@ -528,6 +528,7 @@ public class TenantMigrationActor extends BaseActor {
         Map<String, Object> propertiesMap = new HashMap<>();
         propertiesMap.put(JsonKey.CLAIM_STATUS, ClaimStatus.CLAIMED.getValue());
         propertiesMap.put(JsonKey.UPDATED_ON, new Timestamp(System.currentTimeMillis()));
+        propertiesMap.put(JsonKey.CLAIMED_ON,new Timestamp(System.currentTimeMillis()));
         propertiesMap.put(JsonKey.USER_ID, userId);
         MigrationUtils.updateRecord(propertiesMap, shadowUser.getChannel(), shadowUser.getUserExtId());
         // TODO DELETE ENTRY FROM ALERT TABLE
@@ -575,14 +576,13 @@ public class TenantMigrationActor extends BaseActor {
 
 
   private void increaseAttemptCount(ShadowUser shadowUser, boolean isFailed){
+    Map<String, Object> propertiesMap = new WeakHashMap<>();
+    propertiesMap.put(JsonKey.ATTEMPTED_COUNT, shadowUser.getAttemptedCount() + 1);
+    propertiesMap.put(JsonKey.UPDATED_ON, new Timestamp(System.currentTimeMillis()));
     if (isFailed) {
-      MigrationUtils.updateClaimStatus(shadowUser,ClaimStatus.FAILED.getValue());
-    } else {
-      Map<String, Object> propertiesMap = new WeakHashMap<>();
-      propertiesMap.put(JsonKey.ATTEMPTED_COUNT, shadowUser.getAttemptedCount() + 1);
-      propertiesMap.put(JsonKey.UPDATED_ON, new Timestamp(System.currentTimeMillis()));
-      MigrationUtils.updateRecord(propertiesMap, shadowUser.getChannel(), shadowUser.getUserExtId());
+      propertiesMap.put(JsonKey.CLAIM_STATUS,ClaimStatus.FAILED.getValue());
     }
+      MigrationUtils.updateRecord(propertiesMap, shadowUser.getChannel(), shadowUser.getUserExtId());
   }
 
   /**

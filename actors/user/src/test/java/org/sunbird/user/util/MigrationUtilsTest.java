@@ -2,8 +2,10 @@ package org.sunbird.user.util;
 
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.junit.runners.MethodSorters;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -24,6 +26,7 @@ import java.util.Map;
 import static org.powermock.api.mockito.PowerMockito.*;
 
 @RunWith(PowerMockRunner.class)
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @PrepareForTest({
         UserServiceImpl.class,
         ServiceFactory.class,

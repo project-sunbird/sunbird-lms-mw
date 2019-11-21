@@ -435,6 +435,7 @@ public class TenantMigrationActor extends BaseActor {
       }
       else {
         selfMigrate(request, userId, extUserId, shadowUserList.get(index));
+        increaseAttemptCount(shadowUserList.get(index),false);
         shadowUserList.remove(index);
         rejectRemainingUser(shadowUserList);
       }

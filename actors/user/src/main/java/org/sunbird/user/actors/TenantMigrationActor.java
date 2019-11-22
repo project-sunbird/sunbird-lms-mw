@@ -547,6 +547,7 @@ public class TenantMigrationActor extends BaseActor {
    */
   private void selfMigrate(
       Request request, String userId, String extUserId, ShadowUser shadowUser) {
+    String feedId = (String) request.getRequest().get(JsonKey.FEED_ID);
     request.setRequest(prepareMigrationRequest(shadowUser, userId, extUserId));
     ProjectLogger.log(
         "TenantMigrationActor:selfMigrate:request prepared for user migration:"
@@ -559,11 +560,14 @@ public class TenantMigrationActor extends BaseActor {
     propertiesMap.put(JsonKey.CLAIMED_ON, new Timestamp(System.currentTimeMillis()));
     propertiesMap.put(JsonKey.USER_ID, userId);
     MigrationUtils.updateRecord(propertiesMap, shadowUser.getChannel(), shadowUser.getUserExtId());
-    deleteUserFeed((String) request.getRequest().get(JsonKey.FEED_ID));
+    deleteUserFeed(feedId);
   }
 
   private void deleteUserFeed(String feedId) {
     if (StringUtils.isNotBlank(feedId)) {
+      ProjectLogger.log(
+          "TenantMigrationActor:deleteUserFeed method called for feedId : " + feedId,
+          LoggerEnum.INFO.name());
       feedService.delete(feedId);
     }
   }

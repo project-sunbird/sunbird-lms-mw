@@ -150,7 +150,7 @@ public class TenantMigrationActorTest extends UserManagementActorTestBase {
                 .setChannel("anyChannel")
                 .setUserExtId(StringUtils.isNotEmpty(userExtId) ? userExtId : "anyUserExtId")
                 .setUserId("anyUserId")
-                .setAttemptedCount(attemptCount)
+                .setAttemptedCount(attemptCount-1)
                 .setUserStatus(ProjectUtil.Status.ACTIVE.getValue())
                 .build();
         return shadowUser;

@@ -10,10 +10,10 @@ import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.dto.SearchDTO;
+import org.sunbird.feed.IFeedService;
+import org.sunbird.feed.impl.FeedServiceImpl;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
-import org.sunbird.user.service.IFeedService;
-import org.sunbird.user.service.impl.FeedServiceImpl;
 
 /** This class contains API related to user feed. */
 @ActorConfig(

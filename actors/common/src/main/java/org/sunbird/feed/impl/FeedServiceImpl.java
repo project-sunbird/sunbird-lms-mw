@@ -1,5 +1,6 @@
 package org.sunbird.feed.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -90,15 +91,22 @@ public class FeedServiceImpl implements IFeedService {
             usrFeedDbInfo.getKeySpace(), usrFeedDbInfo.getTableName(), properties);
     List<Map<String, Object>> responseList = null;
     List<Feed> feedList = new ArrayList<>();
-    Response response = null;
     if (null != dbResponse && null != dbResponse.getResult()) {
       responseList = (List<Map<String, Object>>) dbResponse.getResult().get(JsonKey.RESPONSE);
       if (CollectionUtils.isNotEmpty(responseList)) {
         responseList.forEach(
             s -> {
-              String data = (String) s.get(JsonKey.FEED_DATA);
-              s.put(JsonKey.FEED_DATA, mapper.convertValue(data, Map.class));
-              feedList.add(mapper.convertValue(s, Feed.class));
+              try {
+                String data = (String) s.get(JsonKey.FEED_DATA);
+                s.put(
+                    JsonKey.FEED_DATA,
+                    mapper.readValue(data, new TypeReference<Map<String, Object>>() {}));
+                feedList.add(mapper.convertValue(s, Feed.class));
+              } catch (Exception ex) {
+                ProjectLogger.log(
+                    "FeedServiceImpl:getRecordsByProperties :Exception occurred while mapping feed data.",
+                    ex);
+              }
             });
       }
     }

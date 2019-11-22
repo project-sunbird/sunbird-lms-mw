@@ -27,45 +27,54 @@ public class FeedServiceImpl implements IFeedService {
   private Util.DbInfo usrFeedDbInfo = Util.dbInfoMap.get(JsonKey.USER_FEED_DB);
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private ObjectMapper mapper = new ObjectMapper();
+  private static volatile IFeedService instance;
+
+  private FeedServiceImpl() {}
+
+  public static IFeedService getInstance() {
+    if (instance == null) {
+      synchronized (FeedServiceImpl.class) {
+        if (instance == null) instance = new FeedServiceImpl();
+      }
+    }
+    return instance;
+  }
 
   @Override
   public Response save(Feed feed) {
+    ProjectLogger.log("FeedServiceImpl:save Calling save UserFeed : ", LoggerEnum.INFO.name());
+    esService = EsClientFactory.getInstance(JsonKey.REST);
+    usrFeedDbInfo = Util.dbInfoMap.get(JsonKey.USER_FEED_DB);
+    cassandraOperation = ServiceFactory.getInstance();
     Response response = null;
     if (StringUtils.isNotBlank(feed.getId())) {
-      ProjectLogger.log(
-          "FeedServiceImpl:save Calling updateUserFeed for feed id : " + feed.getId(),
-          LoggerEnum.INFO.name());
       response = updateUserFeed(feed);
     } else {
-      ProjectLogger.log("FeedServiceImpl:save Calling insertUserFeed", LoggerEnum.INFO.name());
-      response = insertUserFeed(feed);
+      response = saveUserFeed(feed);
     }
     return response;
   }
 
-  private Response insertUserFeed(Feed feed) {
+  private Response saveUserFeed(Feed feed) {
     Map<String, Object> userFeed = mapper.convertValue(feed, Map.class);
     userFeed.put(JsonKey.ID, ProjectUtil.generateUniqueId());
     userFeed.put(JsonKey.CREATED_ON, new Timestamp(Calendar.getInstance().getTimeInMillis()));
+    // To store feed data as String in cassandra
+    userFeed.put(JsonKey.FEED_DATA, mapper.convertValue(feed.getData(), String.class));
     Response response = saveFeed(userFeed);
+    // store feed data as Map in ES
+    userFeed.put(JsonKey.FEED_DATA, feed.getData());
     esService.save(ProjectUtil.EsType.userfeed.getTypeName(), feed.getId(), userFeed);
     return response;
   }
 
   private Response updateUserFeed(Feed feed) {
     ProjectLogger.log(
-        "FeedServiceImpl:updateUserFeed fetching getRecordById for feed id " + feed.getId(),
-        LoggerEnum.INFO.name());
-    Response response =
-        cassandraOperation.getRecordById(
-            usrFeedDbInfo.getKeySpace(), usrFeedDbInfo.getTableName(), feed.getId());
+        "FeedServiceImpl:updateUserFeed for feed id " + feed.getId(), LoggerEnum.INFO.name());
     Map<String, Object> userFeed = new HashMap<>();
-    if (null != response && null != response.getResult()) {
-      List<Map<String, Object>> userFeedList =
-          (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
-      if (CollectionUtils.isNotEmpty(userFeedList)) {
-        userFeed = userFeedList.get(0);
-      }
+    List<Map<String, Object>> userFeedList = getFeedById(feed.getId());
+    if (CollectionUtils.isNotEmpty(userFeedList)) {
+      userFeed = userFeedList.get(0);
     }
     String feedData = (String) userFeed.get(JsonKey.FEED_DATA);
     Map<String, Object> feedDataMap = new HashMap<>();
@@ -76,13 +85,29 @@ public class FeedServiceImpl implements IFeedService {
           "FeedServiceImpl:save: Exception occurred while converting feed data from db to List",
           ex);
     }
-    List<String> userChannel = (List<String>) feedDataMap.get(JsonKey.CHANNEL);
-    userChannel.addAll((List<String>) feed.getData().get(JsonKey.CHANNEL));
+    List<String> userProspectsChannel = (List<String>) feedDataMap.get(JsonKey.PROSPECTS_CHANNELS);
+    userProspectsChannel.addAll((List<String>) feed.getData().get(JsonKey.PROSPECTS_CHANNELS));
     userFeed.put(JsonKey.UPDATED_ON, new Timestamp(Calendar.getInstance().getTimeInMillis()));
+    // Store feed data as String in cassandra
     userFeed.put(JsonKey.FEED_DATA, mapper.convertValue(feedDataMap, String.class));
     Response userFeedResponse = saveFeed(userFeed);
+    // Store feed data as Map in ES
+    userFeed.put(JsonKey.FEED_DATA, mapper.convertValue(feedDataMap, Map.class));
     esService.save(ProjectUtil.EsType.userfeed.getTypeName(), feed.getId(), userFeed);
     return userFeedResponse;
+  }
+
+  private List<Map<String, Object>> getFeedById(String feedId) {
+    ProjectLogger.log(
+        "FeedServiceImpl:updateUserFeed fetching getRecordById for feed id " + feedId,
+        LoggerEnum.INFO.name());
+    Response response =
+        cassandraOperation.getRecordById(
+            usrFeedDbInfo.getKeySpace(), usrFeedDbInfo.getTableName(), feedId);
+    if (null != response && null != response.getResult()) {
+      return (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
+    }
+    return Collections.EMPTY_LIST;
   }
 
   @Override

@@ -22,20 +22,6 @@ public class Feed implements Serializable {
   private Timestamp updatedOn;
   private Timestamp createdOn;
 
-  public Feed(Builder builder) {
-    this.id = builder.id;
-    this.userId = builder.userId;
-    this.category = builder.category;
-    this.priority = builder.priority;
-    this.createdBy = builder.createdBy;
-    this.status = builder.status;
-    this.data = builder.data;
-    this.updatedBy = builder.updatedBy;
-    this.expireOn = builder.expireOn;
-    this.updatedOn = builder.updatedOn;
-    this.createdOn = builder.createdOn;
-  }
-
   public String getId() {
     return id;
   }
@@ -80,74 +66,47 @@ public class Feed implements Serializable {
     return createdOn;
   }
 
-  public static class Builder {
-    private String id;
-    private String userId;
-    private String category;
-    private int priority;
-    private String createdBy;
-    private String status;
-    private Map<String, Object> data;
-    private String updatedBy;
-    private Timestamp expireOn;
-    private Timestamp updatedOn;
-    private Timestamp createdOn;
+  public void setId(String id) {
+    this.id = id;
+  }
 
-    public Builder setId(String id) {
-      this.id = id;
-      return this;
-    }
+  public void setUserId(String userId) {
+    this.userId = userId;
+  }
 
-    public Builder setUserId(String userId) {
-      this.userId = userId;
-      return this;
-    }
+  public void setCategory(String category) {
+    this.category = category;
+  }
 
-    public Builder setCategory(String category) {
-      this.category = category;
-      return this;
-    }
+  public void setPriority(int priority) {
+    this.priority = priority;
+  }
 
-    public Builder setPriority(int priority) {
-      this.priority = priority;
-      return this;
-    }
+  public void setCreatedBy(String createdBy) {
+    this.createdBy = createdBy;
+  }
 
-    public Builder setCreatedBy(String createdBy) {
-      this.createdBy = createdBy;
-      return this;
-    }
+  public void setStatus(String status) {
+    this.status = status;
+  }
 
-    public Builder setStatus(String status) {
-      this.status = status;
-      return this;
-    }
+  public void setData(Map<String, Object> data) {
+    this.data = data;
+  }
 
-    public Builder setData(Map<String, Object> Data) {
-      this.data = data;
-      return this;
-    }
+  public void setUpdatedBy(String updatedBy) {
+    this.updatedBy = updatedBy;
+  }
 
-    public Builder setUpdatedBy(String updatedBy) {
-      this.updatedBy = updatedBy;
-      return this;
-    }
+  public void setExpireOn(Timestamp expireOn) {
+    this.expireOn = expireOn;
+  }
 
-    public void setExpireOn(Timestamp expireOn) {
-      this.expireOn = expireOn;
-    }
+  public void setUpdatedOn(Timestamp updatedOn) {
+    this.updatedOn = updatedOn;
+  }
 
-    public void setUpdatedOn(Timestamp updatedOn) {
-      this.updatedOn = updatedOn;
-    }
-
-    public void setCreatedOn(Timestamp createdOn) {
-      this.createdOn = createdOn;
-    }
-
-    public Feed build() {
-      Feed feed = new Feed(this);
-      return feed;
-    }
+  public void setCreatedOn(Timestamp createdOn) {
+    this.createdOn = createdOn;
   }
 }

@@ -31,7 +31,7 @@ public class UserFeedActor extends BaseActor {
     if (ActorOperations.GET_USER_FEED_BY_ID.getValue().equalsIgnoreCase(operation)) {
       ProjectLogger.log(
           "UserFeedActor:onReceive getUserFeed method called", LoggerEnum.INFO.name());
-      String userId = (String) request.getRequest().getOrDefault(JsonKey.USER_ID, "");
+      String userId = (String) request.getRequest().get(JsonKey.USER_ID);
       getUserFeed(userId);
     } else {
       onReceiveUnsupportedOperation("UserFeedActor");
@@ -39,7 +39,7 @@ public class UserFeedActor extends BaseActor {
   }
 
   private void getUserFeed(String userId) {
-    IFeedService feedService = new FeedServiceImpl();
+    IFeedService feedService = FeedServiceImpl.getInstance();
     Map<String, Object> filters = new HashMap<>();
     filters.put(JsonKey.USER_ID, userId);
     SearchDTO search = new SearchDTO();

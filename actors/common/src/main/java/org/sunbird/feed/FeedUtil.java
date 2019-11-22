@@ -1,6 +1,7 @@
 package org.sunbird.feed;
 
 import java.util.*;
+import java.util.stream.IntStream;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.bean.ShadowUser;
 import org.sunbird.common.models.util.JsonKey;
@@ -23,20 +24,14 @@ public class FeedUtil {
     reqMap.put(JsonKey.USER_ID, userIds.get(0));
     reqMap.put(JsonKey.CATEGORY, ORG_MIGRATION_ACTION);
     List<Feed> feedList = feedService.getRecordsByProperties(reqMap);
-    Optional<Feed> optional =
-        feedList
-            .stream()
-            .filter(
-                feed -> StringUtils.endsWithIgnoreCase(feed.getCategory(), ORG_MIGRATION_ACTION))
-            .findFirst();
-    Feed feed = optional.get();
-    if (null == feed) {
+    int index = getIndexOfMatchingFeed(feedList);
+    if (index == -1) {
       feedService.insert(getFeedObj(shadowUser, userIds));
     } else {
-      Map<String, Object> data = feed.getData();
+      Map<String, Object> data = feedList.get(index).getData();
       List<String> channelList = (List<String>) data.get(JsonKey.PROSPECT_CHANNELS);
       channelList.add(shadowUser.getChannel());
-      feedService.update(feed);
+      feedService.update(feedList.get(index));
     }
   }
 
@@ -53,5 +48,18 @@ public class FeedUtil {
     feed.setData(prospectsChannel);
     feed.setUserId(userIds.get(0));
     return feed;
+  }
+
+  private static int getIndexOfMatchingFeed(List<Feed> feedList) {
+    int index =
+        IntStream.range(0, feedList.size())
+            .filter(i -> Objects.nonNull(feedList.get(i)))
+            .filter(
+                i ->
+                    StringUtils.equalsIgnoreCase(
+                        ORG_MIGRATION_ACTION, feedList.get(i).getCategory()))
+            .findFirst()
+            .orElse(-1);
+    return index;
   }
 }

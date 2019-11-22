@@ -13,6 +13,8 @@ import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.feed.IFeedService;
@@ -41,33 +43,48 @@ public class FeedServiceImpl implements IFeedService {
 
   @Override
   public Response insert(Feed feed) {
+    ProjectLogger.log("FeedServiceImpl:insert method called : ", LoggerEnum.INFO.name());
     Map<String, Object> feedData = feed.getData();
     Map<String, Object> dbMap = mapper.convertValue(feed, Map.class);
-    dbMap.put(JsonKey.ID, ProjectUtil.generateUniqueId());
+    String feedId = ProjectUtil.generateUniqueId();
+    dbMap.put(JsonKey.ID, feedId);
     dbMap.put(JsonKey.CREATED_ON, new Timestamp(Calendar.getInstance().getTimeInMillis()));
-    dbMap.put(JsonKey.FEED_DATA, mapper.convertValue(feed.getData(), String.class));
+    try {
+      dbMap.put(JsonKey.FEED_DATA, mapper.writeValueAsString(feed.getData()));
+    } catch (Exception ex) {
+      ProjectLogger.log("FeedServiceImpl:insert Exception occurred while mapping.", ex);
+    }
     Response response = saveFeed(dbMap);
     // save data to ES
     dbMap.put(JsonKey.FEED_DATA, feedData);
-    esService.save(ProjectUtil.EsType.userfeed.getTypeName(), feed.getId(), dbMap);
+    dbMap.put(JsonKey.CREATED_ON, Calendar.getInstance().getTimeInMillis());
+    esService.save(ProjectUtil.EsType.userfeed.getTypeName(), feedId, dbMap);
     return response;
   }
 
   @Override
   public Response update(Feed feed) {
+    ProjectLogger.log("FeedServiceImpl:update method called : ", LoggerEnum.INFO.name());
     Map<String, Object> feedData = feed.getData();
     Map<String, Object> dbMap = mapper.convertValue(feed, Map.class);
-    dbMap.put(JsonKey.FEED_DATA, mapper.convertValue(feed.getData(), String.class));
+    try {
+      dbMap.put(JsonKey.FEED_DATA, mapper.writeValueAsString(feed.getData()));
+    } catch (Exception ex) {
+      ProjectLogger.log("FeedServiceImpl:update Exception occurred while mapping.", ex);
+    }
     dbMap.put(JsonKey.UPDATED_ON, new Timestamp(Calendar.getInstance().getTimeInMillis()));
     Response response = saveFeed(dbMap);
     // update data to ES
     dbMap.put(JsonKey.FEED_DATA, feedData);
+    dbMap.put(JsonKey.UPDATED_ON, Calendar.getInstance().getTimeInMillis());
     esService.update(ProjectUtil.EsType.userfeed.getTypeName(), feed.getId(), dbMap);
     return response;
   }
 
   @Override
   public List<Feed> getRecordsByProperties(Map<String, Object> properties) {
+    ProjectLogger.log(
+        "FeedServiceImpl:getRecordsByProperties method called : ", LoggerEnum.INFO.name());
     Response dbResponse =
         cassandraOperation.getRecordsByProperties(
             usrFeedDbInfo.getKeySpace(), usrFeedDbInfo.getTableName(), properties);
@@ -90,6 +107,7 @@ public class FeedServiceImpl implements IFeedService {
 
   @Override
   public Response search(SearchDTO searchDTO) {
+    ProjectLogger.log("FeedServiceImpl:search method called : ", LoggerEnum.INFO.name());
     Future<Map<String, Object>> resultF =
         esService.search(searchDTO, ProjectUtil.EsType.userfeed.getTypeName());
     Map<String, Object> result =
@@ -101,11 +119,13 @@ public class FeedServiceImpl implements IFeedService {
 
   @Override
   public void delete(String id) {
+    ProjectLogger.log(
+        "FeedServiceImpl:delete method called for feedId : " + id, LoggerEnum.INFO.name());
     cassandraOperation.deleteRecord(usrFeedDbInfo.getKeySpace(), usrFeedDbInfo.getTableName(), id);
     esService.delete(ProjectUtil.EsType.userfeed.getTypeName(), id);
   }
 
-  public Response saveFeed(Map<String, Object> feed) {
+  private Response saveFeed(Map<String, Object> feed) {
     return cassandraOperation.upsertRecord(
         usrFeedDbInfo.getKeySpace(), usrFeedDbInfo.getTableName(), feed);
   }

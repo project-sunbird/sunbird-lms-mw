@@ -35,7 +35,7 @@ import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.feed.IFeedService;
-import org.sunbird.feed.impl.FeedServiceImpl;
+import org.sunbird.feed.impl.FeedFactory;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.organisation.external.identity.service.OrgExternalService;
 import org.sunbird.learner.util.UserFlagEnum;
@@ -75,7 +75,7 @@ public class TenantMigrationActor extends BaseActor {
   private static final String MASK_IDENTIFIER = "maskIdentifier";
   private static final int MAX_MIGRATION_ATTEMPT = 2;
   public static final int USER_EXTERNAL_ID_MISMATCH = -1;
-  private IFeedService feedService = FeedServiceImpl.getInstance();
+  private IFeedService feedService = FeedFactory.getInstance();
   DecryptionService decryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
           "");

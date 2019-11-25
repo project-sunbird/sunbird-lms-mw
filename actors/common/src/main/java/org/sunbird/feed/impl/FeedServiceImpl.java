@@ -3,11 +3,10 @@ package org.sunbird.feed.impl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.factory.EsClientFactory;
@@ -25,21 +24,15 @@ import org.sunbird.models.user.Feed;
 import scala.concurrent.Future;
 
 public class FeedServiceImpl implements IFeedService {
-  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
   private Util.DbInfo usrFeedDbInfo = Util.dbInfoMap.get(JsonKey.USER_FEED_DB);
-  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private ObjectMapper mapper = new ObjectMapper();
-  private static volatile IFeedService instance;
 
-  private FeedServiceImpl() {}
+  public static CassandraOperation getCassandraInstance() {
+    return ServiceFactory.getInstance();
+  }
 
-  public static IFeedService getInstance() {
-    if (instance == null) {
-      synchronized (FeedServiceImpl.class) {
-        if (instance == null) instance = new FeedServiceImpl();
-      }
-    }
-    return instance;
+  public static ElasticSearchService getESInstance() {
+    return EsClientFactory.getInstance(JsonKey.REST);
   }
 
   @Override
@@ -51,7 +44,9 @@ public class FeedServiceImpl implements IFeedService {
     dbMap.put(JsonKey.ID, feedId);
     dbMap.put(JsonKey.CREATED_ON, new Timestamp(Calendar.getInstance().getTimeInMillis()));
     try {
-      dbMap.put(JsonKey.FEED_DATA, mapper.writeValueAsString(feed.getData()));
+      if (MapUtils.isNotEmpty(feed.getData())) {
+        dbMap.put(JsonKey.FEED_DATA, mapper.writeValueAsString(feed.getData()));
+      }
     } catch (Exception ex) {
       ProjectLogger.log("FeedServiceImpl:insert Exception occurred while mapping.", ex);
     }
@@ -59,7 +54,7 @@ public class FeedServiceImpl implements IFeedService {
     // save data to ES
     dbMap.put(JsonKey.FEED_DATA, feedData);
     dbMap.put(JsonKey.CREATED_ON, Calendar.getInstance().getTimeInMillis());
-    esService.save(ProjectUtil.EsType.userfeed.getTypeName(), feedId, dbMap);
+    getESInstance().save(ProjectUtil.EsType.userfeed.getTypeName(), feedId, dbMap);
     return response;
   }
 
@@ -69,7 +64,9 @@ public class FeedServiceImpl implements IFeedService {
     Map<String, Object> feedData = feed.getData();
     Map<String, Object> dbMap = mapper.convertValue(feed, Map.class);
     try {
-      dbMap.put(JsonKey.FEED_DATA, mapper.writeValueAsString(feed.getData()));
+      if (MapUtils.isNotEmpty(feed.getData())) {
+        dbMap.put(JsonKey.FEED_DATA, mapper.writeValueAsString(feed.getData()));
+      }
     } catch (Exception ex) {
       ProjectLogger.log("FeedServiceImpl:update Exception occurred while mapping.", ex);
     }
@@ -78,7 +75,7 @@ public class FeedServiceImpl implements IFeedService {
     // update data to ES
     dbMap.put(JsonKey.FEED_DATA, feedData);
     dbMap.put(JsonKey.UPDATED_ON, Calendar.getInstance().getTimeInMillis());
-    esService.update(ProjectUtil.EsType.userfeed.getTypeName(), feed.getId(), dbMap);
+    getESInstance().update(ProjectUtil.EsType.userfeed.getTypeName(), feed.getId(), dbMap);
     return response;
   }
 
@@ -87,8 +84,9 @@ public class FeedServiceImpl implements IFeedService {
     ProjectLogger.log(
         "FeedServiceImpl:getRecordsByProperties method called : ", LoggerEnum.INFO.name());
     Response dbResponse =
-        cassandraOperation.getRecordsByProperties(
-            usrFeedDbInfo.getKeySpace(), usrFeedDbInfo.getTableName(), properties);
+        getCassandraInstance()
+            .getRecordsByProperties(
+                usrFeedDbInfo.getKeySpace(), usrFeedDbInfo.getTableName(), properties);
     List<Map<String, Object>> responseList = null;
     List<Feed> feedList = new ArrayList<>();
     if (null != dbResponse && null != dbResponse.getResult()) {
@@ -98,9 +96,13 @@ public class FeedServiceImpl implements IFeedService {
             s -> {
               try {
                 String data = (String) s.get(JsonKey.FEED_DATA);
-                s.put(
-                    JsonKey.FEED_DATA,
-                    mapper.readValue(data, new TypeReference<Map<String, Object>>() {}));
+                if (StringUtils.isNotBlank(data)) {
+                  s.put(
+                      JsonKey.FEED_DATA,
+                      mapper.readValue(data, new TypeReference<Map<String, Object>>() {}));
+                } else {
+                  s.put(JsonKey.FEED_DATA, Collections.emptyMap());
+                }
                 feedList.add(mapper.convertValue(s, Feed.class));
               } catch (Exception ex) {
                 ProjectLogger.log(
@@ -117,7 +119,7 @@ public class FeedServiceImpl implements IFeedService {
   public Response search(SearchDTO searchDTO) {
     ProjectLogger.log("FeedServiceImpl:search method called : ", LoggerEnum.INFO.name());
     Future<Map<String, Object>> resultF =
-        esService.search(searchDTO, ProjectUtil.EsType.userfeed.getTypeName());
+        getESInstance().search(searchDTO, ProjectUtil.EsType.userfeed.getTypeName());
     Map<String, Object> result =
         (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     Response response = new Response();
@@ -129,12 +131,13 @@ public class FeedServiceImpl implements IFeedService {
   public void delete(String id) {
     ProjectLogger.log(
         "FeedServiceImpl:delete method called for feedId : " + id, LoggerEnum.INFO.name());
-    cassandraOperation.deleteRecord(usrFeedDbInfo.getKeySpace(), usrFeedDbInfo.getTableName(), id);
-    esService.delete(ProjectUtil.EsType.userfeed.getTypeName(), id);
+    getCassandraInstance()
+        .deleteRecord(usrFeedDbInfo.getKeySpace(), usrFeedDbInfo.getTableName(), id);
+    getESInstance().delete(ProjectUtil.EsType.userfeed.getTypeName(), id);
   }
 
   private Response saveFeed(Map<String, Object> feed) {
-    return cassandraOperation.upsertRecord(
-        usrFeedDbInfo.getKeySpace(), usrFeedDbInfo.getTableName(), feed);
+    return getCassandraInstance()
+        .upsertRecord(usrFeedDbInfo.getKeySpace(), usrFeedDbInfo.getTableName(), feed);
   }
 }

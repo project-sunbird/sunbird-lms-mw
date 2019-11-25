@@ -11,7 +11,7 @@ import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.feed.IFeedService;
-import org.sunbird.feed.impl.FeedServiceImpl;
+import org.sunbird.feed.impl.FeedFactory;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
@@ -39,7 +39,7 @@ public class UserFeedActor extends BaseActor {
   }
 
   private void getUserFeed(String userId) {
-    IFeedService feedService = FeedServiceImpl.getInstance();
+    IFeedService feedService = FeedFactory.getInstance();
     Map<String, Object> filters = new HashMap<>();
     filters.put(JsonKey.USER_ID, userId);
     SearchDTO search = new SearchDTO();

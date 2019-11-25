@@ -5,16 +5,12 @@ import java.util.stream.IntStream;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.bean.ShadowUser;
 import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.feed.impl.FeedServiceImpl;
+import org.sunbird.feed.impl.FeedFactory;
 import org.sunbird.models.user.Feed;
 
-/**
- * this class will be used as a Util for inserting Feed in table
- *
- * @author amit
- */
+/** this class will be used as a Util for inserting Feed in table */
 public class FeedUtil {
-  private static IFeedService feedService = FeedServiceImpl.getInstance();
+  private static IFeedService feedService = FeedFactory.getInstance();
   private static final String ORG_MIGRATION_ACTION = "OrgMigrationAction";
   public static final String UNREAD = "unread";
   public static final String READ = "read";

@@ -44,14 +44,16 @@ public class MigrationUtilsTest {
         PowerMockito.mockStatic(ServiceFactory.class);
         cassandraOperationImpl = mock(CassandraOperationImpl.class);
         when(ServiceFactory.getInstance()).thenReturn(cassandraOperationImpl);
-        when(cassandraOperationImpl.searchValueInList(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, JsonKey.USER_IDs, "DEF")).thenReturn(getRecordsById(false),getRecordsById(true),getRecordsById(false));
-        when(cassandraOperationImpl.searchValueInList(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, JsonKey.USER_IDs, "ABC",new HashMap<>())).thenReturn(getRecordsById(false),getRecordsById(true));
-        when(cassandraOperationImpl.searchValueInList(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, JsonKey.USER_IDs, "EFG",new HashMap<>())).thenReturn(getRecordsByIdFailure());
+        when(cassandraOperationImpl.searchValueInList(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, JsonKey.USER_IDs, "EFG")).thenReturn(getRecordsById(false));
+        when(cassandraOperationImpl.searchValueInList(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, JsonKey.USER_IDs, "DEF")).thenReturn(getRecordsById(true));
+        when(cassandraOperationImpl.searchValueInList(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, JsonKey.USER_IDs, "ABC",new HashMap<>())).thenReturn(getRecordsById(false));
+        when(cassandraOperationImpl.searchValueInList(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, JsonKey.USER_IDs, "XYZ",new HashMap<>())).thenReturn(getRecordsById(true));
+
     }
 
     @Test
     public void testGetRecordByUserIdSuccess() {
-        ShadowUser shadowUser=MigrationUtils.getRecordByUserId("DEF");
+        ShadowUser shadowUser=MigrationUtils.getRecordByUserId("EFG");
         Assert.assertEquals("TN",shadowUser.getChannel());
     }
 
@@ -109,17 +111,12 @@ public class MigrationUtilsTest {
     }
     @Test
     public void testGetEligibleUserByIdsFailure(){
-        List<ShadowUser>shadowUserList= MigrationUtils.getEligibleUsersById("ABC",new HashMap<>());
-        Assert.assertEquals(0,shadowUserList.size());
-    }
-    @Test
-    public void testGetEligibleUserByIds(){
-        List<ShadowUser>shadowUserList= MigrationUtils.getEligibleUsersById("EFG",new HashMap<>());
+        List<ShadowUser>shadowUserList= MigrationUtils.getEligibleUsersById("XYZ",new HashMap<>());
         Assert.assertEquals(0,shadowUserList.size());
     }
     @Test
     public void testGetEligibleUserByIdsWithoutProps(){
-        List<ShadowUser>shadowUserList= MigrationUtils.getEligibleUsersById("DEF");
+        List<ShadowUser>shadowUserList= MigrationUtils.getEligibleUsersById("EFG");
         Assert.assertEquals(1,shadowUserList.size());
     }
 
@@ -134,18 +131,6 @@ public class MigrationUtilsTest {
             map.put(JsonKey.CLAIM_STATUS, ClaimStatus.ELIGIBLE.getValue());
             list.add(map);
         }
-        res.put(JsonKey.RESPONSE, list);
-        return res;
-    }
-
-    private Response getRecordsByIdFailure() {
-        Response res = new Response();
-        List<Map<String, Object>> list = new ArrayList<>();
-        Map<String, Object> map = new HashMap<>();
-        map.put(JsonKey.CHANNEL, "TN");
-        map.put(JsonKey.USER_ID, "EFG");
-        map.put(JsonKey.CLAIM_STATUS, ClaimStatus.MULTIMATCH.getValue());
-        list.add(map);
         res.put(JsonKey.RESPONSE, list);
         return res;
     }

@@ -57,6 +57,8 @@ public class FeedServiceImplTest {
     PowerMockito.when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     when(FeedServiceImpl.getCassandraInstance()).thenReturn(cassandraOperation);
     when(FeedServiceImpl.getESInstance()).thenReturn(esUtil);
+
+    initCassandraForSuccess();
   }
 
   private static void initCassandraForSuccess() {
@@ -82,7 +84,6 @@ public class FeedServiceImplTest {
 
   @Test
   public void testInsert() {
-    initCassandraForSuccess();
     Response res = feedService.insert(getFeed(false));
     Assert.assertTrue(
         ((String) res.getResult().get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS));
@@ -90,7 +91,6 @@ public class FeedServiceImplTest {
 
   @Test
   public void testUpdate() {
-    initCassandraForSuccess();
     Response res = feedService.update(getFeed(true));
     Assert.assertTrue(
         ((String) res.getResult().get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS));
@@ -98,7 +98,6 @@ public class FeedServiceImplTest {
 
   @Test
   public void testDelete() {
-    initCassandraForSuccess();
     try {
       feedService.delete("123-456-789");
     } catch (Exception ex) {
@@ -108,7 +107,6 @@ public class FeedServiceImplTest {
 
   @Test
   public void testGetRecordsByProperties() {
-    initCassandraForSuccess();
     Map<String, Object> props = new HashMap<>();
     props.put(JsonKey.USER_ID, "123-456-789");
     List<Feed> res = feedService.getRecordsByProperties(props);

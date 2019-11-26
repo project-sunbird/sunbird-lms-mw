@@ -122,12 +122,13 @@ public class TenantMigrationActorTest extends UserManagementActorTestBase {
             Mockito.anyObject()))
         .thenReturn(new HashMap<>());
     PowerMockito.mockStatic(MigrationUtils.class);
+    when(MigrationUtils.markUserAsRejected(Mockito.any(ShadowUser.class))).thenReturn(true);
   }
 
   @Test
   public void testUserMigrateRejectWhenUserFound() {
-    when(MigrationUtils.getEligibleUsersById(Mockito.anyString()))
-        .thenReturn(getShadowUserAsList(StringUtils.EMPTY, 0));
+    when(MigrationUtils.getEligibleUsersById("anyUserId"))
+        .thenReturn(getShadowUserAsList(StringUtils.EMPTY, 1));
     boolean result =
         testScenario(
             getMigrateReq(ActorOperations.MIGRATE_USER, JsonKey.REJECT), null, ResponseCode.OK);
@@ -137,11 +138,10 @@ public class TenantMigrationActorTest extends UserManagementActorTestBase {
   @Test
   public void testUserMigrateRejectWhenUserNotFound() {
     List<ShadowUser> shadowUserList = new ArrayList<>();
-    when(MigrationUtils.getEligibleUsersById(Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(shadowUserList);
+    when(MigrationUtils.getEligibleUsersById("WrongUserId")).thenReturn(shadowUserList);
     boolean result =
         testScenario(
-            getMigrateReq(ActorOperations.MIGRATE_USER, JsonKey.REJECT),
+            getFailureMigrateReq(ActorOperations.MIGRATE_USER, JsonKey.REJECT),
             ResponseCode.invalidUserId,
             null);
     assertTrue(result);
@@ -150,21 +150,36 @@ public class TenantMigrationActorTest extends UserManagementActorTestBase {
   @Test
   public void testUserMigrationAcceptWhenUserNotFound() {
     List<ShadowUser> shadowUserList = new ArrayList<>();
-    when(MigrationUtils.getEligibleUsersById(Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(shadowUserList);
+    when(MigrationUtils.getEligibleUsersById("WrongUserId")).thenReturn(shadowUserList);
     boolean result =
         testScenario(
-            getMigrateReq(ActorOperations.MIGRATE_USER, JsonKey.ACCEPT),
+            getFailureMigrateReq(ActorOperations.MIGRATE_USER, JsonKey.ACCEPT),
             ResponseCode.invalidUserId,
             null);
     assertTrue(result);
   }
 
+  public Request getFailureMigrateReq(ActorOperations actorOperation, String action) {
+    Request reqObj = new Request();
+    Map reqMap = new HashMap<>();
+    reqMap.put(JsonKey.USER_ID, "WrongUserId");
+    reqMap.put(JsonKey.USER_EXT_ID, "WrongAnyUserExtId");
+    reqMap.put(JsonKey.CHANNEL, "anyChannel");
+    reqMap.put(JsonKey.ACTION, action);
+    reqMap.put(JsonKey.FEED_ID, "anyFeedId");
+    reqObj.setRequest(reqMap);
+    reqObj.setOperation(actorOperation.getValue());
+    System.out.println(reqMap);
+    return reqObj;
+  }
+
   /** AC->ATTEMPT COUNT, e.g AC1-> Attempt Count 1 */
   @Test
   public void testUserMigrationAcceptWhenUserFoundWithInCorrectExtIdAC1() {
-    when(MigrationUtils.getEligibleUsersById(Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(getShadowUserAsList("wrongAnyUserExtId", 1));
+    Map<String, Object> propsMap = new HashMap<>();
+    propsMap.put(JsonKey.CHANNEL, "anyChannel");
+    when(MigrationUtils.getEligibleUsersById("anyUserId", propsMap))
+        .thenReturn(getShadowUserAsList("wrongUserExtId", 1));
     boolean result =
         testScenario(
             getMigrateReq(ActorOperations.MIGRATE_USER, JsonKey.ACCEPT),
@@ -176,7 +191,7 @@ public class TenantMigrationActorTest extends UserManagementActorTestBase {
   @Test
   public void testUserMigrationAcceptWhenUserFoundWithInCorrectExtIdAC2() {
     when(MigrationUtils.getEligibleUsersById(Mockito.anyString(), Mockito.anyMap()))
-        .thenReturn(getShadowUserAsList("wrongAnyUserExtId", 2));
+        .thenReturn(getShadowUserAsList("wrongUserExtId", 2));
     boolean result =
         testScenario(
             getMigrateReq(ActorOperations.MIGRATE_USER, JsonKey.ACCEPT),

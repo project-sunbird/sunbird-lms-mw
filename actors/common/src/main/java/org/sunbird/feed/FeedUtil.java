@@ -15,13 +15,17 @@ public class FeedUtil {
   private static IFeedService feedService = FeedFactory.getInstance();
 
   public static void saveFeed(ShadowUser shadowUser, List<String> userIds) {
+    saveFeed(shadowUser, userIds.get(0));
+  }
+
+  public static void saveFeed(ShadowUser shadowUser, String userId) {
     Map<String, Object> reqMap = new HashMap<>();
-    reqMap.put(JsonKey.USER_ID, userIds.get(0));
+    reqMap.put(JsonKey.USER_ID, userId);
     reqMap.put(JsonKey.CATEGORY, FeedAction.ORG_MIGRATION_ACTION.getfeedAction());
     List<Feed> feedList = feedService.getRecordsByProperties(reqMap);
     int index = getIndexOfMatchingFeed(feedList);
     if (index == -1) {
-      feedService.insert(createFeedObj(shadowUser, userIds.get(0)));
+      feedService.insert(createFeedObj(shadowUser, userId));
     } else {
       Map<String, Object> data = feedList.get(index).getData();
       List<String> channelList = (List<String>) data.get(JsonKey.PROSPECT_CHANNELS);

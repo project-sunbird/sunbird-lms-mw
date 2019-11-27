@@ -122,6 +122,9 @@ public class FeedServiceImpl implements IFeedService {
         getESInstance().search(searchDTO, ProjectUtil.EsType.userfeed.getTypeName());
     Map<String, Object> result =
         (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
+    result.put(JsonKey.USER_FEED, result.get(JsonKey.CONTENT));
+    result.remove(JsonKey.COUNT);
+    result.remove(JsonKey.CONTENT);
     Response response = new Response();
     response.put(JsonKey.RESPONSE, result);
     return response;

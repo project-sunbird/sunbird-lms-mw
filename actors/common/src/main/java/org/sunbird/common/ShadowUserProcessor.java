@@ -212,7 +212,10 @@ public class ShadowUserProcessor {
           List<String> userIds = new ArrayList<>();
           userIds.add((String) userMap.get(JsonKey.ID));
           updateUserInShadowDb(null, shadowUser, ClaimStatus.ELIGIBLE.getValue(), userIds);
-          // TODO ENTRY OF USER IN ALERTS TABLE
+          ProjectLogger.log(
+              "ShadowUserProcessor:updateUser: calling FeedUtil.saveFeed method for user id "
+                  + userIds.get(0),
+              LoggerEnum.INFO.name());
           FeedUtil.saveFeed(shadowUser, userIds);
         }
       } else if (esUser.size() > 1) {

@@ -6,6 +6,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.bean.ShadowUser;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.feed.impl.FeedFactory;
 import org.sunbird.models.user.Feed;
 import org.sunbird.models.user.FeedAction;
@@ -20,11 +22,20 @@ public class FeedUtil {
   }
 
   public static Response saveFeed(ShadowUser shadowUser, String userId) {
+    ProjectLogger.log("FeedUtil:saveFeed method called.", LoggerEnum.INFO.name());
     Response response = null;
     Map<String, Object> reqMap = new HashMap<>();
     reqMap.put(JsonKey.USER_ID, userId);
     reqMap.put(JsonKey.CATEGORY, FeedAction.ORG_MIGRATION_ACTION.getfeedAction());
+    ProjectLogger.log(
+        "FeedUtil:saveFeed:fetching feed for userId ." + userId, LoggerEnum.INFO.name());
     List<Feed> feedList = feedService.getRecordsByProperties(reqMap);
+    ProjectLogger.log(
+        "FeedUtil:saveFeed total no. of feed fetched for user id ."
+            + userId
+            + " ,feed count = "
+            + feedList.size(),
+        LoggerEnum.INFO.name());
     int index = getIndexOfMatchingFeed(feedList);
     if (index == -1) {
       response = feedService.insert(createFeedObj(shadowUser, userId));

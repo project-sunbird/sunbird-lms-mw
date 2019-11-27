@@ -70,6 +70,7 @@ public class FeedServiceImpl implements IFeedService {
     } catch (Exception ex) {
       ProjectLogger.log("FeedServiceImpl:update Exception occurred while mapping.", ex);
     }
+    dbMap.remove(JsonKey.CREATED_ON);
     dbMap.put(JsonKey.UPDATED_ON, new Timestamp(Calendar.getInstance().getTimeInMillis()));
     Response response = saveFeed(dbMap);
     // update data to ES

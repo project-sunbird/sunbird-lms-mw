@@ -62,6 +62,8 @@ public class FeedUtilTest {
     when(feedService.getRecordsByProperties(Mockito.anyMap()))
         .thenReturn(getFeedList(true))
         .thenReturn(getFeedList(false));
+    when(feedService.insert(Mockito.any())).thenReturn(new Response());
+    when(feedService.update(Mockito.any())).thenReturn(new Response());
 
     PowerMockito.mockStatic(ServiceFactory.class);
     PowerMockito.mockStatic(EsClientFactory.class);
@@ -117,11 +119,8 @@ public class FeedUtilTest {
   public void saveFeedInsertTest() {
     List<String> userIds = new ArrayList<>();
     userIds.add("123-456-7890");
-    try {
-      FeedUtil.saveFeed(getShadowUser(), userIds);
-    } catch (Exception e) {
-      Assert.assertTrue(false);
-    }
+    Response response = FeedUtil.saveFeed(getShadowUser(), userIds);
+    Assert.assertNotNull(response);
   }
 
   public static ShadowUser getShadowUser() {

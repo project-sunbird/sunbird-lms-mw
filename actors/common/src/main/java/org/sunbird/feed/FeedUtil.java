@@ -4,6 +4,7 @@ import java.util.*;
 import java.util.stream.IntStream;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.bean.ShadowUser;
+import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.feed.impl.FeedFactory;
 import org.sunbird.models.user.Feed;
@@ -14,24 +15,26 @@ import org.sunbird.models.user.FeedStatus;
 public class FeedUtil {
   private static IFeedService feedService = FeedFactory.getInstance();
 
-  public static void saveFeed(ShadowUser shadowUser, List<String> userIds) {
-    saveFeed(shadowUser, userIds.get(0));
+  public static Response saveFeed(ShadowUser shadowUser, List<String> userIds) {
+    return saveFeed(shadowUser, userIds.get(0));
   }
 
-  public static void saveFeed(ShadowUser shadowUser, String userId) {
+  public static Response saveFeed(ShadowUser shadowUser, String userId) {
+    Response response = null;
     Map<String, Object> reqMap = new HashMap<>();
     reqMap.put(JsonKey.USER_ID, userId);
     reqMap.put(JsonKey.CATEGORY, FeedAction.ORG_MIGRATION_ACTION.getfeedAction());
     List<Feed> feedList = feedService.getRecordsByProperties(reqMap);
     int index = getIndexOfMatchingFeed(feedList);
     if (index == -1) {
-      feedService.insert(createFeedObj(shadowUser, userId));
+      response = feedService.insert(createFeedObj(shadowUser, userId));
     } else {
       Map<String, Object> data = feedList.get(index).getData();
       List<String> channelList = (List<String>) data.get(JsonKey.PROSPECT_CHANNELS);
       channelList.add(shadowUser.getChannel());
-      feedService.update(feedList.get(index));
+      response = feedService.update(feedList.get(index));
     }
+    return response;
   }
 
   private static Feed createFeedObj(ShadowUser shadowUser, String userId) {

@@ -1,5 +1,6 @@
 package org.sunbird.user.actors;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import org.sunbird.actor.core.BaseActor;
@@ -45,6 +46,13 @@ public class UserFeedActor extends BaseActor {
     SearchDTO search = new SearchDTO();
     search.getAdditionalProperties().put(JsonKey.FILTERS, filters);
     Response userFeedResponse = feedService.search(search);
+    Map<String, Object> result =
+        (Map<String, Object>) userFeedResponse.getResult().get(JsonKey.RESPONSE);
+    result.put(
+        JsonKey.USER_FEED,
+        result.get(JsonKey.CONTENT) == null ? new ArrayList<>() : result.get(JsonKey.CONTENT));
+    result.remove(JsonKey.COUNT);
+    result.remove(JsonKey.CONTENT);
     sender().tell(userFeedResponse, self());
   }
 }

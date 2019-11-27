@@ -98,11 +98,14 @@ public class FeedServiceImplTest {
 
   @Test
   public void testDelete() {
+    boolean response = false;
     try {
       feedService.delete("123-456-789");
+      response = true;
     } catch (Exception ex) {
-      Assert.assertTrue(false);
+      Assert.assertTrue(response);
     }
+    Assert.assertTrue(response);
   }
 
   @Test

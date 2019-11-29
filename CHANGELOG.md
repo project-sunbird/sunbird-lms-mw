@@ -1,4 +1,14 @@
 ### Issue#SC-1243 removed Hardcodings for scheduler job time for shadow user (HEAD -> SC-1243)
+>Fri, 29 Nov 2019 13:23:58 +0530
+
+>Author: anmol2302 (anmolgupta23021997@gmail.com)
+
+>Commiter: anmol2302 (anmolgupta23021997@gmail.com)
+
+
+
+
+### Issue#SC-1243 removed Hardcodings for scheduler job time for shadow user (origin/SC-1243)
 >Fri, 29 Nov 2019 13:21:42 +0530
 
 >Author: anmol2302 (anmolgupta23021997@gmail.com)

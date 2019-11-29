@@ -272,7 +272,7 @@ public final class SchedulerManager {
             .withIdentity("migrateShadowUserTrigger", identifier)
             .withSchedule(
                 CronScheduleBuilder.cronSchedule(
-                    "0 0/5 * 1/1 * ? *"))
+                        PropertiesCache.getInstance().getProperty("quartz_shadow_user_migration_timer")))
             .build();
     try {
       if (scheduler.checkExists(migrateShadowUserJob.getKey())) {

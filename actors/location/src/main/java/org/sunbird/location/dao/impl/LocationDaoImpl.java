@@ -18,6 +18,9 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.location.dao.LocationDao;
 import org.sunbird.models.location.Location;
 import scala.concurrent.Future;
+import org.apache.commons.collections.MapUtils;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
 
 /** @author Amit Kumar */
 public class LocationDaoImpl implements LocationDao {
@@ -27,6 +30,8 @@ public class LocationDaoImpl implements LocationDao {
   private static final String KEYSPACE_NAME = "sunbird";
   private static final String LOCATION_TABLE_NAME = "location";
   private ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
+  private static final String DEFAULT_SORT_BY = "ASC";
+
 
   @Override
   public Response create(Location location) {
@@ -51,6 +56,7 @@ public class LocationDaoImpl implements LocationDao {
   @Override
   public Response search(Map<String, Object> searchQueryMap) {
     SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
+     searchDto = addSortBy(searchDto);
     String type = ProjectUtil.EsType.location.getTypeName();
     Future<Map<String, Object>> resultF = esUtil.search(searchDto, type);
     Map<String, Object> result =
@@ -78,4 +84,22 @@ public class LocationDaoImpl implements LocationDao {
         (String) queryMap.get(GeoLocationJsonKey.PROPERTY_NAME),
         queryMap.get(GeoLocationJsonKey.PROPERTY_VALUE));
   }
+
+ public SearchDTO addSortBy(SearchDTO searchDtO) {
+    if (MapUtils.isNotEmpty(searchDtO.getAdditionalProperties())
+        && searchDtO.getAdditionalProperties().containsKey(JsonKey.FILTERS)
+        && searchDtO.getAdditionalProperties().get(JsonKey.FILTERS) instanceof Map
+        && ((Map<String, Object>) searchDtO.getAdditionalProperties().get(JsonKey.FILTERS))
+            .containsKey(JsonKey.TYPE)) {
+      if (MapUtils.isEmpty(searchDtO.getSortBy())) {
+        ProjectLogger.log(
+            "LocationDaoImpl:search:addSortBy added sort type name attribute.",
+            LoggerEnum.INFO.name());
+        searchDtO.getSortBy().put(JsonKey.NAME, DEFAULT_SORT_BY);
+      }
+    }
+
+    return searchDtO;
+  }
+
 }

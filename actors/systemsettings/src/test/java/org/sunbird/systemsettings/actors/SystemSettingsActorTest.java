@@ -90,7 +90,7 @@ public class SystemSettingsActorTest {
     resp.put(JsonKey.RESPONSE, list);
     when(cassandraOperation.getRecordsByIndexedProperty(
             Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.any()))
-        .thenReturn(resp);
+        .thenReturn(resp,new Response());
     actorMessage.setOperation(ActorOperations.GET_SYSTEM_SETTING.getValue());
     actorMessage.setRequest(orgData);
     subject.tell(actorMessage, probe.getRef());

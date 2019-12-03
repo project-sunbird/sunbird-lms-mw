@@ -191,6 +191,7 @@
 					<excludes>
 						<exclude>org/sunbird/bean/*</exclude>
 						<exclude>org/sunbird/models/**/*</exclude>
+						<exclude>org/sunbird/learner/actors/url/action/**/*</exclude>
 					</excludes>
 				</configuration>
 				<executions>

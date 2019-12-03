@@ -30,7 +30,6 @@ import static org.powermock.api.mockito.PowerMockito.when;
 @PowerMockIgnore({"javax.management.*"})
 public class RoleDaoImplTest {
     private static final String TABLE_NAME = "role";
-    private CassandraOperationImpl cassandraOperationImpl;
     private CassandraOperation cassandraOperation;
     private Response response;
     private RoleDao roleDao;

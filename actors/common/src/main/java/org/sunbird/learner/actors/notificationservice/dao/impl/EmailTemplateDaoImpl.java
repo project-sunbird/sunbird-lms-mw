@@ -14,7 +14,6 @@ import org.sunbird.learner.actors.notificationservice.dao.EmailTemplateDao;
 
 public class EmailTemplateDaoImpl implements EmailTemplateDao {
 
-  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   static EmailTemplateDao emailTemplateDao;
   private static final String EMAIL_TEMPLATE = "email_template";
   private static final String DEFAULT_EMAIL_TEMPLATE_NAME = "default";
@@ -37,7 +36,7 @@ public class EmailTemplateDaoImpl implements EmailTemplateDao {
       idList.add(templateName);
     }
     Response response =
-        cassandraOperation.getRecordsByPrimaryKeys(
+        getCassandraOperation().getRecordsByPrimaryKeys(
             JsonKey.SUNBIRD, EMAIL_TEMPLATE, idList, JsonKey.NAME);
     List<Map<String, Object>> emailTemplateList =
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
@@ -47,4 +46,9 @@ public class EmailTemplateDaoImpl implements EmailTemplateDao {
     }
     return (String) map.get(TEMPLATE);
   }
+
+  private CassandraOperation getCassandraOperation(){
+    return ServiceFactory.getInstance();
+  }
+
 }

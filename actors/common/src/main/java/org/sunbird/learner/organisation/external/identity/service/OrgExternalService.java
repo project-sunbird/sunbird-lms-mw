@@ -15,7 +15,6 @@ public class OrgExternalService {
   private final String KEYSPACE_NAME = "sunbird";
   private final String ORG_EXTERNAL_IDENTITY = "org_external_identity";
 
-  @SuppressWarnings("unchecked")
   public String getOrgIdFromOrgExternalIdAndProvider(String externalId, String provider) {
     Map<String, Object> dbRequestMap = new HashMap<>();
     dbRequestMap.put(JsonKey.EXTERNAL_ID, externalId.toLowerCase());

@@ -35,15 +35,15 @@ public class OrgExternalServiceTest {
     @Before
     public void setUp()  {
         orgExternalService=new OrgExternalService();
-
+        cassandraOperation= PowerMockito.mock(CassandraOperation.class);
+        PowerMockito.mockStatic(ServiceFactory.class);
+        when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     }
 
     @Test
     public void testGetOrgIdFromOrgExtIdFailure() {
         try {
-            cassandraOperation= PowerMockito.mock(CassandraOperation.class);
-            PowerMockito.mockStatic(ServiceFactory.class);
-            when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
+
             Map<String, Object> dbRequestMap = new HashMap<>();
             dbRequestMap.put(JsonKey.EXTERNAL_ID, "anyorgextid");
             dbRequestMap.put(JsonKey.PROVIDER, "anyprovider");
@@ -63,9 +63,6 @@ public class OrgExternalServiceTest {
     @Test
     public void testGetOrgIdFromOrgExtIdSuccess() {
         try {
-            cassandraOperation= PowerMockito.mock(CassandraOperation.class);
-            PowerMockito.mockStatic(ServiceFactory.class);
-            when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
             Map<String, Object> dbRequestMap = new HashMap<>();
             dbRequestMap.put(JsonKey.EXTERNAL_ID, "orgextid");
             dbRequestMap.put(JsonKey.PROVIDER, "provider");

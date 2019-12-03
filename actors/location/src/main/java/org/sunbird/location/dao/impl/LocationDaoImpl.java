@@ -63,9 +63,11 @@ public class LocationDaoImpl implements LocationDao {
         (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     Response response = new Response();
     if (result != null) {
+      response.put(JsonKey.COUNT, result.get(JsonKey.COUNT)); 
       response.put(JsonKey.RESPONSE, result.get(JsonKey.CONTENT));
     } else {
       List<Map<String, Object>> list = new ArrayList<>();
+      response.put(JsonKey.COUNT, list.size());
       response.put(JsonKey.RESPONSE, list);
     }
     return response;

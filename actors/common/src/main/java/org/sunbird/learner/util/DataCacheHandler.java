@@ -19,13 +19,7 @@ import org.sunbird.helper.ServiceFactory;
  * @author Amit Kumar
  */
 public class DataCacheHandler implements Runnable {
-  /**
-   * pageMap is the map of (orgId:pageName) and page Object (i.e map of string , object) sectionMap
-   * is the map of section Id and section Object (i.e map of string , object)
-   */
-  private static Map<String, Map<String, Object>> pageMap = new ConcurrentHashMap<>();
 
-  private static Map<String, Map<String, Object>> sectionMap = new ConcurrentHashMap<>();
   private static Map<String, Object> roleMap = new ConcurrentHashMap<>();
   private static Map<String, String> orgTypeMap = new ConcurrentHashMap<>();
   private static Map<String, String> configSettings = new ConcurrentHashMap<>();
@@ -34,13 +28,11 @@ public class DataCacheHandler implements Runnable {
   private static Map<String, List<String>> frameworkFieldsConfig = new ConcurrentHashMap<>();
   private static Map<String, List<String>> hashtagIdFrameworkIdMap = new HashMap<>();
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private static final String KEY_SPACE_NAME = "sunbird";
+  private static final String KEY_SPACE_NAME = Util.KEY_SPACE_NAME;
 
   @Override
   public void run() {
     ProjectLogger.log("DataCacheHandler:run: Cache refresh started.", LoggerEnum.INFO.name());
-    cache(pageMap, "page_management");
-    cache(sectionMap, "page_section");
     roleCache(roleMap);
     orgTypeCache(orgTypeMap);
     cacheSystemConfig(configSettings);
@@ -105,54 +97,6 @@ public class DataCacheHandler implements Runnable {
       }
     }
   }
-
-  @SuppressWarnings("unchecked")
-  private void cache(Map<String, Map<String, Object>> map, String tableName) {
-    try {
-      Response response = cassandraOperation.getAllRecords(KEY_SPACE_NAME, tableName);
-      List<Map<String, Object>> responseList =
-          (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
-      if (null != responseList && !responseList.isEmpty()) {
-        for (Map<String, Object> resultMap : responseList) {
-          if (tableName.equalsIgnoreCase(JsonKey.PAGE_SECTION)) {
-            map.put((String) resultMap.get(JsonKey.ID), resultMap);
-          } else {
-            String orgId =
-                (((String) resultMap.get(JsonKey.ORGANISATION_ID)) == null
-                    ? "NA"
-                    : (String) resultMap.get(JsonKey.ORGANISATION_ID));
-            map.put(orgId + ":" + ((String) resultMap.get(JsonKey.PAGE_NAME)), resultMap);
-          }
-        }
-      }
-      ProjectLogger.log("pagemap keyset " + map.keySet());
-      ProjectLogger.log(tableName + " cache size: " + map.size(), LoggerEnum.INFO.name());
-    } catch (Exception e) {
-      ProjectLogger.log(
-          "DataCacheHandler:cache: Exception in retrieving page section " + e.getMessage(), e);
-    }
-  }
-
-  /** @return the pageMap */
-  public static Map<String, Map<String, Object>> getPageMap() {
-    return pageMap;
-  }
-
-  /** @param pageMap the pageMap to set */
-  public static void setPageMap(Map<String, Map<String, Object>> pageMap) {
-    DataCacheHandler.pageMap = pageMap;
-  }
-
-  /** @return the sectionMap */
-  public static Map<String, Map<String, Object>> getSectionMap() {
-    return sectionMap;
-  }
-
-  /** @param sectionMap the sectionMap to set */
-  public static void setSectionMap(Map<String, Map<String, Object>> sectionMap) {
-    DataCacheHandler.sectionMap = sectionMap;
-  }
-
   /** @return the roleMap */
   public static Map<String, Object> getRoleMap() {
     return roleMap;

@@ -1,8 +1,6 @@
 package org.sunbird.validator.user;
 
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.sunbird.bean.MigrationUser;
@@ -14,20 +12,9 @@ import org.sunbird.common.responsecode.ResponseCode;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.*;
-
 @PrepareForTest(UserBulkMigrationRequestValidator.class)
 public class UserBulkMigrationRequestValidatorTest {
     private static final int MAX_ROW_SUPPORTED=20000;
-
-    @Before
-    public void setUp() throws Exception {
-    }
-
-    @After
-    public void tearDown() throws Exception {
-    }
-
 
     @Test
     public void testRowsCountFailureWithEmptyCSVFile() {

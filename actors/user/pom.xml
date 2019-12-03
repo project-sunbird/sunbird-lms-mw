@@ -63,6 +63,9 @@
 				<configuration>
 					<destFile>${basedir}/target/coverage-reports/jacoco-unit.exec</destFile>
 					<dataFile>${basedir}/target/coverage-reports/jacoco-unit.exec</dataFile>
+					<excludes>
+						<exclude>org/sunbird/models/**/*</exclude>
+					</excludes>
 				</configuration>
 				<executions>
 					<execution>

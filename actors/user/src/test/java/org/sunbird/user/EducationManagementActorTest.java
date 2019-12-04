@@ -293,7 +293,6 @@ public class EducationManagementActorTest {
     } else {
       ProjectCommonException res =
               probe.expectMsgClass(duration("10 second"), ProjectCommonException.class);
-      System.out.println("the error in null is"+res.getResponseCode());
       return res.getCode().equals(errorCode.getErrorCode())
               || res.getResponseCode() == errorCode.getResponseCode();
     }
@@ -304,7 +303,6 @@ public class EducationManagementActorTest {
     ActorRef subject = system.actorOf(props);
     subject.tell(reqObj, probe.getRef());
     Response res = probe.expectMsgClass(duration("10 second"), Response.class);
-    System.out.println("the error is"+res.getResult());
     return res;
   }
 }

@@ -1928,7 +1928,7 @@ public final class Util {
     }
   }
 
-  public static void getUserRequiredActionLink(
+  public static String getUserRequiredActionLink(
       Map<String, Object> templateMap, boolean isUrlShortRequired) {
     URLShortner urlShortner = new URLShortnerImpl();
     String redirectUri =
@@ -1946,6 +1946,8 @@ public final class Util {
 
       templateMap.put(
           JsonKey.SET_PASSWORD_LINK, isUrlShortRequired ? urlShortner.shortUrl(url) : url);
+      return  isUrlShortRequired ? urlShortner.shortUrl(url) : url;
+
 
     } else {
       String url =
@@ -1955,6 +1957,7 @@ public final class Util {
               KeycloakRequiredActionLinkUtil.VERIFY_EMAIL);
       templateMap.put(
           JsonKey.VERIFY_EMAIL_LINK, isUrlShortRequired ? urlShortner.shortUrl(url) : url);
+      return isUrlShortRequired ? urlShortner.shortUrl(url) : url;
     }
   }
 

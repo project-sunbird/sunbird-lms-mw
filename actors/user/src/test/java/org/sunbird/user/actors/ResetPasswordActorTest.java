@@ -59,6 +59,7 @@ public class ResetPasswordActorTest {
         when(userDao.getUserById("ValidUserId")).thenReturn(getValidUserResponse());
 
     }
+
     @Test
     public void testResetPasswordWithInvalidUserIdFailure(){
         when(userDao.getUserById("invalidUserId")).thenReturn(null);

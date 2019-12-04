@@ -277,6 +277,7 @@ public class EducationManagementActorTest {
     addressMap.put(JsonKey.ID,ProjectUtil.getUniqueIdFromTimestamp(0));
     addressMap.put(JsonKey.TYPE,"DISTRICT");
     addressMap.put(JsonKey.STATE,"KARANATAKA");
+
     addressMap.put(JsonKey.ZIPCODE,"anyZipCode");
     return addressMap;
   }

@@ -57,11 +57,11 @@ public class UserService {
     }
   }
 
-  public CassandraOperation getCassandraOperation(){
+  private CassandraOperation getCassandraOperation(){
     return ServiceFactory.getInstance();
   }
 
-  public EncryptionService getEncryptionService(){
+  private EncryptionService getEncryptionService(){
     return org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(null);
   }
 

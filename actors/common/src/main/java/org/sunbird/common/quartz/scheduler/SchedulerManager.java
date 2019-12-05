@@ -273,7 +273,6 @@ public final class SchedulerManager {
     ProjectLogger.log(
         "SchedulerManager:scheduleShadowUser: schedule time is : " + shadowUserTime,
         LoggerEnum.INFO.name());
-    shadowUserTime="0 0/5 * 1/1 * ? *";
     Trigger migrateShadowUserTrigger =
         TriggerBuilder.newTrigger()
             .withIdentity("migrateShadowUserTrigger", identifier)

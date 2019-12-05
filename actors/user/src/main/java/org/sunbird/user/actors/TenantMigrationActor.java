@@ -41,6 +41,8 @@ import org.sunbird.learner.organisation.external.identity.service.OrgExternalSer
 import org.sunbird.learner.util.UserFlagEnum;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
+import org.sunbird.services.sso.SSOManager;
+import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
@@ -137,6 +139,9 @@ public class TenantMigrationActor extends BaseActor {
       // throw exception for migration failed
       ProjectCommonException.throwServerErrorException(ResponseCode.errorUserMigrationFailed);
     }
+    if(null!=userUpdateRequest.get(JsonKey.IS_DELETED) && (Boolean)userUpdateRequest.get(JsonKey.IS_DELETED)){
+      deactivateUserFromKC((String) userUpdateRequest.get(JsonKey.ID));
+    }
     ProjectLogger.log(
         "TenantMigrationActor:migrateUser user record got updated.", LoggerEnum.INFO.name());
     // Update user org details
@@ -178,6 +183,20 @@ public class TenantMigrationActor extends BaseActor {
     Map<String, Object> userData = createUserData(userDetail);
     Request notificationRequest = createNotificationData(userData);
     tellToAnother(notificationRequest);
+  }
+
+  private void deactivateUserFromKC(String userId){
+    try{
+      Map<String,Object>userDbMap=new HashMap<>();
+      userDbMap.put(JsonKey.USER_ID,userId);
+      String status=getSSOManager().deactivateUser(userDbMap);
+      ProjectLogger.log("TenantMigrationActor:deactivateUserFromKC:user status in deactivating Keycloak"+status,LoggerEnum.INFO.name());
+    }
+    catch (Exception e){
+      ProjectLogger.log("TenantMigrationActor:deactivateUserFromKC:Error occurred while deactivating user from  Keycloak"+e,LoggerEnum.ERROR.name());
+    }
+
+
   }
 
   private Request createNotificationData(Map<String, Object> userData) {
@@ -458,6 +477,7 @@ public class TenantMigrationActor extends BaseActor {
       unSupportedMessage();
     }
     sender().tell(response, self());
+
   }
 
   private int getRemainingAttempt(List<ShadowUser> shadowUserList) {
@@ -639,5 +659,9 @@ public class TenantMigrationActor extends BaseActor {
             shadowUser -> {
               increaseAttemptCount(shadowUser, isFailed);
             });
+  }
+
+  private SSOManager getSSOManager(){
+   return SSOServiceFactory.getInstance();
   }
 }

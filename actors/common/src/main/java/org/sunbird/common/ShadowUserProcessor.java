@@ -26,6 +26,8 @@ import org.sunbird.learner.util.UserFlagEnum;
 import org.sunbird.learner.util.UserFlagUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.UserType;
+import org.sunbird.services.sso.SSOManager;
+import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import scala.concurrent.Future;
 
@@ -37,6 +39,7 @@ public class ShadowUserProcessor {
   private Util.DbInfo bulkUploadDbInfo = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
   private Map<String, String> extOrgIdMap = new HashMap<>();
   private String custodianOrgId;
+  private SSOManager keyCloakService = SSOServiceFactory.getInstance();
   private Map<String, Map<String, Object>> processIdtelemetryCtxMap = new HashMap<>();
   private ElasticSearchService elasticSearchService = EsClientFactory.getInstance(JsonKey.REST);
 
@@ -87,6 +90,9 @@ public class ShadowUserProcessor {
     if (!((String) esUser.get(JsonKey.FIRST_NAME)).equalsIgnoreCase(shadowUser.getName())
         || ((int) esUser.get(JsonKey.STATUS)) != shadowUser.getUserStatus()) {
       updateUserInUserTable(flagsValue, shadowUser.getUserId(), rootOrgId, shadowUser);
+      if(shadowUser.getUserStatus()==ProjectUtil.Status.INACTIVE.getValue()){
+        deactivateMergeeFromKC(userId);
+      }
     }
     deleteUserFromOrganisations(
         shadowUser, rootOrgId, (List<Map<String, Object>>) esUser.get(JsonKey.ORGANISATIONS));
@@ -95,6 +101,18 @@ public class ShadowUserProcessor {
     }
     syncUserToES(userId);
     updateUserInShadowDb(userId, shadowUser, ClaimStatus.CLAIMED.getValue(), null);
+  }
+
+  private void deactivateMergeeFromKC(String userId){
+    Map<String,Object>userMap=new HashMap<>();
+    userMap.put(JsonKey.USER_ID,userId);
+    try {
+      ProjectLogger.log("ShadowUserProcessor:processClaimedUse:request Got to deactivate user account from KC:" + userMap, LoggerEnum.INFO.name());
+      String status = keyCloakService.deactivateUser(userMap);
+      ProjectLogger.log("ShadowUserProcessor:processClaimedUse:deactivate user account from KC:" + status, LoggerEnum.INFO.name());
+    }catch (Exception e){
+      ProjectLogger.log("ShadowUserProcessor:processClaimedUse:Error occurred while deactivate user account from KC:" + userId, LoggerEnum.ERROR.name());
+    }
   }
 
   private boolean isRootOrgMatchedWithOrgId(String rootOrgId, String orgId) {
@@ -649,4 +667,7 @@ public class ShadowUserProcessor {
     }
     return filterShadowUser;
   }
+
+
+
 }

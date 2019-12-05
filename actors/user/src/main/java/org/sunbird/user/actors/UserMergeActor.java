@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.typesafe.config.Config;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.sunbird.actor.router.ActorConfig;
@@ -106,6 +108,12 @@ public class UserMergeActor extends UserBaseActor {
 
       // update mergee details in ES
       mergeUserDetailsToEs(userRequest);
+
+      //deleting User From KeyCloak
+      CompletableFuture.supplyAsync(()-> {return deactivateMergeeFromKC(mergeeDBMap);}).thenApply(status->{
+        ProjectLogger.log("UserMergeActor: updateUserMergeDetails: user deleted from KeyCloak: "+status);
+        return null;
+      });
 
       // create telemetry event for merge
       triggerUserMergeTelemetry(telemetryMap, merger);
@@ -283,5 +291,11 @@ public class UserMergeActor extends UserBaseActor {
     } catch (Exception e) {
       ProjectLogger.log("UserMergeActor:initKafkaClient: An exception occurred." +e , LoggerEnum.ERROR.name());
     }
+  }
+
+
+  private String deactivateMergeeFromKC(Map<String,Object>userMap){
+    ProjectLogger.log("UserMergeActor:deactivateMergeeFromKC: request Got to deactivate mergee account from KC:"+userMap,LoggerEnum.INFO.name());
+    return  keyCloakService.deactivateUser(userMap);
   }
 }

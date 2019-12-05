@@ -8,8 +8,8 @@ import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
-import org.sunbird.common.ElasticSearchTcpImpl;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
@@ -34,10 +34,8 @@ import scala.concurrent.Future;
  */
 public class IdentifierFreeUpActor extends BaseActor {
 
-  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
   public static final int FIRST_RECORD = 0;
-  private static ElasticSearchService esUtil = new ElasticSearchTcpImpl();
 
   @Override
   public void onReceive(Request request) {
@@ -48,7 +46,7 @@ public class IdentifierFreeUpActor extends BaseActor {
 
   private Map<String, Object> getUserById(String id) {
     Response response =
-        cassandraOperation.getRecordById(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), id);
+        getCassandraOperation().getRecordById(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), id);
     List<Map<String, Object>> responseList = (List) response.get(JsonKey.RESPONSE);
     if (CollectionUtils.isEmpty(responseList)) {
       ProjectLogger.log(
@@ -116,7 +114,7 @@ public class IdentifierFreeUpActor extends BaseActor {
   }
 
   private Response updateUser(Map<String, Object> userDbMap) {
-    return cassandraOperation.updateRecord(
+    return getCassandraOperation().updateRecord(
         usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userDbMap);
   }
 
@@ -138,12 +136,22 @@ public class IdentifierFreeUpActor extends BaseActor {
 
   private boolean saveUserDetailsToEs(Map<String, Object> userDbMap) {
     Future<Boolean> future =
-        esUtil.update(
+        getEsUtil().update(
             ProjectUtil.EsType.user.getTypeName(), (String) userDbMap.get(JsonKey.ID), userDbMap);
     return (boolean) ElasticSearchHelper.getResponseFromFuture(future);
   }
 
   private boolean isNullifyOperationValid(String identifier) {
     return StringUtils.isNotBlank(identifier);
+  }
+
+
+  private CassandraOperation getCassandraOperation()
+  {
+    return ServiceFactory.getInstance();
+  }
+
+  private ElasticSearchService getEsUtil(){
+    return EsClientFactory.getInstance(JsonKey.REST);
   }
 }

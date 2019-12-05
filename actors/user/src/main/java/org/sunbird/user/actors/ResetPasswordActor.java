@@ -31,7 +31,6 @@ import org.sunbird.user.dao.impl.UserDaoImpl;
 )
 public class ResetPasswordActor extends BaseActor {
 
-  private SSOManager ssoManager = SSOServiceFactory.getInstance();
   ObjectMapper mapper = new ObjectMapper();
 
   @Override
@@ -47,15 +46,15 @@ public class ResetPasswordActor extends BaseActor {
 
   private void resetPassword(String userId, String type) {
     ProjectLogger.log("ResetPasswordActor:resetPassword: method called.", LoggerEnum.INFO.name());
-    UserDao userDao = new UserDaoImpl();
-    User user = userDao.getUserById(userId);
+    User user = getUserDao().getUserById(userId);
     if (null != user) {
       user = removeUnUsedIdentity(user, type);
       Map<String, Object> userMap = mapper.convertValue(user, Map.class);
       UserUtility.decryptUserData(userMap);
       userMap.put(JsonKey.USERNAME, userMap.get(JsonKey.USERNAME));
       userMap.put(JsonKey.REDIRECT_URI, Util.getSunbirdLoginUrl());
-      Util.getUserRequiredActionLink(userMap, false);
+      String url=Util.getUserRequiredActionLink(userMap, false);
+      userMap.put(JsonKey.SET_PASSWORD_LINK,url);
       if ((String) userMap.get(JsonKey.SET_PASSWORD_LINK) != null) {
         ProjectLogger.log(
             "ResetPasswordActor:resetPassword: link generated for reset password.",
@@ -102,5 +101,9 @@ public class ResetPasswordActor extends BaseActor {
       user.setEmail(user.getPrevUsedEmail());
     }
     return user;
+  }
+
+  private UserDao getUserDao(){
+    return UserDaoImpl.getInstance();
   }
 }

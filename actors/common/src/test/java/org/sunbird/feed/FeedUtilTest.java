@@ -1,5 +1,4 @@
 package org.sunbird.feed;
-
 import static org.powermock.api.mockito.PowerMockito.*;
 
 import java.util.*;
@@ -30,27 +29,24 @@ import org.sunbird.models.user.Feed;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
-  ServiceFactory.class,
-  ElasticSearchRestHighImpl.class,
-  ElasticSearchHelper.class,
-  EsClientFactory.class,
-  CassandraOperationImpl.class,
-  ElasticSearchService.class,
-  IFeedService.class,
-  FeedServiceImpl.class,
-  FeedFactory.class,
-  ShadowUser.class,
-  FeedUtil.class
+        ServiceFactory.class,
+        ElasticSearchRestHighImpl.class,
+        ElasticSearchHelper.class,
+        EsClientFactory.class,
+        CassandraOperationImpl.class,
+        ElasticSearchService.class,
+        IFeedService.class,
+        FeedServiceImpl.class,
+        FeedFactory.class,
+        ShadowUser.class
 })
 @SuppressStaticInitializationFor("org.sunbird.common.ElasticSearchUtil")
 @PowerMockIgnore({"javax.management.*"})
 public class FeedUtilTest {
-
   private ElasticSearchService esUtil;
   private CassandraOperation cassandraOperation = null;
   private static Response response;
   private static IFeedService feedService;
-
   @Before
   public void setUp() throws Exception {
     PowerMockito.mockStatic(FeedServiceImpl.class);
@@ -60,8 +56,8 @@ public class FeedUtilTest {
     when(FeedServiceImpl.getCassandraInstance()).thenReturn(cassandraOperation);
     when(FeedServiceImpl.getESInstance()).thenReturn(esUtil);
     when(feedService.getRecordsByProperties(Mockito.anyMap()))
-        .thenReturn(getFeedList(true))
-        .thenReturn(getFeedList(false));
+            .thenReturn(getFeedList(true))
+            .thenReturn(getFeedList(false));
     when(feedService.insert(Mockito.any())).thenReturn(new Response());
     when(feedService.update(Mockito.any())).thenReturn(new Response());
 
@@ -71,7 +67,6 @@ public class FeedUtilTest {
     esUtil = mock(ElasticSearchService.class);
     esUtil = mock(ElasticSearchRestHighImpl.class);
     when(EsClientFactory.getInstance(Mockito.anyString())).thenReturn(esUtil);
-
     cassandraOperation = mock(CassandraOperationImpl.class);
     response = new Response();
     Map<String, Object> responseMap = new HashMap<>();
@@ -80,16 +75,14 @@ public class FeedUtilTest {
     PowerMockito.when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     PowerMockito.when(
             cassandraOperation.getRecordsByProperties(Mockito.any(), Mockito.any(), Mockito.any()))
-        .thenReturn(response);
-
+            .thenReturn(response);
     Response upsertResponse = new Response();
     Map<String, Object> responseMap2 = new HashMap<>();
     responseMap2.put(Constants.RESPONSE, Constants.SUCCESS);
     upsertResponse.getResult().putAll(responseMap2);
     PowerMockito.when(cassandraOperation.upsertRecord(Mockito.any(), Mockito.any(), Mockito.any()))
-        .thenReturn(upsertResponse);
+            .thenReturn(upsertResponse);
   }
-
   private List<Feed> getFeedList(boolean needId) {
     Feed feed = new Feed();
     feed.setUserId("123-456-7890");

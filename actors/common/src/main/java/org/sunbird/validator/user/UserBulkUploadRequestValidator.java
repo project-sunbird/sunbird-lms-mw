@@ -44,7 +44,7 @@ public class UserBulkUploadRequestValidator {
           ResponseCode.mandatoryParamsMissing,
           MessageFormat.format(
               ResponseCode.mandatoryParamsMissing.getErrorMessage(),
-              (StringFormatter.joinByOr(JsonKey.ORGANISATION_ID, JsonKey.ORG_EXTERNAL_ID))));
+              (StringFormatter.joinByOr(JsonKey.ORG_ID, JsonKey.ORG_EXTERNAL_ID))));
     }
   }
 }

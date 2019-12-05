@@ -63,6 +63,13 @@
 				<configuration>
 					<destFile>${basedir}/target/coverage-reports/jacoco-unit.exec</destFile>
 					<dataFile>${basedir}/target/coverage-reports/jacoco-unit.exec</dataFile>
+					<excludes>
+						<exclude>org/sunbird/models/**/*</exclude>
+						<exclude>org/sunbird/user/util/KafkaConfigConstants.class</exclude>
+						<exclude>org/sunbird/user/util/UserActorOperations.class</exclude>
+						<exclude>org/sunbird/user/util/UserConstants.class</exclude>
+						<exclude>org/sunbird/content/store/util/ContentStoreUtil.class</exclude>
+					</excludes>
 				</configuration>
 				<executions>
 					<execution>

@@ -188,6 +188,12 @@
 				<configuration>
 					<destFile>${basedir}/target/coverage-reports/jacoco-unit.exec</destFile>
 					<dataFile>${basedir}/target/coverage-reports/jacoco-unit.exec</dataFile>
+					<excludes>
+						<exclude>org/sunbird/bean/*</exclude>
+						<exclude>org/sunbird/models/**/*</exclude>
+						<exclude>org/sunbird/learner/actors/url/action/**/*</exclude>
+						<exclude>org/sunbird/learner/actors/bulkupload/model/*</exclude>
+					</excludes>
 				</configuration>
 				<executions>
 					<execution>

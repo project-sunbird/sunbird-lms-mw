@@ -273,7 +273,7 @@ public final class SchedulerManager {
     ProjectLogger.log(
         "SchedulerManager:scheduleShadowUser: schedule time is : " + shadowUserTime,
         LoggerEnum.INFO.name());
-     Trigger migrateShadowUserTrigger =
+    Trigger migrateShadowUserTrigger =
         TriggerBuilder.newTrigger()
             .withIdentity("migrateShadowUserTrigger", identifier)
             .withSchedule(CronScheduleBuilder.cronSchedule(shadowUserTime))
@@ -289,7 +289,7 @@ public final class SchedulerManager {
           LoggerEnum.INFO.name());
     } catch (Exception e) {
       ProjectLogger.log(
-          "SchedulerManager:scheduleShadowUser Error occured " + e.getMessage(),
+          "SchedulerManager:scheduleShadowUser Error occurred " + e.getMessage(),
           LoggerEnum.ERROR.name());
     }
   }

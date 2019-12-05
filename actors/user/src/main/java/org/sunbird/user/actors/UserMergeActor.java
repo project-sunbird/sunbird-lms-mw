@@ -111,7 +111,7 @@ public class UserMergeActor extends UserBaseActor {
 
       //deleting User From KeyCloak
       CompletableFuture.supplyAsync(()-> {return deactivateMergeeFromKC((String)mergeeDBMap.get(JsonKey.ID));}).thenApply(status->{
-        ProjectLogger.log("UserMergeActor: updateUserMergeDetails: user deleted from KeyCloak: "+status);
+        ProjectLogger.log("UserMergeActor: updateUserMergeDetails: user deleted from KeyCloak: "+status,LoggerEnum.INFO.name());
         return null;
       });
 

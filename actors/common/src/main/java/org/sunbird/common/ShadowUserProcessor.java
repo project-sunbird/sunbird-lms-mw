@@ -91,7 +91,7 @@ public class ShadowUserProcessor {
         || ((int) esUser.get(JsonKey.STATUS)) != shadowUser.getUserStatus()) {
       updateUserInUserTable(flagsValue, shadowUser.getUserId(), rootOrgId, shadowUser);
       if(shadowUser.getUserStatus()==ProjectUtil.Status.INACTIVE.getValue()){
-        deactivateMergeeFromKC(userId);
+        deactivateUserFromKC(userId);
       }
     }
     deleteUserFromOrganisations(
@@ -103,7 +103,7 @@ public class ShadowUserProcessor {
     updateUserInShadowDb(userId, shadowUser, ClaimStatus.CLAIMED.getValue(), null);
   }
 
-  private void deactivateMergeeFromKC(String userId){
+  private void deactivateUserFromKC(String userId){
     Map<String,Object>userMap=new HashMap<>();
     userMap.put(JsonKey.USER_ID,userId);
     try {

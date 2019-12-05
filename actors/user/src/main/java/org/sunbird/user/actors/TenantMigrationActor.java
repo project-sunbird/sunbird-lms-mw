@@ -140,7 +140,7 @@ public class TenantMigrationActor extends BaseActor {
       ProjectCommonException.throwServerErrorException(ResponseCode.errorUserMigrationFailed);
     }
     if(null!=userUpdateRequest.get(JsonKey.IS_DELETED) && (Boolean)userUpdateRequest.get(JsonKey.IS_DELETED)){
-      deactivateUserFromKC(userUpdateRequest);
+      deactivateUserFromKC((String) userUpdateRequest.get(JsonKey.ID));
     }
     ProjectLogger.log(
         "TenantMigrationActor:migrateUser user record got updated.", LoggerEnum.INFO.name());
@@ -185,8 +185,10 @@ public class TenantMigrationActor extends BaseActor {
     tellToAnother(notificationRequest);
   }
 
-  private void deactivateUserFromKC(Map<String,Object>userDbMap){
+  private void deactivateUserFromKC(String userId){
     try{
+      Map<String,Object>userDbMap=new HashMap<>();
+      userDbMap.put(JsonKey.USER_ID,userId);
       String status=getSSOManager().deactivateUser(userDbMap);
       ProjectLogger.log("TenantMigrationActor:deactivateUserFromKC:user status in deactivating Keycloak"+status,LoggerEnum.INFO.name());
     }

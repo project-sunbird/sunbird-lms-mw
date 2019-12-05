@@ -110,7 +110,7 @@ public class UserMergeActor extends UserBaseActor {
       mergeUserDetailsToEs(userRequest);
 
       //deleting User From KeyCloak
-      CompletableFuture.supplyAsync(()-> {return deactivateMergeeFromKC(mergeeDBMap);}).thenApply(status->{
+      CompletableFuture.supplyAsync(()-> {return deactivateMergeeFromKC((String)mergeeDBMap.get(JsonKey.ID));}).thenApply(status->{
         ProjectLogger.log("UserMergeActor: updateUserMergeDetails: user deleted from KeyCloak: "+status);
         return null;
       });
@@ -294,7 +294,9 @@ public class UserMergeActor extends UserBaseActor {
   }
 
 
-  private String deactivateMergeeFromKC(Map<String,Object>userMap){
+  private String deactivateMergeeFromKC(String userId){
+    Map<String,Object>userMap=new HashMap<>();
+    userMap.put(JsonKey.USER_ID,userId);
     ProjectLogger.log("UserMergeActor:deactivateMergeeFromKC: request Got to deactivate mergee account from KC:"+userMap,LoggerEnum.INFO.name());
     return  keyCloakService.deactivateUser(userMap);
   }

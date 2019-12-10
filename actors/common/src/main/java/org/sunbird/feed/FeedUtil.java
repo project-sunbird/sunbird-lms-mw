@@ -42,7 +42,9 @@ public class FeedUtil {
     } else {
       Map<String, Object> data = feedList.get(index).getData();
       List<String> channelList = (List<String>) data.get(JsonKey.PROSPECT_CHANNELS);
-      channelList.add(shadowUser.getChannel());
+      if(!channelList.contains(shadowUser.getChannel())) {
+        channelList.add(shadowUser.getChannel());
+      }
       response = feedService.update(feedList.get(index));
     }
     return response;

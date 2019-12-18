@@ -20,6 +20,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.role.service.RoleService;
+import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
 import org.sunbird.models.user.org.UserOrg;
@@ -55,8 +56,12 @@ public class UserRoleActor extends UserBaseActor {
   }
 
   private void getRoles() {
-    ProjectLogger.log("UserRoleActor: getRoles called");
-    Response response = RoleService.getUserRoles();
+    ProjectLogger.log("UserRoleActor: getRoles called", LoggerEnum.INFO.name());
+    Response response = DataCacheHandler.getRoleResponse();
+    if (response == null) {
+      response = RoleService.getUserRoles();
+      DataCacheHandler.setRoleResponse(response);
+    }
     sender().tell(response, self());
   }
 

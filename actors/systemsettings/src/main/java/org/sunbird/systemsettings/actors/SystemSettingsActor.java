@@ -37,11 +37,11 @@ public class SystemSettingsActor extends BaseActor {
     /*
      * super.preStart(); try { List<SystemSetting> settings =
      * systemSettingDaoImpl.readAll(); if (CollectionUtils.isNotEmpty(settings)) {
-     * settings .stream() .map(f ->
+     * settings.stream().map(f ->
      * cache.put(ActorOperations.GET_SYSTEM_SETTING.getValue(), f.getField(), f))
-     * .collect(Collectors.toList()); } } catch (Exception e) { ProjectLogger.log(
-     * "SystemSettingsActor:getSystemSetting: Error occurred = " + e.getMessage(),
-     * LoggerEnum.ERROR.name()); }
+     * .collect(Collectors.toList()); } } catch (Exception e) {
+     * ProjectLogger.log("SystemSettingsActor:getSystemSetting: Error occurred = " +
+     * e.getMessage(), LoggerEnum.ERROR.name()); }
      */ }
 
   @Override
@@ -81,6 +81,9 @@ public class SystemSettingsActor extends BaseActor {
               value);
     }
 
+    ProjectLogger.log(
+        "SystemSettingsActor:getSystemSetting: new changes applied " + actorMessage.getRequest(),
+        LoggerEnum.INFO.name());
     /*
      * (SystemSetting) cache.get( ActorOperations.GET_SYSTEM_SETTING.getValue(),
      * (String) actorMessage.getContext().get(JsonKey.FIELD), SystemSetting.class);

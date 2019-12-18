@@ -1,13 +1,12 @@
 package org.sunbird.systemsettings.actors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.collections.CollectionUtils;
+import java.text.MessageFormat;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
-import org.sunbird.actorutil.user.UserClient;
-import org.sunbird.actorutil.user.impl.UserClientImpl;
-import org.sunbird.cache.CacheFactory;
-import org.sunbird.cache.interfaces.Cache;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
@@ -20,11 +19,6 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.models.systemsetting.SystemSetting;
 import org.sunbird.systemsettings.dao.impl.SystemSettingDaoImpl;
 
-import java.text.MessageFormat;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
 @ActorConfig(
   tasks = {"getSystemSetting", "getAllSystemSettings", "setSystemSetting"},
   asyncTasks = {}
@@ -34,25 +28,21 @@ public class SystemSettingsActor extends BaseActor {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private final SystemSettingDaoImpl systemSettingDaoImpl =
       new SystemSettingDaoImpl(cassandraOperation);
-  private Cache cache = CacheFactory.getInstance();
+  private static ConcurrentHashMap<String, String> systemSettingsMap =
+      new ConcurrentHashMap<String, String>();
+  // private Cache cache = CacheFactory.getInstance();
 
   @Override
   public void preStart() throws Exception {
-    super.preStart();
-    try {
-      List<SystemSetting> settings = systemSettingDaoImpl.readAll();
-      if (CollectionUtils.isNotEmpty(settings)) {
-        settings
-            .stream()
-            .map(f -> cache.put(ActorOperations.GET_SYSTEM_SETTING.getValue(), f.getField(), f))
-            .collect(Collectors.toList());
-      }
-    } catch (Exception e) {
-      ProjectLogger.log(
-          "SystemSettingsActor:getSystemSetting: Error occurred = " + e.getMessage(),
-          LoggerEnum.ERROR.name());
-    }
-  }
+    /*
+     * super.preStart(); try { List<SystemSetting> settings =
+     * systemSettingDaoImpl.readAll(); if (CollectionUtils.isNotEmpty(settings)) {
+     * settings .stream() .map(f ->
+     * cache.put(ActorOperations.GET_SYSTEM_SETTING.getValue(), f.getField(), f))
+     * .collect(Collectors.toList()); } } catch (Exception e) { ProjectLogger.log(
+     * "SystemSettingsActor:getSystemSetting: Error occurred = " + e.getMessage(),
+     * LoggerEnum.ERROR.name()); }
+     */ }
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -81,20 +71,27 @@ public class SystemSettingsActor extends BaseActor {
     ProjectLogger.log(
         "SystemSettingsActor:getSystemSetting: request is " + actorMessage.getRequest(),
         LoggerEnum.INFO.name());
-    SystemSetting setting =
-        (SystemSetting)
-            cache.get(
-                ActorOperations.GET_SYSTEM_SETTING.getValue(),
-                (String) actorMessage.getContext().get(JsonKey.FIELD),
-                SystemSetting.class);
+    SystemSetting setting = null;
+    String value = systemSettingsMap.get((String) actorMessage.getContext().get(JsonKey.FIELD));
+    if (value != null) {
+      setting =
+          new SystemSetting(
+              (String) actorMessage.getContext().get(JsonKey.FIELD),
+              (String) actorMessage.getContext().get(JsonKey.FIELD),
+              value);
+    }
+
+    /*
+     * (SystemSetting) cache.get( ActorOperations.GET_SYSTEM_SETTING.getValue(),
+     * (String) actorMessage.getContext().get(JsonKey.FIELD), SystemSetting.class);
+     */
     if (setting == null) {
       setting =
           systemSettingDaoImpl.readByField((String) actorMessage.getContext().get(JsonKey.FIELD));
+
       if (setting != null) {
-        cache.put(
-            ActorOperations.GET_SYSTEM_SETTING.getValue(),
-            (String) actorMessage.getContext().get(JsonKey.FIELD),
-            setting);
+        systemSettingsMap.put(
+            (String) actorMessage.getContext().get(JsonKey.FIELD), setting.getValue());
       }
     }
     if (setting == null) {
@@ -136,7 +133,7 @@ public class SystemSettingsActor extends BaseActor {
     SystemSetting systemSetting = mapper.convertValue(request, SystemSetting.class);
     Response response = systemSettingDaoImpl.write(systemSetting);
     if (response != null) {
-      cache.put(ActorOperations.GET_SYSTEM_SETTING.getValue(), field, systemSetting);
+      // cache.put(ActorOperations.GET_SYSTEM_SETTING.getValue(), field, systemSetting);
     }
     sender().tell(response, self());
   }

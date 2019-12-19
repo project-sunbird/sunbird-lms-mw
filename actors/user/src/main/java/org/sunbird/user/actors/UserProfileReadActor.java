@@ -4,6 +4,7 @@ import static org.sunbird.learner.util.Util.isNotNull;
 
 import akka.actor.ActorRef;
 import akka.dispatch.Mapper;
+import akka.pattern.Patterns;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -57,7 +58,6 @@ import org.sunbird.user.dao.impl.UserDaoImpl;
 import org.sunbird.user.dao.impl.UserExternalIdentityDaoImpl;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
-import scala.concurrent.duration.Duration;
 
 @ActorConfig(
   tasks = {"getUserDetailsByLoginId", "getUserProfile", "getUserProfileV2", "getUserByKey"},
@@ -115,7 +115,7 @@ public class UserProfileReadActor extends BaseActor {
     sender().tell(response, self());
   }
 
-  private Response getUserProfileData(Request actorMessage){
+  private Response getUserProfileData(Request actorMessage) {
     Map<String, Object> userMap = actorMessage.getRequest();
     String id = (String) userMap.get(JsonKey.USER_ID);
     String userId;
@@ -145,16 +145,21 @@ public class UserProfileReadActor extends BaseActor {
       showMaskedData = false;
     }
     boolean isPrivate = (boolean) actorMessage.getContext().get(JsonKey.PRIVATE);
-    Map<String, Object> result=null;
+    Map<String, Object> result = null;
     if (!isPrivate) {
-      Future<Map<String, Object>> resultF = esUtil.getDataByIdentifier(ProjectUtil.EsType.user.getTypeName(), userId);
+      Future<Map<String, Object>> resultF =
+          esUtil.getDataByIdentifier(ProjectUtil.EsType.user.getTypeName(), userId);
       try {
-        Object object  =  Await.result(resultF, ElasticSearchHelper.timeout.duration());
-        if(object != null) {
+        Object object = Await.result(resultF, ElasticSearchHelper.timeout.duration());
+        if (object != null) {
           result = (Map<String, Object>) object;
         }
       } catch (Exception e) {
-        ProjectLogger.log(String.format("%s:%s:User not found with provided id == %s and error %s",this.getClass().getSimpleName(),"getUserProfileData",e.getMessage()), LoggerEnum.ERROR.name());
+        ProjectLogger.log(
+            String.format(
+                "%s:%s:User not found with provided id == %s and error %s",
+                this.getClass().getSimpleName(), "getUserProfileData", e.getMessage()),
+            LoggerEnum.ERROR.name());
       }
     } else {
       UserDao userDao = new UserDaoImpl();
@@ -184,7 +189,10 @@ public class UserProfileReadActor extends BaseActor {
         && (Boolean) result.get(JsonKey.IS_DELETED)) {
       ProjectCommonException.throwClientErrorException(ResponseCode.userAccountlocked);
     }
-    fetchRootAndRegisterOrganisation(result);
+    Future<Map<String, Object>> esResultF = fetchRootAndRegisterOrganisation(result);
+    Map<String, Object> esResult =
+        (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(esResultF);
+    result.put(JsonKey.ROOT_ORG, esResult);
     // having check for removing private filed from user , if call user and response
     // user data id is not same.
     String requestedById =
@@ -313,20 +321,16 @@ public class UserProfileReadActor extends BaseActor {
     return responseMap;
   }
 
-  private void fetchRootAndRegisterOrganisation(Map<String, Object> result) {
+  private Future<Map<String, Object>> fetchRootAndRegisterOrganisation(Map<String, Object> result) {
     try {
       if (isNotNull(result.get(JsonKey.ROOT_ORG_ID))) {
-
         String rootOrgId = (String) result.get(JsonKey.ROOT_ORG_ID);
-        Future<Map<String, Object>> esResultF =
-            esUtil.getDataByIdentifier(ProjectUtil.EsType.organisation.getTypeName(), rootOrgId);
-        Map<String, Object> esResult =
-            (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(esResultF);
-        result.put(JsonKey.ROOT_ORG, esResult);
+        return esUtil.getDataByIdentifier(ProjectUtil.EsType.organisation.getTypeName(), rootOrgId);
       }
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);
     }
+    return null;
   }
 
   @SuppressWarnings({"unchecked", "rawtypes"})
@@ -729,7 +733,27 @@ public class UserProfileReadActor extends BaseActor {
           ResponseCode.userAccountlocked.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
-    fetchRootAndRegisterOrganisation(result);
+    Future<Map<String, Object>> future = fetchRootAndRegisterOrganisation(result);
+    Future<Response> response =
+        future.map(
+            new Mapper<Map<String, Object>, Response>() {
+              @Override
+              public Response apply(Map<String, Object> responseMap) {
+                ProjectLogger.log(
+                    "UserProfileReadActor:handle user profile read async call ",
+                    LoggerEnum.INFO.name());
+                result.put(JsonKey.ROOT_ORG, responseMap);
+                Response response = new Response();
+                handleUserCallAsync(result, response, actorMessage);
+                return response;
+              }
+            },
+            getContext().dispatcher());
+    Patterns.pipe(response, getContext().dispatcher()).to(sender());
+  }
+
+  private void handleUserCallAsync(
+      Map<String, Object> result, Response response, Request actorMessage) {
     // having check for removing private filed from user , if call user and response
     // user data id is not same.
     String requestedById =
@@ -744,11 +768,11 @@ public class UserProfileReadActor extends BaseActor {
       if (!(((String) result.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedById))) {
         result = removeUserPrivateField(result);
       } else {
-        // These values are set to ensure backward compatibility post introduction of global
+        // These values are set to ensure backward compatibility post introduction of
+        // global
         // settings in user profile visibility
         setCompleteProfileVisibilityMap(result);
         setDefaultUserProfileVisibility(result);
-
         // If the user requests his data then we are fetching the private data from
         // userprofilevisibility index
         // and merge it with user index data
@@ -773,7 +797,6 @@ public class UserProfileReadActor extends BaseActor {
       return;
     }
 
-    Response response = new Response();
     if (null != result) {
       // remove email and phone no from response
       result.remove(JsonKey.ENC_EMAIL);
@@ -798,7 +821,6 @@ public class UserProfileReadActor extends BaseActor {
       result = new HashMap<>();
       response.put(JsonKey.RESPONSE, result);
     }
-    sender().tell(response, self());
   }
 
   private void updateTncInfo(Map<String, Object> result) {

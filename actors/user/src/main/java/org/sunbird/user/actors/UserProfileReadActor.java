@@ -1,23 +1,11 @@
 package org.sunbird.user.actors;
 
-import static org.sunbird.learner.util.Util.isNotNull;
-
 import akka.actor.ActorRef;
 import akka.dispatch.Mapper;
 import akka.pattern.Patterns;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -31,14 +19,8 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
-import org.sunbird.common.models.util.PropertiesCache;
-import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.request.ExecutionContext;
@@ -59,8 +41,17 @@ import org.sunbird.user.dao.impl.UserExternalIdentityDaoImpl;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
 
+import java.text.MessageFormat;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+
+import static akka.pattern.Patterns.pipe;
+import static org.sunbird.learner.util.Util.isNotNull;
+
 @ActorConfig(
-  tasks = {"getUserDetailsByLoginId", "getUserProfile", "getUserProfileV2", "getUserByKey"},
+  tasks = {"getUserDetailsByLoginId", "getUserProfile", "getUserProfileV2", "getUserByKey", "checkUserExistence"},
   asyncTasks = {}
 )
 public class UserProfileReadActor extends BaseActor {
@@ -99,6 +90,9 @@ public class UserProfileReadActor extends BaseActor {
         break;
       case "getUserByKey":
         getUserByKey(request);
+        break;
+      case "checkUserExistence":
+        checkUserExistence(request);
         break;
       default:
         onReceiveUnsupportedOperation("UserProfileReadActor");
@@ -832,7 +826,7 @@ public class UserProfileReadActor extends BaseActor {
               getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()), JsonKey.TNC_CONFIG);
     } catch (Exception e) {
       ProjectLogger.log(
-          "UserManagementActor:updateTncInfo: Exception occurred while getting system setting for"
+          "UserProfileReadActor:updateTncInfo: Exception occurred while getting system setting for"
               + JsonKey.TNC_CONFIG
               + e.getMessage(),
           LoggerEnum.ERROR.name());
@@ -856,16 +850,16 @@ public class UserProfileReadActor extends BaseActor {
         if (tncConfigMap.containsKey(tncLatestVersion)) {
           String url = (String) ((Map) tncConfigMap.get(tncLatestVersion)).get(JsonKey.URL);
           ProjectLogger.log(
-              "UserManagementActor:updateTncInfo: url = " + url, LoggerEnum.INFO.name());
+              "UserProfileReadActor:updateTncInfo: url = " + url, LoggerEnum.INFO.name());
           result.put(JsonKey.TNC_LATEST_VERSION_URL, url);
         } else {
           result.put(JsonKey.PROMPT_TNC, false);
           ProjectLogger.log(
-              "UserManagementActor:updateTncInfo: TnC version URL is missing from configuration");
+              "UserProfileReadActor:updateTncInfo: TnC version URL is missing from configuration");
         }
       } catch (Exception e) {
         ProjectLogger.log(
-            "UserManagementActor:updateTncInfo: Exception occurred with error message = "
+            "UserProfileReadActor:updateTncInfo: Exception occurred with error message = "
                 + e.getMessage(),
             LoggerEnum.ERROR.name());
         ProjectCommonException.throwServerErrorException(ResponseCode.SERVER_ERROR);
@@ -884,4 +878,31 @@ public class UserProfileReadActor extends BaseActor {
     }
     return new ArrayList<>();
   }
+
+  private void checkUserExistence(Request request) {
+    Map<String,Object>searchMap=new HashMap<>();
+    String value=(String)request.get(JsonKey.VALUE);
+    String encryptedValue = null;
+    try {
+      encryptedValue = this.encryptionService.encryptData(StringUtils.lowerCase(value));
+    } catch (Exception var11) {
+      ProjectCommonException exception = new ProjectCommonException(ResponseCode.userDataEncryptionError.getErrorCode(), ResponseCode.userDataEncryptionError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
+      this.sender().tell(exception, this.self());
+    }
+    searchMap.put((String) request.get(JsonKey.KEY),encryptedValue);
+    ProjectLogger.log("UserProfileReadActor:checkUserExistence: search map prepared "+searchMap,LoggerEnum.INFO.name());
+    CompletableFuture<Response>fut=CompletableFuture.supplyAsync(() -> {
+      Response response=cassandraOperation.getRecordsByProperties(JsonKey.SUNBIRD, JsonKey.USER, searchMap);
+      List<Map<String,Object>>respList=(List)response.get(JsonKey.RESPONSE);
+      Response resp=new Response();
+      resp.put(JsonKey.EXISTS, false);
+      long size=respList.size();
+      if(size>0) {
+        resp.put(JsonKey.EXISTS, true);
+      }
+      return resp;
+    });
+    pipe(fut, getContext().dispatcher()).to(sender());
+  }
+
 }

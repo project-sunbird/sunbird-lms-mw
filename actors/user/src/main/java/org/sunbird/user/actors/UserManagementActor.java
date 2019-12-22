@@ -24,7 +24,10 @@ import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -58,9 +61,10 @@ import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.UserActorOperations;
 import org.sunbird.user.util.UserUtil;
+import scala.concurrent.Future;
 
 @ActorConfig(
-  tasks = {"createUser", "updateUser"},
+  tasks = {"createUser", "updateUser", "createUserV3"},
   asyncTasks = {}
 )
 public class UserManagementActor extends BaseActor {
@@ -74,9 +78,11 @@ public class UserManagementActor extends BaseActor {
   private OrganisationClient organisationClient = new OrganisationClientImpl();
   private OrgExternalService orgExternalService = new OrgExternalService();
   private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+  private Util.DbInfo userOrgDb = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
   private static InterServiceCommunication interServiceCommunication =
       InterServiceCommunicationFactory.getInstance();
   private ActorRef systemSettingActorRef = null;
+  private static ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -94,9 +100,43 @@ public class UserManagementActor extends BaseActor {
       case "updateUser":
         updateUser(request);
         break;
+      case "createUserV3":
+        createUserV3(request);
       default:
         onReceiveUnsupportedOperation("UserManagementActor");
     }
+  }
+
+  /**
+   * This method will create user in user in cassandra and update to ES as well at same time.
+   *
+   * @param request
+   */
+  private void createUserV3(Request actorMessage) {
+    ProjectLogger.log("UserManagementActor:createUserV3 method called.", LoggerEnum.INFO.name());
+    actorMessage.toLower();
+    Map<String, Object> userMap = actorMessage.getRequest();
+    String signupType =
+        (String) actorMessage.getContext().get(JsonKey.SIGNUP_TYPE) != null
+            ? (String) actorMessage.getContext().get(JsonKey.SIGNUP_TYPE)
+            : "";
+    String source =
+        (String) actorMessage.getContext().get(JsonKey.REQUEST_SOURCE) != null
+            ? (String) actorMessage.getContext().get(JsonKey.REQUEST_SOURCE)
+            : "";
+    String channel =
+        DataCacheHandler.getConfigSettings()
+            .get(
+                JsonKey
+                    .CUSTODIAN_ORG_CHANNEL); // userService.getCustodianChannel(userMap,
+                                             // systemSettingActorRef);
+    String rootOrgId =
+        DataCacheHandler.getConfigSettings()
+            .get(JsonKey.CUSTODIAN_ORG_ID); // userService.getRootOrgIdFromChannel(channel);
+    userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
+    userMap.put(JsonKey.CHANNEL, channel);
+    userMap.put(JsonKey.USER_TYPE, UserType.OTHER.getTypeName());
+    processUserRequestV3(userMap, signupType, source);
   }
 
   private void cacheFrameworkFieldsConfig() {
@@ -564,6 +604,105 @@ public class UserManagementActor extends BaseActor {
             ResponseCode.parameterMismatch.getErrorMessage(), StringFormatter.joinByComma(param)));
   }
 
+  private void processUserRequestV3(Map<String, Object> userMap, String signupType, String source) {
+    Map<String, Object> requestMap = null;
+    UserUtil.setUserDefaultValueForV3(userMap);
+    UserUtil.toLower(userMap);
+    UserUtil.checkPhoneUniqueness((String) userMap.get(JsonKey.PHONE));
+    UserUtil.checkEmailUniqueness((String) userMap.get(JsonKey.EMAIL));
+    String userId = ProjectUtil.generateUniqueId();
+    userMap.put(JsonKey.ID, userId);
+    userMap.put(JsonKey.USER_ID, userId);
+    requestMap = UserUtil.encryptUserData(userMap);
+    UserUtil.addMaskEmailAndMaskPhone(requestMap);
+    requestMap.put(JsonKey.IS_DELETED, false);
+    Map<String, Boolean> userFlagsMap = new HashMap<>();
+    // checks if the user is belongs to state and sets a validation flag
+    setStateValidation(requestMap, userFlagsMap);
+    userFlagsMap.put(
+        JsonKey.EMAIL_VERIFIED,
+        (Boolean)
+            (userMap.get(JsonKey.EMAIL_VERIFIED) != null
+                ? userMap.get(JsonKey.EMAIL_VERIFIED)
+                : false));
+    userFlagsMap.put(
+        JsonKey.PHONE_VERIFIED,
+        (Boolean)
+            (userMap.get(JsonKey.PHONE_VERIFIED) != null
+                ? userMap.get(JsonKey.PHONE_VERIFIED)
+                : false));
+    int userFlagValue = userFlagsToNum(userFlagsMap);
+    requestMap.put(JsonKey.FLAGS_VALUE, userFlagValue);
+    Response response = null;
+    boolean isPasswordUpdated = false;
+    try {
+      response =
+          cassandraOperation.insertRecord(
+              usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
+      isPasswordUpdated = UserUtil.updatePassword(userMap);
+    } finally {
+      if (response == null) {
+        response = new Response();
+      }
+      response.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
+      if (!isPasswordUpdated) {
+        response.put(JsonKey.ERROR_MSG, ResponseMessage.Message.ERROR_USER_UPDATE_PASSWORD);
+      }
+    }
+    Map<String, Object> esResponse = new HashMap<>();
+    if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+      Map<String, Object> orgMap = saveUserOrgInfo(userMap);
+      esResponse = Util.getUserDetails(requestMap, orgMap);
+
+    } else {
+      ProjectLogger.log("UserManagementActor:processUserRequest: User creation failure");
+    }
+    saveUserTOES(esResponse);
+    sender().tell(response, self());
+    Map<String, Object> targetObject = null;
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+    Map<String, String> rollUp = new HashMap<>();
+    rollUp.put("l1", (String) userMap.get(JsonKey.ROOT_ORG_ID));
+    ExecutionContext.getCurrent().getRequestContext().put(JsonKey.ROLLUP, rollUp);
+    targetObject =
+        TelemetryUtil.generateTargetObject(
+            (String) userMap.get(JsonKey.ID), TelemetryEnvKey.USER, JsonKey.CREATE, null);
+    TelemetryUtil.generateCorrelatedObject(userId, TelemetryEnvKey.USER, null, correlatedObject);
+    if (StringUtils.isNotBlank(signupType)) {
+      TelemetryUtil.generateCorrelatedObject(
+          signupType, StringUtils.capitalize(JsonKey.SIGNUP_TYPE), null, correlatedObject);
+    } else {
+      ProjectLogger.log("UserManagementActor:processUserRequest: No signupType found");
+    }
+    if (StringUtils.isNotBlank(source)) {
+      TelemetryUtil.generateCorrelatedObject(
+          source, StringUtils.capitalize(JsonKey.REQUEST_SOURCE), null, correlatedObject);
+    } else {
+      ProjectLogger.log("UserManagementActor:processUserRequest: No source found");
+    }
+
+    TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
+  }
+
+  private Map<String, Object> saveUserOrgInfo(Map<String, Object> userMap) {
+    Map<String, Object> userOrgMap = createUserOrgRequestData(userMap);
+    cassandraOperation.insertRecord(userOrgDb.getKeySpace(), userOrgDb.getTableName(), userOrgMap);
+
+    return userOrgMap;
+  }
+
+  private Map<String, Object> createUserOrgRequestData(Map<String, Object> userMap) {
+    Map<String, Object> userOrgMap = new HashMap<String, Object>();
+    userOrgMap.put(JsonKey.ID, ProjectUtil.getUniqueIdFromTimestamp(1));
+    userOrgMap.put(JsonKey.HASHTAGID, userMap.get(JsonKey.ROOT_ORG_ID));
+    userOrgMap.put(JsonKey.USER_ID, userMap.get(JsonKey.USER_ID));
+    userOrgMap.put(JsonKey.ORGANISATION_ID, userMap.get(JsonKey.ROOT_ORG_ID));
+    userOrgMap.put(JsonKey.ORG_JOIN_DATE, ProjectUtil.getFormattedDate());
+    userOrgMap.put(JsonKey.IS_DELETED, false);
+    userOrgMap.put(JsonKey.ROLES, userMap.get(JsonKey.ROLES));
+    return userOrgMap;
+  }
+
   @SuppressWarnings("unchecked")
   private void processUserRequest(
       Map<String, Object> userMap, String callerId, String signupType, String source) {
@@ -705,16 +844,19 @@ public class UserManagementActor extends BaseActor {
     return userBooleanMap;
   }
 
-
-  /** This method set the default value of the user-flag if it is not present in userDbRecord
+  /**
+   * This method set the default value of the user-flag if it is not present in userDbRecord
+   *
    * @param userDbRecord
    * @param flagType
    * @param verifiedFlagType
    * @return
    */
-  public Map<String, Object> setUserFlagValue(Map<String, Object> userDbRecord, String flagType, String verifiedFlagType) {
-    if(userDbRecord.get(flagType) != null && (userDbRecord.get(verifiedFlagType) == null
-            || (boolean)userDbRecord.get(verifiedFlagType))) {
+  public Map<String, Object> setUserFlagValue(
+      Map<String, Object> userDbRecord, String flagType, String verifiedFlagType) {
+    if (userDbRecord.get(flagType) != null
+        && (userDbRecord.get(verifiedFlagType) == null
+            || (boolean) userDbRecord.get(verifiedFlagType))) {
       userDbRecord.put(verifiedFlagType, true);
     } else {
       userDbRecord.put(verifiedFlagType, false);
@@ -757,6 +899,18 @@ public class UserManagementActor extends BaseActor {
     EmailAndSmsRequest.getRequest().putAll(userMap);
     EmailAndSmsRequest.setOperation(UserActorOperations.PROCESS_ONBOARDING_MAIL_AND_SMS.getValue());
     tellToAnother(EmailAndSmsRequest);
+  }
+
+  private void saveUserTOES(Map<String, Object> completeUserMap) {
+    Future<String> response =
+        esUtil.save(
+            ProjectUtil.EsType.user.getTypeName(),
+            (String) completeUserMap.get(JsonKey.USER_ID),
+            completeUserMap);
+    String saveResponse = (String) ElasticSearchHelper.getResponseFromFuture(response);
+    ProjectLogger.log(
+        "UserManagementActor:saveUserTOES  user data saved to ES:" + saveResponse,
+        LoggerEnum.INFO.name());
   }
 
   private void saveUserDetailsToEs(Map<String, Object> completeUserMap) {

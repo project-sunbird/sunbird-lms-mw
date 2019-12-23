@@ -883,13 +883,14 @@ public class UserProfileReadActor extends BaseActor {
     Map<String,Object>searchMap=new HashMap<>();
     String value=(String)request.get(JsonKey.VALUE);
     String encryptedValue = null;
-    try {
-      encryptedValue = this.encryptionService.encryptData(StringUtils.lowerCase(value));
-    } catch (Exception var11) {
-      ProjectCommonException exception = new ProjectCommonException(ResponseCode.userDataEncryptionError.getErrorCode(), ResponseCode.userDataEncryptionError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
-      this.sender().tell(exception, this.self());
-    }
-    searchMap.put((String) request.get(JsonKey.KEY),encryptedValue);
+//    try {
+//      encryptedValue = this.encryptionService.encryptData(StringUtils.lowerCase(value));
+//    } catch (Exception var11) {
+//      ProjectCommonException exception = new ProjectCommonException(ResponseCode.userDataEncryptionError.getErrorCode(), ResponseCode.userDataEncryptionError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
+//      this.sender().tell(exception, this.self());
+//    }
+//    searchMap.put((String) request.get(JsonKey.KEY),encryptedValue);
+    searchMap.put((String) request.get(JsonKey.KEY),value);
     ProjectLogger.log("UserProfileReadActor:checkUserExistence: search map prepared "+searchMap,LoggerEnum.INFO.name());
     CompletableFuture<Object>fut=CompletableFuture.supplyAsync(() -> {
       Response response=cassandraOperation.getRecordsByProperties(JsonKey.SUNBIRD, JsonKey.USER, searchMap);

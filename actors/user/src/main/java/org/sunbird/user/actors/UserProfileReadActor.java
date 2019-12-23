@@ -1,19 +1,11 @@
 package org.sunbird.user.actors;
 
-import static akka.pattern.Patterns.pipe;
-import static org.sunbird.learner.util.Util.isNotNull;
-
 import akka.actor.ActorRef;
 import akka.dispatch.Mapper;
 import akka.pattern.Patterns;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import java.text.MessageFormat;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -49,18 +41,12 @@ import org.sunbird.user.dao.impl.UserExternalIdentityDaoImpl;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
 
-<<<<<<< HEAD
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
-
-import static akka.pattern.Patterns.pipe;
 import static org.sunbird.learner.util.Util.isNotNull;
 
-=======
->>>>>>> 2860e56274d0e43175aec4f4c1c9d254e982abde
 @ActorConfig(
   tasks = {
     "getUserDetailsByLoginId",

@@ -895,10 +895,13 @@ public class UserProfileReadActor extends BaseActor {
       Response response=cassandraOperation.getRecordsByProperties(JsonKey.SUNBIRD, JsonKey.USER, searchMap);
       List<Map<String,Object>>respList=(List)response.get(JsonKey.RESPONSE);
       Response resp=new Response();
-      resp.put(JsonKey.EXISTS, false);
+      resp.put(JsonKey.EXISTS, true);
       long size=respList.size();
-      if(size>0) {
-        resp.put(JsonKey.EXISTS, true);
+      if(size<=0) {
+        throw new ProjectCommonException(
+                ResponseCode.userNotFound.getErrorCode(),
+                ResponseCode.userNotFound.getErrorMessage(),
+                ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
       }
       return resp;
     });

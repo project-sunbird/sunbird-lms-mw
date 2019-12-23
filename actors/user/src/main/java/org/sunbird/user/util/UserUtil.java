@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.WeakHashMap;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
@@ -66,6 +67,7 @@ public class UserUtil {
   private static UserExternalIdentityDao userExternalIdentityDao =
       new UserExternalIdentityDaoImpl();
   private static ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
+  static Random rand = new Random(System.nanoTime());
 
   private UserUtil() {}
 
@@ -96,6 +98,54 @@ public class UserUtil {
               ProjectCommonException.throwClientErrorException(ResponseCode.PhoneNumberInUse, null);
             }
           }
+        }
+      }
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  public static void checkPhoneUniqueness(String phone) {
+    // Get Phone configuration if not found , by default phone will be unique across
+    // the application
+    String phoneSetting = DataCacheHandler.getConfigSettings().get(JsonKey.PHONE_UNIQUE);
+    if (StringUtils.isNotBlank(phoneSetting) && Boolean.parseBoolean(phoneSetting)) {
+      if (StringUtils.isNotBlank(phone)) {
+        try {
+          phone = encryptionService.encryptData(phone);
+        } catch (Exception e) {
+          ProjectLogger.log("Exception occurred while encrypting phone number ", e);
+        }
+        Response result =
+            cassandraOperation.getRecordsByIndexedProperty(
+                userDb.getKeySpace(), userDb.getTableName(), (JsonKey.PHONE), phone);
+        List<Map<String, Object>> userMapList =
+            (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+        if (!userMapList.isEmpty()) {
+          ProjectCommonException.throwClientErrorException(ResponseCode.PhoneNumberInUse, null);
+        }
+      }
+    }
+  }
+
+  public static void checkEmailUniqueness(String email) {
+    // Get Phone configuration if not found , by default phone will be unique across
+    // the application
+    String emailSetting = DataCacheHandler.getConfigSettings().get(JsonKey.EMAIL_UNIQUE);
+    if (StringUtils.isNotBlank(emailSetting) && Boolean.parseBoolean(emailSetting)) {
+      if (StringUtils.isNotBlank(email)) {
+        try {
+          email = encryptionService.encryptData(email);
+        } catch (Exception e) {
+          ProjectLogger.log("Exception occurred while encrypting phone number ", e);
+        }
+        Response result =
+            cassandraOperation.getRecordsByIndexedProperty(
+                userDb.getKeySpace(), userDb.getTableName(), (JsonKey.EMAIL), email);
+        List<Map<String, Object>> userMapList =
+            (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+        if (!userMapList.isEmpty()) {
+          ProjectCommonException.throwClientErrorException(
+              ResponseCode.emailAlreadyExistError, null);
         }
       }
     }
@@ -394,6 +444,31 @@ public class UserUtil {
   public static Map<String, Object> checkProfileCompleteness(Map<String, Object> userMap) {
     ProfileCompletenessService profileService = ProfileCompletenessFactory.getInstance();
     return profileService.computeProfile(userMap);
+  }
+
+  public static void setUserDefaultValueForV3(Map<String, Object> userMap) {
+    List<String> roles = new ArrayList<>();
+    roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
+    userMap.put(JsonKey.ROLES, roles);
+    userMap.put(
+        JsonKey.COUNTRY_CODE, propertiesCache.getProperty(JsonKey.SUNBIRD_DEFAULT_COUNTRY_CODE));
+    // Since global settings are introduced, profile visibility map should be empty during user
+    // creation
+    userMap.put(JsonKey.PROFILE_VISIBILITY, new HashMap<String, String>());
+    userMap.put(JsonKey.IS_DELETED, false);
+    userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
+    userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
+
+    if (StringUtils.isBlank((String) userMap.get(JsonKey.USERNAME))) {
+      String firstName = (String) userMap.get(JsonKey.FIRST_NAME);
+      firstName = firstName.split(" ")[0];
+      // getUsername(firstName);
+      userMap.put(JsonKey.USERNAME, firstName + rand.nextInt(1000000));
+    } else {
+      if (!userService.checkUsernameUniqueness((String) userMap.get(JsonKey.USERNAME), false)) {
+        ProjectCommonException.throwClientErrorException(ResponseCode.userNameAlreadyExistError);
+      }
+    }
   }
 
   public static void setUserDefaultValue(Map<String, Object> userMap, String callerId) {

@@ -891,16 +891,21 @@ public class UserProfileReadActor extends BaseActor {
     }
     searchMap.put((String) request.get(JsonKey.KEY),encryptedValue);
     ProjectLogger.log("UserProfileReadActor:checkUserExistence: search map prepared "+searchMap,LoggerEnum.INFO.name());
-    CompletableFuture<Response>fut=CompletableFuture.supplyAsync(() -> {
+    CompletableFuture<Object>fut=CompletableFuture.supplyAsync(() -> {
       Response response=cassandraOperation.getRecordsByProperties(JsonKey.SUNBIRD, JsonKey.USER, searchMap);
       List<Map<String,Object>>respList=(List)response.get(JsonKey.RESPONSE);
       Response resp=new Response();
-      resp.put(JsonKey.EXISTS, false);
       long size=respList.size();
-      if(size>0) {
-        resp.put(JsonKey.EXISTS, true);
+      if(size<=0) {
+        ProjectCommonException exception = new ProjectCommonException(ResponseCode.userNotFound.getErrorCode(),
+                ResponseCode.userNotFound.getErrorMessage(),
+                ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+        return exception;
       }
-      return resp;
+      else {
+        resp.put(JsonKey.EXISTS, true);
+        return resp;
+      }
     });
     pipe(fut, getContext().dispatcher()).to(sender());
   }

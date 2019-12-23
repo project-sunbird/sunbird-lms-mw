@@ -892,13 +892,11 @@ public class UserProfileReadActor extends BaseActor {
       this.sender().tell(exception, this.self());
     }
     searchMap.put((String) request.get(JsonKey.KEY),encryptedValue);
-    CompletableFuture<Object>fut=CompletableFuture.supplyAsync(()->{
+    ProjectLogger.log("UserProfileReadActor:checkUserExistence: search map prepared "+searchMap,LoggerEnum.INFO.name());
+    CompletableFuture<Object>fut=CompletableFuture.supplyAsync(() -> {
       Response response=cassandraOperation.getRecordsByProperties(JsonKey.SUNBIRD, JsonKey.USER, searchMap);
-      return response;
-    }).thenApplyAsync(resp->{
-      List<Map<String,Object>>respList=(List)resp.get(JsonKey.RESPONSE);
-      Response response=new Response();
-      long size=respList.size();
+      List<Map<String,Object>>respList=(List)response.get(JsonKey.RESPONSE);
+      Response resp=new Response();long size=respList.size();
       if(size<=0) {
         ProjectCommonException exception = new ProjectCommonException(ResponseCode.userNotFound.getErrorCode(),
                 ResponseCode.userNotFound.getErrorMessage(),
@@ -906,8 +904,8 @@ public class UserProfileReadActor extends BaseActor {
         return exception;
       }
       else {
-        response.put(JsonKey.EXISTS, true);
-        return response;
+        resp.put(JsonKey.EXISTS, true);
+        return resp;
       }
     });
     pipe(fut, getContext().dispatcher()).to(sender());

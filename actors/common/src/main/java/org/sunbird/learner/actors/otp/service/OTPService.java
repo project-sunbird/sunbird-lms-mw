@@ -7,14 +7,21 @@ import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.learner.actors.notificationservice.dao.EmailTemplateDao;
+import org.sunbird.learner.actors.notificationservice.dao.impl.EmailTemplateDaoImpl;
 import org.sunbird.learner.actors.otp.dao.OTPDao;
 import org.sunbird.learner.actors.otp.dao.impl.OTPDaoImpl;
 
 public class OTPService {
 
   private static OTPDao otpDao = OTPDaoImpl.getInstance();
+  private static EmailTemplateDao emailTemplateDao = EmailTemplateDaoImpl.getInstance();
 
-  public Map<String, Object> getOTPDetails(String type, String key) {
+  public static String getOTPSMSTemplate(String templateName) {
+   return emailTemplateDao.getTemplate(templateName);
+  }
+
+ public Map<String, Object> getOTPDetails(String type, String key) {
     return otpDao.getOTPDetails(type, key);
   }
 
@@ -26,7 +33,7 @@ public class OTPService {
     otpDao.deleteOtp(type,key);
   }
 
-  public static String getOTPSMSBody(Map<String, String> smsTemplate) {
+  public static String getDefaultOTPSMSBody(Map<String, String> smsTemplate) {
     try {
       Properties props = new Properties();
       props.put("resource.loader", "class");
@@ -43,7 +50,7 @@ public class OTPService {
       return writer.toString();
     } catch (Exception ex) {
       ProjectLogger.log(
-          "OTPService:getOTPSMSBody: Exception occurred with error message = " + ex.getMessage(), ex);
+          "OTPService:getDefaultOTPSMSBody: Exception occurred with error message = " + ex.getMessage(), ex);
     }
     return "";
   }

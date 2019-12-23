@@ -4,12 +4,17 @@ import com.warrenstrange.googleauth.GoogleAuthenticator;
 import com.warrenstrange.googleauth.GoogleAuthenticatorConfig;
 import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
 import com.warrenstrange.googleauth.KeyRepresentation;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+
+import java.io.StringWriter;
+import java.util.*;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.velocity.Template;
+import org.apache.velocity.VelocityContext;
+import org.apache.velocity.runtime.RuntimeServices;
+import org.apache.velocity.runtime.RuntimeSingleton;
+import org.apache.velocity.runtime.parser.node.SimpleNode;
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -53,19 +58,42 @@ public final class OTPUtil {
     return String.valueOf(code);
   }
 
-  public static void sendOTPViaSMS(Map<String, Object> otpMap) {
+  public static void sendOTPViaSMS(Map<String, Object> otpMap) throws Exception {
     if (StringUtils.isBlank((String) otpMap.get(JsonKey.PHONE))) {
       return;
     }
 
     Map<String, String> smsTemplate = new HashMap<>();
+    String template = (String) otpMap.get(JsonKey.TEMPLATE);
     smsTemplate.put(JsonKey.OTP, (String) otpMap.get(JsonKey.OTP));
     smsTemplate.put(
         JsonKey.OTP_EXPIRATION_IN_MINUTES, (String) otpMap.get(JsonKey.OTP_EXPIRATION_IN_MINUTES));
     smsTemplate.put(
         JsonKey.INSTALLATION_NAME,
         ProjectUtil.getConfigValue(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME));
-    String sms = OTPService.getOTPSMSBody(smsTemplate);
+   String sms = null;
+    if(template.isEmpty()) {
+     sms = OTPService.getDefaultOTPSMSBody(smsTemplate);
+    } else {
+     sms = OTPService.getOTPSMSTemplate(template);
+     RuntimeServices rs = RuntimeSingleton.getRuntimeServices();
+     SimpleNode sn = rs.parse(sms, "Sms Information");
+     Template t = new Template();
+     t.setRuntimeServices(rs);
+     t.setData(sn);
+     t.initDocument();
+     VelocityContext context = new VelocityContext();
+     context.put(JsonKey.OTP,  otpMap.get(JsonKey.OTP));
+     context.put(
+             JsonKey.OTP_EXPIRATION_IN_MINUTES,  otpMap.get(JsonKey.OTP_EXPIRATION_IN_MINUTES));
+     context.put(JsonKey.INSTALLATION_NAME,
+             ProjectUtil.getConfigValue(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME));
+
+     StringWriter sw = new StringWriter();
+     t.merge(context, sw);
+     sms =  sw.toString();
+    }
+
 
     ProjectLogger.log("OTPUtil:sendOTPViaSMS: SMS text = " + sms, LoggerEnum.INFO);
 

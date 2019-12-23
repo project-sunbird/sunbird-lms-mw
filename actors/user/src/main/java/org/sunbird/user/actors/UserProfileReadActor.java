@@ -1,19 +1,11 @@
 package org.sunbird.user.actors;
 
-import static akka.pattern.Patterns.pipe;
-import static org.sunbird.learner.util.Util.isNotNull;
-
 import akka.actor.ActorRef;
 import akka.dispatch.Mapper;
 import akka.pattern.Patterns;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import java.text.MessageFormat;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -48,6 +40,12 @@ import org.sunbird.user.dao.impl.UserDaoImpl;
 import org.sunbird.user.dao.impl.UserExternalIdentityDaoImpl;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
+
+import java.text.MessageFormat;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
+import static org.sunbird.learner.util.Util.isNotNull;
 
 @ActorConfig(
   tasks = {
@@ -899,30 +897,39 @@ public class UserProfileReadActor extends BaseActor {
       this.sender().tell(exception, this.self());
     }
     searchMap.put((String) request.get(JsonKey.KEY), encryptedValue);
-    ProjectLogger.log(
-        "UserProfileReadActor:checkUserExistence: search map prepared " + searchMap,
-        LoggerEnum.INFO.name());
-    CompletableFuture<Object> fut =
-        CompletableFuture.supplyAsync(
-            () -> {
-              Response response =
-                  cassandraOperation.getRecordsByProperties(
-                      JsonKey.SUNBIRD, JsonKey.USER, searchMap);
-              List<Map<String, Object>> respList = (List) response.get(JsonKey.RESPONSE);
-              Response resp = new Response();
-              long size = respList.size();
-              if (size <= 0) {
-                ProjectCommonException exception =
-                    new ProjectCommonException(
-                        ResponseCode.userNotFound.getErrorCode(),
-                        ResponseCode.userNotFound.getErrorMessage(),
-                        ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
-                return exception;
-              } else {
-                resp.put(JsonKey.EXISTS, true);
-                return resp;
-              }
-            });
-    pipe(fut, getContext().dispatcher()).to(sender());
+    SearchDTO searchDTO=new SearchDTO();
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, searchMap);
+    ProjectLogger.log("UserProfileReadActor:checkUserExistence: search map prepared " + searchMap , LoggerEnum.INFO.name());
+    handleUserSearchAsyncRequest(EsType.user.getTypeName(),searchDTO);
+  }
+
+
+  private void handleUserSearchAsyncRequest(String indexType, SearchDTO searchDto) {
+    Future<Map<String, Object>> futureResponse = esUtil.search(searchDto, indexType);
+    Future<Object> response =
+            futureResponse.map(
+                    new Mapper<Map<String, Object>, Object>() {
+                      @Override
+                      public Object apply(Map<String, Object> responseMap) {
+                        ProjectLogger.log(
+                                "SearchHandlerActor:handleUserSearchAsyncRequest user search call ",
+                                LoggerEnum.INFO.name());
+                        Response response = new Response();
+                        List<Map<String, Object>> respList = (List) responseMap.get(JsonKey.CONTENT);
+                        long size = respList.size();
+                        if (size <= 0) {
+                          ProjectCommonException exception = new ProjectCommonException(ResponseCode.userNotFound.getErrorCode(),
+                                  ResponseCode.userNotFound.getErrorMessage(),
+                                  ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+                          return exception;
+                        }
+                        else {
+                          response.put(JsonKey.EXISTS,true);
+                          return response;
+                        }
+                      }
+                    },
+                    getContext().dispatcher());
+    Patterns.pipe(response, getContext().dispatcher()).to(sender());
   }
 }

@@ -1,11 +1,19 @@
 package org.sunbird.user.actors;
 
+import static akka.pattern.Patterns.pipe;
+import static org.sunbird.learner.util.Util.isNotNull;
+
 import akka.actor.ActorRef;
 import akka.dispatch.Mapper;
 import akka.pattern.Patterns;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import java.text.MessageFormat;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -41,19 +49,14 @@ import org.sunbird.user.dao.impl.UserExternalIdentityDaoImpl;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
 
-import java.text.MessageFormat;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
-
-import static akka.pattern.Patterns.pipe;
-import static org.sunbird.learner.util.Util.isNotNull;
-
 @ActorConfig(
-  tasks = {"getUserDetailsByLoginId", "getUserProfile", "getUserProfileV2", "getUserByKey", "checkUserExistence"},
+  tasks = {
+    "getUserDetailsByLoginId",
+    "getUserProfile",
+    "getUserProfileV2",
+    "getUserByKey",
+    "checkUserExistence"
+  },
   asyncTasks = {}
 )
 public class UserProfileReadActor extends BaseActor {
@@ -882,32 +885,44 @@ public class UserProfileReadActor extends BaseActor {
   }
 
   private void checkUserExistence(Request request) {
-    Map<String,Object>searchMap=new HashMap<>();
-    String value=(String)request.get(JsonKey.VALUE);
+    Map<String, Object> searchMap = new HashMap<>();
+    String value = (String) request.get(JsonKey.VALUE);
     String encryptedValue = null;
     try {
       encryptedValue = this.encryptionService.encryptData(StringUtils.lowerCase(value));
     } catch (Exception var11) {
-      ProjectCommonException exception = new ProjectCommonException(ResponseCode.userDataEncryptionError.getErrorCode(), ResponseCode.userDataEncryptionError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
+      ProjectCommonException exception =
+          new ProjectCommonException(
+              ResponseCode.userDataEncryptionError.getErrorCode(),
+              ResponseCode.userDataEncryptionError.getErrorMessage(),
+              ResponseCode.SERVER_ERROR.getResponseCode());
       this.sender().tell(exception, this.self());
     }
-    searchMap.put((String) request.get(JsonKey.KEY),encryptedValue);
-    ProjectLogger.log("UserProfileReadActor:checkUserExistence: search map prepared "+searchMap,LoggerEnum.INFO.name());
-    CompletableFuture<Object>fut=CompletableFuture.supplyAsync(() -> {
-      Response response=cassandraOperation.getRecordsByProperties(JsonKey.SUNBIRD, JsonKey.USER, searchMap);
-      List<Map<String,Object>>respList=(List)response.get(JsonKey.RESPONSE);
-      Response resp=new Response();long size=respList.size();
-      if(size<=0) {
-        ProjectCommonException exception = new ProjectCommonException(ResponseCode.userNotFound.getErrorCode(),
-                ResponseCode.userNotFound.getErrorMessage(),
-                ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
-        return exception;
-      }
-      else {
-        resp.put(JsonKey.EXISTS, true);
-        return resp;
-      }
-    });
+    searchMap.put((String) request.get(JsonKey.KEY), encryptedValue);
+    ProjectLogger.log(
+        "UserProfileReadActor:checkUserExistence: search map prepared " + searchMap,
+        LoggerEnum.INFO.name());
+    CompletableFuture<Object> fut =
+        CompletableFuture.supplyAsync(
+            () -> {
+              Response response =
+                  cassandraOperation.getRecordsByProperties(
+                      JsonKey.SUNBIRD, JsonKey.USER, searchMap);
+              List<Map<String, Object>> respList = (List) response.get(JsonKey.RESPONSE);
+              Response resp = new Response();
+              long size = respList.size();
+              if (size <= 0) {
+                ProjectCommonException exception =
+                    new ProjectCommonException(
+                        ResponseCode.userNotFound.getErrorCode(),
+                        ResponseCode.userNotFound.getErrorMessage(),
+                        ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+                return exception;
+              } else {
+                resp.put(JsonKey.EXISTS, true);
+                return resp;
+              }
+            });
     pipe(fut, getContext().dispatcher()).to(sender());
   }
 }

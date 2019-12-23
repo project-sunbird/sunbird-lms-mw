@@ -95,7 +95,7 @@ public class TenantMigrationActor extends BaseActor {
     }
     switch (operation) {
       case "userTenantMigrate":
-        migrateUser(request,true);
+        migrateUser(request, true);
         break;
       case "migrateUser":
         processShadowUserMigrate(request);
@@ -139,7 +139,8 @@ public class TenantMigrationActor extends BaseActor {
       // throw exception for migration failed
       ProjectCommonException.throwServerErrorException(ResponseCode.errorUserMigrationFailed);
     }
-    if(null!=userUpdateRequest.get(JsonKey.IS_DELETED) && (Boolean)userUpdateRequest.get(JsonKey.IS_DELETED)){
+    if (null != userUpdateRequest.get(JsonKey.IS_DELETED)
+        && (Boolean) userUpdateRequest.get(JsonKey.IS_DELETED)) {
       deactivateUserFromKC((String) userUpdateRequest.get(JsonKey.ID));
     }
     ProjectLogger.log(
@@ -170,8 +171,8 @@ public class TenantMigrationActor extends BaseActor {
     sender().tell(response, self());
     // save user data to ES
     saveUserDetailsToEs((String) request.getRequest().get(JsonKey.USER_ID));
-    if(notify) {
-     notify(userDetails);
+    if (notify) {
+      notify(userDetails);
     }
     targetObject =
         TelemetryUtil.generateTargetObject(
@@ -187,18 +188,20 @@ public class TenantMigrationActor extends BaseActor {
     tellToAnother(notificationRequest);
   }
 
-  private void deactivateUserFromKC(String userId){
-    try{
-      Map<String,Object>userDbMap=new HashMap<>();
-      userDbMap.put(JsonKey.USER_ID,userId);
-      String status=getSSOManager().deactivateUser(userDbMap);
-      ProjectLogger.log("TenantMigrationActor:deactivateUserFromKC:user status in deactivating Keycloak"+status,LoggerEnum.INFO.name());
+  private void deactivateUserFromKC(String userId) {
+    try {
+      Map<String, Object> userDbMap = new HashMap<>();
+      userDbMap.put(JsonKey.USER_ID, userId);
+      String status = getSSOManager().deactivateUser(userDbMap);
+      ProjectLogger.log(
+          "TenantMigrationActor:deactivateUserFromKC:user status in deactivating Keycloak" + status,
+          LoggerEnum.INFO.name());
+    } catch (Exception e) {
+      ProjectLogger.log(
+          "TenantMigrationActor:deactivateUserFromKC:Error occurred while deactivating user from  Keycloak"
+              + e,
+          LoggerEnum.ERROR.name());
     }
-    catch (Exception e){
-      ProjectLogger.log("TenantMigrationActor:deactivateUserFromKC:Error occurred while deactivating user from  Keycloak"+e,LoggerEnum.ERROR.name());
-    }
-
-
   }
 
   private Request createNotificationData(Map<String, Object> userData) {
@@ -479,7 +482,6 @@ public class TenantMigrationActor extends BaseActor {
       unSupportedMessage();
     }
     sender().tell(response, self());
-
   }
 
   private int getRemainingAttempt(List<ShadowUser> shadowUserList) {
@@ -575,7 +577,7 @@ public class TenantMigrationActor extends BaseActor {
         "TenantMigrationActor:selfMigrate:request prepared for user migration:"
             + request.getRequest(),
         LoggerEnum.INFO.name());
-    migrateUser(request,false);
+    migrateUser(request, false);
     Map<String, Object> propertiesMap = new HashMap<>();
     propertiesMap.put(JsonKey.CLAIM_STATUS, ClaimStatus.CLAIMED.getValue());
     propertiesMap.put(JsonKey.UPDATED_ON, new Timestamp(System.currentTimeMillis()));
@@ -663,7 +665,7 @@ public class TenantMigrationActor extends BaseActor {
             });
   }
 
-  private SSOManager getSSOManager(){
-   return SSOServiceFactory.getInstance();
+  private SSOManager getSSOManager() {
+    return SSOServiceFactory.getInstance();
   }
 }

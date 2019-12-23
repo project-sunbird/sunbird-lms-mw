@@ -1,6 +1,8 @@
 package org.sunbird.user.actors;
 
 import akka.actor.ActorRef;
+import akka.dispatch.Mapper;
+import akka.pattern.Patterns;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Timestamp;
@@ -26,7 +28,6 @@ import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.inf.ElasticSearchService;
@@ -105,6 +106,7 @@ public class UserManagementActor extends BaseActor {
         break;
       case "createUserV3":
         createUserV3(request);
+        break;
       default:
         onReceiveUnsupportedOperation("UserManagementActor");
     }
@@ -619,7 +621,8 @@ public class UserManagementActor extends BaseActor {
     requestMap.put(JsonKey.IS_DELETED, false);
     Map<String, Boolean> userFlagsMap = new HashMap<>();
     // checks if the user is belongs to state and sets a validation flag
-    setStateValidation(requestMap, userFlagsMap);
+    // setStateValidation(requestMap, userFlagsMap);
+    userFlagsMap.put(JsonKey.STATE_VALIDATED, false);
     userFlagsMap.put(
         JsonKey.EMAIL_VERIFIED,
         (Boolean)
@@ -640,6 +643,7 @@ public class UserManagementActor extends BaseActor {
       response =
           cassandraOperation.insertRecord(
               usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
+
       isPasswordUpdated = UserUtil.updatePassword(userMap);
     } finally {
       if (response == null) {
@@ -658,8 +662,25 @@ public class UserManagementActor extends BaseActor {
     } else {
       ProjectLogger.log("UserManagementActor:processUserRequest: User creation failure");
     }
-    saveUserTOES(esResponse);
-    sender().tell(response, self());
+    Future<String> future = saveUserTOES(esResponse);
+    Future<Response> futResponse =
+        future.map(
+            new Mapper<String, Response>() {
+              @Override
+              public Response apply(String userId) {
+                ProjectLogger.log(
+                    "UserManagementActor:Create user v3 response async userId " + userId,
+                    LoggerEnum.INFO.name());
+                Response innResposne = new Response();
+                innResposne.put(JsonKey.USER_ID, userId);
+                // sender().tell(innResposne, self());
+                return innResposne;
+              }
+            },
+            getContext().dispatcher());
+    Patterns.pipe(futResponse, getContext().dispatcher()).to(sender());
+
+    // sender().tell(response, self());
     processTelemetry(userMap, signupType, source, userId);
   }
 
@@ -911,16 +932,18 @@ public class UserManagementActor extends BaseActor {
     tellToAnother(EmailAndSmsRequest);
   }
 
-  private void saveUserTOES(Map<String, Object> completeUserMap) {
-    Future<String> response =
-        esUtil.save(
-            ProjectUtil.EsType.user.getTypeName(),
-            (String) completeUserMap.get(JsonKey.USER_ID),
-            completeUserMap);
-    String saveResponse = (String) ElasticSearchHelper.getResponseFromFuture(response);
-    ProjectLogger.log(
-        "UserManagementActor:saveUserTOES  user data saved to ES:" + saveResponse,
-        LoggerEnum.INFO.name());
+  private Future<String> saveUserTOES(Map<String, Object> completeUserMap) {
+    return esUtil.save(
+        ProjectUtil.EsType.user.getTypeName(),
+        (String) completeUserMap.get(JsonKey.USER_ID),
+        completeUserMap);
+
+    /*
+     * String saveResponse = (String)
+     * ElasticSearchHelper.getResponseFromFuture(response); ProjectLogger.log(
+     * "UserManagementActor:saveUserTOES  user data saved to ES:" + saveResponse,
+     * LoggerEnum.INFO.name());
+     */
   }
 
   private void saveUserDetailsToEs(Map<String, Object> completeUserMap) {

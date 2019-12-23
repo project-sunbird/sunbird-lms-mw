@@ -1,11 +1,19 @@
 package org.sunbird.user.actors;
 
+import static akka.pattern.Patterns.pipe;
+import static org.sunbird.learner.util.Util.isNotNull;
+
 import akka.actor.ActorRef;
 import akka.dispatch.Mapper;
 import akka.pattern.Patterns;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import java.text.MessageFormat;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -41,6 +49,7 @@ import org.sunbird.user.dao.impl.UserExternalIdentityDaoImpl;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
 
+<<<<<<< HEAD
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.Map.Entry;
@@ -50,8 +59,16 @@ import java.util.stream.Collectors;
 import static akka.pattern.Patterns.pipe;
 import static org.sunbird.learner.util.Util.isNotNull;
 
+=======
+>>>>>>> 2860e56274d0e43175aec4f4c1c9d254e982abde
 @ActorConfig(
-  tasks = {"getUserDetailsByLoginId", "getUserProfile", "getUserProfileV2", "getUserByKey", "checkUserExistence"},
+  tasks = {
+    "getUserDetailsByLoginId",
+    "getUserProfile",
+    "getUserProfileV2",
+    "getUserByKey",
+    "checkUserExistence"
+  },
   asyncTasks = {}
 )
 public class UserProfileReadActor extends BaseActor {
@@ -883,15 +900,16 @@ public class UserProfileReadActor extends BaseActor {
     Map<String, Object> searchMap = new HashMap<>();
     String value = (String) request.get(JsonKey.VALUE);
     String encryptedValue = null;
-    long start = System.currentTimeMillis();
     try {
       encryptedValue = this.encryptionService.encryptData(StringUtils.lowerCase(value));
     } catch (Exception var11) {
-      ProjectCommonException exception = new ProjectCommonException(ResponseCode.userDataEncryptionError.getErrorCode(), ResponseCode.userDataEncryptionError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
+      ProjectCommonException exception =
+          new ProjectCommonException(
+              ResponseCode.userDataEncryptionError.getErrorCode(),
+              ResponseCode.userDataEncryptionError.getErrorMessage(),
+              ResponseCode.SERVER_ERROR.getResponseCode());
       this.sender().tell(exception, this.self());
     }
-    long end = System.currentTimeMillis();
-    System.out.println("time took for encryption:" + (end - start) + "");
     searchMap.put((String) request.get(JsonKey.KEY), encryptedValue);
     SearchDTO searchDTO=new SearchDTO();
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, searchMap);

@@ -270,7 +270,6 @@ public final class SchedulerManager {
             .build();
     String shadowUserTime =
         PropertiesCache.getInstance().getProperty("quartz_shadow_user_migration_timer");
-    shadowUserTime = "0 0/10 * 1/1 * ? *";
     ProjectLogger.log(
         "SchedulerManager:scheduleShadowUser: schedule time is : " + shadowUserTime,
         LoggerEnum.INFO.name());

@@ -9,8 +9,14 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import java.text.MessageFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
@@ -25,9 +31,14 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.ActorOperations;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
-import org.sunbird.common.models.util.datasecurity.DecryptionService;
+import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
 import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
@@ -44,6 +55,7 @@ import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.user.dao.UserDao;
 import org.sunbird.user.dao.impl.UserDaoImpl;
 import org.sunbird.user.dao.impl.UserExternalIdentityDaoImpl;
+import org.sunbird.user.util.UserUtil;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
 
@@ -60,15 +72,11 @@ import scala.concurrent.Future;
 public class UserProfileReadActor extends BaseActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private DecryptionService decryptionService =
-      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
-          null);
   private EncryptionService encryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
           null);
   private Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
   private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
-  private SSOManager ssoManager = SSOServiceFactory.getInstance();
   private ActorRef systemSettingActorRef = null;
   private UserExternalIdentityDaoImpl userExternalIdentityDao = new UserExternalIdentityDaoImpl();
   private ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
@@ -883,26 +891,22 @@ public class UserProfileReadActor extends BaseActor {
   }
 
   private void checkUserExistence(Request request) {
-    Map<String, Object> searchMap = new HashMap<>();
+
     String value = (String) request.get(JsonKey.VALUE);
-    String encryptedValue = null;
+    String type = (String) request.get(JsonKey.KEY);
     try {
-      encryptedValue = this.encryptionService.encryptData(StringUtils.lowerCase(value));
+      boolean exists = UserUtil.identifierExists(type, value);
+      Response response = new Response();
+      response.put(JsonKey.EXISTS, exists);
+      sender().tell(response, self());
     } catch (Exception var11) {
       ProjectCommonException exception =
           new ProjectCommonException(
               ResponseCode.userDataEncryptionError.getErrorCode(),
               ResponseCode.userDataEncryptionError.getErrorMessage(),
               ResponseCode.SERVER_ERROR.getResponseCode());
-      this.sender().tell(exception, this.self());
+      sender().tell(exception, self());
     }
-    searchMap.put((String) request.get(JsonKey.KEY), encryptedValue);
-    SearchDTO searchDTO = new SearchDTO();
-    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, searchMap);
-    ProjectLogger.log(
-        "UserProfileReadActor:checkUserExistence: search map prepared " + searchMap,
-        LoggerEnum.INFO.name());
-    handleUserSearchAsyncRequest(EsType.user.getTypeName(), searchDTO);
   }
 
   private void handleUserSearchAsyncRequest(String indexType, SearchDTO searchDto) {

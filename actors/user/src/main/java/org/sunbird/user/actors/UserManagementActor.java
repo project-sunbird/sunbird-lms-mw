@@ -75,8 +75,6 @@ import scala.concurrent.Future;
 public class UserManagementActor extends BaseActor {
   private ObjectMapper mapper = new ObjectMapper();
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private static final boolean IS_REGISTRY_ENABLED =
-      Boolean.parseBoolean(ProjectUtil.getConfigValue(JsonKey.SUNBIRD_OPENSABER_BRIDGE_ENABLE));
   private UserRequestValidator userRequestValidator = new UserRequestValidator();
   private UserService userService = UserServiceImpl.getInstance();
   private SystemSettingClient systemSettingClient = SystemSettingClientImpl.getInstance();
@@ -113,7 +111,11 @@ public class UserManagementActor extends BaseActor {
         onReceiveUnsupportedOperation("UserManagementActor");
     }
   }
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> eb27705bb18d7e2cfa10f4afc07fcb9e2b5422cd
   /**
    * This method will create user in user in cassandra and update to ES as well at same time.
    *
@@ -365,7 +367,6 @@ public class UserManagementActor extends BaseActor {
     if (userMap.containsKey(JsonKey.USER_TYPE)) {
       String userType = (String) userMap.get(JsonKey.USER_TYPE);
       if (UserType.TEACHER.getTypeName().equalsIgnoreCase(userType)) {
-        String custodianChannel = null;
         String custodianRootOrgId = null;
         User user = userService.getUserById((String) userMap.get(JsonKey.USER_ID));
         try {

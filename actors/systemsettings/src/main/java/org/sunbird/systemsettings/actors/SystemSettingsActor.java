@@ -30,19 +30,6 @@ public class SystemSettingsActor extends BaseActor {
       new SystemSettingDaoImpl(cassandraOperation);
   private static ConcurrentHashMap<String, String> systemSettingsMap =
       new ConcurrentHashMap<String, String>();
-  // private Cache cache = CacheFactory.getInstance();
-
-  @Override
-  public void preStart() throws Exception {
-    /*
-     * super.preStart(); try { List<SystemSetting> settings =
-     * systemSettingDaoImpl.readAll(); if (CollectionUtils.isNotEmpty(settings)) {
-     * settings.stream().map(f ->
-     * cache.put(ActorOperations.GET_SYSTEM_SETTING.getValue(), f.getField(), f))
-     * .collect(Collectors.toList()); } } catch (Exception e) {
-     * ProjectLogger.log("SystemSettingsActor:getSystemSetting: Error occurred = " +
-     * e.getMessage(), LoggerEnum.ERROR.name()); }
-     */ }
 
   @Override
   public void onReceive(Request request) throws Throwable {

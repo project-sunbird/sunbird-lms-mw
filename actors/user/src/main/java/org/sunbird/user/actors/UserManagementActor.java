@@ -634,14 +634,7 @@ public class UserManagementActor extends BaseActor {
     int userFlagValue = userFlagsToNum(userFlagsMap);
     userMap.put(JsonKey.FLAGS_VALUE, userFlagValue);
     Response response = cassandraOperation.insertRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userMap);
-    boolean isPasswordUpdated = false;
-//    try {
-//      //isPasswordUpdated = UserUtil.updatePassword(userMap);
-//    } finally {
-//      if (response == null) {
-//        response = new Response();
-//      }
-//    }
+    boolean isPasswordUpdated = UserUtil.updatePassword(userMap);
     response.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
     if (!isPasswordUpdated) {
       response.put(JsonKey.ERROR_MSG, ResponseMessage.Message.ERROR_USER_UPDATE_PASSWORD);

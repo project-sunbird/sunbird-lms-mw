@@ -911,29 +911,4 @@ public class UserProfileReadActor extends BaseActor {
       sender().tell(exception, self());
     }
   }
-
-
-  private void handleUserSearchAsyncRequest(String indexType, SearchDTO searchDto) {
-    Future<Map<String, Object>> futureResponse = esUtil.search(searchDto, indexType);
-    Future<Object> response =
-            futureResponse.map(
-                    new Mapper<Map<String, Object>, Object>() {
-                      @Override
-                      public Object apply(Map<String, Object> responseMap) {
-                        ProjectLogger.log(
-                                "UserProfileReadActor:handleUserSearchAsyncRequest user search call ",
-                                LoggerEnum.INFO.name());
-                        Response response = new Response();
-                        List<Map<String, Object>> respList = (List) responseMap.get(JsonKey.CONTENT);
-                        long size = respList.size();
-                        response.put(JsonKey.EXISTS,true);
-                        if (size <= 0) {
-                          response.put(JsonKey.EXISTS,false);
-                        }
-                        return response;
-                      }
-                    },
-                    getContext().dispatcher());
-    Patterns.pipe(response, getContext().dispatcher()).to(sender());
-  }
 }

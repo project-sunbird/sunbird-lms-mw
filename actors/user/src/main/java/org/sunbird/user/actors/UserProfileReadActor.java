@@ -921,21 +921,16 @@ public class UserProfileReadActor extends BaseActor {
                       @Override
                       public Object apply(Map<String, Object> responseMap) {
                         ProjectLogger.log(
-                                "SearchHandlerActor:handleUserSearchAsyncRequest user search call ",
+                                "UserProfileReadActor:handleUserSearchAsyncRequest user search call ",
                                 LoggerEnum.INFO.name());
                         Response response = new Response();
                         List<Map<String, Object>> respList = (List) responseMap.get(JsonKey.CONTENT);
                         long size = respList.size();
+                        response.put(JsonKey.EXISTS,true);
                         if (size <= 0) {
-                          ProjectCommonException exception = new ProjectCommonException(ResponseCode.userNotFound.getErrorCode(),
-                                  ResponseCode.userNotFound.getErrorMessage(),
-                                  ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
-                          return exception;
+                          response.put(JsonKey.EXISTS,false);
                         }
-                        else {
-                          response.put(JsonKey.EXISTS,true);
-                          return response;
-                        }
+                        return response;
                       }
                     },
                     getContext().dispatcher());

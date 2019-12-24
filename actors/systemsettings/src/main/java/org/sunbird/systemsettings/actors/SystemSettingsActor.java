@@ -54,7 +54,6 @@ public class SystemSettingsActor extends BaseActor {
 
   @SuppressWarnings("unchecked")
   private void getSystemSetting(Request actorMessage) {
-    ProjectLogger.log("SystemSettingsActor: getSystemSetting called", LoggerEnum.INFO.name());
     ProjectLogger.log(
         "SystemSettingsActor:getSystemSetting: request is " + actorMessage.getRequest(),
         LoggerEnum.INFO.name());

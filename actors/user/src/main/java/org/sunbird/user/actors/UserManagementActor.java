@@ -1,8 +1,5 @@
 package org.sunbird.user.actors;
 
-import akka.actor.ActorRef;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Timestamp;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -13,6 +10,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -47,10 +45,12 @@ import org.sunbird.common.responsecode.ResponseMessage;
 import org.sunbird.common.util.Matcher;
 import org.sunbird.content.store.util.ContentStoreUtil;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.kafka.client.KafkaClient;
 import org.sunbird.learner.actors.role.service.RoleService;
 import org.sunbird.learner.organisation.external.identity.service.OrgExternalService;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.UserFlagUtil;
+import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
 import org.sunbird.models.user.User;
@@ -63,6 +63,13 @@ import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.UserActorOperations;
 import org.sunbird.user.util.UserUtil;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import akka.actor.ActorRef;
+import akka.dispatch.Mapper;
+import akka.pattern.Patterns;
 import scala.concurrent.Future;
 
 @ActorConfig(
@@ -105,9 +112,16 @@ public class UserManagementActor extends BaseActor {
         break;
       case "createUserV3":
         createUserV3(request);
+        break;
       default:
         onReceiveUnsupportedOperation("UserManagementActor");
     }
+  }
+  
+  private void createUserV4(Request actorMessage) {
+	  
+	  Response response = new Response();
+	  sender().tell(response, self());
   }
 
   /**
@@ -606,7 +620,6 @@ public class UserManagementActor extends BaseActor {
   }
 
   private void processUserRequestV3(Map<String, Object> userMap, String signupType, String source) {
-    Map<String, Object> requestMap = null;
     UserUtil.setUserDefaultValueForV3(userMap);
     UserUtil.toLower(userMap);
     UserUtil.checkPhoneUniqueness((String) userMap.get(JsonKey.PHONE));
@@ -614,52 +627,56 @@ public class UserManagementActor extends BaseActor {
     String userId = ProjectUtil.generateUniqueId();
     userMap.put(JsonKey.ID, userId);
     userMap.put(JsonKey.USER_ID, userId);
-    requestMap = UserUtil.encryptUserData(userMap);
-    UserUtil.addMaskEmailAndMaskPhone(requestMap);
-    requestMap.put(JsonKey.IS_DELETED, false);
-    Map<String, Boolean> userFlagsMap = new HashMap<>();
-    // checks if the user is belongs to state and sets a validation flag
-    setStateValidation(requestMap, userFlagsMap);
-    userFlagsMap.put(
-        JsonKey.EMAIL_VERIFIED,
-        (Boolean)
-            (userMap.get(JsonKey.EMAIL_VERIFIED) != null
-                ? userMap.get(JsonKey.EMAIL_VERIFIED)
-                : false));
-    userFlagsMap.put(
-        JsonKey.PHONE_VERIFIED,
-        (Boolean)
-            (userMap.get(JsonKey.PHONE_VERIFIED) != null
-                ? userMap.get(JsonKey.PHONE_VERIFIED)
-                : false));
-    int userFlagValue = userFlagsToNum(userFlagsMap);
-    requestMap.put(JsonKey.FLAGS_VALUE, userFlagValue);
-    Response response = null;
-    boolean isPasswordUpdated = false;
     try {
-      response =
-          cassandraOperation.insertRecord(
-              usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
-      isPasswordUpdated = UserUtil.updatePassword(userMap);
-    } finally {
-      if (response == null) {
-        response = new Response();
-      }
-      response.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
-      if (!isPasswordUpdated) {
-        response.put(JsonKey.ERROR_MSG, ResponseMessage.Message.ERROR_USER_UPDATE_PASSWORD);
-      }
+    	UserUtility.encryptUserData(userMap);
+    } catch(Exception ex) {
+    	ex.printStackTrace();
+    }
+    UserUtil.addMaskEmailAndMaskPhone(userMap);
+    userMap.put(JsonKey.IS_DELETED, false);
+    Map<String, Boolean> userFlagsMap = new HashMap<>();
+    userFlagsMap.put(JsonKey.STATE_VALIDATED, false);
+    
+    userFlagsMap.put(JsonKey.EMAIL_VERIFIED,
+        (Boolean) (userMap.get(JsonKey.EMAIL_VERIFIED) != null ? userMap.get(JsonKey.EMAIL_VERIFIED) : false));
+    userFlagsMap.put(JsonKey.PHONE_VERIFIED,
+        (Boolean) (userMap.get(JsonKey.PHONE_VERIFIED) != null ? userMap.get(JsonKey.PHONE_VERIFIED) : false));
+    int userFlagValue = userFlagsToNum(userFlagsMap);
+    userMap.put(JsonKey.FLAGS_VALUE, userFlagValue);
+    Response response = cassandraOperation.insertRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userMap);
+    boolean isPasswordUpdated = false;
+//    try {
+//      //isPasswordUpdated = UserUtil.updatePassword(userMap);
+//    } finally {
+//      if (response == null) {
+//        response = new Response();
+//      }
+//    }
+    response.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
+    if (!isPasswordUpdated) {
+      response.put(JsonKey.ERROR_MSG, ResponseMessage.Message.ERROR_USER_UPDATE_PASSWORD);
     }
     Map<String, Object> esResponse = new HashMap<>();
-    if (((String) response.get(JsonKey.RESPONSE)).equalsIgnoreCase(JsonKey.SUCCESS)) {
+    if (JsonKey.SUCCESS.equalsIgnoreCase((String) response.get(JsonKey.RESPONSE))) {
       Map<String, Object> orgMap = saveUserOrgInfo(userMap);
-      esResponse = Util.getUserDetails(requestMap, orgMap);
-
+      esResponse = Util.getUserDetails(userMap, orgMap);
     } else {
       ProjectLogger.log("UserManagementActor:processUserRequest: User creation failure");
     }
-    saveUserTOES(esResponse);
-    sender().tell(response, self());
+    
+    if("kafka".equalsIgnoreCase(ProjectUtil.getConfigValue("sunbird_user_create_sync_type"))) {
+      saveUserToKafka(esResponse);
+      sender().tell(response, self());
+    } else {
+      Future<Response> future = saveUserToES(esResponse).map(new Mapper<String, Response>() {
+        @Override
+        public Response apply(String parameter) {
+          return response;
+        }
+      }, getContext().dispatcher());
+      Patterns.pipe(future, getContext().dispatcher()).to(sender());
+    }
+    
     processTelemetry(userMap, signupType, source, userId);
   }
 
@@ -910,17 +927,22 @@ public class UserManagementActor extends BaseActor {
     EmailAndSmsRequest.setOperation(UserActorOperations.PROCESS_ONBOARDING_MAIL_AND_SMS.getValue());
     tellToAnother(EmailAndSmsRequest);
   }
+  
+  private Future<String> saveUserToES(Map<String, Object> completeUserMap) {
 
-  private void saveUserTOES(Map<String, Object> completeUserMap) {
-    Future<String> response =
-        esUtil.save(
-            ProjectUtil.EsType.user.getTypeName(),
-            (String) completeUserMap.get(JsonKey.USER_ID),
-            completeUserMap);
-    String saveResponse = (String) ElasticSearchHelper.getResponseFromFuture(response);
-    ProjectLogger.log(
-        "UserManagementActor:saveUserTOES  user data saved to ES:" + saveResponse,
-        LoggerEnum.INFO.name());
+    return esUtil.save(ProjectUtil.EsType.user.getTypeName(), (String) completeUserMap.get(JsonKey.USER_ID),
+        completeUserMap);
+  }
+
+  private void saveUserToKafka(Map<String, Object> completeUserMap) {
+
+    try {
+      String event = mapper.writeValueAsString(completeUserMap);
+      // user_events
+      KafkaClient.send(event, ProjectUtil.getConfigValue("sunbird_user_create_sync_topic"));
+    } catch (Exception ex) {
+      ex.printStackTrace();
+    }
   }
 
   private void saveUserDetailsToEs(Map<String, Object> completeUserMap) {

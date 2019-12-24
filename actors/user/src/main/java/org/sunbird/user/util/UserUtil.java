@@ -126,6 +126,26 @@ public class UserUtil {
       }
     }
   }
+  
+  public static boolean identifierExists(String type, String value) {
+ 
+    if (StringUtils.isNotBlank(value)) {
+      try {
+        value = encryptionService.encryptData(value);
+      } catch (Exception e) {
+        ProjectLogger.log("Exception occurred while encrypting email/phone", e);
+      }
+      Response result = cassandraOperation.getRecordsByIndexedProperty(userDb.getKeySpace(), userDb.getTableName(),
+          type, value);
+      @SuppressWarnings("unchecked")
+      List<Map<String, Object>> userMapList = (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+      return !userMapList.isEmpty();
+    } else {
+      return false;
+    }
+  }
+  
+  
 
   public static void checkEmailUniqueness(String email) {
     // Get Phone configuration if not found , by default phone will be unique across

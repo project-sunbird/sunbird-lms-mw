@@ -20,3 +20,4 @@ dist
 .project
 *.iml
 actors/badge/logs
+dependency-reduced-pom.xml

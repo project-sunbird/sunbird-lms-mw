@@ -3,18 +3,14 @@ package org.sunbird.user.actors;
 import static org.sunbird.learner.util.Util.isNotNull;
 
 import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -59,6 +55,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import akka.actor.ActorRef;
 import akka.dispatch.Mapper;
 import akka.pattern.Patterns;
+import scala.compat.java8.FutureConverters;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
 
@@ -82,7 +79,7 @@ public class UserProfileReadActor extends BaseActor {
   private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
   private ActorRef systemSettingActorRef = null;
   private UserExternalIdentityDaoImpl userExternalIdentityDao = new UserExternalIdentityDaoImpl();
-  private ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
+  private ElasticSearchService esUtil = getESInstance();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -103,7 +100,7 @@ public class UserProfileReadActor extends BaseActor {
         getUserDetailsByLoginId(request);
         break;
       case "getUserByKey":
-        getUserByKey(request);
+        getKey(request);
         break;
       case "checkUserExistence":
         checkUserExistence(request);
@@ -741,6 +738,7 @@ public class UserProfileReadActor extends BaseActor {
           ResponseCode.userAccountlocked.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
+
     Future<Map<String, Object>> future = fetchRootAndRegisterOrganisation(result);
     Future<Response> response =
         future.map(
@@ -760,8 +758,7 @@ public class UserProfileReadActor extends BaseActor {
     Patterns.pipe(response, getContext().dispatcher()).to(sender());
   }
 
-  private void handleUserCallAsync(
-      Map<String, Object> result, Response response, Request actorMessage) {
+  private void handleUserCallAsync(Map<String, Object> result, Response response, Request actorMessage) {
     // having check for removing private filed from user , if call user and response
     // user data id is not same.
     String requestedById =
@@ -910,5 +907,70 @@ public class UserProfileReadActor extends BaseActor {
               ResponseCode.SERVER_ERROR.getResponseCode());
       sender().tell(exception, self());
     }
+  }
+
+  private ElasticSearchService getESInstance(){
+    return EsClientFactory.getInstance(JsonKey.REST);
+  }
+
+
+
+  private void getKey(Request actorMessage){
+    String key = (String) actorMessage.getRequest().get(JsonKey.KEY);
+    String value = (String) actorMessage.getRequest().get(JsonKey.VALUE);
+    if (JsonKey.LOGIN_ID.equalsIgnoreCase(key) || JsonKey.EMAIL.equalsIgnoreCase(key)) {
+      value = value.toLowerCase();
+    }
+    String encryptedValue = null;
+    try {
+      encryptedValue = encryptionService.encryptData(value);
+    } catch (Exception e) {
+      ProjectCommonException exception =
+              new ProjectCommonException(
+                      ResponseCode.userDataEncryptionError.getErrorCode(),
+                      ResponseCode.userDataEncryptionError.getErrorMessage(),
+                      ResponseCode.SERVER_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return;
+    }
+
+    Map<String, Object> searchMap = new WeakHashMap<>();
+    searchMap.put(key, encryptedValue);
+    SearchDTO searchDTO=new SearchDTO();
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS,searchMap);
+    handleUserSearchAsyncRequest(searchDTO,actorMessage);
+
+  }
+
+
+  private void handleUserSearchAsyncRequest(SearchDTO searchDto,Request actorMessage) {
+    Future<Map<String, Object>> futureResponse = esUtil.search(searchDto, EsType.user.getTypeName());
+    Future<Object> response =
+            futureResponse.map(
+                    new Mapper<Map<String, Object>, Object>() {
+                      @Override
+                      public Object apply(Map<String, Object> responseMap) {
+                        ProjectLogger.log(
+                                "SearchHandlerActor:handleOrgSearchAsyncRequest org search call ",
+                                LoggerEnum.INFO);
+                        List<Map<String, Object>> respList = (List) responseMap.get(JsonKey.CONTENT);
+                        if (null == respList || respList.size() == 0) {
+                          ProjectCommonException projectCommonException = new ProjectCommonException(ResponseCode.userNotFound.getErrorCode(), ResponseCode.userNotFound.getErrorMessage(), ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+                          return projectCommonException;
+                        }
+                        responseMap.put(JsonKey.EMAIL, responseMap.get(JsonKey.MASKED_EMAIL));
+                        responseMap.put(JsonKey.PHONE, responseMap.get(JsonKey.MASKED_PHONE));
+                        if(BooleanUtils.isTrue((Boolean)responseMap.get(JsonKey.IS_DELETED))){
+                         ProjectCommonException exception= new ProjectCommonException(ResponseCode.userAccountlocked.getErrorCode(), ResponseCode.userAccountlocked.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+                         return exception;
+                        }
+                        Response response = new Response();
+                        response.put(JsonKey.RESPONSE, responseMap);
+                        return response;
+                      }
+                    },getContext().dispatcher());
+
+
+    Patterns.pipe(response, getContext().dispatcher()).to(sender());
   }
 }

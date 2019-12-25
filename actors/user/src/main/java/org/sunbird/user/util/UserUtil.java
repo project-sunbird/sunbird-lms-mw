@@ -239,7 +239,6 @@ public class UserUtil {
     return user;
   }
 
-  @SuppressWarnings("unchecked")
   public static String getUserIdFromExternalId(Map<String, Object> userMap) {
     Request request = new Request();
     request.setRequest(userMap);

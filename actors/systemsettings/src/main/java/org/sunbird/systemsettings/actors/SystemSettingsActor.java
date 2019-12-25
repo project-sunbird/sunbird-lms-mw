@@ -30,19 +30,6 @@ public class SystemSettingsActor extends BaseActor {
       new SystemSettingDaoImpl(cassandraOperation);
   private static ConcurrentHashMap<String, String> systemSettingsMap =
       new ConcurrentHashMap<String, String>();
-  // private Cache cache = CacheFactory.getInstance();
-
-  @Override
-  public void preStart() throws Exception {
-    /*
-     * super.preStart(); try { List<SystemSetting> settings =
-     * systemSettingDaoImpl.readAll(); if (CollectionUtils.isNotEmpty(settings)) {
-     * settings.stream().map(f ->
-     * cache.put(ActorOperations.GET_SYSTEM_SETTING.getValue(), f.getField(), f))
-     * .collect(Collectors.toList()); } } catch (Exception e) {
-     * ProjectLogger.log("SystemSettingsActor:getSystemSetting: Error occurred = " +
-     * e.getMessage(), LoggerEnum.ERROR.name()); }
-     */ }
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -67,7 +54,6 @@ public class SystemSettingsActor extends BaseActor {
 
   @SuppressWarnings("unchecked")
   private void getSystemSetting(Request actorMessage) {
-    ProjectLogger.log("SystemSettingsActor: getSystemSetting called", LoggerEnum.INFO.name());
     ProjectLogger.log(
         "SystemSettingsActor:getSystemSetting: request is " + actorMessage.getRequest(),
         LoggerEnum.INFO.name());
@@ -84,10 +70,6 @@ public class SystemSettingsActor extends BaseActor {
     ProjectLogger.log(
         "SystemSettingsActor:getSystemSetting: new changes applied " + actorMessage.getRequest(),
         LoggerEnum.INFO.name());
-    /*
-     * (SystemSetting) cache.get( ActorOperations.GET_SYSTEM_SETTING.getValue(),
-     * (String) actorMessage.getContext().get(JsonKey.FIELD), SystemSetting.class);
-     */
     if (setting == null) {
       setting =
           systemSettingDaoImpl.readByField((String) actorMessage.getContext().get(JsonKey.FIELD));
@@ -135,9 +117,6 @@ public class SystemSettingsActor extends BaseActor {
 
     SystemSetting systemSetting = mapper.convertValue(request, SystemSetting.class);
     Response response = systemSettingDaoImpl.write(systemSetting);
-    if (response != null) {
-      // cache.put(ActorOperations.GET_SYSTEM_SETTING.getValue(), field, systemSetting);
-    }
     sender().tell(response, self());
   }
 }

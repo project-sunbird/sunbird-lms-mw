@@ -3,18 +3,16 @@ package org.sunbird.user.actors;
 import static org.sunbird.learner.util.Util.isNotNull;
 
 import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import akka.dispatch.OnComplete;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -59,6 +57,8 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import akka.actor.ActorRef;
 import akka.dispatch.Mapper;
 import akka.pattern.Patterns;
+import scala.Tuple2;
+import scala.compat.java8.FutureConverters;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
 
@@ -82,7 +82,8 @@ public class UserProfileReadActor extends BaseActor {
   private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
   private ActorRef systemSettingActorRef = null;
   private UserExternalIdentityDaoImpl userExternalIdentityDao = new UserExternalIdentityDaoImpl();
-  private ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
+  private ElasticSearchService esUtil = getESInstance();
+  private static ObjectMapper mapper=new ObjectMapper();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -741,6 +742,7 @@ public class UserProfileReadActor extends BaseActor {
           ResponseCode.userAccountlocked.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
+
     Future<Map<String, Object>> future = fetchRootAndRegisterOrganisation(result);
     Future<Response> response =
         future.map(
@@ -760,8 +762,7 @@ public class UserProfileReadActor extends BaseActor {
     Patterns.pipe(response, getContext().dispatcher()).to(sender());
   }
 
-  private void handleUserCallAsync(
-      Map<String, Object> result, Response response, Request actorMessage) {
+  private void handleUserCallAsync(Map<String, Object> result, Response response, Request actorMessage) {
     // having check for removing private filed from user , if call user and response
     // user data id is not same.
     String requestedById =
@@ -830,6 +831,57 @@ public class UserProfileReadActor extends BaseActor {
       response.put(JsonKey.RESPONSE, result);
     }
   }
+
+
+
+
+
+  private void updateTnc(Map<String,Object>userSearchMap){
+    Map<String, Object> tncConfigMap=null;
+    try{
+      String tncValue=DataCacheHandler.getConfigSettings().get(JsonKey.TNC_CONFIG);
+      tncConfigMap = mapper.readValue(tncValue, Map.class);
+
+    }
+    catch (Exception e){
+      ProjectLogger.log(
+              "UserProfileReadActor:updateTncInfo: Exception occurred while getting system setting for"
+                      + JsonKey.TNC_CONFIG
+                      + e.getMessage(),
+              LoggerEnum.ERROR.name());
+    }
+
+    if(MapUtils.isNotEmpty(tncConfigMap)){
+      try {
+        String tncLatestVersion = (String) tncConfigMap.get(JsonKey.LATEST_VERSION);
+        userSearchMap.put(JsonKey.TNC_LATEST_VERSION, tncLatestVersion);
+        String tncUserAcceptedVersion = (String) userSearchMap.get(JsonKey.TNC_ACCEPTED_VERSION);
+        String tncUserAcceptedOn = (String) userSearchMap.get(JsonKey.TNC_ACCEPTED_ON);
+        if (StringUtils.isEmpty(tncUserAcceptedVersion)
+                || !tncUserAcceptedVersion.equalsIgnoreCase(tncLatestVersion)
+                || StringUtils.isEmpty(tncUserAcceptedOn)) {
+          userSearchMap.put(JsonKey.PROMPT_TNC, true);
+        } else {
+          userSearchMap.put(JsonKey.PROMPT_TNC, false);
+        }
+
+        if (tncConfigMap.containsKey(tncLatestVersion)) {
+          String url = (String) ((Map) tncConfigMap.get(tncLatestVersion)).get(JsonKey.URL);
+          ProjectLogger.log(
+                  "UserProfileReadActor:updateTncInfo: url = " + url, LoggerEnum.INFO.name());
+          userSearchMap.put(JsonKey.TNC_LATEST_VERSION_URL, url);
+        } else {
+          userSearchMap.put(JsonKey.PROMPT_TNC, false);
+          ProjectLogger.log(
+                  "UserProfileReadActor:updateTncInfo: TnC version URL is missing from configuration");
+        }
+      } catch (Exception e) {
+        ProjectLogger.log(
+                "UserProfileReadActor:updateTncInfo: Exception occurred with error message = "
+                        + e.getMessage(),
+                LoggerEnum.ERROR.name());
+        ProjectCommonException.throwServerErrorException(ResponseCode.SERVER_ERROR);
+      }}}
 
   private void updateTncInfo(Map<String, Object> result) {
     SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
@@ -911,4 +963,156 @@ public class UserProfileReadActor extends BaseActor {
       sender().tell(exception, self());
     }
   }
+
+  private ElasticSearchService getESInstance(){
+    return EsClientFactory.getInstance(JsonKey.REST);
+  }
+
+
+
+  private void getKey(Request actorMessage){
+    String key = (String) actorMessage.getRequest().get(JsonKey.KEY);
+    String value = (String) actorMessage.getRequest().get(JsonKey.VALUE);
+    if (JsonKey.LOGIN_ID.equalsIgnoreCase(key) || JsonKey.EMAIL.equalsIgnoreCase(key)) {
+      value = value.toLowerCase();
+    }
+    String encryptedValue = null;
+    try {
+      encryptedValue = encryptionService.encryptData(value);
+    } catch (Exception e) {
+      ProjectCommonException exception =
+              new ProjectCommonException(
+                      ResponseCode.userDataEncryptionError.getErrorCode(),
+                      ResponseCode.userDataEncryptionError.getErrorMessage(),
+                      ResponseCode.SERVER_ERROR.getResponseCode());
+      sender().tell(exception, self());
+      return;
+    }
+
+    Map<String, Object> searchMap = new WeakHashMap<>();
+    searchMap.put(key, encryptedValue);
+    SearchDTO searchDTO=new SearchDTO();
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS,searchMap);
+    handleUserSearchAsyncRequest(searchDTO,actorMessage);
+
+  }
+
+
+  private void handleUserSearchAsyncRequest(SearchDTO searchDto,Request actorMessage) {
+    Future<Map<String, Object>> futureResponse = esUtil.search(searchDto, EsType.user.getTypeName());
+
+
+    Future<Map<String, Object>> userResponse = futureResponse.map(
+                    new Mapper<Map<String, Object>, Map<String, Object>>() {
+                      @Override
+                      public Map<String, Object>  apply(Map<String, Object> responseMap) {
+                        ProjectLogger.log("SearchHandlerActor:handleUserSearchAsyncRequest user search call ", LoggerEnum.INFO);
+                        List<Map<String, Object>> respList = (List) responseMap.get(JsonKey.CONTENT);
+                        isUserExists(respList);
+                        Map<String,Object>userMap=respList.get(0);
+                        userMap.put(JsonKey.EMAIL, userMap.get(JsonKey.MASKED_EMAIL));
+                        userMap.put(JsonKey.PHONE, userMap.get(JsonKey.MASKED_PHONE));
+                        isUserAccountDeleted(userMap);
+                        return userMap;
+                      }
+                    },getContext().dispatcher());
+
+
+
+    Future<Object> orgResponse= userResponse.map(new Mapper<Map<String, Object>, Object>() {
+      @Override
+      public Object apply(Map<String, Object> parameter) {
+        Map<String,Object>esOrgMap=new HashMap<>();
+        esOrgMap= (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(fetchRootAndRegisterOrganisation(parameter));
+        return esOrgMap;
+      }
+    },getContext().dispatcher());
+
+
+    Future<Map<String,Object>>userOrgResponse=userResponse.zip(orgResponse).map(new Mapper<Tuple2<Map<String, Object>, Object>, Map<String, Object>>() {
+      @Override
+      public Map<String, Object> apply(Tuple2<Map<String, Object>, Object> parameter) {
+        Map<String, Object> userMap=parameter._1;
+        userMap.put(JsonKey.ROOT_ORG, (Map<String, Object>) parameter._2);
+        userMap.remove(JsonKey.ENC_EMAIL);
+        userMap.remove(JsonKey.ENC_PHONE);
+        String requestedById = (String) actorMessage.getContext().getOrDefault(JsonKey.REQUESTED_BY, "");
+        if (!(((String) userMap.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedById))) {
+          userMap = removeUserPrivateField(userMap);
+        }
+        return userMap;      }
+    },getContext().dispatcher());
+
+    Future<Map<String, Object>> externalIdFuture = userResponse.map(new Mapper<Map<String, Object>, Map<String, Object>>() {
+      @Override
+      public Map<String, Object> apply(Map<String, Object> result) {
+        Map<String,Object>extIdMap=new HashMap<>();
+        String requestedById = (String) actorMessage.getContext().getOrDefault(JsonKey.REQUESTED_BY, "");
+        if (((String) result.get(JsonKey.USER_ID)).equalsIgnoreCase(requestedById)) {
+          List<Map<String, String>> dbResExternalIds = fetchUserExternalIdentity((String) result.get(JsonKey.USER_ID));
+          extIdMap.put(JsonKey.EXTERNAL_IDS, dbResExternalIds);
+          return extIdMap;
+        }
+        return extIdMap;
+      }
+    }, getContext().dispatcher());
+
+
+    Future<Map<String,Object>>tncFuture =  userOrgResponse.map(new Mapper<Map<String, Object>, Map<String, Object>>() {
+      @Override
+      public Map<String, Object> apply(Map<String, Object> result) {
+        updateTnc(result);
+        if (null != actorMessage.getRequest().get(JsonKey.FIELDS)) {
+          List<String> requestFields = (List<String>) actorMessage.getRequest().get(JsonKey.FIELDS);
+          if (requestFields != null) {
+            addExtraFieldsInUserProfileResponse(
+                    result, String.join(",", requestFields), (String) result.get(JsonKey.USER_ID));
+          } else {
+            result.remove(JsonKey.MISSING_FIELDS);
+            result.remove(JsonKey.COMPLETENESS);
+          }
+        } else {
+          result.remove(JsonKey.MISSING_FIELDS);
+          result.remove(JsonKey.COMPLETENESS);
+        }
+        UserUtility.decryptUserDataFrmES(result);
+        return result;
+      }
+    },getContext().dispatcher());
+
+
+    Future<Response> sumFuture = externalIdFuture.zip(tncFuture).map(new Mapper<Tuple2<Map<String, Object>, Map<String, Object>>, Response>() {
+      @Override
+      public Response apply(Tuple2<Map<String, Object>, Map<String, Object>> parameter) {
+        Map<String, Object> externalIdMap = parameter._1;
+        System.out.println("the externalId maap is " + externalIdMap);
+        Map<String, Object> tncMap = parameter._2;
+        tncMap.putAll(externalIdMap);
+        Response response = new Response();
+        response.put(JsonKey.RESPONSE, tncMap);
+        return response;
+      }
+    }, getContext().dispatcher());
+
+    Patterns.pipe(sumFuture, getContext().dispatcher()).to(sender());
+  }
+
+
+
+  private void isUserAccountDeleted(Map<String,Object>responseMap){
+    if(BooleanUtils.isTrue((Boolean)responseMap.get(JsonKey.IS_DELETED))){
+      throw new ProjectCommonException(ResponseCode.userAccountlocked.getErrorCode(), ResponseCode.userAccountlocked.getErrorMessage(), ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+  }
+
+  private void isUserExists(List<Map<String, Object>> respList){
+    if (null == respList || respList.size() == 0) {
+      throw new ProjectCommonException(ResponseCode.userNotFound.getErrorCode(), ResponseCode.userNotFound.getErrorMessage(), ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+    }
+  }
+
+
+
+
+
 }

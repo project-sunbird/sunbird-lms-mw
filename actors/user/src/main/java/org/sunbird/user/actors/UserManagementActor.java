@@ -111,11 +111,6 @@ public class UserManagementActor extends BaseActor {
         onReceiveUnsupportedOperation("UserManagementActor");
     }
   }
-<<<<<<< HEAD
-
-=======
-  
->>>>>>> eb27705bb18d7e2cfa10f4afc07fcb9e2b5422cd
   /**
    * This method will create user in user in cassandra and update to ES as well at same time.
    *

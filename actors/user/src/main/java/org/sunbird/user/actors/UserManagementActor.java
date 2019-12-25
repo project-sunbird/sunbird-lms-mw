@@ -1,5 +1,10 @@
 package org.sunbird.user.actors;
 
+import akka.actor.ActorRef;
+import akka.dispatch.Mapper;
+import akka.pattern.Patterns;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Timestamp;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -10,7 +15,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -62,13 +66,6 @@ import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.UserActorOperations;
 import org.sunbird.user.util.UserUtil;
-
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import akka.actor.ActorRef;
-import akka.dispatch.Mapper;
-import akka.pattern.Patterns;
 import scala.concurrent.Future;
 
 @ActorConfig(
@@ -114,7 +111,6 @@ public class UserManagementActor extends BaseActor {
         onReceiveUnsupportedOperation("UserManagementActor");
     }
   }
-  
   /**
    * This method will create user in user in cassandra and update to ES as well at same time.
    *
@@ -132,13 +128,8 @@ public class UserManagementActor extends BaseActor {
         (String) actorMessage.getContext().get(JsonKey.REQUEST_SOURCE) != null
             ? (String) actorMessage.getContext().get(JsonKey.REQUEST_SOURCE)
             : "";
-    String channel =
-        DataCacheHandler.getConfigSettings()
-            .get(JsonKey.CUSTODIAN_ORG_CHANNEL); // userService.getCustodianChannel(userMap,
-    // systemSettingActorRef);
-    String rootOrgId =
-        DataCacheHandler.getConfigSettings()
-            .get(JsonKey.CUSTODIAN_ORG_ID); // userService.getRootOrgIdFromChannel(channel);
+    String channel = DataCacheHandler.getConfigSettings().get(JsonKey.CUSTODIAN_ORG_CHANNEL);
+    String rootOrgId = DataCacheHandler.getConfigSettings().get(JsonKey.CUSTODIAN_ORG_ID);
     userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
     userMap.put(JsonKey.CHANNEL, channel);
     userMap.put(JsonKey.USER_TYPE, UserType.OTHER.getTypeName());
@@ -618,24 +609,32 @@ public class UserManagementActor extends BaseActor {
     userMap.put(JsonKey.ID, userId);
     userMap.put(JsonKey.USER_ID, userId);
     try {
-    	UserUtility.encryptUserData(userMap);
-    } catch(Exception ex) {
-    	ex.printStackTrace();
+      UserUtility.encryptUserData(userMap);
+    } catch (Exception ex) {
+      ex.printStackTrace();
     }
     UserUtil.addMaskEmailAndMaskPhone(userMap);
     userMap.put(JsonKey.IS_DELETED, false);
     Map<String, Boolean> userFlagsMap = new HashMap<>();
     userFlagsMap.put(JsonKey.STATE_VALIDATED, false);
-    
-    userFlagsMap.put(JsonKey.EMAIL_VERIFIED,
-        (Boolean) (userMap.get(JsonKey.EMAIL_VERIFIED) != null ? userMap.get(JsonKey.EMAIL_VERIFIED) : false));
-    userFlagsMap.put(JsonKey.PHONE_VERIFIED,
-        (Boolean) (userMap.get(JsonKey.PHONE_VERIFIED) != null ? userMap.get(JsonKey.PHONE_VERIFIED) : false));
+
+    userFlagsMap.put(
+        JsonKey.EMAIL_VERIFIED,
+        (Boolean)
+            (userMap.get(JsonKey.EMAIL_VERIFIED) != null
+                ? userMap.get(JsonKey.EMAIL_VERIFIED)
+                : false));
+    userFlagsMap.put(
+        JsonKey.PHONE_VERIFIED,
+        (Boolean)
+            (userMap.get(JsonKey.PHONE_VERIFIED) != null
+                ? userMap.get(JsonKey.PHONE_VERIFIED)
+                : false));
     int userFlagValue = userFlagsToNum(userFlagsMap);
     userMap.put(JsonKey.FLAGS_VALUE, userFlagValue);
-    Response response = cassandraOperation.insertRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userMap);
+    Response response =
+        cassandraOperation.insertRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userMap);
     boolean isPasswordUpdated = UserUtil.updatePassword(userMap);
-
     response.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
     if (!isPasswordUpdated) {
       response.put(JsonKey.ERROR_MSG, ResponseMessage.Message.ERROR_USER_UPDATE_PASSWORD);
@@ -647,20 +646,23 @@ public class UserManagementActor extends BaseActor {
     } else {
       ProjectLogger.log("UserManagementActor:processUserRequest: User creation failure");
     }
-    
-    if("kafka".equalsIgnoreCase(ProjectUtil.getConfigValue("sunbird_user_create_sync_type"))) {
+    if ("kafka".equalsIgnoreCase(ProjectUtil.getConfigValue("sunbird_user_create_sync_type"))) {
       saveUserToKafka(esResponse);
       sender().tell(response, self());
     } else {
-      Future<Response> future = saveUserToES(esResponse).map(new Mapper<String, Response>() {
-        @Override
-        public Response apply(String parameter) {
-          return response;
-        }
-      }, getContext().dispatcher());
+      Future<Response> future =
+          saveUserToES(esResponse)
+              .map(
+                  new Mapper<String, Response>() {
+                    @Override
+                    public Response apply(String parameter) {
+                      return response;
+                    }
+                  },
+                  getContext().dispatcher());
       Patterns.pipe(future, getContext().dispatcher()).to(sender());
     }
-    
+
     processTelemetry(userMap, signupType, source, userId);
   }
 
@@ -911,10 +913,12 @@ public class UserManagementActor extends BaseActor {
     EmailAndSmsRequest.setOperation(UserActorOperations.PROCESS_ONBOARDING_MAIL_AND_SMS.getValue());
     tellToAnother(EmailAndSmsRequest);
   }
-  
+
   private Future<String> saveUserToES(Map<String, Object> completeUserMap) {
 
-    return esUtil.save(ProjectUtil.EsType.user.getTypeName(), (String) completeUserMap.get(JsonKey.USER_ID),
+    return esUtil.save(
+        ProjectUtil.EsType.user.getTypeName(),
+        (String) completeUserMap.get(JsonKey.USER_ID),
         completeUserMap);
   }
 

@@ -99,12 +99,12 @@ public final class Util {
   static {
     loadPropertiesFile();
     initializeOrgStatusTransition();
-    initializeDBProperty();
-    // EkStep HttpClient headers init
+    initializeDBProperty(); // EkStep HttpClient headers init
     headers.put("content-type", "application/json");
     headers.put("accept", "application/json");
     new Thread(
             new Runnable() {
+
               @Override
               public void run() {
                 SchedulerManager.getInstance();

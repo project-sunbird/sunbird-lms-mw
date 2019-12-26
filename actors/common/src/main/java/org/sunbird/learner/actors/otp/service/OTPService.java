@@ -50,7 +50,7 @@ public class OTPService {
     return writer.toString();
    } catch (Exception ex) {
     ProjectLogger.log(
-            "OTPService:getDefaultOTPSMSBody: Exception occurred with error message = " + ex.getMessage(), ex);
+            "OTPService:getSmsBody: Exception occurred with error message = " + ex.getMessage(), ex);
    }
    return "";
   }

@@ -6,7 +6,12 @@ import java.util.Properties;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
+import org.apache.velocity.runtime.RuntimeServices;
+import org.apache.velocity.runtime.RuntimeSingleton;
+import org.apache.velocity.runtime.parser.node.SimpleNode;
+import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.learner.actors.notificationservice.dao.EmailTemplateDao;
 import org.sunbird.learner.actors.notificationservice.dao.impl.EmailTemplateDaoImpl;
 import org.sunbird.learner.actors.otp.dao.OTPDao;
@@ -35,16 +40,20 @@ public class OTPService {
 
   public static String getSmsBody(String templateFile, Map<String, String> smsTemplate) {
    try {
-    Properties props = new Properties();
-    props.put("resource.loader", "class");
-    props.put(
-            "class.resource.loader.class",
-            "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader");
+    String sms = getOTPSMSTemplate(templateFile);
+    RuntimeServices rs = RuntimeSingleton.getRuntimeServices();
+    SimpleNode sn = rs.parse(sms, "Sms Information");
+    Template t = new Template();
+    t.setRuntimeServices(rs);
+    t.setData(sn);
+    t.initDocument();
+    VelocityContext context = new VelocityContext();
+    context.put(JsonKey.OTP,  smsTemplate.get(JsonKey.OTP));
+    context.put(
+            JsonKey.OTP_EXPIRATION_IN_MINUTES,  smsTemplate.get(JsonKey.OTP_EXPIRATION_IN_MINUTES));
+    context.put(JsonKey.INSTALLATION_NAME,
+            ProjectUtil.getConfigValue(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME));
 
-    VelocityEngine ve = new VelocityEngine();
-    ve.init(props);
-    Template t = ve.getTemplate("/"+templateFile);
-    VelocityContext context = new VelocityContext(smsTemplate);
     StringWriter writer = new StringWriter();
     t.merge(context, writer);
     return writer.toString();

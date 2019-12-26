@@ -5,6 +5,7 @@ import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -29,11 +30,11 @@ public class SendOTPActor extends BaseActor {
     }
   }
 
-  private void sendOTP(Request request) throws Exception {
+  private void sendOTP(Request request) {
     String type = (String) request.getRequest().get(JsonKey.TYPE);
     String key = (String) request.getRequest().get(JsonKey.KEY);
     String otp = (String) request.getRequest().get(JsonKey.OTP);
-    String template = (String) request.getRequest().get(JsonKey.TEMPLATEID);
+    String template = (String) request.getRequest().get(JsonKey.TEMPLATE_ID);
     if (JsonKey.EMAIL.equalsIgnoreCase(type) || JsonKey.PREV_USED_EMAIL.equalsIgnoreCase(type)|| JsonKey.RECOVERY_EMAIL.equalsIgnoreCase(type)) {
       String userId = (String) request.get(JsonKey.USER_ID);
       ProjectLogger.log(
@@ -43,6 +44,9 @@ public class SendOTPActor extends BaseActor {
         || JsonKey.PREV_USED_PHONE.equalsIgnoreCase(type) || JsonKey.RECOVERY_PHONE.equalsIgnoreCase(type)) {
       sendOTPViaSMS(key, otp, template);
     }
+   Response response = new Response();
+   response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+   sender().tell(response, self());
   }
 
   private void sendOTPViaEmail(String key, String otp, String otpType, String template) {
@@ -50,7 +54,7 @@ public class SendOTPActor extends BaseActor {
     emailTemplateMap.put(JsonKey.EMAIL, key);
     emailTemplateMap.put(JsonKey.OTP, otp);
     emailTemplateMap.put(JsonKey.OTP_EXPIRATION_IN_MINUTES, OTPUtil.getOTPExpirationInMinutes());
-    emailTemplateMap.put(JsonKey.TEMPLATEID, template);
+    emailTemplateMap.put(JsonKey.TEMPLATE_ID, template);
     Request emailRequest = null;
     if (StringUtils.isBlank(otpType)) {
       emailRequest = OTPUtil.sendOTPViaEmail(emailTemplateMap);
@@ -60,11 +64,11 @@ public class SendOTPActor extends BaseActor {
     tellToAnother(emailRequest);
   }
 
-  private void sendOTPViaSMS(String key, String otp, String template) throws Exception {
+  private void sendOTPViaSMS(String key, String otp, String template)  {
     Map<String, Object> otpMap = new HashMap<>();
     otpMap.put(JsonKey.PHONE, key);
     otpMap.put(JsonKey.OTP, otp);
-    otpMap.put(JsonKey.TEMPLATEID, template);
+    otpMap.put(JsonKey.TEMPLATE_ID, template);
     otpMap.put(JsonKey.OTP_EXPIRATION_IN_MINUTES, OTPUtil.getOTPExpirationInMinutes());
     OTPUtil.sendOTPViaSMS(otpMap);
   }

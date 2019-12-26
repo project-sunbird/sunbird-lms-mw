@@ -32,9 +32,9 @@ import org.sunbird.notification.utils.SMSFactory;
 public final class OTPUtil {
 
   private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private static DecryptionService decService =
-      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
+  private static DecryptionService decService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
           null);
+
   private static final int MINIMUM_OTP_LENGTH = 6;
   private static final int SECONDS_IN_MINUTES = 60;
 
@@ -55,13 +55,13 @@ public final class OTPUtil {
     return String.valueOf(code);
   }
 
-  public static void sendOTPViaSMS(Map<String, Object> otpMap) throws Exception {
+  public static void sendOTPViaSMS(Map<String, Object> otpMap) {
     if (StringUtils.isBlank((String) otpMap.get(JsonKey.PHONE))) {
       return;
     }
 
     Map<String, String> smsTemplate = new HashMap<>();
-    String template = (String) otpMap.get(JsonKey.TEMPLATEID);
+    String template = (String) otpMap.get(JsonKey.TEMPLATE_ID);
     smsTemplate.put(JsonKey.OTP, (String) otpMap.get(JsonKey.OTP));
     smsTemplate.put(
         JsonKey.OTP_EXPIRATION_IN_MINUTES, (String) otpMap.get(JsonKey.OTP_EXPIRATION_IN_MINUTES));
@@ -70,10 +70,9 @@ public final class OTPUtil {
         ProjectUtil.getConfigValue(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME));
    String sms = null;
     if(StringUtils.isBlank(template)) {
-     sms = OTPService.getSmsBody("OTPSMSTemplate.vm", smsTemplate);
+     sms = OTPService.getSmsBody(JsonKey.VERIFY_PHONE_OTP_TEMPLATE, smsTemplate);
     } else {
-     //while reset password with mobile as option
-     sms = OTPService.getSmsBody("resetpasswordmobileotptemplate.vm", smsTemplate);
+     sms = OTPService.getSmsBody(JsonKey.OTP_PHONE_RESET_PASSWORD_TEMPLATE, smsTemplate);
     }
     ProjectLogger.log("OTPUtil:sendOTPViaSMS: SMS text = " + sms, LoggerEnum.INFO);
 
@@ -150,11 +149,11 @@ public final class OTPUtil {
     List<String> reciptientsMail = new ArrayList<>();
     reciptientsMail.add((String) emailTemplateMap.get(JsonKey.EMAIL));
     emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
-    if(StringUtils.isBlank((String) emailTemplateMap.get(JsonKey.TEMPLATEID))) {
+    if(StringUtils.isBlank((String) emailTemplateMap.get(JsonKey.TEMPLATE_ID))) {
      emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, JsonKey.OTP);
     } else {
      //send otp to email while reseting password from portal
-     emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, JsonKey.OTP_RESET_PASSWORD_TEMPLATE);
+     emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, JsonKey.OTP_EMAIL_RESET_PASSWORD_TEMPLATE);
     }
     emailTemplateMap.put(JsonKey.INSTALLATION_NAME, envName);
     request = new Request();

@@ -52,7 +52,6 @@ public class SystemSettingsActor extends BaseActor {
     }
   }
 
-  @SuppressWarnings("unchecked")
   private void getSystemSetting(Request actorMessage) {
     ProjectLogger.log(
         "SystemSettingsActor:getSystemSetting: request is " + actorMessage.getRequest(),
@@ -67,9 +66,6 @@ public class SystemSettingsActor extends BaseActor {
               value);
     }
 
-    ProjectLogger.log(
-        "SystemSettingsActor:getSystemSetting: new changes applied " + actorMessage.getRequest(),
-        LoggerEnum.INFO.name());
     if (setting == null) {
       setting =
           systemSettingDaoImpl.readByField((String) actorMessage.getContext().get(JsonKey.FIELD));
@@ -91,7 +87,6 @@ public class SystemSettingsActor extends BaseActor {
     sender().tell(response, self());
   }
 
-  @SuppressWarnings("unchecked")
   private void getAllSystemSettings() {
     ProjectLogger.log("SystemSettingsActor: getAllSystemSettings called", LoggerEnum.DEBUG.name());
     List<SystemSetting> allSystemSettings = systemSettingDaoImpl.readAll();

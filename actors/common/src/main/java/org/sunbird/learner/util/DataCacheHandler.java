@@ -38,11 +38,11 @@ public class DataCacheHandler implements Runnable {
     roleCache(roleMap);
     orgTypeCache(orgTypeMap);
     cacheSystemConfig(configSettings);
-    CacheRoleForRead();
+    cacheRoleForRead();
     ProjectLogger.log("DataCacheHandler:run: Cache refresh completed.", LoggerEnum.INFO.name());
   }
 
-  private void CacheRoleForRead() {
+  private void cacheRoleForRead() {
     roleCacheResponse = RoleService.getUserRoles();
   }
 

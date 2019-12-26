@@ -31,7 +31,6 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
-import org.sunbird.models.systemsetting.SystemSetting;
 import org.sunbird.models.user.User;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
@@ -234,7 +233,7 @@ public class UserProfileReadActor extends BaseActor {
     if (null != result) {
       UserUtility.decryptUserDataFrmES(result);
       updateSkillWithEndoresmentCount(result);
-      updateTncInfo(result);
+      updateTnc(result);
       // loginId is used internally for checking the duplicate user
       result.remove(JsonKey.LOGIN_ID);
       result.remove(JsonKey.ENC_EMAIL);
@@ -668,50 +667,6 @@ public class UserProfileReadActor extends BaseActor {
     }
   }
 
-  private void getUserByKey(Request actorMessage) {
-    String key = (String) actorMessage.getRequest().get(JsonKey.KEY);
-    String value = (String) actorMessage.getRequest().get(JsonKey.VALUE);
-
-    if (JsonKey.LOGIN_ID.equalsIgnoreCase(key) || JsonKey.EMAIL.equalsIgnoreCase(key)) {
-      // Converting to lower case because all email and loginId will be in lower case.
-      value = value.toLowerCase();
-    }
-    String encryptedValue = null;
-    try {
-      encryptedValue = encryptionService.encryptData(value);
-    } catch (Exception e) {
-      ProjectCommonException exception =
-          new ProjectCommonException(
-              ResponseCode.userDataEncryptionError.getErrorCode(),
-              ResponseCode.userDataEncryptionError.getErrorMessage(),
-              ResponseCode.SERVER_ERROR.getResponseCode());
-      sender().tell(exception, self());
-      return;
-    }
-    UserDao userDao = new UserDaoImpl();
-    Map<String, Object> searchMap = new HashMap();
-    searchMap.put(key, encryptedValue);
-    List<User> foundUsers = userDao.getUsersByProperties(searchMap);
-    if (foundUsers == null || foundUsers.size() == 0) {
-      throw new ProjectCommonException(
-          ResponseCode.userNotFound.getErrorCode(),
-          ResponseCode.userNotFound.getErrorMessage(),
-          ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
-    }
-    User foundUser = foundUsers.get(0);
-
-    ObjectMapper objectMapper = new ObjectMapper();
-    objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-    Map<String, Object> result = objectMapper.convertValue(foundUser, Map.class);
-    if (result != null) {
-      result.put(JsonKey.EMAIL, result.get(JsonKey.MASKED_EMAIL));
-      result.put(JsonKey.PHONE, result.get(JsonKey.MASKED_PHONE));
-    }
-    // String username = ssoManager.getUsernameById(foundUser.getId());
-    // result.put(JsonKey.USERNAME, username);
-    sendResponse(actorMessage, result);
-  }
-
   private void sendResponse(Request actorMessage, Map<String, Object> result) {
     if (result == null || result.size() == 0) {
       throw new ProjectCommonException(
@@ -750,8 +705,7 @@ public class UserProfileReadActor extends BaseActor {
     Patterns.pipe(response, getContext().dispatcher()).to(sender());
   }
 
-  private void handleUserCallAsync(
-      Map<String, Object> result, Response response, Request actorMessage) {
+  private void handleUserCallAsync(Map<String, Object> result, Response response, Request actorMessage) {
     // having check for removing private filed from user , if call user and response
     // user data id is not same.
     String requestedById =
@@ -799,7 +753,7 @@ public class UserProfileReadActor extends BaseActor {
       // remove email and phone no from response
       result.remove(JsonKey.ENC_EMAIL);
       result.remove(JsonKey.ENC_PHONE);
-      updateTncInfo(result);
+      updateTnc(result);
       if (null != actorMessage.getRequest().get(JsonKey.FIELDS)) {
         List<String> requestFields = (List<String>) actorMessage.getRequest().get(JsonKey.FIELDS);
         if (requestFields != null) {
@@ -869,55 +823,6 @@ public class UserProfileReadActor extends BaseActor {
     }
   }
 
-  private void updateTncInfo(Map<String, Object> result) {
-    SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
-    SystemSetting tncSystemSetting = null;
-    try {
-      tncSystemSetting =
-          systemSettingClient.getSystemSettingByField(
-              getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()), JsonKey.TNC_CONFIG);
-    } catch (Exception e) {
-      ProjectLogger.log(
-          "UserProfileReadActor:updateTncInfo: Exception occurred while getting system setting for"
-              + JsonKey.TNC_CONFIG
-              + e.getMessage(),
-          LoggerEnum.ERROR.name());
-    }
-    if (tncSystemSetting != null) {
-      try {
-        ObjectMapper mapper = new ObjectMapper();
-        Map<String, Object> tncConfigMap = mapper.readValue(tncSystemSetting.getValue(), Map.class);
-        String tncLatestVersion = (String) tncConfigMap.get(JsonKey.LATEST_VERSION);
-        result.put(JsonKey.TNC_LATEST_VERSION, tncLatestVersion);
-        String tncUserAcceptedVersion = (String) result.get(JsonKey.TNC_ACCEPTED_VERSION);
-        String tncUserAcceptedOn = (String) result.get(JsonKey.TNC_ACCEPTED_ON);
-        if (StringUtils.isEmpty(tncUserAcceptedVersion)
-            || !tncUserAcceptedVersion.equalsIgnoreCase(tncLatestVersion)
-            || StringUtils.isEmpty(tncUserAcceptedOn)) {
-          result.put(JsonKey.PROMPT_TNC, true);
-        } else {
-          result.put(JsonKey.PROMPT_TNC, false);
-        }
-
-        if (tncConfigMap.containsKey(tncLatestVersion)) {
-          String url = (String) ((Map) tncConfigMap.get(tncLatestVersion)).get(JsonKey.URL);
-          ProjectLogger.log(
-              "UserProfileReadActor:updateTncInfo: url = " + url, LoggerEnum.INFO.name());
-          result.put(JsonKey.TNC_LATEST_VERSION_URL, url);
-        } else {
-          result.put(JsonKey.PROMPT_TNC, false);
-          ProjectLogger.log(
-              "UserProfileReadActor:updateTncInfo: TnC version URL is missing from configuration");
-        }
-      } catch (Exception e) {
-        ProjectLogger.log(
-            "UserProfileReadActor:updateTncInfo: Exception occurred with error message = "
-                + e.getMessage(),
-            LoggerEnum.ERROR.name());
-        ProjectCommonException.throwServerErrorException(ResponseCode.SERVER_ERROR);
-      }
-    }
-  }
 
   private List<Map<String, Object>> getUserLocations(List<String> locationIds) {
     if (CollectionUtils.isNotEmpty(locationIds)) {

@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -74,13 +73,15 @@ public class SystemSettingsActorTest {
     List<Map<String, Object>> list = new ArrayList<>();
     list.add(getOrgData());
     resp.put(JsonKey.RESPONSE, list);
-    when(cassandraOperation.getRecordsByIndexedProperty(KEYSPACE_NAME, TABLE_NAME, JsonKey.FIELD, ROOT_ORG_ID)).thenReturn(resp);
-    when(cassandraOperation.getRecordsByIndexedProperty(KEYSPACE_NAME, TABLE_NAME, JsonKey.FIELD, KEYSPACE_NAME)).thenReturn(new Response());
-
+    when(cassandraOperation.getRecordsByIndexedProperty(
+            KEYSPACE_NAME, TABLE_NAME, JsonKey.FIELD, ROOT_ORG_ID))
+        .thenReturn(resp);
+    when(cassandraOperation.getRecordsByIndexedProperty(
+            KEYSPACE_NAME, TABLE_NAME, JsonKey.FIELD, KEYSPACE_NAME))
+        .thenReturn(new Response());
   }
 
-
-  private  Map<String, Object> getOrgData(){
+  private Map<String, Object> getOrgData() {
     Map<String, Object> orgData = new HashMap<String, Object>();
     orgData.put(JsonKey.FIELD, ROOT_ORG_ID);
     orgData.put(JsonKey.ID, ROOT_ORG_ID);
@@ -111,7 +112,8 @@ public class SystemSettingsActorTest {
 
   @Test
   public void testGetSystemSettingFailure() {
-  //  when(cassandraOperation.getRecordsByIndexedProperty(Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.any())).thenReturn(new Response());
+    //  when(cassandraOperation.getRecordsByIndexedProperty(Mockito.anyString(),
+    // Mockito.anyString(), Mockito.anyString(), Mockito.any())).thenReturn(new Response());
     Map<String, Object> orgData = new HashMap<String, Object>();
     orgData.put(JsonKey.FIELD, KEYSPACE_NAME);
     actorMessage.setOperation(ActorOperations.GET_SYSTEM_SETTING.getValue());

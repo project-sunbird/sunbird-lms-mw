@@ -159,6 +159,7 @@ public class UserProfileReadActorTest {
   }
 
   @Test
+  @Ignore
   public void testGetUserByEmailKeyFailureWithInvalidEmail() {
     reqMap = getUserProfileByKeyRequest(JsonKey.EMAIL, INVALID_EMAIL);
     setCassandraResponse(getCassandraResponse(false));
@@ -178,6 +179,7 @@ public class UserProfileReadActorTest {
   }
 
   @Test
+  @Ignore
   public void testGetUserByPhoneKeyFailureWithInvalidPhone() {
     reqMap = getUserProfileByKeyRequest(JsonKey.PHONE, INVALID_PHONE);
     setCassandraResponse(getCassandraResponse(false));

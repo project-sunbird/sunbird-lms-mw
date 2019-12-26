@@ -1,6 +1,8 @@
 package org.sunbird.user.actors;
 
 import akka.actor.ActorRef;
+import akka.dispatch.Mapper;
+import akka.pattern.Patterns;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Timestamp;
@@ -112,7 +114,7 @@ public class UserManagementActor extends BaseActor {
   /**
    * This method will create user in user in cassandra and update to ES as well at same time.
    *
-   * @param request
+   * @param actorMessage
    */
   private void createUserV3(Request actorMessage) {
     ProjectLogger.log("UserManagementActor:createUserV3 method called.", LoggerEnum.INFO.name());
@@ -649,10 +651,8 @@ public class UserManagementActor extends BaseActor {
       sender().tell(response, self());
     } else {
 
-      sender().tell(response, self());
-      // Future<Response> future =
-      saveUserToES(esResponse);
-      /* .map(
+//      sender().tell(response, self());
+      Future<Response> future = saveUserToES(esResponse).map(
                   new Mapper<String, Response>() {
                     @Override
                     public Response apply(String parameter) {
@@ -660,7 +660,7 @@ public class UserManagementActor extends BaseActor {
                     }
                   },
                   getContext().dispatcher());
-      Patterns.pipe(future, getContext().dispatcher()).to(sender());*/
+      Patterns.pipe(future, getContext().dispatcher()).to(sender());
     }
 
     processTelemetry(userMap, signupType, source, userId);

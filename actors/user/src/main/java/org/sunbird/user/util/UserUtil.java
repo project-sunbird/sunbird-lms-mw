@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -490,7 +491,7 @@ public class UserUtil {
     if (StringUtils.isBlank((String) userMap.get(JsonKey.USERNAME))) {
       String firstName = (String) userMap.get(JsonKey.FIRST_NAME);
       firstName = firstName.split(" ")[0];
-      userMap.put(JsonKey.USERNAME, firstName + "_" + generateUniqueString(5));
+      userMap.put(JsonKey.USERNAME, firstName + "_" + generateUniqueString(4));
     } else {
       if (!userService.checkUsernameUniqueness((String) userMap.get(JsonKey.USERNAME), false)) {
         ProjectCommonException.throwClientErrorException(ResponseCode.userNameAlreadyExistError);
@@ -512,13 +513,16 @@ public class UserUtil {
         code = code + alphabet[rand.nextInt(totalChars - 1)];
       }
     }
-    String val = code.substring(1, 2);
-    try {
-      Integer.parseInt(val);
-    } catch (Exception e) {
+    if (NumberUtils.isNumber(code.substring(1, 2)) || NumberUtils.isNumber(code.substring(2, 3))) {
+      return code;
+    } else {
       code = code.substring(0, 1) + alphabet[rand.nextInt(9)] + code.substring(2);
+      return code;
     }
-    return code;
+  }
+
+  public static void main(String[] args) {
+    for (int i = 0; i < 1000; i++) System.out.println(generateUniqueString(4));
   }
 
   private static String baseN(BigDecimal num, int base) {

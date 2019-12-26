@@ -33,26 +33,26 @@ public class OTPService {
     otpDao.deleteOtp(type,key);
   }
 
-  public static String getDefaultOTPSMSBody(Map<String, String> smsTemplate) {
-    try {
-      Properties props = new Properties();
-      props.put("resource.loader", "class");
-      props.put(
-          "class.resource.loader.class",
-          "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader");
+  public static String getSmsBody(String templateFile, Map<String, String> smsTemplate) {
+   try {
+    Properties props = new Properties();
+    props.put("resource.loader", "class");
+    props.put(
+            "class.resource.loader.class",
+            "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader");
 
-      VelocityEngine ve = new VelocityEngine();
-      ve.init(props);
-      Template t = ve.getTemplate("/OTPSMSTemplate.vm");
-      VelocityContext context = new VelocityContext(smsTemplate);
-      StringWriter writer = new StringWriter();
-      t.merge(context, writer);
-      return writer.toString();
-    } catch (Exception ex) {
-      ProjectLogger.log(
-          "OTPService:getDefaultOTPSMSBody: Exception occurred with error message = " + ex.getMessage(), ex);
-    }
-    return "";
+    VelocityEngine ve = new VelocityEngine();
+    ve.init(props);
+    Template t = ve.getTemplate("/"+templateFile);
+    VelocityContext context = new VelocityContext(smsTemplate);
+    StringWriter writer = new StringWriter();
+    t.merge(context, writer);
+    return writer.toString();
+   } catch (Exception ex) {
+    ProjectLogger.log(
+            "OTPService:getDefaultOTPSMSBody: Exception occurred with error message = " + ex.getMessage(), ex);
+   }
+   return "";
   }
 
 }

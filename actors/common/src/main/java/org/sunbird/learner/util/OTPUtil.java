@@ -5,16 +5,10 @@ import com.warrenstrange.googleauth.GoogleAuthenticatorConfig;
 import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
 import com.warrenstrange.googleauth.KeyRepresentation;
 
-import java.io.StringWriter;
 import java.util.*;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.velocity.Template;
-import org.apache.velocity.VelocityContext;
-import org.apache.velocity.runtime.RuntimeServices;
-import org.apache.velocity.runtime.RuntimeSingleton;
-import org.apache.velocity.runtime.parser.node.SimpleNode;
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -64,7 +58,7 @@ public final class OTPUtil {
     }
 
     Map<String, String> smsTemplate = new HashMap<>();
-    String template = (String) otpMap.get(JsonKey.TEMPLATE);
+    String template = (String) otpMap.get(JsonKey.TEMPLATEID);
     smsTemplate.put(JsonKey.OTP, (String) otpMap.get(JsonKey.OTP));
     smsTemplate.put(
         JsonKey.OTP_EXPIRATION_IN_MINUTES, (String) otpMap.get(JsonKey.OTP_EXPIRATION_IN_MINUTES));
@@ -72,29 +66,12 @@ public final class OTPUtil {
         JsonKey.INSTALLATION_NAME,
         ProjectUtil.getConfigValue(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME));
    String sms = null;
-    if(template.isEmpty()) {
-     sms = OTPService.getDefaultOTPSMSBody(smsTemplate);
+    if(StringUtils.isBlank(template)) {
+     sms = OTPService.getSmsBody("OTPSMSTemplate.vm", smsTemplate);
     } else {
-     sms = OTPService.getOTPSMSTemplate(template);
-     RuntimeServices rs = RuntimeSingleton.getRuntimeServices();
-     SimpleNode sn = rs.parse(sms, "Sms Information");
-     Template t = new Template();
-     t.setRuntimeServices(rs);
-     t.setData(sn);
-     t.initDocument();
-     VelocityContext context = new VelocityContext();
-     context.put(JsonKey.OTP,  otpMap.get(JsonKey.OTP));
-     context.put(
-             JsonKey.OTP_EXPIRATION_IN_MINUTES,  otpMap.get(JsonKey.OTP_EXPIRATION_IN_MINUTES));
-     context.put(JsonKey.INSTALLATION_NAME,
-             ProjectUtil.getConfigValue(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME));
-
-     StringWriter sw = new StringWriter();
-     t.merge(context, sw);
-     sms =  sw.toString();
+     //while reset password with mobile as option
+     sms = OTPService.getSmsBody("resetpasswordmobileotptemplate.vm", smsTemplate);
     }
-
-
     ProjectLogger.log("OTPUtil:sendOTPViaSMS: SMS text = " + sms, LoggerEnum.INFO);
 
     String countryCode = "";
@@ -170,7 +147,12 @@ public final class OTPUtil {
     List<String> reciptientsMail = new ArrayList<>();
     reciptientsMail.add((String) emailTemplateMap.get(JsonKey.EMAIL));
     emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
-    emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, JsonKey.OTP);
+    if(StringUtils.isBlank((String) emailTemplateMap.get(JsonKey.TEMPLATEID))) {
+     emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, JsonKey.OTP);
+    } else {
+     //send otp to email while reseting password from portal
+     emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, JsonKey.OTP_RESET_PASSWORD_TEMPLATE);
+    }
     emailTemplateMap.put(JsonKey.INSTALLATION_NAME, envName);
     request = new Request();
     request.setOperation(BackgroundOperations.emailService.name());

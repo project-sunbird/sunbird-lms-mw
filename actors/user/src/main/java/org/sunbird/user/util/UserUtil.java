@@ -1,17 +1,20 @@
 package org.sunbird.user.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.WeakHashMap;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -66,6 +69,15 @@ public class UserUtil {
   private static UserExternalIdentityDao userExternalIdentityDao =
       new UserExternalIdentityDaoImpl();
   private static ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
+  static Random rand = new Random(System.nanoTime());
+  private static final String[] alphabet =
+      new String[] {
+        "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "g", "h", "i",
+        "j", "k", "l", "m", "n", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"
+      };
+
+  private static String stripChars = "0";
+  private static BigDecimal largePrimeNumber = new BigDecimal(1679979167);
 
   private UserUtil() {}
 
@@ -96,6 +108,74 @@ public class UserUtil {
               ProjectCommonException.throwClientErrorException(ResponseCode.PhoneNumberInUse, null);
             }
           }
+        }
+      }
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  public static void checkPhoneUniqueness(String phone) {
+    // Get Phone configuration if not found , by default phone will be unique across
+    // the application
+    String phoneSetting = DataCacheHandler.getConfigSettings().get(JsonKey.PHONE_UNIQUE);
+    if (StringUtils.isNotBlank(phoneSetting) && Boolean.parseBoolean(phoneSetting)) {
+      if (StringUtils.isNotBlank(phone)) {
+        try {
+          phone = encryptionService.encryptData(phone);
+        } catch (Exception e) {
+          ProjectLogger.log("Exception occurred while encrypting phone number ", e);
+        }
+        Response result =
+            cassandraOperation.getRecordsByIndexedProperty(
+                userDb.getKeySpace(), userDb.getTableName(), (JsonKey.PHONE), phone);
+        List<Map<String, Object>> userMapList =
+            (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+        if (!userMapList.isEmpty()) {
+          ProjectCommonException.throwClientErrorException(ResponseCode.PhoneNumberInUse, null);
+        }
+      }
+    }
+  }
+
+  public static boolean identifierExists(String type, String value) {
+
+    if (StringUtils.isNotBlank(value)) {
+      try {
+        value = encryptionService.encryptData(value);
+      } catch (Exception e) {
+        ProjectLogger.log("Exception occurred while encrypting email/phone", e);
+      }
+      Response result =
+          cassandraOperation.getRecordsByIndexedProperty(
+              userDb.getKeySpace(), userDb.getTableName(), type, value);
+      @SuppressWarnings("unchecked")
+      List<Map<String, Object>> userMapList =
+          (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+      return !userMapList.isEmpty();
+    } else {
+      return false;
+    }
+  }
+
+  public static void checkEmailUniqueness(String email) {
+    // Get Phone configuration if not found , by default phone will be unique across
+    // the application
+    String emailSetting = DataCacheHandler.getConfigSettings().get(JsonKey.EMAIL_UNIQUE);
+    if (StringUtils.isNotBlank(emailSetting) && Boolean.parseBoolean(emailSetting)) {
+      if (StringUtils.isNotBlank(email)) {
+        try {
+          email = encryptionService.encryptData(email);
+        } catch (Exception e) {
+          ProjectLogger.log("Exception occurred while encrypting phone number ", e);
+        }
+        Response result =
+            cassandraOperation.getRecordsByIndexedProperty(
+                userDb.getKeySpace(), userDb.getTableName(), (JsonKey.EMAIL), email);
+        List<Map<String, Object>> userMapList =
+            (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
+        if (!userMapList.isEmpty()) {
+          ProjectCommonException.throwClientErrorException(
+              ResponseCode.emailAlreadyExistError, null);
         }
       }
     }
@@ -160,7 +240,6 @@ public class UserUtil {
     return user;
   }
 
-  @SuppressWarnings("unchecked")
   public static String getUserIdFromExternalId(Map<String, Object> userMap) {
     Request request = new Request();
     request.setRequest(userMap);
@@ -394,6 +473,62 @@ public class UserUtil {
   public static Map<String, Object> checkProfileCompleteness(Map<String, Object> userMap) {
     ProfileCompletenessService profileService = ProfileCompletenessFactory.getInstance();
     return profileService.computeProfile(userMap);
+  }
+
+  public static void setUserDefaultValueForV3(Map<String, Object> userMap) {
+    List<String> roles = new ArrayList<>();
+    roles.add(ProjectUtil.UserRole.PUBLIC.getValue());
+    userMap.put(JsonKey.ROLES, roles);
+    userMap.put(
+        JsonKey.COUNTRY_CODE, propertiesCache.getProperty(JsonKey.SUNBIRD_DEFAULT_COUNTRY_CODE));
+    // Since global settings are introduced, profile visibility map should be empty during user
+    // creation
+    userMap.put(JsonKey.PROFILE_VISIBILITY, new HashMap<String, String>());
+    userMap.put(JsonKey.IS_DELETED, false);
+    userMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
+    userMap.put(JsonKey.STATUS, ProjectUtil.Status.ACTIVE.getValue());
+
+    if (StringUtils.isBlank((String) userMap.get(JsonKey.USERNAME))) {
+      String firstName = (String) userMap.get(JsonKey.FIRST_NAME);
+      firstName = firstName.split(" ")[0];
+      userMap.put(JsonKey.USERNAME, firstName + "_" + generateUniqueString(4));
+    } else {
+      if (!userService.checkUsernameUniqueness((String) userMap.get(JsonKey.USERNAME), false)) {
+        ProjectCommonException.throwClientErrorException(ResponseCode.userNameAlreadyExistError);
+      }
+    }
+  }
+
+  public static String generateUniqueString(int length) {
+    int totalChars = alphabet.length;
+    BigDecimal exponent = BigDecimal.valueOf(totalChars);
+    exponent = exponent.pow(length);
+    String code = "";
+    BigDecimal number = new BigDecimal(rand.nextInt(1000000));
+    BigDecimal num = number.multiply(largePrimeNumber).remainder(exponent);
+    code = baseN(num, totalChars);
+    int codeLenght = code.length();
+    if (codeLenght < length) {
+      for (int i = codeLenght; i < length; i++) {
+        code = code + alphabet[rand.nextInt(totalChars - 1)];
+      }
+    }
+    if (NumberUtils.isNumber(code.substring(1, 2)) || NumberUtils.isNumber(code.substring(2, 3))) {
+      return code;
+    } else {
+      code = code.substring(0, 1) + alphabet[rand.nextInt(9)] + code.substring(2);
+      return code;
+    }
+  }
+
+  private static String baseN(BigDecimal num, int base) {
+    if (num.doubleValue() == 0) {
+      return "0";
+    }
+    double div = Math.floor(num.doubleValue() / base);
+    String val = baseN(new BigDecimal(div), base);
+    return StringUtils.stripStart(val, stripChars)
+        + alphabet[num.remainder(new BigDecimal(base)).intValue()];
   }
 
   public static void setUserDefaultValue(Map<String, Object> userMap, String callerId) {

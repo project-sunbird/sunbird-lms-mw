@@ -99,12 +99,12 @@ public final class Util {
   static {
     loadPropertiesFile();
     initializeOrgStatusTransition();
-    initializeDBProperty();
-    // EkStep HttpClient headers init
+    initializeDBProperty(); // EkStep HttpClient headers init
     headers.put("content-type", "application/json");
     headers.put("accept", "application/json");
     new Thread(
             new Runnable() {
+
               @Override
               public void run() {
                 SchedulerManager.getInstance();
@@ -1476,6 +1476,28 @@ public final class Util {
     return userDetails;
   }
 
+  public static Map<String, Object> getUserDetails(
+      Map<String, Object> userDetails, Map<String, Object> orgMap) {
+    String userId = (String) userDetails.get(JsonKey.USER_ID);
+    ProjectLogger.log("get user profile method call started user Id : " + userId);
+    List<Map<String, Object>> orgList = new ArrayList<Map<String, Object>>();
+    orgList.add(orgMap);
+    ProjectLogger.log("Util:getUserDetails: userId = " + userId, LoggerEnum.INFO.name());
+    userDetails.put(JsonKey.ORGANISATIONS, orgList);
+    Map<String, Object> rootOrg = getOrgDetails((String) userDetails.get(JsonKey.ROOT_ORG_ID));
+    if (!MapUtils.isEmpty(rootOrg)) {
+      userDetails.put(JsonKey.ROOT_ORG_NAME, orgMap.get(JsonKey.ORG_NAME));
+    } else {
+      userDetails.put(JsonKey.ROOT_ORG_NAME, "");
+    }
+    // save masked email and phone number
+    addMaskEmailAndPhone(userDetails);
+    userDetails.remove(JsonKey.PASSWORD);
+    addEmailAndPhone(userDetails);
+    checkEmailAndPhoneVerified(userDetails);
+    return userDetails;
+  }
+
   public static void addEmailAndPhone(Map<String, Object> userDetails) {
     userDetails.put(JsonKey.PHONE, userDetails.remove(JsonKey.ENC_PHONE));
     userDetails.put(JsonKey.EMAIL, userDetails.remove(JsonKey.ENC_EMAIL));
@@ -1946,8 +1968,7 @@ public final class Util {
 
       templateMap.put(
           JsonKey.SET_PASSWORD_LINK, isUrlShortRequired ? urlShortner.shortUrl(url) : url);
-      return  isUrlShortRequired ? urlShortner.shortUrl(url) : url;
-
+      return isUrlShortRequired ? urlShortner.shortUrl(url) : url;
 
     } else {
       String url =

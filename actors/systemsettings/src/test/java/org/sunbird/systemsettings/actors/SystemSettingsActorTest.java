@@ -7,10 +7,13 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
@@ -51,6 +54,8 @@ public class SystemSettingsActorTest {
   private static String FIELD = "someField";
   private static String VALUE = "someValue";
   private ElasticSearchTcpImpl esUtil;
+  private static final String KEYSPACE_NAME = JsonKey.SUNBIRD;
+  private static final String TABLE_NAME = JsonKey.SYSTEM_SETTINGS_DB;
 
   @Before
   public void setUp() {
@@ -64,6 +69,24 @@ public class SystemSettingsActorTest {
     actorMessage = new Request();
     PowerMockito.mockStatic(EsClientFactory.class);
     esUtil = PowerMockito.mock(ElasticSearchTcpImpl.class);
+    Response resp = new Response();
+    List<Map<String, Object>> list = new ArrayList<>();
+    list.add(getOrgData());
+    resp.put(JsonKey.RESPONSE, list);
+    when(cassandraOperation.getRecordsByIndexedProperty(
+            KEYSPACE_NAME, TABLE_NAME, JsonKey.FIELD, ROOT_ORG_ID))
+        .thenReturn(resp);
+    when(cassandraOperation.getRecordsByIndexedProperty(
+            KEYSPACE_NAME, TABLE_NAME, JsonKey.FIELD, KEYSPACE_NAME))
+        .thenReturn(new Response());
+  }
+
+  private Map<String, Object> getOrgData() {
+    Map<String, Object> orgData = new HashMap<String, Object>();
+    orgData.put(JsonKey.FIELD, ROOT_ORG_ID);
+    orgData.put(JsonKey.ID, ROOT_ORG_ID);
+    orgData.put(JsonKey.VALUE, VALUE);
+    return orgData;
   }
 
   @Test
@@ -80,19 +103,8 @@ public class SystemSettingsActorTest {
 
   @Test
   public void testGetSystemSettingSuccess() {
-    Map<String, Object> orgData = new HashMap<String, Object>();
-    orgData.put(JsonKey.FIELD, ROOT_ORG_ID);
-    orgData.put(JsonKey.ID, ROOT_ORG_ID);
-    orgData.put(JsonKey.VALUE, VALUE);
-    Response resp = new Response();
-    List<Map<String, Object>> list = new ArrayList<>();
-    list.add(orgData);
-    resp.put(JsonKey.RESPONSE, list);
-    when(cassandraOperation.getRecordsByIndexedProperty(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.any()))
-        .thenReturn(resp,new Response());
     actorMessage.setOperation(ActorOperations.GET_SYSTEM_SETTING.getValue());
-    actorMessage.setRequest(orgData);
+    actorMessage.setContext(getOrgData());
     subject.tell(actorMessage, probe.getRef());
     Response response = probe.expectMsgAnyClassOf(ACTOR_MAX_WAIT_DURATION, Response.class);
     Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
@@ -100,13 +112,12 @@ public class SystemSettingsActorTest {
 
   @Test
   public void testGetSystemSettingFailure() {
+    //  when(cassandraOperation.getRecordsByIndexedProperty(Mockito.anyString(),
+    // Mockito.anyString(), Mockito.anyString(), Mockito.any())).thenReturn(new Response());
     Map<String, Object> orgData = new HashMap<String, Object>();
-    orgData.put(JsonKey.ID, ROOT_ORG_ID);
-    when(cassandraOperation.getRecordsByIndexedProperty(
-            Mockito.anyString(), Mockito.anyString(), Mockito.anyString(), Mockito.any()))
-        .thenReturn(new Response());
+    orgData.put(JsonKey.FIELD, KEYSPACE_NAME);
     actorMessage.setOperation(ActorOperations.GET_SYSTEM_SETTING.getValue());
-    actorMessage.getRequest().putAll(orgData);
+    actorMessage.setContext(orgData);
     subject.tell(actorMessage, probe.getRef());
     ProjectCommonException exception =
         probe.expectMsgAnyClassOf(ACTOR_MAX_WAIT_DURATION, ProjectCommonException.class);

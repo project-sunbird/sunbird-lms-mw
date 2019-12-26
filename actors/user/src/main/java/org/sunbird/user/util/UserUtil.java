@@ -521,10 +521,6 @@ public class UserUtil {
     }
   }
 
-  public static void main(String[] args) {
-    for (int i = 0; i < 1000; i++) System.out.println(generateUniqueString(4));
-  }
-
   private static String baseN(BigDecimal num, int base) {
     if (num.doubleValue() == 0) {
       return "0";

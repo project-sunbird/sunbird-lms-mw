@@ -21,3 +21,4 @@ dist
 *.iml
 actors/badge/logs
 dependency-reduced-pom.xml
+actors/common/velocity.log

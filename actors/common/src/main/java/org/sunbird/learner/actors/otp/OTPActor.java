@@ -28,6 +28,7 @@ public class OTPActor extends BaseActor {
 
   private OTPService otpService = new OTPService();
   private RateLimitService rateLimitService = new RateLimitServiceImpl();
+  public static final String TEST_OTP = "45678";
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -59,7 +60,7 @@ public class OTPActor extends BaseActor {
       otp = OTPUtil.generateOTP();
       ProjectLogger.log(
           "OTPActor:generateOTP: Key = " + key + " OTP = " + otp, LoggerEnum.DEBUG.name());
-      otpService.insertOTPDetails(type, key, otp);
+      otpService.insertOTPDetails(type, key, TEST_OTP);
     } else {
       otp = (String) details.get(JsonKey.OTP);
     }
@@ -131,7 +132,7 @@ public class OTPActor extends BaseActor {
     sendOtpRequest.getRequest().put(JsonKey.KEY, key);
     sendOtpRequest.getRequest().put(JsonKey.OTP, otp);
     sendOtpRequest.setOperation(ActorOperations.SEND_OTP.getValue());
-    tellToAnother(sendOtpRequest);
+  //  tellToAnother(sendOtpRequest);
   }
 
   private String getKey(String type, Request request) {

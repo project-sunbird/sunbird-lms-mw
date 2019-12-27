@@ -42,13 +42,10 @@ import org.sunbird.user.util.UserUtil;
 import scala.Tuple2;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
-import scala.concurrent.Promise;
-
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import static org.sunbird.learner.util.Util.isNotNull;

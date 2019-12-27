@@ -84,7 +84,6 @@ public class UserManagementActor extends BaseActor {
       InterServiceCommunicationFactory.getInstance();
   private ActorRef systemSettingActorRef = null;
   private static ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
-  ExecutorService service = Executors.newFixedThreadPool(10);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -665,10 +664,7 @@ public class UserManagementActor extends BaseActor {
     processTelemetry(userMap, signupType, source, userId);
   }
 
-  private void processTelemetry(
-      Map<String, Object> userMap, String signupType, String source, String userId) {
-    service.execute(
-        () -> {
+  private void processTelemetry(Map<String, Object> userMap, String signupType, String source, String userId) {
           Map<String, Object> targetObject = null;
           List<Map<String, Object>> correlatedObject = new ArrayList<>();
           Map<String, String> rollUp = new HashMap<>();
@@ -693,7 +689,6 @@ public class UserManagementActor extends BaseActor {
           }
 
           TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
-        });
   }
 
   private Map<String, Object> saveUserOrgInfo(Map<String, Object> userMap) {

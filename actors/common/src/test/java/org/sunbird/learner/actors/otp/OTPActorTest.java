@@ -206,7 +206,6 @@ public class OTPActorTest {
             .thenReturn(createCassandraInsertSuccessResponse());
     subject.tell(request, probe.getRef());
     Response response = probe.expectMsgClass(duration("10 second"), Response.class);
-    System.out.println(response.toString());
     Assert.assertTrue(response.getResponseCode().equals(ResponseCode.OK));
   }
 

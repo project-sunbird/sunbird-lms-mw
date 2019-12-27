@@ -858,8 +858,8 @@ public class UserProfileReadActor extends BaseActor {
 
   private void checkUserExistence(Request request) {
 
-    Future<Map<String,Object>> searchMapFuture = Futures.future(new Callable<Map<String,Object>>() {
-      public Map<String,Object> call() {
+    Future<Response> future = Futures.future(new Callable<Response>() {
+      public Response call() {
         Map<String,Object>searchMap=new HashMap<>();
         String value=(String)request.get(JsonKey.VALUE);
         String encryptedValue = null;
@@ -870,16 +870,10 @@ public class UserProfileReadActor extends BaseActor {
         }
         searchMap.put((String) request.get(JsonKey.KEY),encryptedValue);
         ProjectLogger.log("UserProfileReadActor:checkUserExistence: search map prepared "+searchMap,LoggerEnum.INFO.name());
-        return searchMap;
-      }
-    }, getContext().dispatcher());
-
-
-    Future<Response>responseFuture=  searchMapFuture.map(new Mapper<Map<String, Object>, Response>() {
-      @Override
-      public Response apply(Map<String, Object> searchMap) {
-        Response response=cassandraOperation.getRecordsByProperties(JsonKey.SUNBIRD, JsonKey.USER, searchMap);
-        List<Map<String,Object>>respList=(List)response.get(JsonKey.RESPONSE);
+        SearchDTO searchDTO=new SearchDTO();
+        searchDTO.getAdditionalProperties().put(JsonKey.FILTERS,searchMap);
+        Map<String,Object> respMap=(Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(esUtil.search(searchDTO, EsType.user.getTypeName()));
+        List<Map<String,Object>>respList=(List)respMap.get(JsonKey.CONTENT);
         long size=respList.size();
         Response resp=new Response();
         resp.put(JsonKey.EXISTS, true);
@@ -888,9 +882,8 @@ public class UserProfileReadActor extends BaseActor {
         }
         return resp;
       }
-    },getContext().dispatcher());
-
-    Patterns.pipe(responseFuture, getContext().dispatcher()).to(sender());
+    }, getContext().dispatcher());
+    Patterns.pipe(future, getContext().dispatcher()).to(sender());
   }
 
   private ElasticSearchService getESInstance() {

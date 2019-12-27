@@ -857,33 +857,35 @@ public class UserProfileReadActor extends BaseActor {
   }
 
   private void checkUserExistence(Request request) {
+    Map<String, Object> searchMap = new WeakHashMap<>();
+    String value=(String)request.get(JsonKey.VALUE);
+    String encryptedValue = null;
+    try {
+      encryptedValue = encryptionService.encryptData(StringUtils.lowerCase(value));
+    } catch (Exception var11) {
+      throw  new ProjectCommonException(ResponseCode.userDataEncryptionError.getErrorCode(), ResponseCode.userDataEncryptionError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
+    }
+    searchMap.put((String) request.get(JsonKey.KEY),encryptedValue);
+    ProjectLogger.log("UserProfileReadActor:checkUserExistence: search map prepared "+searchMap,LoggerEnum.INFO.name());
+    SearchDTO searchDTO=new SearchDTO();
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS,searchMap);
+    Future<Map<String, Object>> esFuture = esUtil.search(searchDTO, EsType.user.getTypeName());
+    Future<Response> userResponse = esFuture.map(new Mapper<Map<String, Object>, Response>() {
+                      @Override
+                      public Response apply(Map<String, Object> responseMap) {
+                        List<Map<String, Object>> respList = (List) responseMap.get(JsonKey.CONTENT);
+                        long size=respList.size();
+                        Response resp=new Response();
+                        resp.put(JsonKey.EXISTS, true);
+                        if(size<=0) {
+                          resp.put(JsonKey.EXISTS, false);
+                        }
+                        return resp;
+                      }
+                    },
+                    getContext().dispatcher());
 
-    Future<Response> future = Futures.future(new Callable<Response>() {
-      public Response call() {
-        Map<String,Object>searchMap=new HashMap<>();
-        String value=(String)request.get(JsonKey.VALUE);
-        String encryptedValue = null;
-        try {
-          encryptedValue = encryptionService.encryptData(StringUtils.lowerCase(value));
-        } catch (Exception var11) {
-          throw  new ProjectCommonException(ResponseCode.userDataEncryptionError.getErrorCode(), ResponseCode.userDataEncryptionError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
-        }
-        searchMap.put((String) request.get(JsonKey.KEY),encryptedValue);
-        ProjectLogger.log("UserProfileReadActor:checkUserExistence: search map prepared "+searchMap,LoggerEnum.INFO.name());
-        SearchDTO searchDTO=new SearchDTO();
-        searchDTO.getAdditionalProperties().put(JsonKey.FILTERS,searchMap);
-        Map<String,Object> respMap=(Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(esUtil.search(searchDTO, EsType.user.getTypeName()));
-        List<Map<String,Object>>respList=(List)respMap.get(JsonKey.CONTENT);
-        long size=respList.size();
-        Response resp=new Response();
-        resp.put(JsonKey.EXISTS, true);
-        if(size<=0) {
-          resp.put(JsonKey.EXISTS, false);
-        }
-        return resp;
-      }
-    }, getContext().dispatcher());
-    Patterns.pipe(future, getContext().dispatcher()).to(sender());
+    Patterns.pipe(userResponse, getContext().dispatcher()).to(sender());
   }
 
   private ElasticSearchService getESInstance() {

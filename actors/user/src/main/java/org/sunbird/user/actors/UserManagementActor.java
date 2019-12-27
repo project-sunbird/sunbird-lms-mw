@@ -1,6 +1,8 @@
 package org.sunbird.user.actors;
 
 import akka.actor.ActorRef;
+import akka.dispatch.Mapper;
+import akka.pattern.Patterns;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Timestamp;
@@ -649,8 +651,10 @@ public class UserManagementActor extends BaseActor {
       sender().tell(response, self());
     } else {
 
-      sender().tell(response, self());
-      /* Future<Response> future = saveUserToES(esResponse).map(
+      // sender().tell(response, self());
+      Future<Response> future =
+          saveUserToES(esResponse)
+              .map(
                   new Mapper<String, Response>() {
                     @Override
                     public Response apply(String parameter) {
@@ -659,7 +663,6 @@ public class UserManagementActor extends BaseActor {
                   },
                   getContext().dispatcher());
       Patterns.pipe(future, getContext().dispatcher()).to(sender());
-      */
     }
 
     processTelemetry(userMap, signupType, source, userId);

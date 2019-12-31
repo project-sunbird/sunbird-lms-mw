@@ -13,8 +13,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -633,11 +631,12 @@ public class UserManagementActor extends BaseActor {
     userMap.put(JsonKey.FLAGS_VALUE, userFlagValue);
     Response response =
         cassandraOperation.insertRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userMap);
-    boolean isPasswordUpdated = UserUtil.updatePassword(userMap);
+    // boolean isPasswordUpdated = UserUtil.updatePassword(userMap);
     response.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
-    if (!isPasswordUpdated) {
-      response.put(JsonKey.ERROR_MSG, ResponseMessage.Message.ERROR_USER_UPDATE_PASSWORD);
-    }
+    /*
+     * if (!isPasswordUpdated) { response.put(JsonKey.ERROR_MSG,
+     * ResponseMessage.Message.ERROR_USER_UPDATE_PASSWORD); }
+     */
     Map<String, Object> esResponse = new HashMap<>();
     if (JsonKey.SUCCESS.equalsIgnoreCase((String) response.get(JsonKey.RESPONSE))) {
       Map<String, Object> orgMap = saveUserOrgInfo(userMap);
@@ -657,6 +656,11 @@ public class UserManagementActor extends BaseActor {
                   new Mapper<String, Response>() {
                     @Override
                     public Response apply(String parameter) {
+                      boolean updatePassResponse = UserUtil.updatePassword(userMap);
+                      if (!updatePassResponse) {
+                        response.put(
+                            JsonKey.ERROR_MSG, ResponseMessage.Message.ERROR_USER_UPDATE_PASSWORD);
+                      }
                       return response;
                     }
                   },
@@ -667,31 +671,31 @@ public class UserManagementActor extends BaseActor {
     processTelemetry(userMap, signupType, source, userId);
   }
 
-  private void processTelemetry(Map<String, Object> userMap, String signupType, String source, String userId) {
-          Map<String, Object> targetObject = null;
-          List<Map<String, Object>> correlatedObject = new ArrayList<>();
-          Map<String, String> rollUp = new HashMap<>();
-          rollUp.put("l1", (String) userMap.get(JsonKey.ROOT_ORG_ID));
-          ExecutionContext.getCurrent().getRequestContext().put(JsonKey.ROLLUP, rollUp);
-          targetObject =
-              TelemetryUtil.generateTargetObject(
-                  (String) userMap.get(JsonKey.ID), TelemetryEnvKey.USER, JsonKey.CREATE, null);
-          TelemetryUtil.generateCorrelatedObject(
-              userId, TelemetryEnvKey.USER, null, correlatedObject);
-          if (StringUtils.isNotBlank(signupType)) {
-            TelemetryUtil.generateCorrelatedObject(
-                signupType, StringUtils.capitalize(JsonKey.SIGNUP_TYPE), null, correlatedObject);
-          } else {
-            ProjectLogger.log("UserManagementActor:processUserRequest: No signupType found");
-          }
-          if (StringUtils.isNotBlank(source)) {
-            TelemetryUtil.generateCorrelatedObject(
-                source, StringUtils.capitalize(JsonKey.REQUEST_SOURCE), null, correlatedObject);
-          } else {
-            ProjectLogger.log("UserManagementActor:processUserRequest: No source found");
-          }
+  private void processTelemetry(
+      Map<String, Object> userMap, String signupType, String source, String userId) {
+    Map<String, Object> targetObject = null;
+    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+    Map<String, String> rollUp = new HashMap<>();
+    rollUp.put("l1", (String) userMap.get(JsonKey.ROOT_ORG_ID));
+    ExecutionContext.getCurrent().getRequestContext().put(JsonKey.ROLLUP, rollUp);
+    targetObject =
+        TelemetryUtil.generateTargetObject(
+            (String) userMap.get(JsonKey.ID), TelemetryEnvKey.USER, JsonKey.CREATE, null);
+    TelemetryUtil.generateCorrelatedObject(userId, TelemetryEnvKey.USER, null, correlatedObject);
+    if (StringUtils.isNotBlank(signupType)) {
+      TelemetryUtil.generateCorrelatedObject(
+          signupType, StringUtils.capitalize(JsonKey.SIGNUP_TYPE), null, correlatedObject);
+    } else {
+      ProjectLogger.log("UserManagementActor:processUserRequest: No signupType found");
+    }
+    if (StringUtils.isNotBlank(source)) {
+      TelemetryUtil.generateCorrelatedObject(
+          source, StringUtils.capitalize(JsonKey.REQUEST_SOURCE), null, correlatedObject);
+    } else {
+      ProjectLogger.log("UserManagementActor:processUserRequest: No source found");
+    }
 
-          TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
   }
 
   private Map<String, Object> saveUserOrgInfo(Map<String, Object> userMap) {

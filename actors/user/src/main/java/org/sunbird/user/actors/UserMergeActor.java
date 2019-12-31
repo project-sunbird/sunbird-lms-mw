@@ -298,6 +298,6 @@ public class UserMergeActor extends UserBaseActor {
     Map<String,Object>userMap=new HashMap<>();
     userMap.put(JsonKey.USER_ID,userId);
     ProjectLogger.log("UserMergeActor:deactivateMergeeFromKC: request Got to deactivate mergee account from KC:"+userMap,LoggerEnum.INFO.name());
-    return  keyCloakService.deactivateUser(userMap);
+    return  keyCloakService.removeUser(userMap);
   }
 }

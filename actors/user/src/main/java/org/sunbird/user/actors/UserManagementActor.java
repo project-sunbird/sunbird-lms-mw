@@ -1,6 +1,7 @@
 package org.sunbird.user.actors;
 
 import akka.actor.ActorRef;
+import akka.dispatch.Futures;
 import akka.dispatch.Mapper;
 import akka.pattern.Patterns;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -13,6 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -647,7 +649,33 @@ public class UserManagementActor extends BaseActor {
       sender().tell(response, self());
     } else {
       Future<Boolean> kcFuture =
-          UserUtil.updatePasswordAsync((String) userMap.get(JsonKey.ID), password);
+          Futures.future(
+              new Callable<Boolean>() {
+
+                @Override
+                public Boolean call() {
+                  try {
+                    Map<String, Object> updatePasswordMap = new HashMap<String, Object>();
+                    updatePasswordMap.put(JsonKey.ID, (String) userMap.get(JsonKey.ID));
+                    updatePasswordMap.put(JsonKey.PASSWORD, password);
+                    ProjectLogger.log(
+                        "Update password value passed "
+                            + password
+                            + " --"
+                            + (String) userMap.get(JsonKey.ID),
+                        LoggerEnum.INFO.name());
+                    return UserUtil.updatePassword(updatePasswordMap);
+                  } catch (Exception e) {
+                    ProjectLogger.log(
+                        "Error occured during update pasword : " + e.getMessage(),
+                        LoggerEnum.ERROR.name());
+                    return false;
+                  }
+                }
+              },
+              getContext().dispatcher());
+
+      // UserUtil.updatePasswordAsync((String) userMap.get(JsonKey.ID), password);
       Future<Response> future =
           saveUserToES(esResponse)
               .zip(kcFuture)

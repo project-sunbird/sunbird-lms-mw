@@ -64,6 +64,7 @@ import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.UserActorOperations;
 import org.sunbird.user.util.UserUtil;
+import scala.Tuple2;
 import scala.concurrent.Future;
 
 @ActorConfig(
@@ -629,14 +630,11 @@ public class UserManagementActor extends BaseActor {
                 : false));
     int userFlagValue = userFlagsToNum(userFlagsMap);
     userMap.put(JsonKey.FLAGS_VALUE, userFlagValue);
+    final String password = (String) userMap.get(JsonKey.PASSWORD);
+    userMap.remove(JsonKey.PASSWORD);
     Response response =
         cassandraOperation.insertRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userMap);
-    // boolean isPasswordUpdated = UserUtil.updatePassword(userMap);
     response.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
-    /*
-     * if (!isPasswordUpdated) { response.put(JsonKey.ERROR_MSG,
-     * ResponseMessage.Message.ERROR_USER_UPDATE_PASSWORD); }
-     */
     Map<String, Object> esResponse = new HashMap<>();
     if (JsonKey.SUCCESS.equalsIgnoreCase((String) response.get(JsonKey.RESPONSE))) {
       Map<String, Object> orgMap = saveUserOrgInfo(userMap);
@@ -648,15 +646,21 @@ public class UserManagementActor extends BaseActor {
       saveUserToKafka(esResponse);
       sender().tell(response, self());
     } else {
-
-      // sender().tell(response, self());
+      Future<Boolean> kcFuture =
+          UserUtil.updatePasswordAsync((String) userMap.get(JsonKey.ID), password);
       Future<Response> future =
           saveUserToES(esResponse)
+              .zip(kcFuture)
               .map(
-                  new Mapper<String, Response>() {
+                  new Mapper<Tuple2<String, Boolean>, Response>() {
+
                     @Override
-                    public Response apply(String parameter) {
-                      boolean updatePassResponse = UserUtil.updatePassword(userMap);
+                    public Response apply(Tuple2<String, Boolean> parameter) {
+                      boolean updatePassResponse = parameter._2;
+                      ProjectLogger.log(
+                          "UserManagementActor:processUserRequest: Response from update password call "
+                              + updatePassResponse,
+                          LoggerEnum.INFO.name());
                       if (!updatePassResponse) {
                         response.put(
                             JsonKey.ERROR_MSG, ResponseMessage.Message.ERROR_USER_UPDATE_PASSWORD);

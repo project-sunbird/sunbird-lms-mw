@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.WeakHashMap;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
@@ -432,15 +431,6 @@ public class UserUtil {
           (String) userMap.get(JsonKey.ID), (String) userMap.get(JsonKey.PASSWORD));
     }
     return true;
-  }
-
-  public static Future<Boolean> updatePasswordAsync(String userId, String password) {
-    CompletableFuture<Boolean> fut = new CompletableFuture<Boolean>();
-    fut.complete(true);
-    if (StringUtils.isNotBlank(password)) {
-      return ssoManager.updatePasswordAsync(userId, password);
-    }
-    return scala.compat.java8.FutureConverters.toScala(fut);
   }
 
   public static void addMaskEmailAndPhone(Map<String, Object> userMap) {

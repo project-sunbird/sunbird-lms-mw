@@ -674,8 +674,6 @@ public class UserManagementActor extends BaseActor {
                 }
               },
               getContext().dispatcher());
-
-      // UserUtil.updatePasswordAsync((String) userMap.get(JsonKey.ID), password);
       Future<Response> future =
           saveUserToES(esResponse)
               .zip(kcFuture)

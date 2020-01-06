@@ -1,6 +1,7 @@
 package org.sunbird.user.actors;
 
 import akka.actor.ActorRef;
+import akka.dispatch.Futures;
 import akka.dispatch.Mapper;
 import akka.pattern.Patterns;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -41,10 +42,10 @@ import org.sunbird.user.util.UserUtil;
 import scala.Tuple2;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
-
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 import static org.sunbird.learner.util.Util.isNotNull;
@@ -836,7 +837,7 @@ public class UserProfileReadActor extends BaseActor {
     return new ArrayList<>();
   }
 
-  private void checkUserExistence(Request request) {
+  private void checkUserExistences(Request request) {
 
     String value = (String) request.get(JsonKey.VALUE);
     String type = (String) request.get(JsonKey.KEY);
@@ -853,6 +854,38 @@ public class UserProfileReadActor extends BaseActor {
               ResponseCode.SERVER_ERROR.getResponseCode());
       sender().tell(exception, self());
     }
+  }
+
+  private void checkUserExistence(Request request) {
+    Map<String, Object> searchMap = new WeakHashMap<>();
+    String value=(String)request.get(JsonKey.VALUE);
+    String encryptedValue = null;
+    try {
+      encryptedValue = encryptionService.encryptData(StringUtils.lowerCase(value));
+    } catch (Exception var11) {
+      throw  new ProjectCommonException(ResponseCode.userDataEncryptionError.getErrorCode(), ResponseCode.userDataEncryptionError.getErrorMessage(), ResponseCode.SERVER_ERROR.getResponseCode());
+    }
+    searchMap.put((String) request.get(JsonKey.KEY),encryptedValue);
+    ProjectLogger.log("UserProfileReadActor:checkUserExistence: search map prepared "+searchMap,LoggerEnum.INFO.name());
+    SearchDTO searchDTO=new SearchDTO();
+    searchDTO.getAdditionalProperties().put(JsonKey.FILTERS,searchMap);
+    Future<Map<String, Object>> esFuture = esUtil.search(searchDTO, EsType.user.getTypeName());
+    Future<Response> userResponse = esFuture.map(new Mapper<Map<String, Object>, Response>() {
+                      @Override
+                      public Response apply(Map<String, Object> responseMap) {
+                        List<Map<String, Object>> respList = (List) responseMap.get(JsonKey.CONTENT);
+                        long size=respList.size();
+                        Response resp=new Response();
+                        resp.put(JsonKey.EXISTS, true);
+                        if(size<=0) {
+                          resp.put(JsonKey.EXISTS, false);
+                        }
+                        return resp;
+                      }
+                    },
+                    getContext().dispatcher());
+
+    Patterns.pipe(userResponse, getContext().dispatcher()).to(sender());
   }
 
   private ElasticSearchService getESInstance() {

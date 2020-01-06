@@ -58,7 +58,9 @@ public class OTPActor extends BaseActor {
     if (MapUtils.isEmpty(details)) {
       otp = OTPUtil.generateOTP();
       ProjectLogger.log(
-          "OTPActor:generateOTP: Key = " + key + " OTP = " + otp, LoggerEnum.DEBUG.name());
+          "OTPActor:generateOTP: inserting otp Key = " + key + " OTP = " + otp,
+          LoggerEnum.INFO.name());
+
       otpService.insertOTPDetails(type, key, otp);
     } else {
       otp = (String) details.get(JsonKey.OTP);

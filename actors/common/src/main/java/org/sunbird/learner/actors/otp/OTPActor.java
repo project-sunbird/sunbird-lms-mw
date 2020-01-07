@@ -57,7 +57,10 @@ public class OTPActor extends BaseActor {
     Map<String, Object> details = otpService.getOTPDetails(type, key);
     if (MapUtils.isEmpty(details)) {
       otp = OTPUtil.generateOTP();
-      ProjectLogger.log("OTPActor:generateOTP: Key = " + key + " OTP = " + otp, LoggerEnum.DEBUG);
+      ProjectLogger.log(
+          "OTPActor:generateOTP: inserting otp Key = " + key + " OTP = " + otp,
+          LoggerEnum.INFO.name());
+
       otpService.insertOTPDetails(type, key, otp);
     } else {
       otp = (String) details.get(JsonKey.OTP);
@@ -107,7 +110,7 @@ public class OTPActor extends BaseActor {
           LoggerEnum.DEBUG);
       ProjectCommonException.throwClientErrorException(ResponseCode.errorInvalidOTP);
     }
-    otpService.deleteOtp(type,key);
+    otpService.deleteOtp(type, key);
     String otpInDB = (String) otpDetails.get(JsonKey.OTP);
     if (otpInDB == null || otpInRequest == null || !otpInRequest.equals(otpInDB)) {
       ProjectLogger.log(
@@ -130,8 +133,6 @@ public class OTPActor extends BaseActor {
     sendOtpRequest.getRequest().put(JsonKey.KEY, key);
     sendOtpRequest.getRequest().put(JsonKey.OTP, otp);
     sendOtpRequest.setOperation(ActorOperations.SEND_OTP.getValue());
-
-    // Sent OTP via email or sms
     tellToAnother(sendOtpRequest);
   }
 

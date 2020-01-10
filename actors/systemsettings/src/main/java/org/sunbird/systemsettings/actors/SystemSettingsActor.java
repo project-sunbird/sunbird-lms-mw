@@ -15,6 +15,7 @@ import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.systemsetting.SystemSetting;
 import org.sunbird.systemsettings.dao.impl.SystemSettingDaoImpl;
@@ -28,8 +29,6 @@ public class SystemSettingsActor extends BaseActor {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private final SystemSettingDaoImpl systemSettingDaoImpl =
       new SystemSettingDaoImpl(cassandraOperation);
-  private static ConcurrentHashMap<String, String> systemSettingsMap =
-      new ConcurrentHashMap<String, String>();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -53,11 +52,10 @@ public class SystemSettingsActor extends BaseActor {
   }
 
   private void getSystemSetting(Request actorMessage) {
-    ProjectLogger.log(
-        "SystemSettingsActor:getSystemSetting: request is " + actorMessage.getRequest(),
-        LoggerEnum.INFO.name());
+    ProjectLogger.log("SystemSettingsActor:getSystemSetting: request is " + actorMessage.getRequest(), LoggerEnum.INFO.name());
     SystemSetting setting = null;
-    String value = systemSettingsMap.get((String) actorMessage.getContext().get(JsonKey.FIELD));
+    String value = DataCacheHandler.getConfigSettings().get((String) actorMessage.getContext().get(JsonKey.FIELD));
+    ProjectLogger.log("SystemSettingsActor:getSystemSetting:the value got for field from cache is:"+ value,LoggerEnum.INFO.name());
     if (value != null) {
       setting =
           new SystemSetting(
@@ -69,11 +67,8 @@ public class SystemSettingsActor extends BaseActor {
     if (setting == null) {
       setting =
           systemSettingDaoImpl.readByField((String) actorMessage.getContext().get(JsonKey.FIELD));
-
-      if (setting != null) {
-        systemSettingsMap.put(
-            (String) actorMessage.getContext().get(JsonKey.FIELD), setting.getValue());
-      }
+      ProjectLogger.log("SystemSettingsActor:getSystemSetting:the value got for field from db is:"+ setting.getValue(),LoggerEnum.INFO.name());
+      DataCacheHandler.getConfigSettings().put((String) actorMessage.getContext().get(JsonKey.FIELD),setting.getValue());
     }
     if (setting == null) {
       throw new ProjectCommonException(
@@ -81,7 +76,6 @@ public class SystemSettingsActor extends BaseActor {
           ResponseCode.resourceNotFound.getErrorMessage(),
           ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
     }
-
     Response response = new Response();
     response.put(JsonKey.RESPONSE, setting);
     sender().tell(response, self());

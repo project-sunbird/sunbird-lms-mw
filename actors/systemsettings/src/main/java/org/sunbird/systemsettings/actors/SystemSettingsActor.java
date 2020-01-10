@@ -55,7 +55,7 @@ public class SystemSettingsActor extends BaseActor {
     ProjectLogger.log("SystemSettingsActor:getSystemSetting: request is " + actorMessage.getRequest(), LoggerEnum.INFO.name());
     SystemSetting setting = null;
     String value = DataCacheHandler.getConfigSettings().get((String) actorMessage.getContext().get(JsonKey.FIELD));
-    ProjectLogger.log("SystemSettingsActor:getSystemSetting:the value got for field from cache is:"+ value,LoggerEnum.INFO.name());
+   ProjectLogger.log("SystemSettingsActor:getSystemSetting:the value got for field from cache is:"+ value,LoggerEnum.INFO.name());
     if (value != null) {
       setting =
           new SystemSetting(
@@ -67,8 +67,7 @@ public class SystemSettingsActor extends BaseActor {
     if (setting == null) {
       setting =
           systemSettingDaoImpl.readByField((String) actorMessage.getContext().get(JsonKey.FIELD));
-      ProjectLogger.log("SystemSettingsActor:getSystemSetting:the value got for field from db is:"+ setting.getValue(),LoggerEnum.INFO.name());
-      DataCacheHandler.getConfigSettings().put((String) actorMessage.getContext().get(JsonKey.FIELD),setting.getValue());
+      ProjectLogger.log("SystemSettingsActor:getSystemSetting:the value got for field from db",LoggerEnum.INFO.name());
     }
     if (setting == null) {
       throw new ProjectCommonException(
@@ -79,6 +78,7 @@ public class SystemSettingsActor extends BaseActor {
     Response response = new Response();
     response.put(JsonKey.RESPONSE, setting);
     sender().tell(response, self());
+    DataCacheHandler.getConfigSettings().put((String) actorMessage.getContext().get(JsonKey.FIELD),setting.getValue());
   }
 
   private void getAllSystemSettings() {

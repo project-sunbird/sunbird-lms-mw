@@ -68,6 +68,9 @@ public class SystemSettingsActor extends BaseActor {
       setting =
           systemSettingDaoImpl.readByField((String) actorMessage.getContext().get(JsonKey.FIELD));
       ProjectLogger.log("SystemSettingsActor:getSystemSetting:the value got for field from db",LoggerEnum.INFO.name());
+      if(null!=setting){
+        DataCacheHandler.getConfigSettings().put((String) actorMessage.getContext().get(JsonKey.FIELD), setting.getValue());
+      }
     }
     if (setting == null) {
       throw new ProjectCommonException(
@@ -78,7 +81,6 @@ public class SystemSettingsActor extends BaseActor {
     Response response = new Response();
     response.put(JsonKey.RESPONSE, setting);
     sender().tell(response, self());
-    DataCacheHandler.getConfigSettings().put((String) actorMessage.getContext().get(JsonKey.FIELD),setting.getValue());
   }
 
   private void getAllSystemSettings() {

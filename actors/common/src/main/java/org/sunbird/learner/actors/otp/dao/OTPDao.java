@@ -24,9 +24,11 @@ public interface OTPDao {
 
   /**
    * this method will be used to delete the Otp
+   *
    * @param type
    * @param key
    */
-  void deleteOtp(String type,String key);
+  void deleteOtp(String type, String key);
 
+  void updateAttemptCount(String type, String key, int attemptCount);
 }

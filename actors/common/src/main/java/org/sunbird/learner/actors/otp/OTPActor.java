@@ -123,14 +123,14 @@ public class OTPActor extends BaseActor {
     if (otpInRequest.equals(otpInDB)) {
       otpService.deleteOtp(type, key);
     } else {
-      handleMismachOtp(type, key, otpDetails);
+      handleMismatchOtp(type, key, otpDetails);
     }
     Response response = new Response();
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(response, self());
   }
 
-  private void handleMismachOtp(String type, String key, Map<String, Object> otpDetails) {
+  private void handleMismatchOtp(String type, String key, Map<String, Object> otpDetails) {
     int remainingCount = getRemainingAttemptedCount(otpDetails);
     if (remainingCount <= 0) {
       otpService.deleteOtp(type, key);

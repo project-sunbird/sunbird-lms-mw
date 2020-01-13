@@ -94,7 +94,7 @@ public class OTPActorTest {
   @Test
   public void testVerifyOtpFailureWithExpiredOtp() {
     Response mockedCassandraResponse = getMockCassandraRecordByIdFailureResponse();
-    vrifyOtpFailureWithExpiredOtp(false, mockedCassandraResponse);
+    verifyOtpFailureWithExpiredOtp(false, mockedCassandraResponse);
   }
 
   @Test
@@ -137,7 +137,7 @@ public class OTPActorTest {
     Assert.assertTrue(response.getResponseCode().equals(ResponseCode.OK));
   }
 
-  private void vrifyOtpFailureWithExpiredOtp(boolean isPhone, Response mockedCassandraResponse) {
+  private void verifyOtpFailureWithExpiredOtp(boolean isPhone, Response mockedCassandraResponse) {
     Request request;
     if (isPhone) {
       request = createRequestForVerifyOtp(PHONE_KEY, PHONE_TYPE);

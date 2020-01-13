@@ -58,6 +58,7 @@ public class DataCacheHandler implements Runnable {
   private void cacheSystemConfig(Map<String, String> configSettings) {
     Response response =
         cassandraOperation.getAllRecords(KEY_SPACE_NAME, JsonKey.SYSTEM_SETTINGS_DB);
+      ProjectLogger.log("DataCacheHandler:cacheSystemConfig: Cache system setting fields"+ response.getResult(), LoggerEnum.INFO.name());
     List<Map<String, Object>> responseList =
         (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
     if (null != responseList && !responseList.isEmpty()) {

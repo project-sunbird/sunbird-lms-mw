@@ -123,21 +123,24 @@ public class OTPActor extends BaseActor {
     if (otpInRequest.equals(otpInDB)) {
       otpService.deleteOtp(type, key);
     } else {
-      int remainingCount = getRemainingAttemptedCount(otpDetails);
-      if (remainingCount <= 0) {
-        otpService.deleteOtp(type, key);
-      } else {
-        int attemptedCount = (int) otpDetails.get(JsonKey.ATTEMPTED_COUNT);
-        otpService.updateAttemptCount(type, key, attemptedCount + 1);
-      }
-      ProjectCommonException.throwClientErrorException(
-          ResponseCode.otpVerificationFailed,
-          MessageFormat.format(
-              ResponseCode.otpVerificationFailed.getErrorMessage(), remainingCount));
+      handleMismachOtp(type, key, otpDetails);
     }
     Response response = new Response();
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(response, self());
+  }
+
+  private void handleMismachOtp(String type, String key, Map<String, Object> otpDetails) {
+    int remainingCount = getRemainingAttemptedCount(otpDetails);
+    if (remainingCount <= 0) {
+      otpService.deleteOtp(type, key);
+    } else {
+      int attemptedCount = (int) otpDetails.get(JsonKey.ATTEMPTED_COUNT);
+      otpService.updateAttemptCount(type, key, attemptedCount + 1);
+    }
+    ProjectCommonException.throwClientErrorException(
+        ResponseCode.otpVerificationFailed,
+        MessageFormat.format(ResponseCode.otpVerificationFailed.getErrorMessage(), remainingCount));
   }
 
   private int getRemainingAttemptedCount(Map<String, Object> otpDetails) {

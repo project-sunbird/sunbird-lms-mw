@@ -1,28 +1,36 @@
 package org.sunbird.learner.actors;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.BulkUploadActorOperation;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.quartz.scheduler.OnDemandShadowManager;
 import org.sunbird.common.request.Request;
+import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 
+import static org.sunbird.common.request.orgvalidator.BaseOrgRequestValidator.ERROR_CODE;
+
 /** @author Amit Kumar */
 @ActorConfig(
-  tasks = {},
+  tasks = {"onDemandStartScheduler"},
   asyncTasks = {"scheduleBulkUpload"}
 )
 public class SchedularActor extends BaseActor {
+  static final String TYPE = "type";
 
   @Override
   public void onReceive(Request actorMessage) throws Throwable {
@@ -30,12 +38,35 @@ public class SchedularActor extends BaseActor {
         .getOperation()
         .equalsIgnoreCase(ActorOperations.SCHEDULE_BULK_UPLOAD.getValue())) {
       schedule(actorMessage);
+    } else if (actorMessage
+            .getOperation()
+            .equalsIgnoreCase(ActorOperations.ONDEMAND_START_SCHEDULER.getValue())) {
+     startSchedular(actorMessage);
     } else {
       ProjectLogger.log("UNSUPPORTED OPERATION");
     }
   }
 
-  @SuppressWarnings("unchecked")
+ private void startSchedular(Request actorMessage) {
+   Map<String, Object> req = actorMessage.getRequest();
+   ArrayList<String> jobTypes = (ArrayList<String>) req.get(TYPE);
+   if(jobTypes.size() > 0) {
+    scheduleJob(jobTypes.stream().toArray(String[]::new));
+   } else {
+    throw new ProjectCommonException(
+            ResponseCode.mandatoryParamsMissing.getErrorCode(),
+            ResponseCode.mandatoryParamsMissing.getErrorMessage(),
+            ERROR_CODE,
+            TYPE);
+   }
+ }
+
+ private void scheduleJob(String[] jobs) {
+  OnDemandShadowManager onDemandShadowManager = OnDemandShadowManager.getInstance();
+  new Thread(() -> onDemandShadowManager.triggerScheduler(jobs)).start();
+ }
+
+ @SuppressWarnings("unchecked")
   private void schedule(Request request) {
     List<Map<String, Object>> result = (List<Map<String, Object>>) request.get(JsonKey.DATA);
     Util.DbInfo bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);

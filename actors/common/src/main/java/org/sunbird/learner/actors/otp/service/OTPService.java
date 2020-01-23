@@ -63,7 +63,7 @@ public class OTPService {
     return "";
   }
 
-  public void updateAttemptCount(String type, String key, int attemptCount) {
-    otpDao.updateAttemptCount(type, key, attemptCount);
+  public void updateAttemptCount(Map<String, Object> otpDetails) {
+    otpDao.updateAttemptCount(otpDetails);
   }
 }

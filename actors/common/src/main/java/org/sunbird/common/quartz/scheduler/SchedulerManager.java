@@ -25,18 +25,18 @@ import org.sunbird.common.models.util.PropertiesCache;
  *
  * @author Manzarul
  */
-public final class SchedulerManager {
+public class SchedulerManager {
 
   private static final String FILE = "quartz.properties";
-  private static Scheduler scheduler = null;
+  public static Scheduler scheduler = null;
   private static SchedulerManager schedulerManager = null;
 
-  private SchedulerManager() {
+  public SchedulerManager() {
     schedule();
   }
 
   /** This method will register the quartz scheduler job. */
-  private void schedule() {
+  public void schedule() {
     ProjectLogger.log(
         "SchedulerManager:schedule: Call to start scheduler jobs - org.sunbird.common.quartz.scheduler.SchedulerManager",
         LoggerEnum.INFO.name());
@@ -59,10 +59,12 @@ public final class SchedulerManager {
         scheduler = new StdSchedulerFactory().getScheduler();
       }
       String identifier = "NetOps-PC1502295457753";
-      scheduleBulkUploadJob(identifier);
-      scheduleUpdateUserCountJob(identifier);
-      scheduleChannelReg(identifier);
-      scheduleShadowUser(identifier);
+
+       scheduleBulkUploadJob(identifier);
+       scheduleUpdateUserCountJob(identifier);
+       scheduleChannelReg(identifier);
+       scheduleShadowUser(identifier);
+
     } catch (Exception e) {
       ProjectLogger.log(
           "SchedulerManager:schedule: Error in starting scheduler jobs - org.sunbird.common.quartz.scheduler.SchedulerManager "

@@ -31,7 +31,7 @@ public class OnDemandSchedulerActor extends BaseActor {
             .equalsIgnoreCase(ActorOperations.ONDEMAND_START_SCHEDULER.getValue())) {
      startSchedular(actorMessage);
     } else {
-      ProjectLogger.log("UNSUPPORTED OPERATION");
+      ProjectLogger.log("UNSUPPORTED OPERATION",  LoggerEnum.ERROR);
     }
   }
 

@@ -25,25 +25,25 @@ public class OnDemandSchedulerManager extends SchedulerManager{
 
   private void scheduleOnDemand(String identifier, String job) {
    ProjectLogger.log(
-           "onDemandSchedulerManager:scheduleOnDemand:scheduler started",
+           "onDemandSchedulerManager:scheduleOnDemand:"+job+" started",
            LoggerEnum.INFO.name());
    String jobName = schedulerMap.get(job);
-   JobDetail migrateShadowUserJob =
+   JobDetail jobDetail =
            JobBuilder.newJob(ShadowUserMigrationScheduler.class)
                    .requestRecovery(true)
                    .withDescription("Scheduler for migrating shadow user ")
                    .withIdentity(jobName+"Scheduler", identifier)
                    .build();
-   Trigger migrateShadowUserTrigger =
+   Trigger trigger =
            TriggerBuilder.newTrigger()
                    .withIdentity(jobName+"Trigger", identifier).startNow()
                    .withSchedule(simpleSchedule().withIntervalInSeconds(1).withRepeatCount(0))
                    .build();
    try {
-    if (scheduler.checkExists(migrateShadowUserJob.getKey())) {
-     scheduler.deleteJob(migrateShadowUserJob.getKey());
+    if (scheduler.checkExists(jobDetail.getKey())) {
+     scheduler.deleteJob(jobDetail.getKey());
     }
-    scheduler.scheduleJob(migrateShadowUserJob, migrateShadowUserTrigger);
+    scheduler.scheduleJob(jobDetail, trigger);
     scheduler.start();
     ProjectLogger.log(
             "onDemandSchedulerManager:scheduleOnDemand:scheduler ended",

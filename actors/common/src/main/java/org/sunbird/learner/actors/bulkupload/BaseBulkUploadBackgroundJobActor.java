@@ -178,8 +178,9 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
       StorageDetails storageDetails =
           uploadResultToCloud(
               bulkUploadProcess, successList, failureList, outputColumnsMap, outputColumnsOrder);
-      bulkUploadProcess.setEncryptedStorageDetails(storageDetails);
-
+      if (null != storageDetails) {
+        bulkUploadProcess.setEncryptedStorageDetails(storageDetails);
+      }
     } catch (Exception e) {
       ProjectLogger.log(
           logMessagePrefix + "Exception occurred with error message = " + e.getMessage(),
@@ -229,9 +230,13 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
           file.getAbsolutePath());
       return new StorageDetails(
           CloudStorageType.AZURE.getType(), bulkUploadProcess.getObjectType(), objKey);
+    } catch (Exception ex) {
+      ProjectLogger.log(
+          "Exception occurred while uploading file to cloud.:: " + ex.getMessage(), ex);
     } finally {
       FileUtils.deleteQuietly(file);
     }
+    return null;
   }
 
   private File getFileHandle(String objType, String processId) {

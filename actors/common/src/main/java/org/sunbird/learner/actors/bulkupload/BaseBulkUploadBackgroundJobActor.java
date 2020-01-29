@@ -183,7 +183,7 @@ public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadAct
       }
     } catch (Exception e) {
       ProjectLogger.log(
-          logMessagePrefix + "Exception occurred with error message = " + e.getMessage(),
+          logMessagePrefix + "Exception occurred with error message := " + e.getMessage(),
           LoggerEnum.INFO,
           e);
     }

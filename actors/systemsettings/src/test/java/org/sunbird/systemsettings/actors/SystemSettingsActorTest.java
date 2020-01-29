@@ -12,6 +12,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.http.HttpStatus;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -102,12 +104,54 @@ public class SystemSettingsActorTest {
   }
 
   @Test
+  public void testSetSystemSettingFailure() {
+    actorMessage.setOperation(ActorOperations.SET_SYSTEM_SETTING.getValue());
+    actorMessage.getRequest().putAll(getInvalidSystemSettingMap());
+    subject.tell(actorMessage, probe.getRef());
+    ProjectCommonException exception= probe.expectMsgAnyClassOf(ACTOR_MAX_WAIT_DURATION, ProjectCommonException.class);
+    Assert.assertTrue(
+            null != exception
+                    && exception.getResponseCode() == HttpStatus.SC_BAD_REQUEST);
+  }
+  @Test
+  public void testSetSystemSettingFailureEmailUnique() {
+    actorMessage.setOperation(ActorOperations.SET_SYSTEM_SETTING.getValue());
+    actorMessage.getRequest().putAll(getEmailUnuiqueSystemSettingMap());
+    subject.tell(actorMessage, probe.getRef());
+    ProjectCommonException exception= probe.expectMsgAnyClassOf(ACTOR_MAX_WAIT_DURATION, ProjectCommonException.class);
+    Assert.assertTrue(
+            null != exception
+                    && exception.getResponseCode() == HttpStatus.SC_BAD_REQUEST);
+  } @Test
+  public void testSetSystemSettingFailurePhoneUnique() {
+    actorMessage.setOperation(ActorOperations.SET_SYSTEM_SETTING.getValue());
+    actorMessage.getRequest().putAll(getPhoneUnuiqueSystemSettingMap());
+    subject.tell(actorMessage, probe.getRef());
+    ProjectCommonException exception= probe.expectMsgAnyClassOf(ACTOR_MAX_WAIT_DURATION, ProjectCommonException.class);
+    Assert.assertTrue(
+            null != exception
+                    && exception.getResponseCode() == HttpStatus.SC_BAD_REQUEST);
+  }
+
+  @Test
+  public void testSetSystemSettingFailureWithEmailUnique() {
+    actorMessage.setOperation(ActorOperations.SET_SYSTEM_SETTING.getValue());
+    actorMessage.getRequest().putAll(getInvalidSystemSettingMap());
+    subject.tell(actorMessage, probe.getRef());
+    ProjectCommonException exception= probe.expectMsgAnyClassOf(ACTOR_MAX_WAIT_DURATION, ProjectCommonException.class);
+    Assert.assertTrue(
+            null != exception
+                    && exception.getResponseCode() == HttpStatus.SC_BAD_REQUEST);
+  }
+
+  @Test
   public void testGetSystemSettingSuccess() {
     actorMessage.setOperation(ActorOperations.GET_SYSTEM_SETTING.getValue());
     actorMessage.setContext(getOrgData());
     subject.tell(actorMessage, probe.getRef());
     Response response = probe.expectMsgAnyClassOf(ACTOR_MAX_WAIT_DURATION, Response.class);
     Assert.assertTrue(null != response && response.getResponseCode() == ResponseCode.OK);
+
   }
 
   @Test
@@ -149,6 +193,29 @@ public class SystemSettingsActorTest {
   private Map<String, Object> getSystemSettingMap() {
     Map<String, Object> orgData = new HashMap<String, Object>();
     orgData.put(JsonKey.ID, ROOT_ORG_ID);
+    orgData.put(JsonKey.FIELD, FIELD);
+    orgData.put(JsonKey.VALUE, VALUE);
+    return orgData;
+  }
+
+  private Map<String, Object> getInvalidSystemSettingMap() {
+    Map<String, Object> orgData = new HashMap<String, Object>();
+    orgData.put(JsonKey.ID, JsonKey.CUSTODIAN_ORG_ID);
+    orgData.put(JsonKey.FIELD, FIELD);
+    orgData.put(JsonKey.VALUE, VALUE);
+    return orgData;
+  }
+
+  private Map<String, Object> getEmailUnuiqueSystemSettingMap() {
+    Map<String, Object> orgData = new HashMap<String, Object>();
+    orgData.put(JsonKey.ID, JsonKey.EMAIL_UNIQUE);
+    orgData.put(JsonKey.FIELD, FIELD);
+    orgData.put(JsonKey.VALUE, VALUE);
+    return orgData;
+  }
+  private Map<String, Object> getPhoneUnuiqueSystemSettingMap() {
+    Map<String, Object> orgData = new HashMap<String, Object>();
+    orgData.put(JsonKey.ID, JsonKey.EMAIL_UNIQUE);
     orgData.put(JsonKey.FIELD, FIELD);
     orgData.put(JsonKey.VALUE, VALUE);
     return orgData;

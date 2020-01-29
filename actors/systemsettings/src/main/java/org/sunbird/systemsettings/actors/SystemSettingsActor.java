@@ -100,7 +100,9 @@ public class SystemSettingsActor extends BaseActor {
     if (JsonKey.PHONE_UNIQUE.equalsIgnoreCase(field)
             || JsonKey.EMAIL_UNIQUE.equalsIgnoreCase(field)
             || JsonKey.PHONE_UNIQUE.equalsIgnoreCase(id)
-            || JsonKey.EMAIL_UNIQUE.equalsIgnoreCase(id)) {
+            || JsonKey.EMAIL_UNIQUE.equalsIgnoreCase(id)
+            ||JsonKey.CUSTODIAN_ORG_ID.equalsIgnoreCase(id)
+            ||JsonKey.CUSTODIAN_ORG_ID.equalsIgnoreCase(field)) {
       ProjectCommonException.throwClientErrorException(
               ResponseCode.errorUpdateSettingNotAllowed,
               MessageFormat.format(ResponseCode.errorUpdateSettingNotAllowed.getErrorMessage(), field));

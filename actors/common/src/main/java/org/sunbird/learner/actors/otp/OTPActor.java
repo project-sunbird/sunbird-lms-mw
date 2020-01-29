@@ -136,7 +136,8 @@ public class OTPActor extends BaseActor {
       otpService.deleteOtp(type, key);
     } else {
       int attemptedCount = (int) otpDetails.get(JsonKey.ATTEMPTED_COUNT);
-      otpService.updateAttemptCount(type, key, attemptedCount + 1);
+      otpDetails.put(JsonKey.ATTEMPTED_COUNT, attemptedCount + 1);
+      otpService.updateAttemptCount(otpDetails);
     }
     ProjectCommonException.throwClientErrorException(
         ResponseCode.otpVerificationFailed,

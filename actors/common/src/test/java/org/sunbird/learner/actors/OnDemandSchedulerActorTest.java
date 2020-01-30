@@ -33,7 +33,6 @@ import static org.powermock.api.mockito.PowerMockito.when;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
-  OnDemandSchedulerActor.class,
   OnDemandSchedulerManager.class,
   SchedulerManager.class
 })
@@ -47,9 +46,10 @@ public class OnDemandSchedulerActorTest {
   @Before
   public void beforeEachTest() throws Exception {
     schedulerManager= mock(SchedulerManager.class);
-    //PowerMockito.whenNew(SchedulerManager.class).withNoArguments().thenReturn(schedulerManager);
-    PowerMockito.mockStatic(SchedulerManager.class);
     onDemandSchedulerManager = mock(OnDemandSchedulerManager.class);
+    //PowerMockito.whenNew(OnDemandSchedulerManager.class).withNoArguments().thenReturn(onDemandSchedulerManager);
+    PowerMockito.mockStatic(SchedulerManager.class);
+    
     PowerMockito.mockStatic(OnDemandSchedulerManager.class);
     doNothing().when(schedulerManager).schedule();
     when(OnDemandSchedulerManager.getInstance()).thenReturn(onDemandSchedulerManager);

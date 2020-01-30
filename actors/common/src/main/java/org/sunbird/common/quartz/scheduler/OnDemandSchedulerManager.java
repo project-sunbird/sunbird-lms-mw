@@ -15,15 +15,15 @@ public class OnDemandSchedulerManager extends SchedulerManager{
 
   public static Map<String, String> schedulerMap = new HashMap<>();
 
-  private OnDemandSchedulerManager() {
-   super();
-   if(schedulerMap == null) {
+  public OnDemandSchedulerManager() {
+   if(schedulerMap.isEmpty()) {
     schedulerMap.put("bulkupload","uploadVerify");
     schedulerMap.put("shadowuser","migrateShadowUser");
    }
   }
+  
 
-  private void scheduleOnDemand(String identifier, String job) {
+  public void scheduleOnDemand(String identifier, String job) {
    ProjectLogger.log(
            "onDemandSchedulerManager:scheduleOnDemand:"+job+" started",
            LoggerEnum.INFO.name());
@@ -81,4 +81,5 @@ public class OnDemandSchedulerManager extends SchedulerManager{
      }
    }
   }
+  
 }

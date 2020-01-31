@@ -27,13 +27,18 @@ public class OnDemandSchedulerManager extends SchedulerManager{
    ProjectLogger.log(
            "onDemandSchedulerManager:scheduleOnDemand:"+job+" started",
            LoggerEnum.INFO.name());
+   JobDetail jobDetail = null;
+   JobBuilder jobBuilder = null;
    String jobName = schedulerMap.get(job);
-   JobDetail jobDetail =
-           JobBuilder.newJob(ShadowUserMigrationScheduler.class)
-                   .requestRecovery(true)
-                   .withDescription("Scheduler for migrating shadow user ")
-                   .withIdentity(jobName+"Scheduler", identifier)
-                   .build();
+   if(job.equals("shadowuser")) {
+     jobBuilder = JobBuilder.newJob(ShadowUserMigrationScheduler.class);
+   } else if(job.equals("bulkupload")) {
+     jobBuilder = JobBuilder.newJob(UploadLookUpScheduler.class);
+   }
+   jobDetail = jobBuilder.requestRecovery(true)
+     .withDescription("Scheduler for migrating shadow user ")
+     .withIdentity(jobName+"Scheduler", identifier)
+     .build();
    Trigger trigger =
            TriggerBuilder.newTrigger()
                    .withIdentity(jobName+"Trigger", identifier).startNow()

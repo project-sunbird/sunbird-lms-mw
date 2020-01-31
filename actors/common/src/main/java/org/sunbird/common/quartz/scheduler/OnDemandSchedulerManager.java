@@ -12,13 +12,15 @@ import static org.quartz.SimpleScheduleBuilder.simpleSchedule;
 public class OnDemandSchedulerManager extends SchedulerManager{
 
   private static OnDemandSchedulerManager onDemandSchedulerManager = null;
+  private static final String BULK_UPLOAD = "bulkupload";
+  private static final String SHADOW_USER = "shadowuser";
 
   public static Map<String, String> schedulerMap = new HashMap<>();
 
   public OnDemandSchedulerManager() {
    if(schedulerMap.isEmpty()) {
-    schedulerMap.put("bulkupload","uploadVerify");
-    schedulerMap.put("shadowuser","migrateShadowUser");
+    schedulerMap.put(BULK_UPLOAD,"uploadVerify");
+    schedulerMap.put(SHADOW_USER,"migrateShadowUser");
    }
   }
   
@@ -30,9 +32,9 @@ public class OnDemandSchedulerManager extends SchedulerManager{
    JobDetail jobDetail = null;
    JobBuilder jobBuilder = null;
    String jobName = schedulerMap.get(job);
-   if(job.equals("shadowuser")) {
+   if(job.equals(SHADOW_USER)) {
      jobBuilder = JobBuilder.newJob(ShadowUserMigrationScheduler.class);
-   } else if(job.equals("bulkupload")) {
+   } else if(job.equals(BULK_UPLOAD)) {
      jobBuilder = JobBuilder.newJob(UploadLookUpScheduler.class);
    }
    jobDetail = jobBuilder.requestRecovery(true)
@@ -75,8 +77,8 @@ public class OnDemandSchedulerManager extends SchedulerManager{
    String identifier = "NetOps-PC1502295457753";
    for(String job: jobs) {
      switch (job) {
-      case "bulkupload":
-      case "shadowuser":
+      case BULK_UPLOAD:
+      case SHADOW_USER:
        scheduleOnDemand(identifier, job);
        break;
       default:

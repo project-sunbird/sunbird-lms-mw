@@ -67,10 +67,8 @@ import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.UserActorOperations;
 import org.sunbird.user.util.UserUtil;
-import scala.Option;
 import scala.Tuple2;
 import scala.concurrent.Future;
-import scala.util.Try;
 
 @ActorConfig(
   tasks = {"createUser", "updateUser", "createUserV3"},
@@ -811,11 +809,18 @@ public class UserManagementActor extends BaseActor {
         JsonKey.ERRORS,
         ((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE)).get(JsonKey.ERRORS));
   
+    Response syncResponse = new Response();
+    syncResponse.putAll(response.getResult());
+    
     if(null != resp && userMap.containsKey("sync") && (boolean)userMap.get("sync")) {
-      Future<String> future =
-        saveUserToES(esResponse);
-      ProjectLogger.log("UserManagementActor:processUserRequest: User record inserted in the es"+ ElasticSearchHelper.getResponseFromFuture(future), LoggerEnum.INFO);
-      sender().tell(response, self());
+      Future<Response> future =
+        saveUserToES(esResponse).map(new Mapper<String, Response>() {
+          @Override
+          public Response apply(String parameter) {
+            return syncResponse;
+          }
+        },context().dispatcher());
+      Patterns.pipe(future, getContext().dispatcher()).to(sender());
     } else {
       sender().tell(response, self());
       if(null != resp) {

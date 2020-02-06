@@ -454,7 +454,7 @@ public class UserManagementActor extends BaseActor {
         (String) actorMessage.getContext().get(JsonKey.REQUEST_SOURCE) != null
             ? (String) actorMessage.getContext().get(JsonKey.REQUEST_SOURCE)
             : "";
-    if (StringUtils.isNotBlank(version) && JsonKey.VERSION_2.equalsIgnoreCase(version)) {
+    if (StringUtils.isNotBlank(version) && (JsonKey.VERSION_2.equalsIgnoreCase(version) || JsonKey.VERSION_3.equalsIgnoreCase(version))) {
       userRequestValidator.validateCreateUserV2Request(actorMessage);
       if (StringUtils.isNotBlank(callerId)) {
         userMap.put(JsonKey.ROOT_ORG_ID, actorMessage.getContext().get(JsonKey.ROOT_ORG_ID));
@@ -814,7 +814,7 @@ public class UserManagementActor extends BaseActor {
     if(null != resp && userMap.containsKey("sync") && (boolean)userMap.get("sync")) {
       Future<String> future =
         saveUserToES(esResponse);
-      ProjectLogger.log("UserManagementActor:processUserRequest: User record inserted in the es", (String) ElasticSearchHelper.getResponseFromFuture(future));
+      ProjectLogger.log("UserManagementActor:processUserRequest: User record inserted in the es"+ ElasticSearchHelper.getResponseFromFuture(future), LoggerEnum.INFO);
       sender().tell(response, self());
     } else {
       sender().tell(response, self());

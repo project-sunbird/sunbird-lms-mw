@@ -28,6 +28,7 @@ import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
+import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.inf.ElasticSearchService;
@@ -66,8 +67,10 @@ import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.UserActorOperations;
 import org.sunbird.user.util.UserUtil;
+import scala.Option;
 import scala.Tuple2;
 import scala.concurrent.Future;
+import scala.util.Try;
 
 @ActorConfig(
   tasks = {"createUser", "updateUser", "createUserV3"},
@@ -807,9 +810,17 @@ public class UserManagementActor extends BaseActor {
     response.put(
         JsonKey.ERRORS,
         ((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE)).get(JsonKey.ERRORS));
-    sender().tell(response, self());
-    if (null != resp) {
-      saveUserDetailsToEs(esResponse);
+  
+    if(null != resp && userMap.containsKey("sync") && (boolean)userMap.get("sync")) {
+      Future<String> future =
+        saveUserToES(esResponse);
+      ProjectLogger.log("UserManagementActor:processUserRequest: User record inserted in the es", (String) ElasticSearchHelper.getResponseFromFuture(future));
+      sender().tell(response, self());
+    } else {
+      sender().tell(response, self());
+      if(null != resp) {
+        saveUserDetailsToEs(esResponse);
+      }
     }
     requestMap.put(JsonKey.PASSWORD, userMap.get(JsonKey.PASSWORD));
     if (StringUtils.isNotBlank(callerId)) {

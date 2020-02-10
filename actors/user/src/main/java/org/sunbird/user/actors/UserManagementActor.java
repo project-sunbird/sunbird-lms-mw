@@ -28,7 +28,6 @@ import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.cassandra.CassandraOperation;
-import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.inf.ElasticSearchService;
@@ -813,15 +812,18 @@ public class UserManagementActor extends BaseActor {
     syncResponse.putAll(response.getResult());
     
     if(null != resp && userMap.containsKey("sync") && (boolean)userMap.get("sync")) {
+        Map<String, Object> userDetails =
+                Util.getUserDetails(userId, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
       Future<Response> future =
-        saveUserToES(esResponse).map(new Mapper<String, Response>() {
+        saveUserToES(userDetails).map(new Mapper<String, Response>() {
           @Override
           public Response apply(String parameter) {
             return syncResponse;
           }
         },context().dispatcher());
       Patterns.pipe(future, getContext().dispatcher()).to(sender());
-    } else {
+    }
+    else {
       sender().tell(response, self());
       if(null != resp) {
         saveUserDetailsToEs(esResponse);

@@ -47,7 +47,7 @@ public class FileUploadServiceActor extends BaseActor {
         fileExtension = split[split.length - 1];
       }
     }
-    fileName.replace(fileExtension,"");
+    fileName = fileName.replace(fileExtension,"");
     String fName = fileName +"-"+ processId;
     if (!StringUtils.isBlank(fileExtension)) {
       fName = fName + "." + fileExtension.toLowerCase();

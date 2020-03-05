@@ -30,5 +30,5 @@ public interface OTPDao {
    */
   void deleteOtp(String type, String key);
 
-  void updateAttemptCount(String type, String key, int attemptCount);
+  void updateAttemptCount(Map<String, Object> otpDetails);
 }

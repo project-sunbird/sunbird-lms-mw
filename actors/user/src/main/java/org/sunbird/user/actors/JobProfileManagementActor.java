@@ -25,9 +25,6 @@ import org.sunbird.user.dao.impl.JobProfileDaoImpl;
 )
 public class JobProfileManagementActor extends BaseActor {
 
-  private AddressDao addressDao = AddressDaoImpl.getInstance();
-  private JobProfileDao jobProfileDao = JobProfileDaoImpl.getInstance();
-
   @Override
   public void onReceive(Request request) throws Throwable {
     String operation = request.getOperation();
@@ -161,8 +158,10 @@ public class JobProfileManagementActor extends BaseActor {
     jobProfileMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
     jobProfileMap.put(JsonKey.UPDATED_BY, createdBy);
     jobProfileMap.remove(JsonKey.USER_ID);
-    jobProfileDao.upsertJobProfile(jobProfileMap);
-    jobProfileMap.put(JsonKey.ADDRESS, addrResponse.get(JsonKey.ADDRESS));
+    getJobProfileDao().upsertJobProfile(jobProfileMap);
+    if(null!=addrResponse) {
+      jobProfileMap.put(JsonKey.ADDRESS, addrResponse.get(JsonKey.ADDRESS));
+    }
     return jobProfileMap;
   }
 
@@ -175,16 +174,16 @@ public class JobProfileManagementActor extends BaseActor {
       addrsId = getAddressId((String) requestMap.get(JsonKey.ID));
     }
     if (null != addrsId) {
-      addressDao.deleteAddress(addrsId);
+      getAddressDao().deleteAddress(addrsId);
     }
-    jobProfileDao.deleteJobProfile((String) requestMap.get(JsonKey.ID));
+    getJobProfileDao().deleteJobProfile((String) requestMap.get(JsonKey.ID));
   }
 
   @SuppressWarnings("unchecked")
   private String getAddressId(String id) {
     String addressId = null;
     try {
-      Response res = jobProfileDao.getPropertiesValueById(JsonKey.ADDRESS_ID, id);
+      Response res = getJobProfileDao().getPropertiesValueById(JsonKey.ADDRESS_ID, id);
       if (!((List<Map<String, Object>>) res.get(JsonKey.RESPONSE)).isEmpty()) {
         addressId =
             (String)
@@ -210,8 +209,10 @@ public class JobProfileManagementActor extends BaseActor {
     jobProfileMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     jobProfileMap.put(JsonKey.CREATED_BY, createdBy);
     jobProfileMap.put(JsonKey.USER_ID, requestMap.get(JsonKey.ID));
-    jobProfileDao.createJobProfile(jobProfileMap);
-    jobProfileMap.put(JsonKey.ADDRESS, addrResponse.get(JsonKey.ADDRESS));
+    getJobProfileDao().createJobProfile(jobProfileMap);
+    if(null!=addrResponse) {
+      jobProfileMap.put(JsonKey.ADDRESS, addrResponse.get(JsonKey.ADDRESS));
+    }
     return jobProfileMap;
   }
 
@@ -233,9 +234,18 @@ public class JobProfileManagementActor extends BaseActor {
       address.put(JsonKey.UPDATED_BY, createdBy);
       address.remove(JsonKey.USER_ID);
     }
-    addrResponse = addressDao.upsertAddress(address);
+    addrResponse = getAddressDao().upsertAddress(address);
     addrResponse.put(JsonKey.ADDRESS_ID, addrId);
     addrResponse.put(JsonKey.ADDRESS, address);
     return addrResponse;
+  }
+
+  private JobProfileDao getJobProfileDao(){
+    return JobProfileDaoImpl.getInstance();
+  }
+
+  private AddressDao getAddressDao(){
+    return AddressDaoImpl.getInstance();
+
   }
 }

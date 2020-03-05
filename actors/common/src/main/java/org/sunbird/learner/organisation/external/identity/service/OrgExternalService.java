@@ -14,15 +14,13 @@ public class OrgExternalService {
 
   private final String KEYSPACE_NAME = "sunbird";
   private final String ORG_EXTERNAL_IDENTITY = "org_external_identity";
-  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
-  @SuppressWarnings("unchecked")
   public String getOrgIdFromOrgExternalIdAndProvider(String externalId, String provider) {
     Map<String, Object> dbRequestMap = new HashMap<>();
     dbRequestMap.put(JsonKey.EXTERNAL_ID, externalId.toLowerCase());
     dbRequestMap.put(JsonKey.PROVIDER, provider.toLowerCase());
     Response response =
-        cassandraOperation.getRecordsByCompositeKey(
+        getCassandraOperation().getRecordsByCompositeKey(
             KEYSPACE_NAME, ORG_EXTERNAL_IDENTITY, dbRequestMap);
     List<Map<String, Object>> orgList =
         (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
@@ -33,5 +31,9 @@ public class OrgExternalService {
       }
     }
     return null;
+  }
+
+  private CassandraOperation getCassandraOperation(){
+    return ServiceFactory.getInstance();
   }
 }

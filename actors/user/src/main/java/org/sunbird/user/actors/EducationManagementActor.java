@@ -26,9 +26,6 @@ import org.sunbird.user.dao.impl.EducationDaoImpl;
 )
 public class EducationManagementActor extends BaseActor {
 
-  private EducationDao educationDao = EducationDaoImpl.getInstance();
-  private AddressDao addressDao = AddressDaoImpl.getInstance();
-
   @Override
   public void onReceive(Request request) throws Throwable {
     String operation = request.getOperation();
@@ -163,7 +160,7 @@ public class EducationManagementActor extends BaseActor {
     educationDetailsMap.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
     educationDetailsMap.put(JsonKey.UPDATED_BY, createdBy);
     educationDetailsMap.remove(JsonKey.USER_ID);
-    educationDao.upsertEducation(educationDetailsMap);
+    getEducationDao().upsertEducation(educationDetailsMap);
     educationDetailsMap.put(JsonKey.ADDRESS, addrResponse.get(JsonKey.ADDRESS));
     return educationDetailsMap;
   }
@@ -180,9 +177,9 @@ public class EducationManagementActor extends BaseActor {
     }
     if (null != addrsId) {
       // delete eductaion address
-      addressDao.deleteAddress(addrsId);
+      getAddressDao().deleteAddress(addrsId);
     }
-    educationDao.deleteEducation((String) educationDetailsMap.get(JsonKey.ID));
+    getEducationDao().deleteEducation((String) educationDetailsMap.get(JsonKey.ID));
   }
 
   @SuppressWarnings("unchecked")
@@ -190,7 +187,7 @@ public class EducationManagementActor extends BaseActor {
     String addressId = null;
     // eduDbInfo
     try {
-      Response res = educationDao.getPropertiesValueById(JsonKey.ADDRESS_ID, id);
+      Response res = getEducationDao().getPropertiesValueById(JsonKey.ADDRESS_ID, id);
       if (!((List<Map<String, Object>>) res.get(JsonKey.RESPONSE)).isEmpty()) {
         addressId =
             (String)
@@ -218,8 +215,10 @@ public class EducationManagementActor extends BaseActor {
     educationDetailsMap.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     educationDetailsMap.put(JsonKey.CREATED_BY, createdBy);
     educationDetailsMap.put(JsonKey.USER_ID, requestMap.get(JsonKey.ID));
-    educationDao.createEducation(educationDetailsMap);
-    educationDetailsMap.put(JsonKey.ADDRESS, addrResponse.get(JsonKey.ADDRESS));
+    getEducationDao().createEducation(educationDetailsMap);
+    if(null!=addrResponse) {
+      educationDetailsMap.put(JsonKey.ADDRESS, addrResponse.get(JsonKey.ADDRESS));
+    }
     return educationDetailsMap;
   }
 
@@ -268,9 +267,16 @@ public class EducationManagementActor extends BaseActor {
       address.put(JsonKey.UPDATED_BY, createdBy);
       address.remove(JsonKey.USER_ID);
     }
-    addrResponse = addressDao.upsertAddress(address);
+    addrResponse = getAddressDao().upsertAddress(address);
     addrResponse.put(JsonKey.ADDRESS_ID, addrId);
     addrResponse.put(JsonKey.ADDRESS, address);
     return addrResponse;
+  }
+
+  private EducationDao getEducationDao(){
+    return EducationDaoImpl.getInstance();
+  }
+  private AddressDao getAddressDao(){
+    return AddressDaoImpl.getInstance();
   }
 }

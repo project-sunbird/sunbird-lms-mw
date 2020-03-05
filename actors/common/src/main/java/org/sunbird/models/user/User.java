@@ -470,5 +470,5 @@ public class User implements Serializable {
   public void setRecoveryPhone(String recoveryPhone) {
     this.recoveryPhone = recoveryPhone;
   }
-  
+
 }

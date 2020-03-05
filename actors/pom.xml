@@ -12,14 +12,14 @@
 	<artifactId>mw-actors</artifactId>
 	<packaging>pom</packaging>
 	<name>Middleware Actors</name>
+	<properties>
+		<learner.akka.version>2.5.19</learner.akka.version>
+	</properties>
 	<modules>
 		<module>common</module>
 		<module>user</module>
 		<module>organization</module>
-		<module>course</module>
-		<module>content</module>
 		<module>badge</module>
-		<module>dashboard</module>
 		<module>location</module>
 		<module>systemsettings</module>
 	</modules>

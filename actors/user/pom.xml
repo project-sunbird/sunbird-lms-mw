@@ -22,11 +22,6 @@
 		</dependency>
 		<dependency>
 			<groupId>org.sunbird</groupId>
-			<artifactId>content</artifactId>
-			<version>1.0-SNAPSHOT</version>
-		</dependency>
-		<dependency>
-			<groupId>org.sunbird</groupId>
 			<artifactId>sunbird-es-utils</artifactId>
 			<version>1.0-SNAPSHOT</version>
 		</dependency>
@@ -53,7 +48,7 @@
 		<dependency>
 			<groupId>com.typesafe.akka</groupId>
 			<artifactId>akka-testkit_2.11</artifactId>
-			<version>2.5.16</version>
+			<version>${learner.akka.version}</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
@@ -68,6 +63,13 @@
 				<configuration>
 					<destFile>${basedir}/target/coverage-reports/jacoco-unit.exec</destFile>
 					<dataFile>${basedir}/target/coverage-reports/jacoco-unit.exec</dataFile>
+					<excludes>
+						<exclude>org/sunbird/models/**/*</exclude>
+						<exclude>org/sunbird/user/util/KafkaConfigConstants.class</exclude>
+						<exclude>org/sunbird/user/util/UserActorOperations.class</exclude>
+						<exclude>org/sunbird/user/util/UserConstants.class</exclude>
+						<exclude>org/sunbird/content/store/util/ContentStoreUtil.class</exclude>
+					</excludes>
 				</configuration>
 				<executions>
 					<execution>

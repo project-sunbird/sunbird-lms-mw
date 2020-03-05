@@ -15,7 +15,6 @@ import org.sunbird.models.role.Role;
 public class RoleDaoImpl implements RoleDao {
 
   private static final String TABLE_NAME = "role";
-  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private ObjectMapper mapper = new ObjectMapper();
   private static RoleDao roleDao;
 
@@ -29,11 +28,16 @@ public class RoleDaoImpl implements RoleDao {
   @SuppressWarnings("unchecked")
   @Override
   public List<Role> getRoles() {
-    Response roleResults = cassandraOperation.getAllRecords(Util.KEY_SPACE_NAME, TABLE_NAME);
+    Response roleResults = getCassandraOperation().getAllRecords(Util.KEY_SPACE_NAME, TABLE_NAME);
     TypeReference<List<Role>> roleMapType = new TypeReference<List<Role>>() {};
     List<Map<String, Object>> roleMapList =
         (List<Map<String, Object>>) roleResults.get(JsonKey.RESPONSE);
     List<Role> roleList = mapper.convertValue(roleMapList, roleMapType);
     return roleList;
+  }
+
+
+  public CassandraOperation getCassandraOperation() {
+    return ServiceFactory.getInstance();
   }
 }

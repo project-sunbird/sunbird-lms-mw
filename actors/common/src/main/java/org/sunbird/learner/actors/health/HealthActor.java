@@ -29,9 +29,7 @@ import scala.concurrent.Future;
 )
 public class HealthActor extends BaseActor {
 
-  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private Util.DbInfo badgesDbInfo = Util.dbInfoMap.get(JsonKey.BADGES_DB);
-  private ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public void onReceive(Request message) throws Throwable {
@@ -85,7 +83,7 @@ public class HealthActor extends BaseActor {
     List<Map<String, Object>> responseList = new ArrayList<>();
     responseList.add(ProjectUtil.createCheckResponse(JsonKey.ACTOR_SERVICE, false, null));
     try {
-      Future<Boolean> esResponseF = esUtil.healthCheck();
+      Future<Boolean> esResponseF = getEsConnection().healthCheck();
       boolean esResponse = (boolean) ElasticSearchHelper.getResponseFromFuture(esResponseF);
 
       responseList.add(ProjectUtil.createCheckResponse(JsonKey.ES_SERVICE, esResponse, null));
@@ -115,7 +113,7 @@ public class HealthActor extends BaseActor {
     responseList.add(ProjectUtil.createCheckResponse(JsonKey.LEARNER_SERVICE, false, null));
     responseList.add(ProjectUtil.createCheckResponse(JsonKey.ACTOR_SERVICE, false, null));
     try {
-      cassandraOperation.getAllRecords(badgesDbInfo.getKeySpace(), badgesDbInfo.getTableName());
+      getCassandraOperation().getAllRecords(badgesDbInfo.getKeySpace(), badgesDbInfo.getTableName());
       responseList.add(ProjectUtil.createCheckResponse(JsonKey.CASSANDRA_SERVICE, false, null));
     } catch (Exception e) {
       responseList.add(ProjectUtil.createCheckResponse(JsonKey.CASSANDRA_SERVICE, true, e));
@@ -155,7 +153,7 @@ public class HealthActor extends BaseActor {
     responseList.add(ProjectUtil.createCheckResponse(JsonKey.LEARNER_SERVICE, false, null));
     responseList.add(ProjectUtil.createCheckResponse(JsonKey.ACTOR_SERVICE, false, null));
     try {
-      cassandraOperation.getAllRecords(badgesDbInfo.getKeySpace(), badgesDbInfo.getTableName());
+      getCassandraOperation().getAllRecords(badgesDbInfo.getKeySpace(), badgesDbInfo.getTableName());
       responseList.add(ProjectUtil.createCheckResponse(JsonKey.CASSANDRA_SERVICE, false, null));
     } catch (Exception e) {
       responseList.add(ProjectUtil.createCheckResponse(JsonKey.CASSANDRA_SERVICE, true, e));
@@ -163,7 +161,7 @@ public class HealthActor extends BaseActor {
     }
     // check the elastic search
     try {
-      Future<Boolean> responseF = esUtil.healthCheck();
+      Future<Boolean> responseF = getEsConnection().healthCheck();
       boolean response = (boolean) ElasticSearchHelper.getResponseFromFuture(responseF);
       responseList.add(ProjectUtil.createCheckResponse(JsonKey.ES_SERVICE, !response, null));
       isallHealthy = response;
@@ -212,4 +210,9 @@ public class HealthActor extends BaseActor {
     response.getResult().put(JsonKey.RESPONSE, finalResponseMap);
     sender().tell(response, self());
   }
+  public CassandraOperation getCassandraOperation() {
+    return ServiceFactory.getInstance();
+  }
+  public ElasticSearchService getEsConnection(){return EsClientFactory.getInstance(JsonKey.REST);}
+
 }

@@ -10,7 +10,7 @@ public class Application {
 
   public static void main(String[] args) {
     SunbirdMWService.init();
-    checkCassandraConnection();
+     checkCassandraConnection();
   }
 
   public static void checkCassandraConnection() {

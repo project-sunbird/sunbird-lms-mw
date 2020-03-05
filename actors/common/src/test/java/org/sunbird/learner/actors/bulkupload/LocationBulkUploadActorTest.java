@@ -1,25 +1,40 @@
 package org.sunbird.learner.actors.bulkupload;
 
 import static akka.testkit.JavaTestKit.duration;
+import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import org.junit.*;
+import java.util.Map;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.FixMethodOrder;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
-import org.sunbird.actor.service.SunbirdMWService;
+import org.mockito.Mockito;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
+import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.BulkUploadActorOperation;
 import org.sunbird.common.models.util.GeoLocationJsonKey;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
+import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessDaoImpl;
 import org.sunbird.learner.util.Util;
 
 /**
@@ -28,24 +43,40 @@ import org.sunbird.learner.util.Util;
  * @author arvind on 30/4/18.
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-@Ignore
+@PrepareForTest({
+  ServiceFactory.class,
+  Util.class,
+  LocationBulkUploadActor.class,
+  BulkUploadProcessDaoImpl.class,
+  LocationBulkUploadBackGroundJobActor.class
+})
+@PowerMockIgnore("javax.management.*")
+@RunWith(PowerMockRunner.class)
 public class LocationBulkUploadActorTest {
 
   private static ActorSystem system;
   private static final Props props = Props.create(LocationBulkUploadActor.class);
   private static final String USER_ID = "user123";
   private static final String LOCATION_TYPE = "State";
-  private ObjectMapper mapper = new ObjectMapper();
+  private static CassandraOperationImpl cassandraOperation;
 
   @BeforeClass
   public static void setUp() {
-    SunbirdMWService.init();
     system = ActorSystem.create("system");
-    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
+    PowerMockito.mockStatic(ServiceFactory.class);
+    cassandraOperation = mock(CassandraOperationImpl.class);
+    when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
   }
 
   @Test
+  @Ignore
   public void testLocationBulkUploadWithProperData() throws Exception {
+    when(cassandraOperation.getRecordById(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyString()))
+        .thenReturn(getCassandraRecordByIdForUserResponse());
+    when(cassandraOperation.insertRecord(
+            Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+        .thenReturn(createCassandraInsertSuccessResponse());
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);
     List<String> headerLine =
@@ -59,8 +90,25 @@ public class LocationBulkUploadActorTest {
     Request reqObj = getRequestObjectForLocationBulkUpload(LOCATION_TYPE, jsonString.getBytes());
     subject.tell(reqObj, probe.getRef());
     Response res = probe.expectMsgClass(duration("100 second"), Response.class);
-    String processId = (String) res.get(JsonKey.ID);
+    String processId = (String) res.get(JsonKey.PROCESS_ID);
     Assert.assertTrue(null != processId);
+  }
+
+  private Response createCassandraInsertSuccessResponse() {
+    Response response = new Response();
+    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    return response;
+  }
+
+  private Response getCassandraRecordByIdForUserResponse() {
+    Response response = new Response();
+    List<Map<String, Object>> userList = new ArrayList<>();
+    Map<String, Object> map = new HashMap<>();
+    map.put(JsonKey.USER_ID, "VALID-USER-ID");
+    map.put(JsonKey.CHANNEL, "anyChannel");
+    userList.add(map);
+    response.put(JsonKey.RESPONSE, userList);
+    return response;
   }
 
   @Test

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.typesafe.config.Config;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.sunbird.actor.router.ActorConfig;
@@ -106,6 +108,12 @@ public class UserMergeActor extends UserBaseActor {
 
       // update mergee details in ES
       mergeUserDetailsToEs(userRequest);
+
+      //deleting User From KeyCloak
+      CompletableFuture.supplyAsync(()-> {return deactivateMergeeFromKC((String)mergeeDBMap.get(JsonKey.ID));}).thenApply(status->{
+        ProjectLogger.log("UserMergeActor: updateUserMergeDetails: user deleted from KeyCloak: "+status,LoggerEnum.INFO.name());
+        return null;
+      });
 
       // create telemetry event for merge
       triggerUserMergeTelemetry(telemetryMap, merger);
@@ -254,16 +262,16 @@ public class UserMergeActor extends UserBaseActor {
   }
 
   private void checkTokenDetails(Map headers, String mergeeId, String mergerId) {
-    String[] userAuthToken = (String[]) headers.get(JsonKey.X_AUTHENTICATED_USER_TOKEN);
-    String[] sourceUserAuthToken = (String[]) headers.get(JsonKey.X_SOURCE_USER_TOKEN);
+    String userAuthToken = (String) headers.get(JsonKey.X_AUTHENTICATED_USER_TOKEN);
+    String sourceUserAuthToken = (String) headers.get(JsonKey.X_SOURCE_USER_TOKEN);
     String subDomainUrl = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_SUBDOMAIN_KEYCLOAK_BASE_URL);
     ProjectLogger.log(
         "UserMergeActor:checkTokenDetails subdomain url value " + subDomainUrl,
         LoggerEnum.INFO.name());
-    String userId = keyCloakService.verifyToken(userAuthToken[0]);
+    String userId = keyCloakService.verifyToken(userAuthToken);
     // Since source token is generated from subdomain , so verification also need with
     // same subdomain.
-    String sourceUserId = keyCloakService.verifyToken(sourceUserAuthToken[0], subDomainUrl);
+    String sourceUserId = keyCloakService.verifyToken(sourceUserAuthToken, subDomainUrl);
     if (!(mergeeId.equals(sourceUserId) && mergerId.equals(userId))) {
       throw new ProjectCommonException(
           ResponseCode.unAuthorized.getErrorCode(),
@@ -283,5 +291,13 @@ public class UserMergeActor extends UserBaseActor {
     } catch (Exception e) {
       ProjectLogger.log("UserMergeActor:initKafkaClient: An exception occurred." +e , LoggerEnum.ERROR.name());
     }
+  }
+
+
+  private String deactivateMergeeFromKC(String userId){
+    Map<String,Object>userMap=new HashMap<>();
+    userMap.put(JsonKey.USER_ID,userId);
+    ProjectLogger.log("UserMergeActor:deactivateMergeeFromKC: request Got to deactivate mergee account from KC:"+userMap,LoggerEnum.INFO.name());
+    return  keyCloakService.removeUser(userMap);
   }
 }

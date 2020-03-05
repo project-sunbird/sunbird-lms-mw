@@ -29,9 +29,7 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.actors.PageManagementActor;
 import org.sunbird.learner.actors.notificationservice.dao.impl.EmailTemplateDaoImpl;
-import org.sunbird.learner.util.ContentSearchUtil;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 import org.sunbird.user.actors.UserExternalIdManagementActor;
@@ -42,8 +40,6 @@ import org.sunbird.user.util.UserActorOperations;
   ServiceFactory.class,
   Util.class,
   DataCacheHandler.class,
-  PageManagementActor.class,
-  ContentSearchUtil.class,
   org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.class,
   EmailTemplateDaoImpl.class,
   Util.class,

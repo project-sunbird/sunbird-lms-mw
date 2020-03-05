@@ -8,22 +8,28 @@ import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
 import java.util.*;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.KeyCloakConnectionProvider;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.user.actors.UserTypeActor;
 
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({KeyCloakConnectionProvider.class})
+@PowerMockIgnore("javax.management.*")
 public class UserTypeActorTest {
 
   private static ActorSystem system = ActorSystem.create("system");
   private static final Props props = Props.create(UserTypeActor.class);
 
   @Test
-  @Ignore
   public void testGetUserTypesSuccess() {
     TestKit probe = new TestKit(system);
     ActorRef subject = system.actorOf(props);

@@ -65,8 +65,9 @@ public final class SchedulerManager {
       scheduleShadowUser(identifier);
     } catch (Exception e) {
       ProjectLogger.log(
-          "SchedulerManager:schedule: Error in starting scheduler jobs - org.sunbird.common.quartz.scheduler.SchedulerManager ",
-          e);
+          "SchedulerManager:schedule: Error in starting scheduler jobs - org.sunbird.common.quartz.scheduler.SchedulerManager "
+              + e.getMessage(),
+          LoggerEnum.ERROR.name());
     } finally {
       registerShutDownHook();
     }
@@ -259,21 +260,23 @@ public final class SchedulerManager {
         "SchedulerManager:scheduleShadowUser:scheduleShadowUser scheduler started",
         LoggerEnum.INFO.name());
     ProjectLogger.log(
-            "SchedulerManager:scheduleShadowUser:scheduleShadowUser scheduler started seconde log",
-            LoggerEnum.INFO.name());
+        "SchedulerManager:scheduleShadowUser:scheduleShadowUser scheduler started seconde log",
+        LoggerEnum.INFO.name());
     JobDetail migrateShadowUserJob =
         JobBuilder.newJob(ShadowUserMigrationScheduler.class)
             .requestRecovery(true)
             .withDescription("Scheduler for migrating shadow user ")
             .withIdentity("migrateShadowUserScheduler", identifier)
             .build();
+    String shadowUserTime =
+        PropertiesCache.getInstance().getProperty("quartz_shadow_user_migration_timer");
+    ProjectLogger.log(
+        "SchedulerManager:scheduleShadowUser: schedule time is : " + shadowUserTime,
+        LoggerEnum.INFO.name());
     Trigger migrateShadowUserTrigger =
         TriggerBuilder.newTrigger()
             .withIdentity("migrateShadowUserTrigger", identifier)
-            .withSchedule(
-                CronScheduleBuilder.cronSchedule(
-                    PropertiesCache.getInstance()
-                        .getProperty("quartz_shadow_user_migration_timer")))
+            .withSchedule(CronScheduleBuilder.cronSchedule(shadowUserTime))
             .build();
     try {
       if (scheduler.checkExists(migrateShadowUserJob.getKey())) {
@@ -285,7 +288,9 @@ public final class SchedulerManager {
           "SchedulerManager:scheduleShadowUser:scheduleShadowUser scheduler ended",
           LoggerEnum.INFO.name());
     } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(), e);
+      ProjectLogger.log(
+          "SchedulerManager:scheduleShadowUser Error occurred " + e.getMessage(),
+          LoggerEnum.ERROR.name());
     }
   }
 }

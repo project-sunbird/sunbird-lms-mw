@@ -13,13 +13,10 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Properties;
-import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
@@ -79,7 +76,6 @@ import scala.concurrent.Future;
 public final class Util {
 
   public static final Map<String, DbInfo> dbInfoMap = new HashMap<>();
-  public static final int RECOMENDED_LIST_SIZE = 10;
   private static PropertiesCache propertiesCache = PropertiesCache.getInstance();
   public static final int DEFAULT_ELASTIC_DATA_LIMIT = 10000;
   public static final String KEY_SPACE_NAME = "sunbird";
@@ -103,12 +99,12 @@ public final class Util {
   static {
     loadPropertiesFile();
     initializeOrgStatusTransition();
-    initializeDBProperty();
-    // EkStep HttpClient headers init
+    initializeDBProperty(); // EkStep HttpClient headers init
     headers.put("content-type", "application/json");
     headers.put("accept", "application/json");
     new Thread(
             new Runnable() {
+
               @Override
               public void run() {
                 SchedulerManager.getInstance();
@@ -157,19 +153,9 @@ public final class Util {
     // this map will be used during cassandra data base interaction.
     // this map will have each DB name and it's corresponding keyspace and table
     // name.
-    dbInfoMap.put(JsonKey.LEARNER_COURSE_DB, getDbInfoObject(KEY_SPACE_NAME, "user_courses"));
-    dbInfoMap.put(
-        JsonKey.LEARNER_CONTENT_DB, getDbInfoObject(KEY_SPACE_NAME, "content_consumption"));
-    dbInfoMap.put(
-        JsonKey.COURSE_MANAGEMENT_DB, getDbInfoObject(KEY_SPACE_NAME, "course_management"));
     dbInfoMap.put(JsonKey.USER_DB, getDbInfoObject(KEY_SPACE_NAME, "user"));
     dbInfoMap.put(JsonKey.USER_AUTH_DB, getDbInfoObject(KEY_SPACE_NAME, "user_auth"));
     dbInfoMap.put(JsonKey.ORG_DB, getDbInfoObject(KEY_SPACE_NAME, "organisation"));
-    dbInfoMap.put(JsonKey.PAGE_MGMT_DB, getDbInfoObject(KEY_SPACE_NAME, "page_management"));
-    dbInfoMap.put(JsonKey.PAGE_SECTION_DB, getDbInfoObject(KEY_SPACE_NAME, "page_section"));
-    dbInfoMap.put(JsonKey.SECTION_MGMT_DB, getDbInfoObject(KEY_SPACE_NAME, "page_section"));
-    dbInfoMap.put(JsonKey.ASSESSMENT_EVAL_DB, getDbInfoObject(KEY_SPACE_NAME, "assessment_eval"));
-    dbInfoMap.put(JsonKey.ASSESSMENT_ITEM_DB, getDbInfoObject(KEY_SPACE_NAME, "assessment_item"));
     dbInfoMap.put(JsonKey.ADDRESS_DB, getDbInfoObject(KEY_SPACE_NAME, "address"));
     dbInfoMap.put(JsonKey.EDUCATION_DB, getDbInfoObject(KEY_SPACE_NAME, "user_education"));
     dbInfoMap.put(JsonKey.JOB_PROFILE_DB, getDbInfoObject(KEY_SPACE_NAME, "user_job_profile"));
@@ -186,9 +172,6 @@ public final class Util {
     dbInfoMap.put(JsonKey.ROLE_GROUP, getDbInfoObject(KEY_SPACE_NAME, "role_group"));
     dbInfoMap.put(JsonKey.USER_ORG_DB, getDbInfoObject(KEY_SPACE_NAME, "user_org"));
     dbInfoMap.put(JsonKey.BULK_OP_DB, getDbInfoObject(KEY_SPACE_NAME, "bulk_upload_process"));
-    dbInfoMap.put(JsonKey.COURSE_BATCH_DB, getDbInfoObject(KEY_SPACE_NAME, "course_batch"));
-    dbInfoMap.put(
-        JsonKey.COURSE_PUBLISHED_STATUS, getDbInfoObject(KEY_SPACE_NAME, "course_publish_status"));
     dbInfoMap.put(JsonKey.REPORT_TRACKING_DB, getDbInfoObject(KEY_SPACE_NAME, "report_tracking"));
     dbInfoMap.put(JsonKey.BADGES_DB, getDbInfoObject(KEY_SPACE_NAME, "badge"));
     dbInfoMap.put(JsonKey.USER_BADGES_DB, getDbInfoObject(KEY_SPACE_NAME, "user_badge"));
@@ -206,11 +189,8 @@ public final class Util {
     dbInfoMap.put(
         BadgingJsonKey.USER_BADGE_ASSERTION_DB,
         getDbInfoObject(KEY_SPACE_NAME, "user_badge_assertion"));
-
-    dbInfoMap.put(
-        BadgingJsonKey.CONTENT_BADGE_ASSOCIATION_DB,
-        getDbInfoObject(KEY_SPACE_NAME, "content_badge_association"));
     dbInfoMap.put(JsonKey.USER_CERT, getDbInfoObject(KEY_SPACE_NAME, JsonKey.USER_CERT));
+    dbInfoMap.put(JsonKey.USER_FEED_DB, getDbInfoObject(KEY_SPACE_NAME, JsonKey.USER_FEED_DB));
   }
 
   /**
@@ -562,17 +542,8 @@ public final class Util {
               (Collection<? extends Map<String, Object>>) searchQueryMap.get(JsonKey.GROUP_QUERY));
     }
     if (searchQueryMap.containsKey(JsonKey.SOFT_CONSTRAINTS)) {
-      // Play is converting int value to bigInt so need to cnvert back those data to iny
-      // SearchDto soft constraints expect Map<String, Integer>
-      Map<String, Integer> constraintsMap = new HashMap<>();
-      Set<Entry<String, BigInteger>> entrySet =
-          ((Map<String, BigInteger>) searchQueryMap.get(JsonKey.SOFT_CONSTRAINTS)).entrySet();
-      Iterator<Entry<String, BigInteger>> itr = entrySet.iterator();
-      while (itr.hasNext()) {
-        Entry<String, BigInteger> entry = itr.next();
-        constraintsMap.put(entry.getKey(), entry.getValue().intValue());
-      }
-      search.setSoftConstraints(constraintsMap);
+      search.setSoftConstraints(
+          (Map<String, Integer>) searchQueryMap.get(JsonKey.SOFT_CONSTRAINTS));
     }
     return search;
   }
@@ -764,7 +735,9 @@ public final class Util {
 
   /** @param req Map<String,Object> */
   public static boolean registerChannel(Map<String, Object> req) {
-    ProjectLogger.log("channel registration for hashTag Id = " + req.get(JsonKey.HASHTAGID) + "");
+    ProjectLogger.log(
+        "channel registration for hashTag Id = " + req.get(JsonKey.HASHTAGID) + "",
+        LoggerEnum.INFO.name());
     Map<String, String> headerMap = new HashMap<>();
     String header = System.getenv(JsonKey.EKSTEP_AUTHORIZATION);
     if (StringUtils.isBlank(header)) {
@@ -779,7 +752,8 @@ public final class Util {
     String regStatus = "";
     try {
       ProjectLogger.log(
-          "start call for registering the channel for hashTag id ==" + req.get(JsonKey.HASHTAGID));
+          "start call for registering the channel for hashTag id ==" + req.get(JsonKey.HASHTAGID),
+          LoggerEnum.INFO.name());
       String ekStepBaseUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
       if (StringUtils.isBlank(ekStepBaseUrl)) {
         ekStepBaseUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
@@ -790,6 +764,11 @@ public final class Util {
       channelMap.put(JsonKey.NAME, req.get(JsonKey.CHANNEL));
       channelMap.put(JsonKey.DESCRIPTION, req.get(JsonKey.DESCRIPTION));
       channelMap.put(JsonKey.CODE, req.get(JsonKey.HASHTAGID));
+      if (req.containsKey(JsonKey.LICENSE)
+          && StringUtils.isNotBlank((String) req.get(JsonKey.LICENSE))) {
+        channelMap.put(JsonKey.DEFAULT_LICENSE, req.get(JsonKey.LICENSE));
+      }
+
       String defaultFramework = (String) req.get(JsonKey.DEFAULT_FRAMEWORK);
       if (StringUtils.isNotBlank(defaultFramework))
         channelMap.put(JsonKey.DEFAULT_FRAMEWORK, defaultFramework);
@@ -807,9 +786,12 @@ public final class Util {
               reqString,
               headerMap);
       ProjectLogger.log(
-          "end call for channel registration for hashTag id ==" + req.get(JsonKey.HASHTAGID));
+          "end call for channel registration for hashTag id ==" + req.get(JsonKey.HASHTAGID),
+          LoggerEnum.INFO.name());
     } catch (Exception e) {
-      ProjectLogger.log("Exception occurred while registarting channel in ekstep.", e);
+      ProjectLogger.log(
+          "Exception occurred while registarting channel in ekstep." + e.getMessage(),
+          LoggerEnum.ERROR.name());
     }
 
     return regStatus.contains("OK");
@@ -817,7 +799,9 @@ public final class Util {
 
   /** @param req Map<String,Object> */
   public static boolean updateChannel(Map<String, Object> req) {
-    ProjectLogger.log("channel update for hashTag Id = " + req.get(JsonKey.HASHTAGID) + "");
+    ProjectLogger.log(
+        "channel update for hashTag Id = " + req.get(JsonKey.HASHTAGID) + "",
+        LoggerEnum.INFO.name());
     Map<String, String> headerMap = new HashMap<>();
     String header = System.getenv(JsonKey.EKSTEP_AUTHORIZATION);
     if (StringUtils.isBlank(header)) {
@@ -832,7 +816,8 @@ public final class Util {
     String regStatus = "";
     try {
       ProjectLogger.log(
-          "start call for registering the channel for hashTag id ==" + req.get(JsonKey.HASHTAGID));
+          "start call for updateChannel for hashTag id ==" + req.get(JsonKey.HASHTAGID),
+          LoggerEnum.INFO.name());
       String ekStepBaseUrl = System.getenv(JsonKey.EKSTEP_BASE_URL);
       if (StringUtils.isBlank(ekStepBaseUrl)) {
         ekStepBaseUrl = PropertiesCache.getInstance().getProperty(JsonKey.EKSTEP_BASE_URL);
@@ -843,6 +828,10 @@ public final class Util {
       channelMap.put(JsonKey.NAME, req.get(JsonKey.CHANNEL));
       channelMap.put(JsonKey.DESCRIPTION, req.get(JsonKey.DESCRIPTION));
       channelMap.put(JsonKey.CODE, req.get(JsonKey.HASHTAGID));
+      String license = (String) req.get(JsonKey.LICENSE);
+      if (StringUtils.isNotBlank(license)) {
+        channelMap.put(JsonKey.DEFAULT_LICENSE, license);
+      }
       reqMap.put(JsonKey.CHANNEL, channelMap);
       map.put(JsonKey.REQUEST, reqMap);
 
@@ -858,9 +847,12 @@ public final class Util {
               reqString,
               headerMap);
       ProjectLogger.log(
-          "end call for channel registration for hashTag id ==" + req.get(JsonKey.HASHTAGID));
+          "end call for channel update for hashTag id ==" + req.get(JsonKey.HASHTAGID),
+          LoggerEnum.INFO.name());
     } catch (Exception e) {
-      ProjectLogger.log("Exception occurred while registarting channel in ekstep.", e);
+      ProjectLogger.log(
+          "Exception occurred while updating channel in ekstep. " + e.getMessage(),
+          LoggerEnum.ERROR.name());
     }
 
     return regStatus.contains("SUCCESS");
@@ -1469,7 +1461,7 @@ public final class Util {
       // save masked email and phone number
       addMaskEmailAndPhone(userDetails);
       checkProfileCompleteness(userDetails);
-      if(actorRef!=null) {
+      if (actorRef != null) {
         checkUserProfileVisibility(userDetails, actorRef);
       }
       userDetails.remove(JsonKey.PASSWORD);
@@ -1481,6 +1473,28 @@ public final class Util {
           LoggerEnum.INFO.name());
     }
     userDetails.put(JsonKey.USERNAME, username);
+    return userDetails;
+  }
+
+  public static Map<String, Object> getUserDetails(
+      Map<String, Object> userDetails, Map<String, Object> orgMap) {
+    String userId = (String) userDetails.get(JsonKey.USER_ID);
+    ProjectLogger.log("get user profile method call started user Id : " + userId);
+    List<Map<String, Object>> orgList = new ArrayList<Map<String, Object>>();
+    orgList.add(orgMap);
+    ProjectLogger.log("Util:getUserDetails: userId = " + userId, LoggerEnum.INFO.name());
+    userDetails.put(JsonKey.ORGANISATIONS, orgList);
+    Map<String, Object> rootOrg = getOrgDetails((String) userDetails.get(JsonKey.ROOT_ORG_ID));
+    if (!MapUtils.isEmpty(rootOrg)) {
+      userDetails.put(JsonKey.ROOT_ORG_NAME, orgMap.get(JsonKey.ORG_NAME));
+    } else {
+      userDetails.put(JsonKey.ROOT_ORG_NAME, "");
+    }
+    // save masked email and phone number
+    addMaskEmailAndPhone(userDetails);
+    userDetails.remove(JsonKey.PASSWORD);
+    addEmailAndPhone(userDetails);
+    checkEmailAndPhoneVerified(userDetails);
     return userDetails;
   }
 
@@ -1936,7 +1950,7 @@ public final class Util {
     }
   }
 
-  public static void getUserRequiredActionLink(
+  public static String getUserRequiredActionLink(
       Map<String, Object> templateMap, boolean isUrlShortRequired) {
     URLShortner urlShortner = new URLShortnerImpl();
     String redirectUri =
@@ -1954,6 +1968,7 @@ public final class Util {
 
       templateMap.put(
           JsonKey.SET_PASSWORD_LINK, isUrlShortRequired ? urlShortner.shortUrl(url) : url);
+      return isUrlShortRequired ? urlShortner.shortUrl(url) : url;
 
     } else {
       String url =
@@ -1963,6 +1978,7 @@ public final class Util {
               KeycloakRequiredActionLinkUtil.VERIFY_EMAIL);
       templateMap.put(
           JsonKey.VERIFY_EMAIL_LINK, isUrlShortRequired ? urlShortner.shortUrl(url) : url);
+      return isUrlShortRequired ? urlShortner.shortUrl(url) : url;
     }
   }
 

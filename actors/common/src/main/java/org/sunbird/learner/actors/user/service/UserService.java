@@ -17,13 +17,8 @@ import org.sunbird.learner.util.Util.DbInfo;
 
 public class UserService {
 
-  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private EncryptionService encryptionService =
-      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
-          null);
   private DbInfo userDb = Util.dbInfoMap.get(JsonKey.USER_DB);
 
-  @SuppressWarnings("unchecked")
   public void checkKeyUniqueness(String key, String value, boolean isEncrypted) {
     if (StringUtils.isBlank(key) || StringUtils.isBlank(value)) {
       ProjectLogger.log(
@@ -37,7 +32,7 @@ public class UserService {
     String val = value;
     if (isEncrypted) {
       try {
-        val = encryptionService.encryptData(val);
+        val = getEncryptionService().encryptData(val);
       } catch (Exception e) {
         ProjectLogger.log(
             "UserService:checkKeyUniqueness: Exception occurred with error message = "
@@ -46,9 +41,7 @@ public class UserService {
       }
     }
 
-    Response result =
-        cassandraOperation.getRecordsByIndexedProperty(
-            userDb.getKeySpace(), userDb.getTableName(), key, val);
+    Response result = getCassandraOperation().getRecordsByIndexedProperty(userDb.getKeySpace(), userDb.getTableName(), key, val);
 
     List<Map<String, Object>> userMapList =
         (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
@@ -62,6 +55,14 @@ public class UserService {
       }
       ProjectCommonException.throwClientErrorException(responseCode, null);
     }
+  }
+
+  private CassandraOperation getCassandraOperation(){
+    return ServiceFactory.getInstance();
+  }
+
+  private EncryptionService getEncryptionService(){
+    return org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(null);
   }
 
 }

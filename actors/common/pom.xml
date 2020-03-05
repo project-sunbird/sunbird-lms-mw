@@ -44,12 +44,12 @@
 		<dependency>
 			<groupId>com.typesafe.akka</groupId>
 			<artifactId>akka-actor_2.11</artifactId>
-			<version>2.5.16</version>
+			<version>${learner.akka.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.typesafe.akka</groupId>
 			<artifactId>akka-slf4j_2.11</artifactId>
-			<version>2.5.16</version>
+			<version>${learner.akka.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.sunbird</groupId>
@@ -69,7 +69,7 @@
 		<dependency>
 			<groupId>com.typesafe.akka</groupId>
 			<artifactId>akka-remote_2.11</artifactId>
-			<version>2.5.16</version>
+			<version>${learner.akka.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.reflections</groupId>
@@ -84,7 +84,7 @@
 		<dependency>
 			<groupId>com.typesafe.akka</groupId>
 			<artifactId>akka-testkit_2.11</artifactId>
-			<version>2.5.16</version>
+			<version>${learner.akka.version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
@@ -188,6 +188,12 @@
 				<configuration>
 					<destFile>${basedir}/target/coverage-reports/jacoco-unit.exec</destFile>
 					<dataFile>${basedir}/target/coverage-reports/jacoco-unit.exec</dataFile>
+					<excludes>
+						<exclude>org/sunbird/bean/*</exclude>
+						<exclude>org/sunbird/models/**/*</exclude>
+						<exclude>org/sunbird/learner/actors/url/action/**/*</exclude>
+						<exclude>org/sunbird/learner/actors/bulkupload/model/*</exclude>
+					</excludes>
 				</configuration>
 				<executions>
 					<execution>

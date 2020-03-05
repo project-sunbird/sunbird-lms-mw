@@ -8,6 +8,7 @@ import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.dispatch.Futures;
+import scala.concurrent.Future;
 import akka.testkit.javadsl.TestKit;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -22,6 +23,7 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.actor.router.RequestRouter;
+import org.sunbird.actor.service.SunbirdMWService;
 import org.sunbird.actorutil.InterServiceCommunication;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
 import org.sunbird.actorutil.impl.InterServiceCommunicationImpl;
@@ -58,7 +60,8 @@ import scala.concurrent.Promise;
   InterServiceCommunicationFactory.class,
   LocationClientImpl.class,
   DataCacheHandler.class,
-  ElasticSearchRestHighImpl.class
+  ElasticSearchRestHighImpl.class,
+  SunbirdMWService.class
 })
 @PowerMockIgnore({"javax.management.*"})
 public abstract class UserManagementActorTestBase {
@@ -81,6 +84,8 @@ public abstract class UserManagementActorTestBase {
 
     PowerMockito.mockStatic(ServiceFactory.class);
     PowerMockito.mockStatic(EsClientFactory.class);
+    PowerMockito.mockStatic(SunbirdMWService.class);
+    SunbirdMWService.tellToBGRouter(Mockito.any(), Mockito.any());
     cassandraOperation = mock(CassandraOperationImpl.class);
     esService = mock(ElasticSearchRestHighImpl.class);
     when(EsClientFactory.getInstance(Mockito.anyString())).thenReturn(esService);
@@ -120,7 +125,11 @@ public abstract class UserManagementActorTestBase {
     promise.success(getEsResponseMap());
     when(esService.getDataByIdentifier(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(promise.future());
-
+    Map<String,Object>map=new HashMap<>();
+    Promise<String> esPromise = Futures.promise();
+    esPromise.success("success");
+    when(esService.save(Mockito.anyString(), Mockito.anyString(), Mockito.anyMap()))
+      .thenReturn(esPromise.future());
     PowerMockito.mockStatic(Util.class);
     Util.getUserProfileConfig(Mockito.any(ActorRef.class));
 

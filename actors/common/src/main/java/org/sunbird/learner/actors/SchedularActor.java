@@ -3,6 +3,7 @@ package org.sunbird.learner.actors;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -23,7 +24,6 @@ import org.sunbird.learner.util.Util;
   asyncTasks = {"scheduleBulkUpload"}
 )
 public class SchedularActor extends BaseActor {
-
   @Override
   public void onReceive(Request actorMessage) throws Throwable {
     if (actorMessage
@@ -35,7 +35,7 @@ public class SchedularActor extends BaseActor {
     }
   }
 
-  @SuppressWarnings("unchecked")
+ @SuppressWarnings("unchecked")
   private void schedule(Request request) {
     List<Map<String, Object>> result = (List<Map<String, Object>>) request.get(JsonKey.DATA);
     Util.DbInfo bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);

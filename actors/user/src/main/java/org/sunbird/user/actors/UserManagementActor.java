@@ -451,7 +451,7 @@ public class UserManagementActor extends BaseActor {
         (String) actorMessage.getContext().get(JsonKey.REQUEST_SOURCE) != null
             ? (String) actorMessage.getContext().get(JsonKey.REQUEST_SOURCE)
             : "";
-    if (StringUtils.isNotBlank(version) && JsonKey.VERSION_2.equalsIgnoreCase(version)) {
+    if (StringUtils.isNotBlank(version) && (JsonKey.VERSION_2.equalsIgnoreCase(version) || JsonKey.VERSION_3.equalsIgnoreCase(version))) {
       userRequestValidator.validateCreateUserV2Request(actorMessage);
       if (StringUtils.isNotBlank(callerId)) {
         userMap.put(JsonKey.ROOT_ORG_ID, actorMessage.getContext().get(JsonKey.ROOT_ORG_ID));
@@ -807,9 +807,27 @@ public class UserManagementActor extends BaseActor {
     response.put(
         JsonKey.ERRORS,
         ((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE)).get(JsonKey.ERRORS));
-    sender().tell(response, self());
-    if (null != resp) {
-      saveUserDetailsToEs(esResponse);
+  
+    Response syncResponse = new Response();
+    syncResponse.putAll(response.getResult());
+    
+    if(null != resp && userMap.containsKey("sync") && (boolean)userMap.get("sync")) {
+        Map<String, Object> userDetails =
+                Util.getUserDetails(userId, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
+      Future<Response> future =
+        saveUserToES(userDetails).map(new Mapper<String, Response>() {
+          @Override
+          public Response apply(String parameter) {
+            return syncResponse;
+          }
+        },context().dispatcher());
+      Patterns.pipe(future, getContext().dispatcher()).to(sender());
+    }
+    else {
+      sender().tell(response, self());
+      if(null != resp) {
+        saveUserDetailsToEs(esResponse);
+      }
     }
     requestMap.put(JsonKey.PASSWORD, userMap.get(JsonKey.PASSWORD));
     if (StringUtils.isNotBlank(callerId)) {

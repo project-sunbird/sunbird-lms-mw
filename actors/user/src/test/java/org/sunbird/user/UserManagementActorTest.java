@@ -361,5 +361,14 @@ public class UserManagementActorTest extends UserManagementActorTestBase {
     when(DataCacheHandler.getRoleMap()).thenReturn(roleMap(false));
     boolean result = testScenario(request, ResponseCode.invalidRole);
     assertTrue(result);
+  }  
+  @Test
+  public void testCreateUserSuccessWithUserSync() {
+    reqMap.put("sync",true);
+    boolean result =
+      testScenario(
+        getRequest(true, true, true, getAdditionalMapData(reqMap), ActorOperations.CREATE_USER),
+        null);
+    assertTrue(result);
   }
 }

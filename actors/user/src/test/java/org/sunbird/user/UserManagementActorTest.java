@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.sunbird.actorutil.InterServiceCommunicationFactory;
@@ -19,6 +20,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.DataCacheHandler;
 import scala.concurrent.Promise;
+
 
 public class UserManagementActorTest extends UserManagementActorTestBase {
 
@@ -164,10 +166,11 @@ public class UserManagementActorTest extends UserManagementActorTestBase {
 
   @Test
   public void testUpdateUserSuccess() {
-
+    Map<String, Object> req = getExternalIdMap();
+    getUpdateRequestWithDefaultFlags(req);
     boolean result =
         testScenario(
-            getRequest(true, true, true, getExternalIdMap(), ActorOperations.UPDATE_USER), null);
+            getRequest(true, true, true, req, ActorOperations.UPDATE_USER), null);
     assertTrue(result);
   }
 
@@ -190,10 +193,11 @@ public class UserManagementActorTest extends UserManagementActorTestBase {
 
   @Test
   public void testUpdateUserSuccessWithoutUserCallerId() {
-
+    Map<String, Object> req = getExternalIdMap();
+    getUpdateRequestWithDefaultFlags(req);
     boolean result =
         testScenario(
-            getRequest(false, true, true, getExternalIdMap(), ActorOperations.UPDATE_USER), null);
+            getRequest(false, true, true, req, ActorOperations.UPDATE_USER), null);
     assertTrue(result);
   }
 
@@ -237,6 +241,7 @@ public class UserManagementActorTest extends UserManagementActorTestBase {
   @Test
   public void testUpdateUserSuccessWithUserTypeTeacher() {
     Map<String, Object> req = getExternalIdMap();
+    getUpdateRequestWithDefaultFlags(req);
     req.put(JsonKey.USER_TYPE, JsonKey.TEACHER);
     when(userService.getUserById(Mockito.anyString())).thenReturn(getUser(false));
     when(userService.getRootOrgIdFromChannel(Mockito.anyString())).thenReturn("rootOrgId1");
@@ -328,6 +333,7 @@ public class UserManagementActorTest extends UserManagementActorTestBase {
   @Test
   public void testUpdateUserOrgSuccessPrivateApi() {
     Map<String, Object> req = getUserOrgUpdateRequest(true);
+    getUpdateRequestWithDefaultFlags(req);
     Request request = getRequest(false, false, true, req, ActorOperations.UPDATE_USER);
     request.getContext().put(JsonKey.PRIVATE, true);
     mockForUserOrgUpdate();
@@ -338,6 +344,7 @@ public class UserManagementActorTest extends UserManagementActorTestBase {
   @Test
   public void testUpdateUserOrgSuccessWithoutRolesPrivateApi() {
     Map<String, Object> req = getUserOrgUpdateRequest(true);
+    getUpdateRequestWithDefaultFlags(req);
     Request request = getRequest(false, false, true, req, ActorOperations.UPDATE_USER);
     request.getContext().put(JsonKey.PRIVATE, true);
     mockForUserOrgUpdate();

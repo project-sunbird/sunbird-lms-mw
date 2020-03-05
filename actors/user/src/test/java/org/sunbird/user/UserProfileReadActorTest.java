@@ -131,6 +131,7 @@ public class UserProfileReadActorTest {
 
     Map<String, Object> requestMap = new HashMap<>();
     requestMap.put(JsonKey.TNC_ACCEPTED_ON, 12345678L);
+    requestMap.put(JsonKey.ROOT_ORG_ID, "rootOrgId");
     when(UserUtil.encryptUserData(Mockito.anyMap())).thenReturn(requestMap);
     PowerMockito.mockStatic(DataCacheHandler.class);
     when(ssoManager.getUsernameById(Mockito.anyString())).thenReturn(VALID_USERNAME);

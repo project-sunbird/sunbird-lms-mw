@@ -26,7 +26,6 @@ public class User implements Serializable {
   private String createdDate;
   private String dob;
   private String email;
-  private Boolean emailVerified;
   private String firstName;
   private String gender;
   private List<String> grade;
@@ -36,7 +35,6 @@ public class User implements Serializable {
   private String lastName;
   private String location;
   private String phone;
-  private Boolean phoneVerified;
   private String profileSummary;
   private Map<String, String> profileVisibility;
   private String provider;
@@ -66,6 +64,11 @@ public class User implements Serializable {
   private String tncAcceptedVersion;
   private Map<String, List<String>> framework;
   private List<String> locationIds;
+  private String prevUsedPhone;
+  private String prevUsedEmail;
+  private int flagsValue;
+  private String recoveryEmail;
+  private String recoveryPhone;
 
   public List<String> getLocationIds() {
     return locationIds;
@@ -169,14 +172,6 @@ public class User implements Serializable {
 
   public void setEmail(String email) {
     this.email = email;
-  }
-
-  public Boolean getEmailVerified() {
-    return emailVerified;
-  }
-
-  public void setEmailVerified(Boolean emailVerified) {
-    this.emailVerified = emailVerified;
   }
 
   public String getFirstName() {
@@ -404,14 +399,6 @@ public class User implements Serializable {
     this.framework = framework;
   }
 
-  public Boolean getPhoneVerified() {
-    return phoneVerified;
-  }
-
-  public void setPhoneVerified(Boolean phoneVerified) {
-    this.phoneVerified = phoneVerified;
-  }
-
   public Timestamp getTncAcceptedOn() {
     return tncAcceptedOn;
   }
@@ -444,4 +431,44 @@ public class User implements Serializable {
   public void setTncAcceptedVersion(String tncAcceptedVersion) {
     this.tncAcceptedVersion = tncAcceptedVersion;
   }
+
+  public String getPrevUsedPhone() {
+    return prevUsedPhone;
+  }
+
+  public void setPrevUsedPhone(String prevUsedPhone) {
+    this.prevUsedPhone = prevUsedPhone;
+  }
+
+  public String getPrevUsedEmail() {
+    return prevUsedEmail;
+  }
+
+  public void setPrevUsedEmail(String prevUsedEmail) {
+    this.prevUsedEmail = prevUsedEmail;
+  }
+
+  public int getFlagsValue() {
+    return flagsValue;
+  }
+
+  public void setFlagsValue(int flagsValue) {
+    this.flagsValue = flagsValue;
+  }
+  public String getRecoveryEmail() {
+    return recoveryEmail;
+  }
+
+  public void setRecoveryEmail(String recoveryEmail) {
+    this.recoveryEmail = recoveryEmail;
+  }
+
+  public String getRecoveryPhone() {
+    return recoveryPhone;
+  }
+
+  public void setRecoveryPhone(String recoveryPhone) {
+    this.recoveryPhone = recoveryPhone;
+  }
+  
 }

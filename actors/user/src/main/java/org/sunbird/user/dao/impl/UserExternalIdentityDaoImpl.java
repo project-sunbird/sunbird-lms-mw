@@ -50,7 +50,7 @@ public class UserExternalIdentityDaoImpl implements UserExternalIdentityDao {
     Map<String, Object> externalIdReq = new HashMap<>();
     externalIdReq.put(JsonKey.PROVIDER, provider.toLowerCase());
     externalIdReq.put(JsonKey.ID_TYPE, idType.toLowerCase());
-    externalIdReq.put(JsonKey.EXTERNAL_ID, getEncryptedData(extId.toLowerCase()));
+    externalIdReq.put(JsonKey.EXTERNAL_ID, extId.toLowerCase());
     Response response =
         cassandraOperation.getRecordsByCompositeKey(
             usrDbInfo.getKeySpace(), JsonKey.USR_EXT_IDNT_TABLE, externalIdReq);

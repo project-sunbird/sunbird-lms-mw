@@ -31,6 +31,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.systemsetting.SystemSetting;
 import org.sunbird.models.user.User;
@@ -259,11 +260,18 @@ public class UserServiceImpl implements UserService {
     String channel = (String) userMap.get(JsonKey.CHANNEL);
     if (StringUtils.isBlank(channel)) {
       try {
-        SystemSettingClient client = SystemSettingClientImpl.getInstance();
-        SystemSetting systemSetting =
-            client.getSystemSettingByField(actorRef, JsonKey.CUSTODIAN_ORG_CHANNEL);
-        if (null != systemSetting && StringUtils.isNotBlank(systemSetting.getValue())) {
-          channel = systemSetting.getValue();
+        Map<String, String> configSettingMap = DataCacheHandler.getConfigSettings();
+        channel = configSettingMap.get(JsonKey.CUSTODIAN_ORG_CHANNEL);
+        if (StringUtils.isBlank(channel)) {
+          SystemSettingClient client = SystemSettingClientImpl.getInstance();
+          SystemSetting custodianOrgChannelSetting =
+                  client.getSystemSettingByField(
+                          actorRef,
+                          JsonKey.CUSTODIAN_ORG_CHANNEL);
+          if (custodianOrgChannelSetting != null &&  StringUtils.isNotBlank(custodianOrgChannelSetting.getValue())) {
+            configSettingMap.put(custodianOrgChannelSetting.getId(), custodianOrgChannelSetting.getValue());
+            channel = custodianOrgChannelSetting.getValue();
+          }
         }
       } catch (Exception ex) {
         ProjectLogger.log(

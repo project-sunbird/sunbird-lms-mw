@@ -26,7 +26,7 @@
 			<version>${learner.akka.version}</version>
 			<scope>test</scope>
 		</dependency>
-		<dependency>
+		<!--<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 			<version>4.12</version>
@@ -49,7 +49,7 @@
 			<artifactId>powermock-api-mockito</artifactId>
 			<version>1.6.5</version>
 			<scope>test</scope>
-		</dependency>
+		</dependency>-->
 	</dependencies>
 	<build>
 		<sourceDirectory>${basedir}/src/main/java</sourceDirectory>

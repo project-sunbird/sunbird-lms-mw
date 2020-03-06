@@ -27,6 +27,8 @@ public class OTPActor extends BaseActor {
 
   private OTPService otpService = new OTPService();
   private static final String SUNBIRD_OTP_ALLOWED_ATTEMPT = "sunbird_otp_allowed_attempt";
+  private static final String REMAINING_ATTEMPT = "remainingAttempt";
+  private static final String MAX_ALLOWED_ATTEMPT = "maxAllowedAttempt";
   private RateLimitService rateLimitService = new RateLimitServiceImpl();
 
   @Override
@@ -41,6 +43,7 @@ public class OTPActor extends BaseActor {
   }
 
   private void generateOTP(Request request) {
+    ProjectLogger.log("OTPActor:generateOTP method call start.",LoggerEnum.INFO.name());
     String type = (String) request.getRequest().get(JsonKey.TYPE);
     String key = getKey(type, request);
 
@@ -57,10 +60,7 @@ public class OTPActor extends BaseActor {
     Map<String, Object> details = otpService.getOTPDetails(type, key);
     if (MapUtils.isEmpty(details)) {
       otp = OTPUtil.generateOTP();
-      ProjectLogger.log(
-              "OTPActor:generateOTP: inserting otp Key = " + key + " OTP = " + otp,
-              LoggerEnum.INFO.name());
-
+      ProjectLogger.log("OTPActor:generateOTP Insert OTP details.",LoggerEnum.INFO.name());
       otpService.insertOTPDetails(type, key, otp);
     } else {
       otp = (String) details.get(JsonKey.OTP);
@@ -104,19 +104,12 @@ public class OTPActor extends BaseActor {
 
     Map<String, Object> otpDetails = otpService.getOTPDetails(type, key);
     if (MapUtils.isEmpty(otpDetails)) {
-      ProjectLogger.log(
-              "OTPActor:verifyOTP: Details not found for type = " + type + " key = " + key,
-              LoggerEnum.DEBUG);
+      ProjectLogger.log("OTPActor:verifyOTP: Details not found for.",LoggerEnum.INFO.name());
       ProjectCommonException.throwClientErrorException(ResponseCode.errorInvalidOTP);
     }
     String otpInDB = (String) otpDetails.get(JsonKey.OTP);
     if (StringUtils.isBlank(otpInDB) || StringUtils.isBlank(otpInRequest)) {
-      ProjectLogger.log(
-              "OTPActor:verifyOTP: OTP mismatch otpInRequest = "
-                      + otpInRequest
-                      + " otpInDB = "
-                      + otpInDB,
-              LoggerEnum.DEBUG);
+      ProjectLogger.log("OTPActor:verifyOTP: OTP mismatch otpInRequest",LoggerEnum.INFO.name());
       ProjectCommonException.throwClientErrorException(ResponseCode.errorInvalidOTP);
     }
 
@@ -145,8 +138,8 @@ public class OTPActor extends BaseActor {
 
     ClientErrorResponse response = new ClientErrorResponse();
     response.setException(ex);
-    response.getResult().put("maxAllowedAttempt",Integer.parseInt(ProjectUtil.getConfigValue(SUNBIRD_OTP_ALLOWED_ATTEMPT)));
-    response.getResult().put("remainingAttempt",remainingCount);
+    response.getResult().put(MAX_ALLOWED_ATTEMPT,Integer.parseInt(ProjectUtil.getConfigValue(SUNBIRD_OTP_ALLOWED_ATTEMPT)));
+    response.getResult().put(REMAINING_ATTEMPT,remainingCount);
     sender().tell(response, self());
   }
 

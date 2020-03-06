@@ -20,8 +20,8 @@ import org.sunbird.ratelimit.service.RateLimitService;
 import org.sunbird.ratelimit.service.RateLimitServiceImpl;
 
 @ActorConfig(
-        tasks = {"generateOTP", "verifyOTP"},
-        asyncTasks = {}
+    tasks = {"generateOTP", "verifyOTP"},
+    asyncTasks = {}
 )
 public class OTPActor extends BaseActor {
 

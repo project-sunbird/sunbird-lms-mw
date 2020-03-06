@@ -96,7 +96,6 @@ public class OTPActor extends BaseActor {
     String type = (String) request.getRequest().get(JsonKey.TYPE);
     String key = getKey(type, request);
     String otpInRequest = (String) request.getRequest().get(JsonKey.OTP);
-
     String userId = (String) request.getRequest().get(JsonKey.USER_ID);
     if (StringUtils.isNotBlank(userId)) {
       key = OTPUtil.getEmailPhoneByUserId(userId, type);

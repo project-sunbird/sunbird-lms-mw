@@ -256,7 +256,7 @@ public class UserUtil {
         try {
           email = encryptionService.encryptData(email);
         } catch (Exception e) {
-          ProjectLogger.log("Exception occurred while encrypting phone number ", e);
+          ProjectLogger.log("Exception occurred while encrypting email:", e);
         }
         Response result =
                 cassandraOperation.getRecordsByIndexedProperty(

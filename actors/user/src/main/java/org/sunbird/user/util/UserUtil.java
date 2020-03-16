@@ -248,9 +248,7 @@ public class UserUtil {
 
   @SuppressWarnings("unchecked")
   public static void checkEmailUniqueness(User user, String opType) {
-    // Get Email configuration if not found , by default Email can be duplicate
-    // across the
-    // application
+
     String emailSetting = DataCacheHandler.getConfigSettings().get(JsonKey.EMAIL_UNIQUE);
     if (StringUtils.isNotBlank(emailSetting) && Boolean.parseBoolean(emailSetting)) {
       String email = user.getEmail();
@@ -258,19 +256,13 @@ public class UserUtil {
         try {
           email = encryptionService.encryptData(email);
         } catch (Exception e) {
-          ProjectLogger.log("Exception occurred while encrypting Email ", e);
+          ProjectLogger.log("Exception occurred while encrypting phone number ", e);
         }
-        Map<String, Object> filters = new HashMap<>();
-        filters.put(JsonKey.EMAIL, email);
-        Map<String, Object> map = new HashMap<>();
-        map.put(JsonKey.FILTERS, filters);
-        SearchDTO searchDto = Util.createSearchDto(map);
-        Future<Map<String, Object>> resultF =
-            esUtil.search(searchDto, ProjectUtil.EsType.user.getTypeName());
-        Map<String, Object> result =
-            (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
+        Response result =
+                cassandraOperation.getRecordsByIndexedProperty(
+                        userDb.getKeySpace(), userDb.getTableName(), (JsonKey.EMAIL), email);
         List<Map<String, Object>> userMapList =
-            (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
+                (List<Map<String, Object>>) result.get(JsonKey.RESPONSE);
         if (!userMapList.isEmpty()) {
           if (opType.equalsIgnoreCase(JsonKey.CREATE)) {
             ProjectCommonException.throwClientErrorException(ResponseCode.emailInUse, null);
@@ -285,7 +277,7 @@ public class UserUtil {
     }
   }
 
-  public static void validateUserPhoneEmailAndWebPages(User user, String operationType) {
+  public static void  validateUserPhoneEmailAndWebPages(User user, String operationType) {
     checkPhoneUniqueness(user, operationType);
     checkEmailUniqueness(user, operationType);
     if (CollectionUtils.isNotEmpty(user.getWebPages())) {

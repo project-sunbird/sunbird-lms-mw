@@ -231,19 +231,12 @@ public class ShadowUserMigrationScheduler extends BaseJob{
      * ALSO this method will allow only CLAIMED user record to be updated in diksha db.
      * @param processId
      * @param migrationUser
-     * @param shadowUser
+     * @param existingShadowUser
      */
-    private void updateUserInShadowDb(String processId,MigrationUser migrationUser, ShadowUser shadowUser) {
-        if(!isSame(shadowUser,migrationUser)){
-            Map<String, Object> propertiesMap = new WeakHashMap<>();
-            propertiesMap.put(JsonKey.EMAIL,migrationUser.getEmail());
-            propertiesMap.put(JsonKey.PHONE,migrationUser.getPhone());
-            propertiesMap.put(JsonKey.PROCESS_ID,processId);
-            propertiesMap.put(JsonKey.NAME, migrationUser.getName());
-            propertiesMap.put(JsonKey.ORG_EXT_ID, migrationUser.getOrgExternalId());
-            propertiesMap.put(JsonKey.UPDATED_ON, new Timestamp(System.currentTimeMillis()));
-            propertiesMap.put(JsonKey.USER_STATUS,getInputStatus(migrationUser.getInputStatus()));
-            if (shadowUser.getClaimStatus() != ClaimStatus.CLAIMED.getValue() && shadowUser.getClaimStatus() != ClaimStatus.REJECTED.getValue() && shadowUser.getClaimStatus() != ClaimStatus.FAILED.getValue()) {
+    private void updateUserInShadowDb(String processId,MigrationUser migrationUser, ShadowUser existingShadowUser) {
+        if(!isSame(existingShadowUser,migrationUser)){
+            Map<String, Object> propertiesMap =populateUserMap(processId, migrationUser);
+            if (existingShadowUser.getClaimStatus() != ClaimStatus.CLAIMED.getValue()) {
                 if (!isOrgExternalIdValid(migrationUser)) {
                     propertiesMap.put(JsonKey.CLAIM_STATUS, ClaimStatus.ORGEXTERNALIDMISMATCH.getValue());
                 } else {
@@ -261,6 +254,19 @@ public class ShadowUserMigrationScheduler extends BaseJob{
                 new ShadowUserProcessor().processClaimedUser(newShadowUser);
             }
         }
+        
+    }
+    
+    private Map<String, Object> populateUserMap(String processId, MigrationUser migrationUser) {
+        Map<String, Object> propertiesMap = new WeakHashMap<>();
+        propertiesMap.put(JsonKey.EMAIL,migrationUser.getEmail());
+        propertiesMap.put(JsonKey.PHONE,migrationUser.getPhone());
+        propertiesMap.put(JsonKey.PROCESS_ID,processId);
+        propertiesMap.put(JsonKey.NAME, migrationUser.getName());
+        propertiesMap.put(JsonKey.ORG_EXT_ID, migrationUser.getOrgExternalId());
+        propertiesMap.put(JsonKey.UPDATED_ON, new Timestamp(System.currentTimeMillis()));
+        propertiesMap.put(JsonKey.USER_STATUS,getInputStatus(migrationUser.getInputStatus()));
+        return propertiesMap;
     }
 
     /**
@@ -325,9 +331,6 @@ public class ShadowUserMigrationScheduler extends BaseJob{
             return false;
         }
         if(!StringUtils.equalsIgnoreCase(shadowUser.getEmail(),migrationUser.getEmail())){
-            return false;
-        }
-        if(! StringUtils.equalsIgnoreCase(shadowUser.getOrgExtId(),migrationUser.getOrgExternalId())){
             return false;
         }
         if(!StringUtils.equalsIgnoreCase(shadowUser.getPhone(),migrationUser.getPhone()))

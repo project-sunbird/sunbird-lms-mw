@@ -337,7 +337,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
         {
             return false;
         }
-        if((getInputStatus(migrationUser.getInputStatus())!=shadowUser.getUserStatus())){
+        if(shadowUser.getClaimStatus() == ClaimStatus.CLAIMED.getValue() && (getInputStatus(migrationUser.getInputStatus())!=shadowUser.getUserStatus())){
             return false;
         }
 

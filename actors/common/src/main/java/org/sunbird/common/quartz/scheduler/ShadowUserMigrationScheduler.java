@@ -234,7 +234,8 @@ public class ShadowUserMigrationScheduler extends BaseJob{
      * @param existingShadowUser
      */
     private void updateUserInShadowDb(String processId,MigrationUser migrationUser, ShadowUser existingShadowUser) {
-        if(!isSame(existingShadowUser,migrationUser)){
+        if((existingShadowUser.getClaimStatus() == ClaimStatus.CLAIMED.getValue() && !isSame(existingShadowUser,migrationUser)) ||
+          (!(existingShadowUser.getClaimStatus() == ClaimStatus.CLAIMED.getValue()))) {
             Map<String, Object> propertiesMap =populateUserMap(processId, migrationUser);
             if (existingShadowUser.getClaimStatus() != ClaimStatus.CLAIMED.getValue()) {
                 if (!isOrgExternalIdValid(migrationUser)) {
@@ -337,7 +338,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
         {
             return false;
         }
-        if(shadowUser.getClaimStatus() == ClaimStatus.CLAIMED.getValue() && (getInputStatus(migrationUser.getInputStatus())!=shadowUser.getUserStatus())){
+        if((getInputStatus(migrationUser.getInputStatus())!=shadowUser.getUserStatus())){
             return false;
         }
 

@@ -225,7 +225,7 @@ public class ShadowUserMigrationScheduler extends BaseJob{
     }
 
     /**
-     * This method will overwrite the user record in shadow_user also will not update the claimStatus of shadow_user if user is already VALIDATED/CLAIMED REJECTED AND FAILED.
+     * This method will overwrite the user record in shadow_user also will not update the claimStatus of shadow_user if user is already VALIDATED/CLAIMED(allows only user-status).
      * if user is not VALIDATED/CLAIMED, REJECTED AND FAILED then it can set claimStatus to 5 if provided ext org id is incorrect.
      * else will set the claim status to UNCLAIMED so will check the multimatch condition again
      * ALSO this method will allow only CLAIMED user record to be updated in diksha db.

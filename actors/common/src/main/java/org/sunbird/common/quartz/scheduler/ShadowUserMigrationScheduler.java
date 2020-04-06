@@ -225,42 +225,56 @@ public class ShadowUserMigrationScheduler extends BaseJob{
     }
 
     /**
-     * This method will overwrite the user record in shadow_user also will not update the claimStatus of shadow_user if user is already VALIDATED/CLAIMED REJECTED AND FAILED.
-     * if user is not VALIDATED/CLAIMED, REJECTED AND FAILED then it can set claimStatus to 5 if provided ext org id is incorrect.
-     * else will set the claim status to UNCLAIMED so will check the multimatch condition again
-     * ALSO this method will allow only CLAIMED user record to be updated in diksha db.
+     *
      * @param processId
      * @param migrationUser
-     * @param shadowUser
+     * @param existingShadowUser
      */
-    private void updateUserInShadowDb(String processId,MigrationUser migrationUser, ShadowUser shadowUser) {
-        if(!isSame(shadowUser,migrationUser)){
-            Map<String, Object> propertiesMap = new WeakHashMap<>();
-            propertiesMap.put(JsonKey.EMAIL,migrationUser.getEmail());
-            propertiesMap.put(JsonKey.PHONE,migrationUser.getPhone());
-            propertiesMap.put(JsonKey.PROCESS_ID,processId);
-            propertiesMap.put(JsonKey.NAME, migrationUser.getName());
-            propertiesMap.put(JsonKey.ORG_EXT_ID, migrationUser.getOrgExternalId());
-            propertiesMap.put(JsonKey.UPDATED_ON, new Timestamp(System.currentTimeMillis()));
-            propertiesMap.put(JsonKey.USER_STATUS,getInputStatus(migrationUser.getInputStatus()));
-            if (shadowUser.getClaimStatus() != ClaimStatus.CLAIMED.getValue() && shadowUser.getClaimStatus() != ClaimStatus.REJECTED.getValue() && shadowUser.getClaimStatus() != ClaimStatus.FAILED.getValue()) {
-                if (!isOrgExternalIdValid(migrationUser)) {
-                    propertiesMap.put(JsonKey.CLAIM_STATUS, ClaimStatus.ORGEXTERNALIDMISMATCH.getValue());
-                } else {
-                    propertiesMap.put(JsonKey.CLAIM_STATUS, ClaimStatus.UNCLAIMED.getValue());
-                }
-            }
-            Map<String,Object>compositeKeysMap=new HashMap<>();
+    private void updateUserInShadowDb(String processId,MigrationUser migrationUser, ShadowUser existingShadowUser) {
+        int currentClaimStatus = existingShadowUser.getClaimStatus();
+        int newClaimStatus = currentClaimStatus;
+        boolean isClaimed = (currentClaimStatus == ClaimStatus.CLAIMED.getValue());
+        boolean isNotSame = !isSame(existingShadowUser,migrationUser);
+        
+        if (isNotSame && !isOrgExternalIdValid(migrationUser)) {
+            newClaimStatus = ClaimStatus.ORGEXTERNALIDMISMATCH.getValue();
+        } else if (!isClaimed) {
+            // Allow all non-claimed users another chance
+            newClaimStatus = ClaimStatus.UNCLAIMED.getValue();
+        }
+        
+        if (isNotSame || (currentClaimStatus != newClaimStatus)) {
+            Map<String, Object> propertiesMap = populateUserMap(processId, migrationUser);
+        
+            propertiesMap.put(JsonKey.CLAIM_STATUS, newClaimStatus);
+        
+            Map<String,Object>compositeKeysMap = new HashMap<>();
             compositeKeysMap.put(JsonKey.CHANNEL, migrationUser.getChannel());
             compositeKeysMap.put(JsonKey.USER_EXT_ID,migrationUser.getUserExternalId());
-            Response response = cassandraOperation.updateRecord(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, propertiesMap,compositeKeysMap);
-            ProjectLogger.log("ShadowUserMigrationScheduler:updateUserInShadowDb: record status in cassandra ".concat(response+ ""), LoggerEnum.INFO.name());
-            propertiesMap.clear();
-            ShadowUser newShadowUser=getUpdatedShadowUser(compositeKeysMap);
-            if(newShadowUser.getClaimStatus()==ClaimStatus.CLAIMED.getValue()) {
+    
+            cassandraOperation.updateRecord(JsonKey.SUNBIRD, JsonKey.SHADOW_USER, propertiesMap,compositeKeysMap);
+        
+            if (isClaimed) {
+                ProjectLogger.log("ShadowUserMigrationScheduler:updateUserInShadowDb: isClaimed ", LoggerEnum.INFO.name());
+                ShadowUser newShadowUser = getUpdatedShadowUser(compositeKeysMap);
                 new ShadowUserProcessor().processClaimedUser(newShadowUser);
             }
         }
+        
+        ProjectLogger.log("ShadowUserMigrationScheduler:updateUserInShadowDb: isNotSame  ", isNotSame, LoggerEnum.INFO.name());
+        ProjectLogger.log("ShadowUserMigrationScheduler:updateUserInShadowDb: newClaimStatus ", newClaimStatus, LoggerEnum.INFO.name());
+    }
+    
+    private Map<String, Object> populateUserMap(String processId, MigrationUser migrationUser) {
+        Map<String, Object> propertiesMap = new WeakHashMap<>();
+        propertiesMap.put(JsonKey.EMAIL,migrationUser.getEmail());
+        propertiesMap.put(JsonKey.PHONE,migrationUser.getPhone());
+        propertiesMap.put(JsonKey.PROCESS_ID,processId);
+        propertiesMap.put(JsonKey.NAME, migrationUser.getName());
+        propertiesMap.put(JsonKey.ORG_EXT_ID, migrationUser.getOrgExternalId());
+        propertiesMap.put(JsonKey.UPDATED_ON, new Timestamp(System.currentTimeMillis()));
+        propertiesMap.put(JsonKey.USER_STATUS,getInputStatus(migrationUser.getInputStatus()));
+        return propertiesMap;
     }
 
     /**
@@ -325,9 +339,6 @@ public class ShadowUserMigrationScheduler extends BaseJob{
             return false;
         }
         if(!StringUtils.equalsIgnoreCase(shadowUser.getEmail(),migrationUser.getEmail())){
-            return false;
-        }
-        if(! StringUtils.equalsIgnoreCase(shadowUser.getOrgExtId(),migrationUser.getOrgExternalId())){
             return false;
         }
         if(!StringUtils.equalsIgnoreCase(shadowUser.getPhone(),migrationUser.getPhone()))

@@ -341,6 +341,9 @@ public class ShadowUserMigrationScheduler extends BaseJob{
         if(!StringUtils.equalsIgnoreCase(shadowUser.getEmail(),migrationUser.getEmail())){
             return false;
         }
+        if(! StringUtils.equalsIgnoreCase(shadowUser.getOrgExtId(),migrationUser.getOrgExternalId())){
+            return false;
+        }
         if(!StringUtils.equalsIgnoreCase(shadowUser.getPhone(),migrationUser.getPhone()))
         {
             return false;

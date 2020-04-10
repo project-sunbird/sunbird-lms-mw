@@ -30,7 +30,7 @@ import org.sunbird.learner.util.Util;
 import java.sql.Timestamp;
 import java.util.*;
 
-public class ShadowUserMigrationScheduler /*extends BaseJob*/{
+public class ShadowUserMigrationScheduler extends BaseJob{
 
     private Util.DbInfo bulkUploadDbInfo = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
     private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
@@ -42,7 +42,7 @@ public class ShadowUserMigrationScheduler /*extends BaseJob*/{
 
 
 
-    /*@Override
+    @Override
     public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
         ProjectLogger.log("ShadowUserMigrationScheduler:execute:checking scheduler workflow",LoggerEnum.INFO.name());
         ProjectLogger.log(
@@ -54,7 +54,7 @@ public class ShadowUserMigrationScheduler /*extends BaseJob*/{
         Util.initializeContextForSchedulerJob(
                 JsonKey.SYSTEM, jobExecutionContext.getFireInstanceId(), JsonKey.SCHEDULER_JOB);
      startMigration();
-    }*/
+    }
 
 
     public void startMigration(){

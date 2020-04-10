@@ -5,6 +5,7 @@ import akka.actor.ActorSystem;
 import akka.actor.Props;
 import akka.testkit.javadsl.TestKit;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.powermock.api.mockito.PowerMockito;
@@ -55,6 +56,7 @@ public class OnDemandSchedulerActorTest {
     when(OnDemandSchedulerManager.getInstance()).thenReturn(onDemandSchedulerManager);
   }
   
+  @Ignore
   @Test
   public void testOnDemandScheduler() {
     Request req = new Request();

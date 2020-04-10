@@ -69,8 +69,10 @@ public class OnDemandSchedulerActor extends BaseActor {
 
  private void scheduleJob(String[] jobs) {
   Response response = new Response();
-  OnDemandSchedulerManager onDemandSchedulerManager = OnDemandSchedulerManager.getInstance();
-  new Thread(() -> onDemandSchedulerManager.triggerScheduler(jobs)).start();
+   ShadowUserMigrationScheduler shadowUserMigrationScheduler = new ShadowUserMigrationScheduler();
+   shadowUserMigrationScheduler.startMigration();
+  /*OnDemandSchedulerManager onDemandSchedulerManager = OnDemandSchedulerManager.getInstance();
+  new Thread(() -> onDemandSchedulerManager.triggerScheduler(jobs)).start();*/
   Map result = new HashMap<String, Object>();
   result.put(JsonKey.STATUS, JsonKey.SUCCESS);
   response.put(JsonKey.RESULT, result);

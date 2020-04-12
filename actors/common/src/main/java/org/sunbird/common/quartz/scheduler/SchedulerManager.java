@@ -13,8 +13,6 @@ import org.quartz.SchedulerException;
 import org.quartz.SimpleScheduleBuilder;
 import org.quartz.Trigger;
 import org.quartz.TriggerBuilder;
-import org.quartz.ee.servlet.QuartzInitializerListener;
-import org.quartz.ee.servlet.QuartzInitializerServlet;
 import org.quartz.impl.StdSchedulerFactory;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
@@ -44,7 +42,7 @@ public class SchedulerManager {
         LoggerEnum.INFO.name());
 
     try {
-      Thread.sleep(60000);
+      Thread.sleep(240000);
       boolean isEmbedded = false;
       Properties configProp = null;
       String embeddVal = System.getenv(JsonKey.SUNBIRD_QUARTZ_MODE);
@@ -203,20 +201,20 @@ public class SchedulerManager {
     String port = System.getenv(JsonKey.SUNBIRD_PG_PORT);
     String db = System.getenv(JsonKey.SUNBIRD_PG_DB);
     String username = System.getenv(JsonKey.SUNBIRD_PG_USER);
-    //String password = System.getenv(JsonKey.SUNBIRD_PG_PASSWORD);
+    String password = System.getenv(JsonKey.SUNBIRD_PG_PASSWORD);
     if (!StringUtils.isBlank(host)
         && !StringUtils.isBlank(port)
         && !StringUtils.isBlank(db)
         && !StringUtils.isBlank(username)
-      ) {
+        && !StringUtils.isBlank(password)) {
       ProjectLogger.log(
           "Taking Postgres value from Environment variable...", LoggerEnum.INFO.name());
       configProp.load(in);
       configProp.put(
           "org.quartz.dataSource.MySqlDS.URL", "jdbc:postgresql://" + host + ":" + port + "/" + db);
       configProp.put("org.quartz.dataSource.MySqlDS.user", username);
+      configProp.put("org.quartz.dataSource.MySqlDS.password", password);
       configProp.put("org.quartz.scheduler.instanceName" , "MyScheduler");
-     // configProp.put("org.quartz.dataSource.MySqlDS.password", password);
       ProjectLogger.log(
           "SchedulerManager:setUpClusterMode: Connection is established from environment variable",
           LoggerEnum.INFO);

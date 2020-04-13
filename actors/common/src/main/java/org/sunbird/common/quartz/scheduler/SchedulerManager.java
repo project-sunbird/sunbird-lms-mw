@@ -52,8 +52,18 @@ public class SchedulerManager {
         configProp = setUpClusterMode();
       }
       if (!isEmbedded && configProp != null) {
+
+        StdSchedulerFactory schedulerFactory = new StdSchedulerFactory(configProp);
         ProjectLogger.log("Quartz scheduler is running in cluster mode.", LoggerEnum.INFO.name());
-        scheduler = new StdSchedulerFactory(configProp).getScheduler();
+        scheduler = schedulerFactory.getScheduler("MyScheduler");
+
+        if (null == scheduler) {
+          Thread.sleep(5000);
+          scheduler = schedulerFactory.getScheduler();
+        }
+
+        String schedulerName = scheduler.getSchedulerName();
+        ProjectLogger.log("Quartz scheduler is running in cluster mode. scheduler Name is: "+schedulerName, LoggerEnum.INFO.name());
       } else {
         ProjectLogger.log("Quartz scheduler is running in embedded mode.", LoggerEnum.INFO.name());
         scheduler = new StdSchedulerFactory().getScheduler();
@@ -204,6 +214,7 @@ public class SchedulerManager {
           "org.quartz.dataSource.MySqlDS.URL", "jdbc:postgresql://" + host + ":" + port + "/" + db);
       configProp.put("org.quartz.dataSource.MySqlDS.user", username);
       configProp.put("org.quartz.dataSource.MySqlDS.password", password);
+      configProp.put("org.quartz.scheduler.instanceName" , "MyScheduler");
       ProjectLogger.log(
           "SchedulerManager:setUpClusterMode: Connection is established from environment variable",
           LoggerEnum.INFO);

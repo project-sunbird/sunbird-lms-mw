@@ -54,6 +54,9 @@ public class OTPActor extends BaseActor {
 
     String otp = null;
     Map<String, Object> details = otpService.getOTPDetails(type, key);
+    ProjectLogger.log(
+            "OTPActor:generateOTP: otp details found for Key = " + key + " = " + details,
+            LoggerEnum.INFO.name());
     if (MapUtils.isEmpty(details)) {
       otp = OTPUtil.generateOTP();
       ProjectLogger.log(
@@ -101,12 +104,15 @@ public class OTPActor extends BaseActor {
       key = OTPUtil.getEmailPhoneByUserId(userId, type);
       type = getType(type);
     }
-
     Map<String, Object> otpDetails = otpService.getOTPDetails(type, key);
+    ProjectLogger.log(
+            "OTPActor:verifyOTP: otp details found for Key = " + key + " = " + otpDetails,
+            LoggerEnum.INFO.name());
+
     if (MapUtils.isEmpty(otpDetails)) {
       ProjectLogger.log(
           "OTPActor:verifyOTP: Details not found for type = " + type + " key = " + key,
-          LoggerEnum.DEBUG);
+          LoggerEnum.INFO.name());
       ProjectCommonException.throwClientErrorException(ResponseCode.errorInvalidOTP);
     }
     String otpInDB = (String) otpDetails.get(JsonKey.OTP);
@@ -121,8 +127,14 @@ public class OTPActor extends BaseActor {
     }
 
     if (otpInRequest.equals(otpInDB)) {
+      ProjectLogger.log(
+              "OTPActor:verifyOTP: user with phone/email has verified OTP successfully= " + key,
+              LoggerEnum.INFO.name());
       otpService.deleteOtp(type, key);
     } else {
+      ProjectLogger.log(
+              "OTPActor:verifyOTP: user with phone/email "+key+" has passed incorrect OTP " + otpInRequest,
+              LoggerEnum.INFO.name());
       handleMismatchOtp(type, key, otpDetails);
     }
     Response response = new Response();
@@ -132,6 +144,9 @@ public class OTPActor extends BaseActor {
 
   private void handleMismatchOtp(String type, String key, Map<String, Object> otpDetails) {
     int remainingCount = getRemainingAttemptedCount(otpDetails);
+    ProjectLogger.log(
+            "OTPActor:handleMismatchOtp: user with phone/email "+key +" has exhausted OTP allowed attempts, remaining attempt is  " + remainingCount,
+            LoggerEnum.INFO.name());
     if (remainingCount <= 0) {
       otpService.deleteOtp(type, key);
     } else {

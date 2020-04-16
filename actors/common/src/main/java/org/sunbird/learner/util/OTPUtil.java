@@ -74,7 +74,7 @@ public final class OTPUtil {
     } else {
      sms = OTPService.getSmsBody(JsonKey.OTP_PHONE_RESET_PASSWORD_TEMPLATE, smsTemplate);
     }
-    ProjectLogger.log("OTPUtil:sendOTPViaSMS: SMS text = " + sms, LoggerEnum.INFO);
+    ProjectLogger.log("OTPUtil:sendOTPViaSMS: SMS text = " + sms, LoggerEnum.INFO.name());
 
     String countryCode = "";
     if (StringUtils.isBlank((String) otpMap.get(JsonKey.COUNTRY_CODE))) {
@@ -94,17 +94,10 @@ public final class OTPUtil {
     boolean response = smsProvider.send((String) otpMap.get(JsonKey.PHONE), countryCode, sms);
 
     ProjectLogger.log(
-        "OTPUtil:sendOTPViaSMS: Response from SMS provider: " + response, LoggerEnum.INFO);
-
-    if (response) {
-      ProjectLogger.log(
-          "OTPUtil:sendOTPViaSMS: OTP sent successfully to " + (String) otpMap.get(JsonKey.PHONE),
-          LoggerEnum.INFO.name());
-    } else {
-      ProjectLogger.log(
-          "OTPUtil:sendOTPViaSMS: OTP send failed for " + (String) otpMap.get(JsonKey.PHONE),
-          LoggerEnum.INFO.name());
-    }
+        "OTPUtil:sendOTPViaSMS: Response from SMS provider: " + response, LoggerEnum.INFO.name());
+    ProjectLogger.log(
+            "OTPUtil:sendOTPViaSMS: OTP sent successfully to phone :" + otpMap.get(JsonKey.PHONE) +"is "+response,
+              LoggerEnum.INFO.name());
   }
 
   /**

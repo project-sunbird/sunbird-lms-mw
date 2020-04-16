@@ -194,7 +194,7 @@ public class OTPActor extends BaseActor {
     source.put(JsonKey.ACTOR_ID, request.getContext().get(JsonKey.ACTOR_ID));
     source.put(JsonKey.ACTOR_TYPE, request.getContext().get(JsonKey.ACTOR_TYPE));
     source.put(JsonKey.APP_ID, request.getContext().get(JsonKey.APP_ID));
-    source.put(JsonKey.REQUEST_ID, request.getContext().get(JsonKey.REQUEST_ID));
+    source.put(JsonKey.REQUEST_ID, request.getRequestId());
     source.put(JsonKey.DEVICE_ID, request.getContext().get(JsonKey.DEVICE_ID));
     return source;
   }

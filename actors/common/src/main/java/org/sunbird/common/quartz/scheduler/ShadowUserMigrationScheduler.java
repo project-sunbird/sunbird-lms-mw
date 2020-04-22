@@ -319,13 +319,13 @@ public class ShadowUserMigrationScheduler extends BaseJob {
       Map<String, Object> propertiesMap = populateUserMap(processId, migrationUser);
 
       propertiesMap.put(JsonKey.CLAIM_STATUS, newClaimStatus);
+      propertiesMap.put(
+          JsonKey.ATTEMPTED_COUNT,
+          0); // we wanted to reset the attempted count for the failed records
 
       Map<String, Object> compositeKeysMap = new HashMap<>();
       compositeKeysMap.put(JsonKey.CHANNEL, migrationUser.getChannel());
       compositeKeysMap.put(JsonKey.USER_EXT_ID, migrationUser.getUserExternalId());
-      compositeKeysMap.put(
-          JsonKey.ATTEMPTED_COUNT,
-          0); // we wanted to reset the attempted count for the failed records
 
       cassandraOperation.updateRecord(
           JsonKey.SUNBIRD, JsonKey.SHADOW_USER, propertiesMap, compositeKeysMap);

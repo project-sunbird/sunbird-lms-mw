@@ -35,18 +35,30 @@ public class SendOTPActor extends BaseActor {
     String key = (String) request.getRequest().get(JsonKey.KEY);
     String otp = (String) request.getRequest().get(JsonKey.OTP);
     String template = (String) request.getRequest().get(JsonKey.TEMPLATE_ID);
-    if (JsonKey.EMAIL.equalsIgnoreCase(type) || JsonKey.PREV_USED_EMAIL.equalsIgnoreCase(type)|| JsonKey.RECOVERY_EMAIL.equalsIgnoreCase(type)) {
+    if (JsonKey.EMAIL.equalsIgnoreCase(type)
+        || JsonKey.PREV_USED_EMAIL.equalsIgnoreCase(type)
+        || JsonKey.RECOVERY_EMAIL.equalsIgnoreCase(type)) {
       String userId = (String) request.get(JsonKey.USER_ID);
       ProjectLogger.log(
-          "SendOTPActor:sendOTP userId found for send otp " + userId, LoggerEnum.INFO.name());
+          "SendOTPActor:sendOTP : Sending OTP via email for key "
+              + key
+              + " or userId "
+              + userId
+              + " otp is "
+              + otp,
+          LoggerEnum.INFO.name());
       sendOTPViaEmail(key, otp, userId, template);
     } else if (JsonKey.PHONE.equalsIgnoreCase(type)
-        || JsonKey.PREV_USED_PHONE.equalsIgnoreCase(type) || JsonKey.RECOVERY_PHONE.equalsIgnoreCase(type)) {
+        || JsonKey.PREV_USED_PHONE.equalsIgnoreCase(type)
+        || JsonKey.RECOVERY_PHONE.equalsIgnoreCase(type)) {
+      ProjectLogger.log(
+          "SendOTPActor:sendOTP : Sending OTP via sms for key " + key + " otp is " + otp,
+          LoggerEnum.INFO.name());
       sendOTPViaSMS(key, otp, template);
     }
-   Response response = new Response();
-   response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-   sender().tell(response, self());
+    Response response = new Response();
+    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+    sender().tell(response, self());
   }
 
   private void sendOTPViaEmail(String key, String otp, String otpType, String template) {
@@ -64,7 +76,7 @@ public class SendOTPActor extends BaseActor {
     tellToAnother(emailRequest);
   }
 
-  private void sendOTPViaSMS(String key, String otp, String template)  {
+  private void sendOTPViaSMS(String key, String otp, String template) {
     Map<String, Object> otpMap = new HashMap<>();
     otpMap.put(JsonKey.PHONE, key);
     otpMap.put(JsonKey.OTP, otp);

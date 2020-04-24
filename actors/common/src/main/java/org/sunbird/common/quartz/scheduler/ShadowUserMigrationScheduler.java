@@ -340,7 +340,9 @@ public class ShadowUserMigrationScheduler extends BaseJob {
     }
 
     ProjectLogger.log(
-        "ShadowUserMigrationScheduler:updateUserInShadowDb userExternalId: "
+        "ShadowUserMigrationScheduler:updateUserInShadowDb channel:"
+            + migrationUser.getChannel()
+            + " userExternalId: "
             + migrationUser.getUserExternalId()
             + " isNotSame: "
             + isNotSame

@@ -340,12 +340,10 @@ public class ShadowUserMigrationScheduler extends BaseJob {
     }
 
     ProjectLogger.log(
-        "ShadowUserMigrationScheduler:updateUserInShadowDb: isNotSame  ",
-        isNotSame,
+        "ShadowUserMigrationScheduler:updateUserInShadowDb: isNotSame: " + isNotSame,
         LoggerEnum.INFO.name());
     ProjectLogger.log(
-        "ShadowUserMigrationScheduler:updateUserInShadowDb: newClaimStatus ",
-        newClaimStatus,
+        "ShadowUserMigrationScheduler:updateUserInShadowDb: newClaimStatus: " + newClaimStatus,
         LoggerEnum.INFO.name());
   }
 

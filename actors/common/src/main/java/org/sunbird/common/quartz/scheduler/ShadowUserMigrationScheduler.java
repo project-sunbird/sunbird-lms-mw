@@ -516,7 +516,6 @@ public class ShadowUserMigrationScheduler extends BaseJob {
   }
 
   private void encryptEmailAndPhone(MigrationUser migrationUser) {
-
     if (StringUtils.isNotBlank(migrationUser.getEmail())) {
       migrationUser.setEmail(encryptValue(migrationUser.getEmail().toLowerCase()));
     }

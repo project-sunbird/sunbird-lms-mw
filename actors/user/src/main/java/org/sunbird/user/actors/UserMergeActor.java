@@ -5,7 +5,6 @@ import com.typesafe.config.Config;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.sunbird.actor.router.ActorConfig;
@@ -42,7 +41,7 @@ import org.sunbird.user.util.KafkaConfigConstants;
 )
 public class UserMergeActor extends UserBaseActor {
   String topic = null;
-  Producer<Long, String> producer = null;
+  Producer<String, String> producer = null;
   private ObjectMapper objectMapper = new ObjectMapper();
   private UserService userService = UserServiceImpl.getInstance();
   private SSOManager keyCloakService = SSOServiceFactory.getInstance();
@@ -109,11 +108,18 @@ public class UserMergeActor extends UserBaseActor {
       // update mergee details in ES
       mergeUserDetailsToEs(userRequest);
 
-      //deleting User From KeyCloak
-      CompletableFuture.supplyAsync(()-> {return deactivateMergeeFromKC((String)mergeeDBMap.get(JsonKey.ID));}).thenApply(status->{
-        ProjectLogger.log("UserMergeActor: updateUserMergeDetails: user deleted from KeyCloak: "+status,LoggerEnum.INFO.name());
-        return null;
-      });
+      // deleting User From KeyCloak
+      CompletableFuture.supplyAsync(
+              () -> {
+                return deactivateMergeeFromKC((String) mergeeDBMap.get(JsonKey.ID));
+              })
+          .thenApply(
+              status -> {
+                ProjectLogger.log(
+                    "UserMergeActor: updateUserMergeDetails: user deleted from KeyCloak: " + status,
+                    LoggerEnum.INFO.name());
+                return null;
+              });
 
       // create telemetry event for merge
       triggerUserMergeTelemetry(telemetryMap, merger);
@@ -174,7 +180,7 @@ public class UserMergeActor extends UserBaseActor {
     ProjectLogger.log(
         "UserMergeActor:mergeCertCourseDetails: Kafka producer topic::" + content,
         LoggerEnum.INFO.name());
-    ProducerRecord<Long, String> record = new ProducerRecord<>(topic, content);
+    ProducerRecord<String, String> record = new ProducerRecord<>(topic, content);
     if (producer != null) {
       producer.send(record);
     } else {
@@ -289,15 +295,18 @@ public class UserMergeActor extends UserBaseActor {
     try {
       producer = KafkaClient.getProducer();
     } catch (Exception e) {
-      ProjectLogger.log("UserMergeActor:initKafkaClient: An exception occurred." +e , LoggerEnum.ERROR.name());
+      ProjectLogger.log(
+          "UserMergeActor:initKafkaClient: An exception occurred." + e, LoggerEnum.ERROR.name());
     }
   }
 
-
-  private String deactivateMergeeFromKC(String userId){
-    Map<String,Object>userMap=new HashMap<>();
-    userMap.put(JsonKey.USER_ID,userId);
-    ProjectLogger.log("UserMergeActor:deactivateMergeeFromKC: request Got to deactivate mergee account from KC:"+userMap,LoggerEnum.INFO.name());
-    return  keyCloakService.removeUser(userMap);
+  private String deactivateMergeeFromKC(String userId) {
+    Map<String, Object> userMap = new HashMap<>();
+    userMap.put(JsonKey.USER_ID, userId);
+    ProjectLogger.log(
+        "UserMergeActor:deactivateMergeeFromKC: request Got to deactivate mergee account from KC:"
+            + userMap,
+        LoggerEnum.INFO.name());
+    return keyCloakService.removeUser(userMap);
   }
 }

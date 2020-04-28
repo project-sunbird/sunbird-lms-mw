@@ -24,6 +24,7 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.response.ClientErrorResponse;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
@@ -179,10 +180,10 @@ public class OTPActorTest {
             Mockito.anyList()))
         .thenReturn(mockedCassandraResponse);
     subject.tell(request, probe.getRef());
-    ProjectCommonException errorResponse =
-        probe.expectMsgClass(duration("100 second"), ProjectCommonException.class);
+    ClientErrorResponse errorResponse =
+        probe.expectMsgClass(duration("100 second"), ClientErrorResponse.class);
     Assert.assertTrue(
-        (errorResponse.getResponseCode()) == (ResponseCode.CLIENT_ERROR).getResponseCode());
+        (errorResponse.getResponseCode().name()).equals(ResponseCode.CLIENT_ERROR.name()));
   }
 
   @Test

@@ -136,9 +136,9 @@ public class OTPActor extends BaseActor {
     if (MapUtils.isEmpty(otpDetails)) {
       ProjectLogger.log(
           "OTPActor:verifyOTP: Details not found for Key = "
-              + maskId(key, type),
+              + maskId(key, type)
               + " type = "
-              + type
+              + type,
           LoggerEnum.INFO.name());
       ProjectCommonException.throwClientErrorException(ResponseCode.errorInvalidOTP);
     }

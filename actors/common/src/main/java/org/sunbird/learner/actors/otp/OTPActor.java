@@ -8,6 +8,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
+import org.sunbird.common.models.response.ClientErrorResponse;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.datasecurity.impl.LogMaskServiceImpl;
@@ -30,6 +31,8 @@ public class OTPActor extends BaseActor {
 
   private OTPService otpService = new OTPService();
   private static final String SUNBIRD_OTP_ALLOWED_ATTEMPT = "sunbird_otp_allowed_attempt";
+  private static final String REMAINING_ATTEMPT = "remainingAttempt";
+  private static final String MAX_ALLOWED_ATTEMPT = "maxAllowedAttempt";
   private RateLimitService rateLimitService = new RateLimitServiceImpl();
   private LogMaskServiceImpl logMaskService = new LogMaskServiceImpl();
 
@@ -60,6 +63,7 @@ public class OTPActor extends BaseActor {
   }
 
   private void generateOTP(Request request) {
+    ProjectLogger.log("OTPActor:generateOTP method call start.", LoggerEnum.INFO.name());
     String type = (String) request.getRequest().get(JsonKey.TYPE);
     String key = getKey(type, request);
 
@@ -83,7 +87,6 @@ public class OTPActor extends BaseActor {
               + " OTP = "
               + maskOTP(otp),
           LoggerEnum.INFO.name());
-
       otpService.insertOTPDetails(type, key, otp);
     } else {
       otp = (String) details.get(JsonKey.OTP);
@@ -160,6 +163,9 @@ public class OTPActor extends BaseActor {
               + maskId(key, type),
           LoggerEnum.INFO.name());
       otpService.deleteOtp(type, key);
+      Response response = new Response();
+      response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
+      sender().tell(response, self());
     } else {
       ProjectLogger.log(
           "OTPActor:verifyOTP: Incorrect OTP Key = "
@@ -171,9 +177,6 @@ public class OTPActor extends BaseActor {
           LoggerEnum.INFO.name());
       handleMismatchOtp(type, key, otpDetails);
     }
-    Response response = new Response();
-    response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
-    sender().tell(response, self());
   }
 
   private void handleMismatchOtp(String type, String key, Map<String, Object> otpDetails) {
@@ -184,16 +187,29 @@ public class OTPActor extends BaseActor {
             + ",remaining attempt is "
             + remainingCount,
         LoggerEnum.INFO.name());
+    int attemptedCount = (int) otpDetails.get(JsonKey.ATTEMPTED_COUNT);
     if (remainingCount <= 0) {
       otpService.deleteOtp(type, key);
     } else {
-      int attemptedCount = (int) otpDetails.get(JsonKey.ATTEMPTED_COUNT);
       otpDetails.put(JsonKey.ATTEMPTED_COUNT, attemptedCount + 1);
       otpService.updateAttemptCount(otpDetails);
     }
-    ProjectCommonException.throwClientErrorException(
-        ResponseCode.otpVerificationFailed,
-        MessageFormat.format(ResponseCode.otpVerificationFailed.getErrorMessage(), remainingCount));
+    ProjectCommonException ex =
+        new ProjectCommonException(
+            ResponseCode.otpVerificationFailed.getErrorCode(),
+            MessageFormat.format(
+                ResponseCode.otpVerificationFailed.getErrorMessage(), remainingCount),
+            ResponseCode.CLIENT_ERROR.getResponseCode());
+
+    ClientErrorResponse response = new ClientErrorResponse();
+    response.setException(ex);
+    response
+        .getResult()
+        .put(
+            MAX_ALLOWED_ATTEMPT,
+            Integer.parseInt(ProjectUtil.getConfigValue(SUNBIRD_OTP_ALLOWED_ATTEMPT)));
+    response.getResult().put(REMAINING_ATTEMPT, remainingCount);
+    sender().tell(response, self());
   }
 
   private int getRemainingAttemptedCount(Map<String, Object> otpDetails) {

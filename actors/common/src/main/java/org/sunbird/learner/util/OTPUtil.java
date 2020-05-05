@@ -4,12 +4,10 @@ import com.warrenstrange.googleauth.GoogleAuthenticator;
 import com.warrenstrange.googleauth.GoogleAuthenticatorConfig;
 import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
 import com.warrenstrange.googleauth.KeyRepresentation;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.background.BackgroundOperations;
@@ -32,7 +30,8 @@ import org.sunbird.notification.utils.SMSFactory;
 public final class OTPUtil {
 
   private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private static DecryptionService decService = org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
+  private static DecryptionService decService =
+      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
           null);
 
   private static final int MINIMUM_OTP_LENGTH = 6;
@@ -68,13 +67,13 @@ public final class OTPUtil {
     smsTemplate.put(
         JsonKey.INSTALLATION_NAME,
         ProjectUtil.getConfigValue(JsonKey.SUNBIRD_INSTALLATION_DISPLAY_NAME));
-   String sms = null;
-    if(StringUtils.isBlank(template)) {
-     sms = OTPService.getSmsBody(JsonKey.VERIFY_PHONE_OTP_TEMPLATE, smsTemplate);
+    String sms = null;
+    if (StringUtils.isBlank(template)) {
+      sms = OTPService.getSmsBody(JsonKey.VERIFY_PHONE_OTP_TEMPLATE, smsTemplate);
     } else {
-     sms = OTPService.getSmsBody(JsonKey.OTP_PHONE_RESET_PASSWORD_TEMPLATE, smsTemplate);
+      sms = OTPService.getSmsBody(JsonKey.OTP_PHONE_RESET_PASSWORD_TEMPLATE, smsTemplate);
     }
-    ProjectLogger.log("OTPUtil:sendOTPViaSMS: SMS text = " + sms, LoggerEnum.INFO);
+    ProjectLogger.log("OTPUtil:sendOTPViaSMS: SMS text = " + sms, LoggerEnum.INFO.name());
 
     String countryCode = "";
     if (StringUtils.isBlank((String) otpMap.get(JsonKey.COUNTRY_CODE))) {
@@ -94,17 +93,13 @@ public final class OTPUtil {
     boolean response = smsProvider.send((String) otpMap.get(JsonKey.PHONE), countryCode, sms);
 
     ProjectLogger.log(
-        "OTPUtil:sendOTPViaSMS: Response from SMS provider: " + response, LoggerEnum.INFO);
-
-    if (response) {
-      ProjectLogger.log(
-          "OTPUtil:sendOTPViaSMS: OTP sent successfully to " + (String) otpMap.get(JsonKey.PHONE),
-          LoggerEnum.INFO.name());
-    } else {
-      ProjectLogger.log(
-          "OTPUtil:sendOTPViaSMS: OTP send failed for " + (String) otpMap.get(JsonKey.PHONE),
-          LoggerEnum.INFO.name());
-    }
+        "OTPUtil:sendOTPViaSMS: Response from SMS provider: " + response, LoggerEnum.INFO.name());
+    ProjectLogger.log(
+        "OTPUtil:sendOTPViaSMS: OTP sent successfully to phone :"
+            + otpMap.get(JsonKey.PHONE)
+            + "is "
+            + response,
+        LoggerEnum.INFO.name());
   }
 
   /**
@@ -149,11 +144,11 @@ public final class OTPUtil {
     List<String> reciptientsMail = new ArrayList<>();
     reciptientsMail.add((String) emailTemplateMap.get(JsonKey.EMAIL));
     emailTemplateMap.put(JsonKey.RECIPIENT_EMAILS, reciptientsMail);
-    if(StringUtils.isBlank((String) emailTemplateMap.get(JsonKey.TEMPLATE_ID))) {
-     emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, JsonKey.OTP);
+    if (StringUtils.isBlank((String) emailTemplateMap.get(JsonKey.TEMPLATE_ID))) {
+      emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, JsonKey.OTP);
     } else {
-     //send otp to email while reseting password from portal
-     emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, JsonKey.OTP_EMAIL_RESET_PASSWORD_TEMPLATE);
+      // send otp to email while reseting password from portal
+      emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, JsonKey.OTP_EMAIL_RESET_PASSWORD_TEMPLATE);
     }
     emailTemplateMap.put(JsonKey.INSTALLATION_NAME, envName);
     request = new Request();

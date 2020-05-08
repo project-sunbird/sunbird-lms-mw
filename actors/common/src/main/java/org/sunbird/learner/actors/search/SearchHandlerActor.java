@@ -150,7 +150,7 @@ public class SearchHandlerActor extends BaseActor {
             },
             getContext().dispatcher());
     Patterns.pipe(response, getContext().dispatcher()).to(sender());
-    Response orgSearchResponse = null;
+    /*Response orgSearchResponse = null;
     try {
       orgSearchResponse = Await.result(response, BaseActor.timeout.duration());
       String[] types = new String[] {indexType};
@@ -176,7 +176,7 @@ public class SearchHandlerActor extends BaseActor {
           "SearchHandlerActor:handelOrgSearchAsyncRequest: Error occured in generating Telemetry for orgSearch  ",
           e,
           LoggerEnum.ERROR.name());
-    }
+    }*/
   }
 
   @SuppressWarnings("unchecked")

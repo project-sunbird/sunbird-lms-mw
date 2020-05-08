@@ -25,6 +25,7 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
+import org.sunbird.telemetry.util.TelemetryGenerator;
 import org.sunbird.telemetry.util.TelemetryLmaxWriter;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import scala.concurrent.Await;
@@ -150,7 +151,7 @@ public class SearchHandlerActor extends BaseActor {
             },
             getContext().dispatcher());
     Patterns.pipe(response, getContext().dispatcher()).to(sender());
-    /*Response orgSearchResponse = null;
+    Response orgSearchResponse = null;
     try {
       orgSearchResponse = Await.result(response, BaseActor.timeout.duration());
       String[] types = new String[] {indexType};
@@ -176,7 +177,7 @@ public class SearchHandlerActor extends BaseActor {
           "SearchHandlerActor:handelOrgSearchAsyncRequest: Error occured in generating Telemetry for orgSearch  ",
           e,
           LoggerEnum.ERROR.name());
-    }*/
+    }
   }
 
   @SuppressWarnings("unchecked")
@@ -300,7 +301,15 @@ public class SearchHandlerActor extends BaseActor {
     // response
     Request req = new Request();
     req.setRequest(telemetryRequestForSearch(telemetryContext, params));
-    TelemetryLmaxWriter.getInstance().submitMessage(req);
+    logTelemetry(req);
+    //TelemetryLmaxWriter.getInstance().submitMessage(req);
+  }
+
+  private void logTelemetry(Request request){
+    Map<String, Object> context = (Map<String, Object>) request.get(JsonKey.CONTEXT);
+    Map<String, Object> params = (Map<String, Object>) request.get(JsonKey.PARAMS);
+    String telemetry = TelemetryGenerator.search(context,params);
+    ProjectLogger.log("SearchHandlerActor:logTelemetry: Telemetry message is : "+telemetry,LoggerEnum.INFO.name());
   }
 
   private List<Map<String, Object>> generateTopnResult(Map<String, Object> result) {

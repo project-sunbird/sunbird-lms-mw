@@ -151,6 +151,7 @@ public class SearchHandlerActor extends BaseActor {
             },
             getContext().dispatcher());
     Patterns.pipe(response, getContext().dispatcher()).to(sender());
+
     Request telemetryReq = new Request();
     Map<String, Object> telemetryContext = TelemetryUtil.getTelemetryContext();
     telemetryReq.getRequest().put("context",telemetryContext);
@@ -159,6 +160,7 @@ public class SearchHandlerActor extends BaseActor {
     telemetryReq.getRequest().put("searchDto",searchDto);
     telemetryReq.setOperation("generateSearchTelemetry");
     tellToAnother(telemetryReq);
+
     /*Response orgSearchResponse = null;
     try {
       orgSearchResponse = Await.result(response, BaseActor.timeout.duration());
@@ -309,15 +311,7 @@ public class SearchHandlerActor extends BaseActor {
     // response
     Request req = new Request();
     req.setRequest(telemetryRequestForSearch(telemetryContext, params));
-    logTelemetry(req);
-    //TelemetryLmaxWriter.getInstance().submitMessage(req);
-  }
-
-  private void logTelemetry(Request request){
-    Map<String, Object> context = (Map<String, Object>) request.get(JsonKey.CONTEXT);
-    Map<String, Object> params = (Map<String, Object>) request.get(JsonKey.PARAMS);
-    String telemetry = TelemetryGenerator.search(context,params);
-    ProjectLogger.log("SearchHandlerActor:logTelemetry: Telemetry message is : "+telemetry,LoggerEnum.INFO.name());
+    TelemetryLmaxWriter.getInstance().submitMessage(req);
   }
 
   private List<Map<String, Object>> generateTopnResult(Map<String, Object> result) {

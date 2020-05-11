@@ -151,7 +151,8 @@ public class SearchHandlerActor extends BaseActor {
             getContext().dispatcher());
     Patterns.pipe(response, getContext().dispatcher()).to(sender());
     Response orgSearchResponse = null;
-    try {
+    ProjectLogger.log("SearchHandlerActor:handleOrgSearchAsyncRequest: Telemetry disabled for search org api.",LoggerEnum.INFO.name());
+    /*try {
       orgSearchResponse = Await.result(response, BaseActor.timeout.duration());
       String[] types = new String[] {indexType};
       Map<String, Object> contentMap = new HashMap<>();
@@ -176,7 +177,7 @@ public class SearchHandlerActor extends BaseActor {
           "SearchHandlerActor:handelOrgSearchAsyncRequest: Error occured in generating Telemetry for orgSearch  ",
           e,
           LoggerEnum.ERROR.name());
-    }
+    }*/
   }
 
   @SuppressWarnings("unchecked")

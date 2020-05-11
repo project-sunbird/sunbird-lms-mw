@@ -149,7 +149,7 @@ public final class OTPUtil {
     if (StringUtils.isBlank((String) emailTemplateMap.get(JsonKey.TEMPLATE_ID))) {
       emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, JsonKey.OTP);
     } else if (StringUtils.isNotBlank((String) emailTemplateMap.get(JsonKey.TEMPLATE_ID)) && StringUtils.equals((String) emailTemplateMap.get(JsonKey.TEMPLATE_ID), JsonKey.WARD_LOGIN_OTP_TEMPLATE_ID)) {
-      emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, JsonKey.OTP_EMAIL_WARD_LOGIN_TEMPLATE);
+      emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE,  JsonKey.OTP_EMAIL_WARD_LOGIN_TEMPLATE);
     } else {
       // send otp to email while reseting password from portal
       emailTemplateMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, JsonKey.OTP_EMAIL_RESET_PASSWORD_TEMPLATE);

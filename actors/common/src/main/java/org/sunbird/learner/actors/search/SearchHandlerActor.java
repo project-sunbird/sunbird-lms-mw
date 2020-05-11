@@ -6,6 +6,7 @@ import java.util.*;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.LoggerFactory;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.org.OrganisationClient;
@@ -45,6 +46,7 @@ public class SearchHandlerActor extends BaseActor {
   private String topn = PropertiesCache.getInstance().getProperty(JsonKey.SEARCH_TOP_N);
   private OrganisationClient orgClient = new OrganisationClientImpl();
   private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
+  org.slf4j.Logger telemetryEventLogger = LoggerFactory.getLogger("TelemetryEventLogger");
 
   @SuppressWarnings({"unchecked", "rawtypes"})
   @Override
@@ -152,6 +154,15 @@ public class SearchHandlerActor extends BaseActor {
     Patterns.pipe(response, getContext().dispatcher()).to(sender());
     Response orgSearchResponse = null;
     ProjectLogger.log("SearchHandlerActor:handleOrgSearchAsyncRequest: Telemetry disabled for search org api.",LoggerEnum.INFO.name());
+    telemetryEventLogger.info("SearchHandlerActor:handleOrgSearchAsyncRequest: Telemetry Event.");
+    Request telemetryReq = new Request();
+    Map<String, Object> telemetryContext = TelemetryUtil.getTelemetryContext();
+    telemetryReq.getRequest().put("context",telemetryContext);
+    telemetryReq.getRequest().put("searchFResponse",response);
+    telemetryReq.getRequest().put("indexType",indexType);
+    telemetryReq.getRequest().put("searchDto",searchDto);
+    telemetryReq.setOperation("generateSearchTelemetry");
+    tellToAnother(telemetryReq);
     /*try {
       orgSearchResponse = Await.result(response, BaseActor.timeout.duration());
       String[] types = new String[] {indexType};

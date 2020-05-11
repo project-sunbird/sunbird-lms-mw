@@ -25,7 +25,6 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
-import org.sunbird.telemetry.util.TelemetryGenerator;
 import org.sunbird.telemetry.util.TelemetryLmaxWriter;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import scala.concurrent.Await;
@@ -151,16 +150,6 @@ public class SearchHandlerActor extends BaseActor {
             },
             getContext().dispatcher());
     Patterns.pipe(response, getContext().dispatcher()).to(sender());
-
-    Request telemetryReq = new Request();
-    Map<String, Object> telemetryContext = TelemetryUtil.getTelemetryContext();
-    telemetryReq.getRequest().put("context",telemetryContext);
-    telemetryReq.getRequest().put("searchFResponse",response);
-    telemetryReq.getRequest().put("indexType",indexType);
-    telemetryReq.getRequest().put("searchDto",searchDto);
-    telemetryReq.setOperation("generateSearchTelemetry");
-    tellToAnother(telemetryReq);
-
     /*Response orgSearchResponse = null;
     try {
       orgSearchResponse = Await.result(response, BaseActor.timeout.duration());

@@ -151,7 +151,15 @@ public class SearchHandlerActor extends BaseActor {
             getContext().dispatcher());
     Patterns.pipe(response, getContext().dispatcher()).to(sender());
     Response orgSearchResponse = null;
-    ProjectLogger.log("SearchHandlerActor:handleOrgSearchAsyncRequest: Telemetry disabled for search org api.",LoggerEnum.INFO.name());
+    ProjectLogger.log("SearchHandlerActor:handleOrgSearchAsyncRequest: Telemetry async call for search org api.",LoggerEnum.INFO.name());
+    Request telemetryReq = new Request();
+    Map<String, Object> telemetryContext = TelemetryUtil.getTelemetryContext();
+    telemetryReq.getRequest().put("context",telemetryContext);
+    telemetryReq.getRequest().put("searchFResponse",response);
+    telemetryReq.getRequest().put("indexType",indexType);
+    telemetryReq.getRequest().put("searchDto",searchDto);
+    telemetryReq.setOperation("generateSearchTelemetry");
+    tellToAnother(telemetryReq);
     /*try {
       orgSearchResponse = Await.result(response, BaseActor.timeout.duration());
       String[] types = new String[] {indexType};

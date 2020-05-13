@@ -2,17 +2,13 @@ package org.sunbird.learner.actors.search;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
-import org.slf4j.LoggerFactory;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.Request;
 import org.sunbird.dto.SearchDTO;
-import org.sunbird.telemetry.collector.TelemetryAssemblerFactory;
-import org.sunbird.telemetry.util.TelemetryGenerator;
-import org.sunbird.telemetry.util.TelemetryLmaxWriter;
-import org.sunbird.telemetry.util.TelemetryUtil;
+import org.sunbird.telemetry.util.TelemetryWriter;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
 
@@ -26,7 +22,6 @@ import java.util.Map;
         asyncTasks = {"generateSearchTelemetry"}
 )
 public class SearchTelemetryGenerator extends BaseActor {
-    org.slf4j.Logger telemetryEventLogger = LoggerFactory.getLogger("TelemetryEventLogger");
     private String topn = PropertiesCache.getInstance().getProperty(JsonKey.SEARCH_TOP_N);
 
     @Override
@@ -86,9 +81,7 @@ public class SearchTelemetryGenerator extends BaseActor {
         // response
         Request req = new Request();
         req.setRequest(telemetryRequestForSearch(telemetryContext, params));
-        String telemetry = TelemetryGenerator.search(telemetryContext,params);
-        telemetryEventLogger.info("SearchTelemetryGenerator:generateSearchTelemetryEvent: Telemetry = "+telemetry);
-        //TelemetryLmaxWriter.getInstance().submitMessage(req);
+        TelemetryWriter.write(req);
     }
 
     private List<Map<String, Object>> generateTopnResult(Map<String, Object> result) {

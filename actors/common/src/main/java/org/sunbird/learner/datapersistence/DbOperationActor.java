@@ -24,8 +24,8 @@ import org.sunbird.helper.CassandraConnectionManager;
 import org.sunbird.helper.CassandraConnectionMngrFactory;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
-import org.sunbird.telemetry.util.TelemetryLmaxWriter;
 import org.sunbird.telemetry.util.TelemetryUtil;
+import org.sunbird.telemetry.util.TelemetryWriter;
 import scala.concurrent.Future;
 
 @ActorConfig(
@@ -420,7 +420,6 @@ public class DbOperationActor extends BaseActor {
    * @param indexName
    * @param typeName
    * @param identifier
-   * @param data
    * @return
    */
   private boolean deleteDataFromElastic(String indexName, String typeName, String identifier) {
@@ -452,7 +451,7 @@ public class DbOperationActor extends BaseActor {
 
     Request request = new Request();
     request.setRequest(telemetryRequestForSearch(telemetryContext, params));
-    TelemetryLmaxWriter.getInstance().submitMessage(request);
+    TelemetryWriter.write(request);
   }
 
   private List<Map<String, Object>> generateTopNResult(Map<String, Object> result) {

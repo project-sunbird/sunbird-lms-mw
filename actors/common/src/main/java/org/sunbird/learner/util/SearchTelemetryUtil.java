@@ -9,8 +9,8 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.request.Request;
 import org.sunbird.dto.SearchDTO;
-import org.sunbird.telemetry.util.TelemetryLmaxWriter;
 import org.sunbird.telemetry.util.TelemetryUtil;
+import org.sunbird.telemetry.util.TelemetryWriter;
 
 public class SearchTelemetryUtil {
   private SearchTelemetryUtil() {}
@@ -29,7 +29,7 @@ public class SearchTelemetryUtil {
 
       Request request = new Request();
       request.setRequest(telemetryRequestForSearch(telemetryContext, params));
-      TelemetryLmaxWriter.getInstance().submitMessage(request);
+      TelemetryWriter.write(request);
     } catch (Exception e) {
       ProjectLogger.log(e.getMessage(), e);
     }

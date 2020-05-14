@@ -3,12 +3,15 @@ package org.sunbird.feed;
 import java.util.*;
 import java.util.stream.IntStream;
 import org.apache.commons.lang3.StringUtils;
+import org.sunbird.actorutil.org.OrganisationClient;
+import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
 import org.sunbird.bean.ShadowUser;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.feed.impl.FeedFactory;
+import org.sunbird.models.organisation.Organisation;
 import org.sunbird.models.user.Feed;
 import org.sunbird.models.user.FeedAction;
 import org.sunbird.models.user.FeedStatus;
@@ -16,6 +19,7 @@ import org.sunbird.models.user.FeedStatus;
 /** this class will be used as a Util for inserting Feed in table */
 public class FeedUtil {
   private static IFeedService feedService = FeedFactory.getInstance();
+  private static OrganisationClient organisationClient = new OrganisationClientImpl();
 
   public static Response saveFeed(ShadowUser shadowUser, List<String> userIds) {
     return saveFeed(shadowUser, userIds.get(0));
@@ -42,7 +46,7 @@ public class FeedUtil {
     } else {
       Map<String, Object> data = feedList.get(index).getData();
       List<String> channelList = (List<String>) data.get(JsonKey.PROSPECT_CHANNELS);
-      if(!channelList.contains(shadowUser.getChannel())) {
+      if (!channelList.contains(shadowUser.getChannel())) {
         channelList.add(shadowUser.getChannel());
       }
       response = feedService.update(feedList.get(index));
@@ -60,6 +64,15 @@ public class FeedUtil {
     List<String> channelList = new ArrayList<>();
     channelList.add(shadowUser.getChannel());
     prospectsChannel.put(JsonKey.PROSPECT_CHANNELS, channelList);
+    Map<String, Object> filters = new HashMap<>();
+    filters.put(JsonKey.EXTERNAL_ID, shadowUser.getOrgExtId());
+    Organisation org = organisationClient.esSearchOrgByFilter(filters).get(0);
+    List<Map<String, String>> orgList = new ArrayList<>();
+    Map<String, String> orgMap = new HashMap<>();
+    orgMap.put("id", org.getId());
+    orgMap.put("name", org.getChannel());
+    orgList.add(orgMap);
+    prospectsChannel.put(JsonKey.PROSPECT_CHANNELS_IDS, orgList);
     feed.setData(prospectsChannel);
     feed.setUserId(userId);
     return feed;

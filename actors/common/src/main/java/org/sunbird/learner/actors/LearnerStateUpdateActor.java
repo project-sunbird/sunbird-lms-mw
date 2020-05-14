@@ -59,8 +59,7 @@ public class LearnerStateUpdateActor extends BaseActor {
     if (request.getOperation().equalsIgnoreCase(ActorOperations.ADD_CONTENT.getValue())) {
       Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.LEARNER_CONTENT_DB);
       Util.DbInfo batchdbInfo = Util.dbInfoMap.get(JsonKey.COURSE_BATCH_DB);
-      // objects of telemetry event...
-      Map<String, Object> targetObject = null;
+
       List<Map<String, Object>> correlatedObject = null;
 
       String userId = (String) request.getRequest().get(JsonKey.USER_ID);
@@ -110,30 +109,9 @@ public class LearnerStateUpdateActor extends BaseActor {
           map.put(JsonKey.DATE_TIME, new Timestamp(new Date().getTime()));
 
           try {
-            ProjectLogger.log(
-                "LearnerStateUpdateActor:onReceive: map  " + map, LoggerEnum.INFO.name());
+            ProjectLogger.log("LearnerStateUpdateActor:onReceive - map:  " + map, LoggerEnum.INFO.name());
             cassandraOperation.upsertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), map);
             response.getResult().put((String) map.get(JsonKey.CONTENT_ID), JsonKey.SUCCESS);
-            // create telemetry for user for each content ...
-            targetObject =
-                TelemetryUtil.generateTargetObject(
-                    (String) map.get(JsonKey.BATCH_ID), JsonKey.BATCH, JsonKey.CREATE, null);
-            // since this event will generate multiple times so nedd to recreate correlated
-            // objects every time ...
-            correlatedObject = new ArrayList<>();
-            TelemetryUtil.generateCorrelatedObject(
-                (String) map.get(JsonKey.CONTENT_ID), JsonKey.CONTENT, null, correlatedObject);
-            TelemetryUtil.generateCorrelatedObject(
-                (String) map.get(JsonKey.COURSE_ID), JsonKey.COURSE, null, correlatedObject);
-            TelemetryUtil.generateCorrelatedObject(
-                (String) map.get(JsonKey.BATCH_ID), JsonKey.BATCH, null, correlatedObject);
-            TelemetryUtil.telemetryProcessingCall(
-                request.getRequest(), targetObject, correlatedObject);
-
-            Map<String, String> rollUp = new HashMap<>();
-            rollUp.put("l1", (String) map.get(JsonKey.COURSE_ID));
-            rollUp.put("l2", (String) map.get(JsonKey.CONTENT_ID));
-            TelemetryUtil.addTargetObjectRollUp(rollUp, targetObject);
           } catch (Exception ex) {
             response.getResult().put((String) map.get(JsonKey.CONTENT_ID), JsonKey.FAILED);
             contentList.remove(map);

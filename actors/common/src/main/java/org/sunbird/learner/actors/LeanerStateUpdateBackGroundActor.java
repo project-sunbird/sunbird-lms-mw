@@ -148,8 +148,10 @@ public class LeanerStateUpdateBackGroundActor extends BaseActor {
           cassandraOperation.upsertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), updateDb);
           updateDb.put(JsonKey.BATCH_ID, course.get(JsonKey.BATCH_ID));
           updateDb.put(JsonKey.USER_ID, course.get(JsonKey.USER_ID));
-          updateDb.put(JsonKey.DATE_TIME, ProjectUtil.formatDate(ts));
+          updateDb.put(JsonKey.DATE_TIME, System.currentTimeMillis());
+          ProjectLogger.log("Saving enrolment update - before.", updateDb, LoggerEnum.INFO.name());
           updateUserCoursesToES(updateDb);
+          ProjectLogger.log("Saving enrolment update - after: " + updateDb.get(JsonKey.USER_ID) + "_" + updateDb.get(JsonKey.BATCH_ID), LoggerEnum.INFO.name());
         } catch (Exception ex) {
           ProjectLogger.log(ex.getMessage(), ex);
         }

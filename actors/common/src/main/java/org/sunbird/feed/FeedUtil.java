@@ -49,6 +49,14 @@ public class FeedUtil {
       if (!channelList.contains(shadowUser.getChannel())) {
         channelList.add(shadowUser.getChannel());
       }
+      List<Map<String, String>> orgList =
+          (List<Map<String, String>>) data.get(JsonKey.PROSPECT_CHANNELS);
+      orgList.forEach(
+          org -> {
+            if (!org.get("orgExtId").equals(shadowUser.getOrgExtId())) {
+              orgList.addAll(getOrgDetails(shadowUser.getOrgExtId()));
+            }
+          });
       response = feedService.update(feedList.get(index));
     }
     return response;
@@ -64,18 +72,23 @@ public class FeedUtil {
     List<String> channelList = new ArrayList<>();
     channelList.add(shadowUser.getChannel());
     prospectsChannel.put(JsonKey.PROSPECT_CHANNELS, channelList);
+    prospectsChannel.put(JsonKey.PROSPECT_CHANNELS_IDS, getOrgDetails(shadowUser.getOrgExtId()));
+    feed.setData(prospectsChannel);
+    feed.setUserId(userId);
+    return feed;
+  }
+
+  private static List<Map<String, String>> getOrgDetails(String orgExtId) {
     Map<String, Object> filters = new HashMap<>();
-    filters.put(JsonKey.EXTERNAL_ID, shadowUser.getOrgExtId());
+    filters.put(JsonKey.EXTERNAL_ID, orgExtId);
     Organisation org = organisationClient.esSearchOrgByFilter(filters).get(0);
     List<Map<String, String>> orgList = new ArrayList<>();
     Map<String, String> orgMap = new HashMap<>();
     orgMap.put("id", org.getId());
     orgMap.put("name", org.getChannel());
+    orgMap.put("orgExtId", org.getExternalId());
     orgList.add(orgMap);
-    prospectsChannel.put(JsonKey.PROSPECT_CHANNELS_IDS, orgList);
-    feed.setData(prospectsChannel);
-    feed.setUserId(userId);
-    return feed;
+    return orgList;
   }
 
   private static int getIndexOfMatchingFeed(List<Feed> feedList) {

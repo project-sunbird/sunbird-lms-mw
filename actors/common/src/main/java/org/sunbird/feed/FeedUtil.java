@@ -50,15 +50,10 @@ public class FeedUtil {
       List<String> channelList = (List<String>) data.get(JsonKey.PROSPECT_CHANNELS);
       if (!channelList.contains(shadowUser.getChannel())) {
         channelList.add(shadowUser.getChannel());
+        List<Map<String, String>> orgList =
+            (ArrayList<Map<String, String>>) data.get(JsonKey.PROSPECT_CHANNELS_IDS);
+        orgList.addAll(getOrgDetails(shadowUser.getChannel()));
       }
-      List<Map<String, String>> orgList =
-          (CopyOnWriteArrayList<Map<String, String>>) data.get(JsonKey.PROSPECT_CHANNELS_IDS);
-      orgList.forEach(
-          org -> {
-            if (!org.get("channel").equals(shadowUser.getChannel())) {
-              orgList.addAll(getOrgDetails(shadowUser.getChannel()));
-            }
-          });
       response = feedService.update(feedList.get(index));
     }
     return response;

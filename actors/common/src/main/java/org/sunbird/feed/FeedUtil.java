@@ -1,6 +1,7 @@
 package org.sunbird.feed;
 
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.IntStream;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actorutil.org.OrganisationClient;
@@ -51,7 +52,7 @@ public class FeedUtil {
         channelList.add(shadowUser.getChannel());
       }
       List<Map<String, String>> orgList =
-          (List<Map<String, String>>) data.get(JsonKey.PROSPECT_CHANNELS_IDS);
+          (CopyOnWriteArrayList<Map<String, String>>) data.get(JsonKey.PROSPECT_CHANNELS_IDS);
       orgList.forEach(
           org -> {
             if (!org.get("channel").equals(shadowUser.getChannel())) {

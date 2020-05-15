@@ -20,6 +20,7 @@ import org.sunbird.models.user.FeedStatus;
 public class FeedUtil {
   private static IFeedService feedService = FeedFactory.getInstance();
   private static OrganisationClient organisationClient = new OrganisationClientImpl();
+  private static Map<String, Object> orgExtIdMap = new HashMap<>();
 
   public static Response saveFeed(ShadowUser shadowUser, List<String> userIds) {
     return saveFeed(shadowUser, userIds.get(0));
@@ -80,13 +81,18 @@ public class FeedUtil {
 
   private static List<Map<String, String>> getOrgDetails(String orgExtId) {
     Map<String, Object> filters = new HashMap<>();
-    filters.put(JsonKey.EXTERNAL_ID, orgExtId);
-    Organisation org = organisationClient.esSearchOrgByFilter(filters).get(0);
     List<Map<String, String>> orgList = new ArrayList<>();
     Map<String, String> orgMap = new HashMap<>();
-    orgMap.put("id", org.getId());
-    orgMap.put("name", org.getChannel());
-    orgMap.put("orgExtId", org.getExternalId());
+    filters.put(JsonKey.EXTERNAL_ID, orgExtId);
+    if (!orgExtIdMap.isEmpty() && orgExtIdMap.containsKey(orgExtId)) {
+      orgMap = (Map<String, String>) orgExtIdMap.get(orgExtId);
+    } else {
+      Organisation org = organisationClient.esSearchOrgByFilter(filters).get(0);
+      orgMap.put("id", org.getId());
+      orgMap.put("name", org.getChannel());
+      orgMap.put("orgExtId", org.getExternalId());
+      orgExtIdMap.put(orgExtId, orgMap);
+    }
     orgList.add(orgMap);
     return orgList;
   }

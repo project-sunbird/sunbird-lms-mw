@@ -82,7 +82,7 @@ public class FeedUtil {
 
   private static List<Map<String, String>> getOrgDetails(String channel) {
     Map<String, Object> filters = new HashMap<>();
-    List<Map<String, String>> orgList = new ArrayList<>();
+    List<Map<String, String>> orgList = new CopyOnWriteArrayList<>();
     Map<String, String> orgMap = new HashMap<>();
     filters.put(JsonKey.CHANNEL, channel);
     filters.put(JsonKey.IS_ROOT_ORG, true);

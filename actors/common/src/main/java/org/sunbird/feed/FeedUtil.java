@@ -20,7 +20,7 @@ import org.sunbird.models.user.FeedStatus;
 public class FeedUtil {
   private static IFeedService feedService = FeedFactory.getInstance();
   private static OrganisationClient organisationClient = new OrganisationClientImpl();
-  private static Map<String, Object> orgExtIdMap = new HashMap<>();
+  private static Map<String, Object> orgIdMap = new HashMap<>();
 
   public static Response saveFeed(ShadowUser shadowUser, List<String> userIds) {
     return saveFeed(shadowUser, userIds.get(0));
@@ -73,25 +73,25 @@ public class FeedUtil {
     List<String> channelList = new ArrayList<>();
     channelList.add(shadowUser.getChannel());
     prospectsChannel.put(JsonKey.PROSPECT_CHANNELS, channelList);
-    prospectsChannel.put(JsonKey.PROSPECT_CHANNELS_IDS, getOrgDetails(shadowUser.getOrgExtId()));
+    prospectsChannel.put(JsonKey.PROSPECT_CHANNELS_IDS, getOrgDetails(shadowUser.getChannel()));
     feed.setData(prospectsChannel);
     feed.setUserId(userId);
     return feed;
   }
 
-  private static List<Map<String, String>> getOrgDetails(String orgExtId) {
+  private static List<Map<String, String>> getOrgDetails(String channel) {
     Map<String, Object> filters = new HashMap<>();
     List<Map<String, String>> orgList = new ArrayList<>();
     Map<String, String> orgMap = new HashMap<>();
-    filters.put(JsonKey.EXTERNAL_ID, orgExtId);
-    if (!orgExtIdMap.isEmpty() && orgExtIdMap.containsKey(orgExtId)) {
-      orgMap = (Map<String, String>) orgExtIdMap.get(orgExtId);
+    filters.put(JsonKey.CHANNEL, channel);
+    filters.put(JsonKey.IS_ROOT_ORG, true);
+    if (!orgIdMap.isEmpty() && orgIdMap.containsKey(channel)) {
+      orgMap = (Map<String, String>) orgIdMap.get(channel);
     } else {
       Organisation org = organisationClient.esSearchOrgByFilter(filters).get(0);
-      orgMap.put("id", org.getId());
+      orgMap.put("id", org.getRootOrgId());
       orgMap.put("name", org.getChannel());
-      orgMap.put("orgExtId", org.getExternalId());
-      orgExtIdMap.put(orgExtId, orgMap);
+      orgIdMap.put(channel, orgMap);
     }
     orgList.add(orgMap);
     return orgList;

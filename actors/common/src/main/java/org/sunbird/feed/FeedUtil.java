@@ -20,7 +20,7 @@ import org.sunbird.models.user.FeedStatus;
 /** this class will be used as a Util for inserting Feed in table */
 public class FeedUtil {
   private static IFeedService feedService = FeedFactory.getInstance();
-  private static OrganisationClient organisationClient = new OrganisationClientImpl();
+  private static OrganisationClient organisationClient = OrganisationClientImpl.getInstance();
   private static Map<String, Object> orgIdMap = new HashMap<>();
 
   public static Response saveFeed(ShadowUser shadowUser, List<String> userIds) {

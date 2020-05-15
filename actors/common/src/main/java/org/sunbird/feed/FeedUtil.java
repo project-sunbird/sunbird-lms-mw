@@ -51,11 +51,11 @@ public class FeedUtil {
         channelList.add(shadowUser.getChannel());
       }
       List<Map<String, String>> orgList =
-          (List<Map<String, String>>) data.get(JsonKey.PROSPECT_CHANNELS);
+          (List<Map<String, String>>) data.get(JsonKey.PROSPECT_CHANNELS_IDS);
       orgList.forEach(
           org -> {
-            if (!org.get("orgExtId").equals(shadowUser.getOrgExtId())) {
-              orgList.addAll(getOrgDetails(shadowUser.getOrgExtId()));
+            if (!org.get("channel").equals(shadowUser.getChannel())) {
+              orgList.addAll(getOrgDetails(shadowUser.getChannel()));
             }
           });
       response = feedService.update(feedList.get(index));

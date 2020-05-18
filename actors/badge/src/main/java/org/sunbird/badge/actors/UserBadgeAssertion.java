@@ -20,7 +20,6 @@ import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
-import org.sunbird.telemetry.util.TelemetryUtil;
 import scala.concurrent.Future;
 
 @ActorConfig(
@@ -137,20 +136,7 @@ public class UserBadgeAssertion extends BaseActor {
     Response reponse = new Response();
     reponse.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(reponse, self());
-    sendTelemetry(request.getRequest(), badge);
   }
 
-  private void sendTelemetry(Map<String, Object> map, Map<String, Object> badge) {
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
-    Map<String, Object> targetObject;
-    String userId = (String) badge.get(JsonKey.USER_ID);
-    targetObject = TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
-    TelemetryUtil.generateCorrelatedObject(
-        (String) badge.get(BadgingJsonKey.ASSERTION_ID),
-        BadgingJsonKey.BADGE_ASSERTION,
-        null,
-        correlatedObject);
-    TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
-    TelemetryUtil.telemetryProcessingCall(map, targetObject, correlatedObject);
-  }
+
 }

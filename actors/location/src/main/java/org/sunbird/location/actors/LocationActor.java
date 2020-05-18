@@ -1,8 +1,6 @@
 package org.sunbird.location.actors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.*;
-import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
@@ -19,6 +17,9 @@ import org.sunbird.location.dao.impl.LocationDaoFactory;
 import org.sunbird.location.util.LocationRequestValidator;
 import org.sunbird.models.location.Location;
 import org.sunbird.models.location.apirequest.UpsertLocationRequest;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * This class will handle all location related request.
@@ -106,7 +107,6 @@ public class LocationActor extends BaseLocationActor {
       sender().tell(response, self());
       ProjectLogger.log("Insert location data to ES");
       saveDataToES(mapper.convertValue(location, Map.class), JsonKey.INSERT);
-      generateTelemetryForLocation(id, mapper.convertValue(location, Map.class), JsonKey.CREATE);
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);
       sender().tell(ex, self());
@@ -121,8 +121,7 @@ public class LocationActor extends BaseLocationActor {
       sender().tell(response, self());
       ProjectLogger.log("Update location data to ES");
       saveDataToES(mapper.convertValue(location, Map.class), JsonKey.UPDATE);
-      generateTelemetryForLocation(
-          location.getId(), mapper.convertValue(location, Map.class), JsonKey.UPDATE);
+
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);
       sender().tell(ex, self());
@@ -135,7 +134,6 @@ public class LocationActor extends BaseLocationActor {
       sender().tell(response, self());
       SearchDTO searchDto = Util.createSearchDto(request.getRequest());
       String[] types = {ProjectUtil.EsType.location.getTypeName()};
-      generateSearchTelemetryEvent(searchDto, types, response.getResult());
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);
       sender().tell(ex, self());
@@ -154,7 +152,6 @@ public class LocationActor extends BaseLocationActor {
       sender().tell(response, self());
       ProjectLogger.log("Delete location data from ES");
       deleteDataFromES(locationId);
-      generateTelemetryForLocation(locationId, new HashMap<>(), JsonKey.DELETE);
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);
       sender().tell(ex, self());

@@ -29,7 +29,6 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
-import org.sunbird.telemetry.util.TelemetryUtil;
 import scala.concurrent.Future;
 
 @ActorConfig(
@@ -106,26 +105,10 @@ public class UserTnCActor extends BaseActor {
         syncUserDetails(userMap);
       }
       sender().tell(response, self());
-      generateTelemetry(userMap, acceptedTnC, lastAcceptedVersion);
     } else {
       response.getResult().put(JsonKey.RESPONSE, JsonKey.SUCCESS);
       sender().tell(response, self());
     }
-  }
-
-  private void generateTelemetry(
-      Map<String, Object> userMap, String acceptedTnCVersion, String lastAcceptedVersion) {
-    Map<String, Object> targetObject = null;
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
-    targetObject =
-        TelemetryUtil.generateTargetObject(
-            (String) userMap.get(JsonKey.USER_ID),
-            JsonKey.USER,
-            JsonKey.UPDATE,
-            lastAcceptedVersion);
-    TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
-    ProjectLogger.log(
-        "UserTnCActor:syncUserDetails: Telemetry generation call ended ", LoggerEnum.INFO.name());
   }
 
   private void syncUserDetails(Map<String, Object> completeUserMap) {

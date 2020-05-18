@@ -28,7 +28,6 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.UserType;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
-import org.sunbird.telemetry.util.TelemetryUtil;
 import scala.concurrent.Future;
 
 public class ShadowUserProcessor {
@@ -40,7 +39,6 @@ public class ShadowUserProcessor {
   private Map<String, String> extOrgIdMap = new HashMap<>();
   private String custodianOrgId;
   private SSOManager keyCloakService = SSOServiceFactory.getInstance();
-  private Map<String, Map<String, Object>> processIdtelemetryCtxMap = new HashMap<>();
   private ElasticSearchService elasticSearchService = EsClientFactory.getInstance(JsonKey.REST);
 
   public void process() {
@@ -251,26 +249,6 @@ public class ShadowUserProcessor {
     esUser.clear();
   }
 
-  private void generateTelemetry(String userId, String rootOrgId, ShadowUser shadowUser) {
-    ExecutionContext.getCurrent()
-        .setRequestContext(getTelemetryContextByProcessId((String) shadowUser.getProcessId()));
-    ProjectLogger.log(
-        "ShadowUserProcessor:generateTelemetry:generate telemetry:" + shadowUser.toString(),
-        LoggerEnum.INFO.name());
-    Map<String, Object> targetObject = new HashMap<>();
-    Map<String, String> rollUp = new HashMap<>();
-    rollUp.put("l1", rootOrgId);
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
-    ExecutionContext.getCurrent().getRequestContext().put(JsonKey.ROLLUP, rollUp);
-    TelemetryUtil.generateCorrelatedObject(
-        shadowUser.getProcessId(), JsonKey.PROCESS_ID, null, correlatedObject);
-    targetObject =
-        TelemetryUtil.generateTargetObject(
-            userId, StringUtils.capitalize(JsonKey.USER), JsonKey.MIGRATION_USER_OBJECT, null);
-    TelemetryUtil.telemetryProcessingCall(
-        mapper.convertValue(shadowUser, Map.class), targetObject, correlatedObject);
-  }
-
   /**
    * this method will be used to get all the userIds got from ES response by searching with
    * phone/email + custoRootOrgId
@@ -327,7 +305,6 @@ public class ShadowUserProcessor {
         "ShadowUserProcessor:updateUserInUserTable:user is updated with shadow user:RESPONSE FROM CASSANDRA IS:"
             + response.getResult(),
         LoggerEnum.INFO.name());
-    generateTelemetry(userId, rootOrgId, shadowUser);
   }
 
   /**
@@ -569,31 +546,6 @@ public class ShadowUserProcessor {
           "ShadowUserProcessor:registerUserToOrg:user is failed to register with org" + userId,
           LoggerEnum.ERROR.name());
     }
-  }
-
-  private Map<String, Object> getTelemetryContextByProcessId(String processId) {
-
-    if (MapUtils.isNotEmpty(processIdtelemetryCtxMap.get(processId))) {
-      return processIdtelemetryCtxMap.get(processId);
-    }
-    Map<String, String> contextMap = new HashMap<>();
-    Map<String, Object> telemetryContext = new HashMap<>();
-    Response response =
-        cassandraOperation.getRecordById(
-            bulkUploadDbInfo.getKeySpace(), bulkUploadDbInfo.getTableName(), processId);
-    List<Map<String, Object>> result = new ArrayList<>();
-    if (!((List) response.getResult().get(JsonKey.RESPONSE)).isEmpty()) {
-      result = ((List) response.getResult().get(JsonKey.RESPONSE));
-      Map<String, Object> responseMap = result.get(0);
-      contextMap = (Map<String, String>) responseMap.get(JsonKey.CONTEXT_TELEMETRY);
-      telemetryContext.putAll(contextMap);
-      processIdtelemetryCtxMap.put(processId, telemetryContext);
-    }
-    ProjectLogger.log(
-        "ShadowUserMigrationScheduler:getFullRecordFromProcessId:got single row data from bulk_upload_process with processId:"
-            + processId,
-        LoggerEnum.INFO.name());
-    return telemetryContext;
   }
 
   /**

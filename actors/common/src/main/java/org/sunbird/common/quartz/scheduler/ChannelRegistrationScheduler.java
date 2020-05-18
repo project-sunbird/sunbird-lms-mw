@@ -16,8 +16,6 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
-import org.sunbird.telemetry.util.TelemetryEvents;
-import org.sunbird.telemetry.util.TelemetryUtil;
 
 public class ChannelRegistrationScheduler extends BaseJob {
 
@@ -59,7 +57,6 @@ public class ChannelRegistrationScheduler extends BaseJob {
               + "entry for CHANNEL_REG_STATUS_ID (003) is null.");
       tellToBGRouter(request);
     }
-    TelemetryUtil.telemetryProcessingCall(logInfo, null, null, TelemetryEvents.LOG.getName());
   }
 
   private Map<String, Object> genarateLogInfo(String logType, String message) {

@@ -24,7 +24,6 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
-import org.sunbird.telemetry.util.TelemetryUtil;
 
 /** Class for providing Geo Location for Organisation Created by arvind on 31/10/17. */
 @ActorConfig(
@@ -153,9 +152,6 @@ public class GeoLocationManagementActor extends BaseActor {
 
     ProjectLogger.log("GeoLocationManagementActor-updateGeoLocation called");
 
-    // object of telemetry event...
-    Map<String, Object> targetObject = null;
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     String locationId = (String) actorMessage.getRequest().get(JsonKey.LOCATION_ID);
     Response finalResponse = new Response();
@@ -172,10 +168,6 @@ public class GeoLocationManagementActor extends BaseActor {
     finalResponse.getResult().put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(finalResponse, self());
 
-    targetObject =
-        TelemetryUtil.generateTargetObject(locationId, JsonKey.LOCATION, JsonKey.DELETE, null);
-    TelemetryUtil.telemetryProcessingCall(
-        actorMessage.getRequest(), targetObject, correlatedObject);
   }
 
   /**
@@ -186,10 +178,6 @@ public class GeoLocationManagementActor extends BaseActor {
   private void updateGeoLocation(Request actorMessage) {
 
     ProjectLogger.log("GeoLocationManagementActor-updateGeoLocation called");
-
-    // object of telemetry event...
-    Map<String, Object> targetObject = null;
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     String requestedBy = (String) actorMessage.getRequest().get(JsonKey.REQUESTED_BY);
     String locationId = (String) actorMessage.getRequest().get(JsonKey.LOCATION_ID);
@@ -235,10 +223,6 @@ public class GeoLocationManagementActor extends BaseActor {
     finalResponse.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(finalResponse, self());
 
-    targetObject =
-        TelemetryUtil.generateTargetObject(locationId, JsonKey.LOCATION, JsonKey.UPDATE, null);
-    TelemetryUtil.telemetryProcessingCall(
-        actorMessage.getRequest(), targetObject, correlatedObject);
   }
 
   /**
@@ -301,9 +285,6 @@ public class GeoLocationManagementActor extends BaseActor {
 
     ProjectLogger.log("GeoLocationManagementActor-createGeoLocation called");
 
-    // object of telemetry event...
-    Map<String, Object> targetObject = null;
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     List<Map<String, Object>> dataList =
         (List<Map<String, Object>>) actorMessage.getRequest().get(JsonKey.DATA);
@@ -367,12 +348,6 @@ public class GeoLocationManagementActor extends BaseActor {
       responseMap.put(JsonKey.LOCATION, location);
       responseMap.put(JsonKey.STATUS, JsonKey.SUCCESS);
       responseList.add(responseMap);
-
-      targetObject = TelemetryUtil.generateTargetObject(id, JsonKey.LOCATION, JsonKey.CREATE, null);
-      TelemetryUtil.generateCorrelatedObject(id, JsonKey.LOCATION, null, correlatedObject);
-      TelemetryUtil.generateCorrelatedObject(rootOrgId, JsonKey.ROOT_ORG, null, correlatedObject);
-      TelemetryUtil.telemetryProcessingCall(
-          actorMessage.getRequest(), targetObject, correlatedObject);
     }
     finalResponse.getResult().put(JsonKey.RESPONSE, responseList);
     sender().tell(finalResponse, self());

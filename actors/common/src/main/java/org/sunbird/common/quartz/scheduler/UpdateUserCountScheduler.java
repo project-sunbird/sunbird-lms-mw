@@ -16,8 +16,6 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
-import org.sunbird.telemetry.util.TelemetryEvents;
-import org.sunbird.telemetry.util.TelemetryUtil;
 
 /** @author Amit Kumar */
 public class UpdateUserCountScheduler extends BaseJob {
@@ -55,7 +53,6 @@ public class UpdateUserCountScheduler extends BaseJob {
     ProjectLogger.log(
         "UpdateUserCountScheduler:execute: calling BackgroundService actor from scheduler");
     tellToBGRouter(request);
-    TelemetryUtil.telemetryProcessingCall(logInfo, null, null, TelemetryEvents.LOG.getName());
   }
 
   private Map<String, Object> genarateLogInfo(String logType, String message) {

@@ -59,7 +59,6 @@ import org.sunbird.models.organisation.Organisation;
 import org.sunbird.models.user.User;
 import org.sunbird.models.user.UserType;
 import org.sunbird.models.user.org.UserOrg;
-import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.dao.UserOrgDao;
 import org.sunbird.user.dao.impl.UserOrgDaoImpl;
 import org.sunbird.user.service.UserService;
@@ -150,8 +149,7 @@ public class UserManagementActor extends BaseActor {
 
   @SuppressWarnings("unchecked")
   private void updateUser(Request actorMessage) {
-    Map<String, Object> targetObject = null;
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+
     actorMessage.toLower();
     Util.getUserProfileConfig(systemSettingActorRef);
     String callerId = (String) actorMessage.getContext().get(JsonKey.CALLER_ID);
@@ -233,10 +231,7 @@ public class UserManagementActor extends BaseActor {
       completeUserDetails.putAll(requestMap);
       saveUserDetailsToEs(completeUserDetails);
     }
-    targetObject =
-        TelemetryUtil.generateTargetObject(
-            (String) userMap.get(JsonKey.USER_ID), TelemetryEnvKey.USER, JsonKey.UPDATE, null);
-    TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
+
   }
 
   @SuppressWarnings("unchecked")
@@ -698,34 +693,6 @@ public class UserManagementActor extends BaseActor {
       Patterns.pipe(future, getContext().dispatcher()).to(sender());
     }
 
-    processTelemetry(userMap, signupType, source, userId);
-  }
-
-  private void processTelemetry(
-      Map<String, Object> userMap, String signupType, String source, String userId) {
-    Map<String, Object> targetObject = null;
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
-    Map<String, String> rollUp = new HashMap<>();
-    rollUp.put("l1", (String) userMap.get(JsonKey.ROOT_ORG_ID));
-    ExecutionContext.getCurrent().getRequestContext().put(JsonKey.ROLLUP, rollUp);
-    targetObject =
-        TelemetryUtil.generateTargetObject(
-            (String) userMap.get(JsonKey.ID), TelemetryEnvKey.USER, JsonKey.CREATE, null);
-    TelemetryUtil.generateCorrelatedObject(userId, TelemetryEnvKey.USER, null, correlatedObject);
-    if (StringUtils.isNotBlank(signupType)) {
-      TelemetryUtil.generateCorrelatedObject(
-          signupType, StringUtils.capitalize(JsonKey.SIGNUP_TYPE), null, correlatedObject);
-    } else {
-      ProjectLogger.log("UserManagementActor:processUserRequest: No signupType found");
-    }
-    if (StringUtils.isNotBlank(source)) {
-      TelemetryUtil.generateCorrelatedObject(
-          source, StringUtils.capitalize(JsonKey.REQUEST_SOURCE), null, correlatedObject);
-    } else {
-      ProjectLogger.log("UserManagementActor:processUserRequest: No source found");
-    }
-
-    TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
   }
 
   private Map<String, Object> saveUserOrgInfo(Map<String, Object> userMap) {
@@ -833,29 +800,6 @@ public class UserManagementActor extends BaseActor {
     if (StringUtils.isNotBlank(callerId)) {
       sendEmailAndSms(requestMap);
     }
-    Map<String, Object> targetObject = null;
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
-    Map<String, String> rollUp = new HashMap<>();
-    rollUp.put("l1", (String) userMap.get(JsonKey.ROOT_ORG_ID));
-    ExecutionContext.getCurrent().getRequestContext().put(JsonKey.ROLLUP, rollUp);
-    targetObject =
-        TelemetryUtil.generateTargetObject(
-            (String) userMap.get(JsonKey.ID), TelemetryEnvKey.USER, JsonKey.CREATE, null);
-    TelemetryUtil.generateCorrelatedObject(userId, TelemetryEnvKey.USER, null, correlatedObject);
-    if (StringUtils.isNotBlank(signupType)) {
-      TelemetryUtil.generateCorrelatedObject(
-          signupType, StringUtils.capitalize(JsonKey.SIGNUP_TYPE), null, correlatedObject);
-    } else {
-      ProjectLogger.log("UserManagementActor:processUserRequest: No signupType found");
-    }
-    if (StringUtils.isNotBlank(source)) {
-      TelemetryUtil.generateCorrelatedObject(
-          source, StringUtils.capitalize(JsonKey.REQUEST_SOURCE), null, correlatedObject);
-    } else {
-      ProjectLogger.log("UserManagementActor:processUserRequest: No source found");
-    }
-
-    TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
   }
 
   private int userFlagsToNum(Map<String, Boolean> userBooleanMap) {

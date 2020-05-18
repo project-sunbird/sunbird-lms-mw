@@ -72,7 +72,6 @@ public class UserProfileActor extends UserBaseActor {
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(response, self());
 
-    generateTelemetryEvent(null, userId, "profileVisibility");
   }
 
   private void validateFields(List<String> values, String listType) {

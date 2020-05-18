@@ -1,65 +1,17 @@
 package org.sunbird.location.actors;
 
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.PropertiesCache;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.commons.collections.MapUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.sunbird.actor.core.BaseActor;
-import org.sunbird.common.models.util.GeoLocationJsonKey;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.PropertiesCache;
-import org.sunbird.common.request.Request;
-import org.sunbird.dto.SearchDTO;
-import org.sunbird.telemetry.util.TelemetryLmaxWriter;
-import org.sunbird.telemetry.util.TelemetryUtil;
+
 
 /** @author Amit Kumar */
 public abstract class BaseLocationActor extends BaseActor {
-
-  public void generateTelemetryForLocation(
-      String targetObjId, Map<String, Object> data, String operation) {
-    // object of telemetry event...
-    try {
-      Map<String, Object> targetObject = null;
-      List<Map<String, Object>> correlatedObject = new ArrayList<>();
-      targetObject =
-          TelemetryUtil.generateTargetObject(targetObjId, JsonKey.LOCATION, operation, null);
-      if (!MapUtils.isEmpty(data)
-          && StringUtils.isNotEmpty((String) data.get(GeoLocationJsonKey.PARENT_ID))) {
-        TelemetryUtil.generateCorrelatedObject(
-            (String) data.get(GeoLocationJsonKey.PARENT_ID),
-            JsonKey.LOCATION,
-            null,
-            correlatedObject);
-      }
-      TelemetryUtil.telemetryProcessingCall(data, targetObject, correlatedObject);
-    } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(), e);
-    }
-  }
-
-  public void generateSearchTelemetryEvent(
-      SearchDTO searchDto, String[] types, Map<String, Object> result) {
-    try {
-      Map<String, Object> telemetryContext = TelemetryUtil.getTelemetryContext();
-      Map<String, Object> params = new HashMap<>();
-      params.put(JsonKey.QUERY, searchDto.getQuery());
-      params.put(JsonKey.FILTERS, searchDto.getAdditionalProperties().get(JsonKey.FILTERS));
-      params.put(JsonKey.SORT, searchDto.getSortBy());
-      params.put(JsonKey.TOPN, generateTopNResult(result));
-      params.put(JsonKey.SIZE, result.get(JsonKey.COUNT));
-      params.put(JsonKey.TYPE, String.join(",", types));
-
-      Request request = new Request();
-      request.setRequest(telemetryRequestForSearch(telemetryContext, params));
-      TelemetryLmaxWriter.getInstance().submitMessage(request);
-    } catch (Exception e) {
-      ProjectLogger.log(e.getMessage(), e);
-    }
-  }
 
   private List<Map<String, Object>> generateTopNResult(Map<String, Object> result) {
     List<Map<String, Object>> dataMapList =

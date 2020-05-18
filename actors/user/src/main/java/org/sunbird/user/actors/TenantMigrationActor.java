@@ -2,10 +2,6 @@ package org.sunbird.user.actors;
 
 import akka.actor.ActorRef;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.sql.Timestamp;
-import java.text.MessageFormat;
-import java.util.*;
-import java.util.stream.IntStream;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -22,13 +18,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.StringFormatter;
-import org.sunbird.common.models.util.TelemetryEnvKey;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.datasecurity.DataMaskingService;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.ExecutionContext;
@@ -43,13 +33,17 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
-import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.MigrationUtils;
 import org.sunbird.user.util.UserActorOperations;
 import org.sunbird.user.util.UserUtil;
 import scala.concurrent.Future;
+
+import java.sql.Timestamp;
+import java.text.MessageFormat;
+import java.util.*;
+import java.util.stream.IntStream;
 
 /**
  * This class contains method and business logic to migrate user from custodian org to some other
@@ -109,8 +103,7 @@ public class TenantMigrationActor extends BaseActor {
   private void migrateUser(Request request, boolean notify) {
     ProjectLogger.log("TenantMigrationActor:migrateUser called.", LoggerEnum.INFO.name());
     Map<String, Object> reqMap = new HashMap<>(request.getRequest());
-    Map<String, Object> targetObject = null;
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+
     Map<String, Object> userDetails =
         userService.esGetPublicUserProfileById((String) request.getRequest().get(JsonKey.USER_ID));
     validateUserCustodianOrgId((String) userDetails.get(JsonKey.ROOT_ORG_ID));
@@ -174,10 +167,7 @@ public class TenantMigrationActor extends BaseActor {
     if (notify) {
       notify(userDetails);
     }
-    targetObject =
-        TelemetryUtil.generateTargetObject(
-            (String) reqMap.get(JsonKey.USER_ID), TelemetryEnvKey.USER, MIGRATE, null);
-    TelemetryUtil.telemetryProcessingCall(reqMap, targetObject, correlatedObject);
+
   }
 
   private void notify(Map<String, Object> userDetail) {

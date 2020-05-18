@@ -22,9 +22,7 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.SearchTelemetryUtil;
 import org.sunbird.learner.util.Util;
-import org.sunbird.telemetry.util.TelemetryUtil;
 import scala.concurrent.Future;
 
 /** This class provides API's to create, update, get and delete user note */
@@ -74,10 +72,6 @@ public class NotesManagementActor extends BaseActor {
   @SuppressWarnings("unchecked")
   private void createNote(Request actorMessage) {
     ProjectLogger.log("Create Note method call start");
-    // object of telemetry event...
-    Map<String, Object> targetObject = new HashMap<>();
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
-
     try {
       Map<String, Object> req = actorMessage.getRequest();
       if (!validUser((String) req.get(JsonKey.USER_ID))) {
@@ -107,19 +101,6 @@ public class NotesManagementActor extends BaseActor {
       result.getResult().remove(JsonKey.RESPONSE);
       sender().tell(result, self());
 
-      targetObject =
-          TelemetryUtil.generateTargetObject(uniqueId, JsonKey.NOTE, JsonKey.CREATE, null);
-      TelemetryUtil.generateCorrelatedObject(uniqueId, JsonKey.NOTE, null, correlatedObject);
-      TelemetryUtil.generateCorrelatedObject(updatedBy, JsonKey.USER, null, correlatedObject);
-
-      Map<String, String> rollup =
-          prepareRollUpForObjectType(
-              (String) req.get(JsonKey.CONTENT_ID), (String) req.get(JsonKey.COURSE_ID));
-      TelemetryUtil.addTargetObjectRollUp(rollup, targetObject);
-
-      TelemetryUtil.telemetryProcessingCall(
-          actorMessage.getRequest(), targetObject, correlatedObject);
-
       Request request = new Request();
       request.setOperation(ActorOperations.INSERT_USER_NOTES_ES.getValue());
       request.getRequest().put(JsonKey.NOTE, req);
@@ -140,10 +121,6 @@ public class NotesManagementActor extends BaseActor {
   @SuppressWarnings("unchecked")
   private void updateNote(Request actorMessage) {
     ProjectLogger.log("Update Note method call start");
-    // object of telemetry event...
-    Map<String, Object> targetObject = new HashMap<>();
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
-
     try {
       String noteId = (String) actorMessage.getContext().get(JsonKey.NOTE_ID);
       String userId = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
@@ -180,16 +157,6 @@ public class NotesManagementActor extends BaseActor {
       result.getResult().put(JsonKey.ID, noteId);
       result.getResult().remove(JsonKey.RESPONSE);
       sender().tell(result, self());
-
-      targetObject = TelemetryUtil.generateTargetObject(noteId, JsonKey.NOTE, JsonKey.UPDATE, null);
-      TelemetryUtil.generateCorrelatedObject(noteId, JsonKey.NOTE, null, correlatedObject);
-      TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
-      Map<String, String> rollup = new HashMap<>();
-      TelemetryUtil.addTargetObjectRollUp(rollup, targetObject);
-
-      TelemetryUtil.telemetryProcessingCall(
-          actorMessage.getRequest(), targetObject, correlatedObject);
-
       Request request = new Request();
       request.getRequest().put(JsonKey.NOTE, req);
       request.setOperation(ActorOperations.UPDATE_USER_NOTES_ES.getValue());
@@ -304,8 +271,6 @@ public class NotesManagementActor extends BaseActor {
       result = new HashMap<>();
     }
     String[] types = {EsType.usernotes.getTypeName()};
-    SearchTelemetryUtil.generateSearchTelemetryEvent(
-        searchDto, types, result); // generating search for telemetry
     return result;
   }
 
@@ -316,9 +281,6 @@ public class NotesManagementActor extends BaseActor {
    */
   private void deleteNote(Request actorMessage) {
     ProjectLogger.log("Delete Note method call start");
-    // object of telemetry event...
-    Map<String, Object> targetObject = new HashMap<>();
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
     try {
       String noteId = (String) actorMessage.getContext().get(JsonKey.NOTE_ID);
       String userId = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
@@ -347,14 +309,6 @@ public class NotesManagementActor extends BaseActor {
               userNotesDbInfo.getKeySpace(), userNotesDbInfo.getTableName(), req);
       result.getResult().remove(JsonKey.RESPONSE);
       sender().tell(result, self());
-
-      targetObject = TelemetryUtil.generateTargetObject(noteId, JsonKey.NOTE, JsonKey.DELETE, null);
-      TelemetryUtil.generateCorrelatedObject(noteId, JsonKey.NOTE, null, correlatedObject);
-      TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
-
-      TelemetryUtil.telemetryProcessingCall(
-          actorMessage.getRequest(), targetObject, correlatedObject);
-
       Request request = new Request();
       request.getRequest().put(JsonKey.NOTE, req);
       request.setOperation(ActorOperations.UPDATE_USER_NOTES_ES.getValue());

@@ -2,13 +2,6 @@ package org.sunbird.badge.service.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.WeakHashMap;
-import java.util.stream.Collectors;
 import org.apache.commons.lang.StringUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -20,18 +13,15 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.HttpUtilResponse;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.BadgingJsonKey;
-import org.sunbird.common.models.util.HttpUtil;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
-import org.sunbird.telemetry.util.TelemetryUtil;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /** @author Manzarul */
 public class BadgrServiceImpl implements BadgingService {
@@ -92,15 +82,6 @@ public class BadgrServiceImpl implements BadgingService {
         httpResponse.getStatusCode(), null, BadgingJsonKey.ISSUER);
     Response response = new Response();
     BadgingUtil.prepareBadgeIssuerResponse(httpResponse.getBody(), response.getResult());
-
-    targetObject =
-        TelemetryUtil.generateTargetObject(
-            (String) response.getResult().get(BadgingJsonKey.ISSUER_ID),
-            BadgingJsonKey.BADGE_ISSUER,
-            JsonKey.CREATE,
-            null);
-    TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
-
     return response;
   }
 
@@ -207,17 +188,6 @@ public class BadgrServiceImpl implements BadgingService {
       badgeClassExtensionService.save(badgeClassExt);
 
       BadgingUtil.prepareBadgeClassResponse(badgrResponseStr, badgeClassExt, response.getResult());
-      targetObject =
-          TelemetryUtil.generateTargetObject(
-              (String) response.getResult().get(BadgingJsonKey.BADGE_ID),
-              BadgingJsonKey.BADGE_CLASS,
-              JsonKey.CREATE,
-              null);
-      TelemetryUtil.generateCorrelatedObject(
-          issuerId, BadgingJsonKey.BADGE_ISSUER, null, correlatedObject);
-      TelemetryUtil.generateCorrelatedObject(
-          rootOrgId, JsonKey.ORGANISATION, null, correlatedObject);
-      TelemetryUtil.telemetryProcessingCall(requestData, targetObject, correlatedObject);
 
     } catch (IOException e) {
       BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
@@ -359,10 +329,6 @@ public class BadgrServiceImpl implements BadgingService {
 
       badgeClassExtensionService.delete(badgeId);
       response.put(JsonKey.MESSAGE, badgrResponseStr.replaceAll("^\"|\"$", ""));
-      targetObject =
-          TelemetryUtil.generateTargetObject(
-              badgeId, BadgingJsonKey.BADGE_CLASS, JsonKey.DELETE, null);
-      TelemetryUtil.telemetryProcessingCall(requestData, targetObject, correlatedObject);
 
     } catch (IOException e) {
       BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
@@ -409,28 +375,7 @@ public class BadgrServiceImpl implements BadgingService {
     res = BadgingUtil.prepareAssertionResponse(res, new HashMap<String, Object>());
     Response response = new Response();
     response.getResult().putAll(res);
-    targetObject =
-        TelemetryUtil.generateTargetObject(
-            (String) response.getResult().get(BadgingJsonKey.BADGE_ID),
-            BadgingJsonKey.BADGE_CLASS,
-            JsonKey.CREATE,
-            null);
-    TelemetryUtil.generateCorrelatedObject(
-        (String) requestedData.get(BadgingJsonKey.RECIPIENT_ID),
-        (String) requestedData.get(BadgingJsonKey.RECIPIENT_TYPE),
-        null,
-        correlatedObject);
-    TelemetryUtil.generateCorrelatedObject(
-        (String) requestedData.get(BadgingJsonKey.ISSUER_ID),
-        BadgingJsonKey.BADGE_ISSUER,
-        null,
-        correlatedObject);
-    TelemetryUtil.generateCorrelatedObject(
-        (String) requestedData.get(BadgingJsonKey.BADGE_ID),
-        BadgingJsonKey.BADGE_CLASS,
-        null,
-        correlatedObject);
-    TelemetryUtil.telemetryProcessingCall(requestedData, targetObject, correlatedObject);
+
     return response;
   }
 
@@ -496,18 +441,6 @@ public class BadgrServiceImpl implements BadgingService {
         httpResponse.getStatusCode(), badgrResponseStr, BadgingJsonKey.BADGE_ASSERTION);
     Response response = new Response();
     response.getResult().put(JsonKey.STATUS, JsonKey.SUCCESS);
-    targetObject =
-        TelemetryUtil.generateTargetObject(
-            (String) requestedData.get(BadgingJsonKey.ASSERTION_ID),
-            BadgingJsonKey.BADGE_ISSUER,
-            JsonKey.DELETE,
-            null);
-    TelemetryUtil.generateCorrelatedObject(
-        (String) requestedData.get(BadgingJsonKey.RECIPIENT_ID),
-        (String) requestedData.get(BadgingJsonKey.RECIPIENT_TYPE),
-        null,
-        correlatedObject);
-    TelemetryUtil.telemetryProcessingCall(requestedData, targetObject, correlatedObject);
     return response;
   }
 
@@ -528,9 +461,6 @@ public class BadgrServiceImpl implements BadgingService {
     // response string
     response.put(JsonKey.MESSAGE, StringUtils.strip(httpResponse.getBody(), "\""));
 
-    targetObject =
-        TelemetryUtil.generateTargetObject(slug, BadgingJsonKey.BADGE_ISSUER, JsonKey.DELETE, null);
-    TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
     return response;
   }
 

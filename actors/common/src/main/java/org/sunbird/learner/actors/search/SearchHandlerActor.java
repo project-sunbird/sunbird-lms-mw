@@ -25,8 +25,6 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
-import org.sunbird.telemetry.util.TelemetryLmaxWriter;
-import org.sunbird.telemetry.util.TelemetryUtil;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
 
@@ -125,7 +123,6 @@ public class SearchHandlerActor extends BaseActor {
         }
         sender().tell(response, self());
         // create search telemetry event here ...
-        generateSearchTelemetryEvent(searchDto, types, result);
       }
     } else {
       onReceiveUnsupportedOperation(request.getOperation());
@@ -150,33 +147,6 @@ public class SearchHandlerActor extends BaseActor {
             },
             getContext().dispatcher());
     Patterns.pipe(response, getContext().dispatcher()).to(sender());
-    Response orgSearchResponse = null;
-    try {
-      orgSearchResponse = Await.result(response, BaseActor.timeout.duration());
-      String[] types = new String[] {indexType};
-      Map<String, Object> contentMap = new HashMap<>();
-      List<Object> contentList = new ArrayList<>();
-      if (orgSearchResponse != null
-          && MapUtils.isNotEmpty(orgSearchResponse.getResult())
-          && MapUtils.isNotEmpty(
-              (Map<String, Object>) orgSearchResponse.getResult().get(JsonKey.RESPONSE))) {
-        HashMap<String, Object> contentListMap =
-            (HashMap<String, Object>) orgSearchResponse.getResult().get(JsonKey.RESPONSE);
-        contentList.add(contentListMap.get(JsonKey.CONTENT));
-        if (CollectionUtils.isNotEmpty(contentList)) {
-          contentMap.put(JsonKey.CONTENT, contentList.get(0));
-          contentMap.put(
-              JsonKey.COUNT,
-              contentListMap.get(JsonKey.COUNT) != null ? contentListMap.get(JsonKey.COUNT) : 0);
-          generateSearchTelemetryEvent(searchDto, types, contentMap);
-        }
-      }
-    } catch (Exception e) {
-      ProjectLogger.log(
-          "SearchHandlerActor:handelOrgSearchAsyncRequest: Error occured in generating Telemetry for orgSearch  ",
-          e,
-          LoggerEnum.ERROR.name());
-    }
   }
 
   @SuppressWarnings("unchecked")
@@ -285,24 +255,6 @@ public class SearchHandlerActor extends BaseActor {
     return orgMap;
   }
 
-  private void generateSearchTelemetryEvent(
-      SearchDTO searchDto, String[] types, Map<String, Object> result) {
-
-    Map<String, Object> telemetryContext = TelemetryUtil.getTelemetryContext();
-
-    Map<String, Object> params = new HashMap<>();
-    params.put(JsonKey.TYPE, String.join(",", types));
-    params.put(JsonKey.QUERY, searchDto.getQuery());
-    params.put(JsonKey.FILTERS, searchDto.getAdditionalProperties().get(JsonKey.FILTERS));
-    params.put(JsonKey.SORT, searchDto.getSortBy());
-    params.put(JsonKey.SIZE, result.get(JsonKey.COUNT));
-    params.put(JsonKey.TOPN, generateTopnResult(result)); // need to get topn value from
-    // response
-    Request req = new Request();
-    req.setRequest(telemetryRequestForSearch(telemetryContext, params));
-    TelemetryLmaxWriter.getInstance().submitMessage(req);
-  }
-
   private List<Map<String, Object>> generateTopnResult(Map<String, Object> result) {
 
     List<Map<String, Object>> userMapList = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
@@ -324,15 +276,6 @@ public class SearchHandlerActor extends BaseActor {
       }
     }
     return list;
-  }
-
-  private static Map<String, Object> telemetryRequestForSearch(
-      Map<String, Object> telemetryContext, Map<String, Object> params) {
-    Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.CONTEXT, telemetryContext);
-    map.put(JsonKey.PARAMS, params);
-    map.put(JsonKey.TELEMETRY_EVENT_TYPE, "SEARCH");
-    return map;
   }
 
   /**

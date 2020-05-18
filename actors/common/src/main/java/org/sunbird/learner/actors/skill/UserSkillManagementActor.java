@@ -45,7 +45,6 @@ import org.sunbird.learner.actors.skill.dao.UserSkillDao;
 import org.sunbird.learner.actors.skill.dao.impl.UserSkillDaoImpl;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.skill.Skill;
-import org.sunbird.telemetry.util.TelemetryUtil;
 import scala.concurrent.Future;
 
 /**
@@ -181,7 +180,6 @@ public class UserSkillManagementActor extends BaseActor {
     response.getResult().put(JsonKey.RESULT, "SUCCESS");
     sender().tell(response, self());
 
-    addTelemetry(userId, actorMessage);
     updateMasterSkillsList(newUserSkillsSet);
   }
 
@@ -283,9 +281,6 @@ public class UserSkillManagementActor extends BaseActor {
 
     ProjectLogger.log("UserSkillManagementActor:endorseSkill called");
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-    // object of telemetry event...
-    Map<String, Object> targetObject = null;
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     String endoresedUserId = (String) actorMessage.getRequest().get(JsonKey.ENDORSED_USER_ID);
 
@@ -358,7 +353,6 @@ public class UserSkillManagementActor extends BaseActor {
             (List<Map<String, Object>>) response.get(JsonKey.RESPONSE);
 
         // prepare correlted object ...
-        TelemetryUtil.generateCorrelatedObject(id, "skill", null, correlatedObject);
 
         if (responseList.isEmpty()) {
           // means this is first time skill coming so add this one
@@ -460,8 +454,6 @@ public class UserSkillManagementActor extends BaseActor {
     response3.getResult().put(JsonKey.RESULT, "SUCCESS");
     sender().tell(response3, self());
 
-    addTelemetry(endoresedUserId, actorMessage);
-
     updateMasterSkillsList(new ArrayList<>(skillset));
   }
 
@@ -486,7 +478,6 @@ public class UserSkillManagementActor extends BaseActor {
     String endorsersId = (String) request.getRequest().get(JsonKey.USER_ID);
     String endorsedId = (String) request.getRequest().get(JsonKey.ENDORSED_USER_ID);
     addEndorsement(skill, endorsedId, endorsersId);
-    addTelemetry(endorsersId, request);
   }
 
   private void addEndorsement(Skill skill, String endorsedId, String endorsersId) {
@@ -629,14 +620,6 @@ public class UserSkillManagementActor extends BaseActor {
       searchDTO.setFields(fields);
     }
     return searchDTO;
-  }
-
-  private void addTelemetry(String userId, Request request) {
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
-    Map<String, Object> targetObject;
-    targetObject = TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
-    TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
-    TelemetryUtil.telemetryProcessingCall(request.getRequest(), targetObject, correlatedObject);
   }
 
   private void validateUserRootOrg(String requestedUserId, String endorsedUserId) {

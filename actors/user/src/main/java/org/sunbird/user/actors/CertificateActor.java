@@ -2,11 +2,6 @@ package org.sunbird.user.actors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.IOException;
-import java.sql.Timestamp;
-import java.text.MessageFormat;
-import java.util.*;
-
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -27,9 +22,13 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.certificate.Certificate;
 import org.sunbird.models.user.User;
-import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
+
+import java.io.IOException;
+import java.sql.Timestamp;
+import java.text.MessageFormat;
+import java.util.*;
 
 /** This class helps in interacting with adding and validating the user-certificate details */
 @ActorConfig(
@@ -104,7 +103,6 @@ public class CertificateActor extends UserBaseActor {
       userResult.setResponseCode(ResponseCode.success);
       sender().tell(userResult, self());
       sendMergeNotification(mergeeId, mergerId);
-      triggerMergeCertTelemetry(request);
     }
   }
 
@@ -360,7 +358,6 @@ public class CertificateActor extends UserBaseActor {
     telemetryMap.put(JsonKey.USER_ID, userId);
     telemetryMap.put(JsonKey.CERT_ID, certAddReqMap.get(JsonKey.ID));
     telemetryMap.put(JsonKey.ROOT_ORG_ID, user.getRootOrgId());
-    triggerAddCertTelemetry(telemetryMap);
   }
 
   private Response reIssueCert(Map<String, Object> certAddReqMap, Map<String, Object> certUpdateReqMap) {
@@ -466,58 +463,5 @@ public class CertificateActor extends UserBaseActor {
       }
     }
     return false;
-  }
-
-  private void triggerMergeCertTelemetry(Map telemetryMap) {
-    ProjectLogger.log(
-        "UserMergeActor:triggerMergeCertTelemetry: generating telemetry event for merge certificate");
-    Map<String, Object> targetObject = null;
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
-    Map<String, String> rollUp = new HashMap<>();
-    rollUp.put("l1", (String) telemetryMap.get(JsonKey.ROOT_ORG_ID));
-    ExecutionContext.getCurrent().getRequestContext().put(JsonKey.ROLLUP, rollUp);
-    targetObject =
-        TelemetryUtil.generateTargetObject(
-            (String) telemetryMap.get(JsonKey.FROM_ACCOUNT_ID),
-            TelemetryEnvKey.USER,
-            JsonKey.MERGE_CERT,
-            null);
-    TelemetryUtil.generateCorrelatedObject(
-        (String) telemetryMap.get(JsonKey.FROM_ACCOUNT_ID),
-        JsonKey.FROM_ACCOUNT_ID,
-        null,
-        correlatedObject);
-    TelemetryUtil.generateCorrelatedObject(
-        (String) telemetryMap.get(JsonKey.TO_ACCOUNT_ID),
-        JsonKey.TO_ACCOUNT_ID,
-        null,
-        correlatedObject);
-    telemetryMap.remove(JsonKey.ID);
-    telemetryMap.remove(JsonKey.USER_ID);
-    telemetryMap.remove(JsonKey.ROOT_ORG_ID);
-    TelemetryUtil.telemetryProcessingCall(telemetryMap, targetObject, correlatedObject);
-  }
-
-  private void triggerAddCertTelemetry(Map telemetryMap) {
-    ProjectLogger.log(
-        "UserMergeActor:triggerAddCertTelemetry: generating telemetry event for add certificate");
-    Map<String, Object> targetObject = null;
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
-    Map<String, String> rollUp = new HashMap<>();
-    rollUp.put("l1", (String) telemetryMap.get(JsonKey.ROOT_ORG_ID));
-    ExecutionContext.getCurrent().getRequestContext().put(JsonKey.ROLLUP, rollUp);
-    if(null != telemetryMap.get(JsonKey.OLD_ID)){
-      TelemetryUtil.generateCorrelatedObject(
-              (String) telemetryMap.get(JsonKey.OLD_ID), JsonKey.OLD_CERTIFICATE, null, correlatedObject);
-    }
-    targetObject =
-        TelemetryUtil.generateTargetObject(
-            (String) telemetryMap.get(JsonKey.CERT_ID), JsonKey.CERTIFICATE, JsonKey.CREATE, null);
-    TelemetryUtil.generateCorrelatedObject(
-        (String) telemetryMap.get(JsonKey.USER_ID), JsonKey.USER, null, correlatedObject);
-    TelemetryUtil.generateCorrelatedObject(
-        (String) telemetryMap.get(JsonKey.CERT_ID), JsonKey.CERTIFICATE, null, correlatedObject);
-    telemetryMap.remove(JsonKey.ROOT_ORG_ID);
-    TelemetryUtil.telemetryProcessingCall(telemetryMap, targetObject, correlatedObject);
   }
 }

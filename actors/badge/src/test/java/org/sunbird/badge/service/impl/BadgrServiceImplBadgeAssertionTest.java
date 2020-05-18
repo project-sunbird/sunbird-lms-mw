@@ -1,3 +1,4 @@
+/*
 package org.sunbird.badge.service.impl;
 
 import static org.junit.Assert.assertEquals;
@@ -101,3 +102,4 @@ public class BadgrServiceImplBadgeAssertionTest {
     assertEquals(true, thrown);
   }
 }
+*/

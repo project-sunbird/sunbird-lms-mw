@@ -106,7 +106,6 @@ public class UserRoleActor extends UserBaseActor {
     } else {
       ProjectLogger.log("UserRoleActor: No ES call to save user roles");
     }
-    generateTelemetryEvent(requestMap, userId, "userLevel");
   }
 
   private boolean initializeHashTagIdFromOrg(Map<String, Object> requestMap) {

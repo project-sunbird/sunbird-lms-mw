@@ -34,7 +34,6 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
-import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.validator.location.LocationRequestValidator;
 import scala.concurrent.Future;
 
@@ -115,9 +114,7 @@ public class OrganisationManagementActor extends BaseActor {
 
   private void updateOrgType(Request actorMessage) {
     ProjectLogger.log("updateOrgType method call start");
-    // object of telemetry event...
-    Map<String, Object> targetObject = null;
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+
 
     try {
       Util.DbInfo orgTypeDbInfo = Util.dbInfoMap.get(JsonKey.ORG_TYPE_DB);
@@ -148,11 +145,6 @@ public class OrganisationManagementActor extends BaseActor {
               orgTypeDbInfo.getKeySpace(), orgTypeDbInfo.getTableName(), request);
       sender().tell(response, self());
 
-      targetObject =
-          TelemetryUtil.generateTargetObject(
-              (String) request.get(JsonKey.ID), "organisationType", JsonKey.UPDATE, null);
-      TelemetryUtil.telemetryProcessingCall(
-          actorMessage.getRequest(), targetObject, correlatedObject);
       // update DataCacheHandler orgType map with new data
       new Thread() {
         @Override
@@ -173,9 +165,6 @@ public class OrganisationManagementActor extends BaseActor {
 
   private void createOrgType(Request actorMessage) {
 
-    // object of telemetry event...
-    Map<String, Object> targetObject = null;
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
 
     ProjectLogger.log("createOrgType method call start");
     try {
@@ -206,11 +195,6 @@ public class OrganisationManagementActor extends BaseActor {
           cassandraOperation.insertRecord(
               orgTypeDbInfo.getKeySpace(), orgTypeDbInfo.getTableName(), request);
       sender().tell(response, self());
-
-      targetObject =
-          TelemetryUtil.generateTargetObject(id, "organisationType", JsonKey.CREATE, null);
-      TelemetryUtil.telemetryProcessingCall(
-          actorMessage.getRequest(), targetObject, correlatedObject);
 
       // update DataCacheHandler orgType map with new data
       new Thread() {
@@ -257,9 +241,7 @@ public class OrganisationManagementActor extends BaseActor {
   @SuppressWarnings("unchecked")
   private void createOrg(Request actorMessage) {
     ProjectLogger.log("OrgManagementActor: Create org method call start", LoggerEnum.INFO.name());
-    // object of telemetry event...
-    Map<String, Object> targetObject = null;
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+
     String callerId = (String) actorMessage.getContext().get(JsonKey.CALLER_ID);
     try {
       actorMessage.toLower();
@@ -325,7 +307,6 @@ public class OrganisationManagementActor extends BaseActor {
         }
         upsertAddress(addressReq);
         request.put(JsonKey.ADDRESS_ID, addressId);
-        telemetryGenerationForOrgAddress(addressReq, request, false);
       }
 
       Boolean isRootOrg = (Boolean) request.get(JsonKey.IS_ROOT_ORG);
@@ -395,14 +376,6 @@ public class OrganisationManagementActor extends BaseActor {
       result.getResult().put(JsonKey.ORGANISATION_ID, uniqueId);
       sender().tell(result, self());
 
-      targetObject =
-          TelemetryUtil.generateTargetObject(uniqueId, JsonKey.ORGANISATION, JsonKey.CREATE, null);
-      TelemetryUtil.generateCorrelatedObject(
-          uniqueId, JsonKey.ORGANISATION, null, correlatedObject);
-      TelemetryUtil.telemetryProcessingCall(
-          (Map<String, Object>) actorMessage.getRequest().get(JsonKey.ORGANISATION),
-          targetObject,
-          correlatedObject);
       if (isEventSyncEnabled()) {
         ProjectLogger.log(
             "OrganisationManagementActor:createOrg: Event sync is enabled", LoggerEnum.INFO);
@@ -506,8 +479,6 @@ public class OrganisationManagementActor extends BaseActor {
   @SuppressWarnings("unchecked")
   private void updateOrgStatus(Request actorMessage) {
 
-    // object of telemetry event...
-    Map<String, Object> targetObject = null;
 
     try {
       actorMessage.toLower();
@@ -571,12 +542,6 @@ public class OrganisationManagementActor extends BaseActor {
         orgRequest.setOperation(ActorOperations.UPDATE_ORG_INFO_ELASTIC.getValue());
         tellToAnother(orgRequest);
 
-        targetObject =
-            TelemetryUtil.generateTargetObject(orgId, JsonKey.ORGANISATION, JsonKey.UPDATE, null);
-        Map<String, Object> telemetryAction = new HashMap<>();
-        telemetryAction.put("updateOrgStatus", "org status updated.");
-        TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, new ArrayList<>());
-
         return;
       }
     } catch (ProjectCommonException e) {
@@ -590,9 +555,7 @@ public class OrganisationManagementActor extends BaseActor {
   private void updateOrgData(Request actorMessage) {
 
     Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-    // object of telemetry event...
-    Map<String, Object> targetObject = null;
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+
     String callerId = (String) actorMessage.getContext().get(JsonKey.CALLER_ID);
     try {
       actorMessage.toLower();
@@ -737,7 +700,6 @@ public class OrganisationManagementActor extends BaseActor {
           addressReq.put(JsonKey.UPDATED_BY, updatedBy);
         }
         upsertAddress(addressReq);
-        telemetryGenerationForOrgAddress(addressReq, orgDao, isAddressUpdated);
       }
       if (!StringUtils.isBlank(((String) request.get(JsonKey.HASHTAGID)))) {
         request.put(
@@ -813,10 +775,6 @@ public class OrganisationManagementActor extends BaseActor {
 
       sender().tell(response, self());
 
-      targetObject =
-          TelemetryUtil.generateTargetObject(
-              (String) orgDao.get(JsonKey.ID), JsonKey.ORGANISATION, JsonKey.UPDATE, null);
-      TelemetryUtil.telemetryProcessingCall(updateOrgDao, targetObject, correlatedObject);
       if (isEventSyncEnabled()) {
         ProjectLogger.log(
             "OrganisationManagementActor:updateOrgData: Event sync is enabled", LoggerEnum.INFO);
@@ -837,28 +795,10 @@ public class OrganisationManagementActor extends BaseActor {
     }
   }
 
-  private void telemetryGenerationForOrgAddress(
-      Map<String, Object> addressReq, Map<String, Object> orgDao, boolean isAddressUpdated) {
-
-    String addressState = JsonKey.CREATE;
-    if (isAddressUpdated) {
-      addressState = JsonKey.UPDATE;
-    }
-    Map<String, Object> targetObject =
-        TelemetryUtil.generateTargetObject(
-            (String) addressReq.get(JsonKey.ID), JsonKey.ADDRESS, addressState, null);
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
-    TelemetryUtil.generateCorrelatedObject(
-        (String) orgDao.get(JsonKey.ID), JsonKey.ORGANISATION, null, correlatedObject);
-    TelemetryUtil.telemetryProcessingCall(addressReq, targetObject, correlatedObject);
-  }
-
   /** Method to add member to the organisation */
   @SuppressWarnings({"rawtypes", "unchecked"})
   private void addMemberOrganisation(Request actorMessage) {
-    // object of telemetry event...
-    Map<String, Object> targetObject = null;
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+
 
     Response response = null;
     actorMessage.toLower();
@@ -1005,20 +945,13 @@ public class OrganisationManagementActor extends BaseActor {
       ProjectLogger.log("no call for ES to save user");
     }
 
-    targetObject = TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.CREATE, null);
-    TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
-    TelemetryUtil.generateCorrelatedObject(orgId, JsonKey.ORGANISATION, null, correlatedObject);
-    Map<String, Object> telemetryAction = new HashMap<>();
-    telemetryAction.put("orgMembershipAdded", "orgMembershipAdded");
-    TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, correlatedObject);
   }
 
   /** Method to remove member from the organisation */
   @SuppressWarnings({"rawtypes", "unchecked"})
   private void removeMemberOrganisation(Request actorMessage) {
     Response response = null;
-    // object of telemetry event...
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
+
     actorMessage.toLower();
     Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
     Util.DbInfo organisationDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
@@ -1122,13 +1055,7 @@ public class OrganisationManagementActor extends BaseActor {
       } else {
         ProjectLogger.log("no call for ES to save user");
       }
-      Map<String, Object> targetObject =
-          TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.CREATE, null);
-      TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
-      TelemetryUtil.generateCorrelatedObject(orgId, JsonKey.ORGANISATION, null, correlatedObject);
-      Map<String, Object> telemetryAction = new HashMap<>();
-      telemetryAction.put("orgMembershipRemoved", "orgMembershipRemoved");
-      TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, correlatedObject);
+
     }
   }
 

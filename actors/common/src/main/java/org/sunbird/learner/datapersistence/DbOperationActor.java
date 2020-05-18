@@ -24,8 +24,6 @@ import org.sunbird.helper.CassandraConnectionManager;
 import org.sunbird.helper.CassandraConnectionMngrFactory;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
-import org.sunbird.telemetry.util.TelemetryLmaxWriter;
-import org.sunbird.telemetry.util.TelemetryUtil;
 import scala.concurrent.Future;
 
 @ActorConfig(
@@ -168,11 +166,7 @@ public class DbOperationActor extends BaseActor {
       }
 
       sender().tell(response, self());
-      // create search telemetry event here ...
-      generateSearchTelemetryEvent(
-          searchDto,
-          new String[] {ES_INDEX_NAME},
-          (Map<String, Object>) response.get(JsonKey.RESPONSE));
+
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);
       sender().tell(ex, self());
@@ -239,7 +233,6 @@ public class DbOperationActor extends BaseActor {
             (String) reqObj.getRequest().get(JsonKey.ID));
       }
       sender().tell(response, self());
-      generateTelemetryObjectStore(reqObj, JsonKey.DELETE);
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);
       sender().tell(ex, self());
@@ -299,7 +292,6 @@ public class DbOperationActor extends BaseActor {
         }
       }
       sender().tell(response, self());
-      generateTelemetryObjectStore(reqObj, JsonKey.UPDATE);
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);
       sender().tell(ex, self());
@@ -338,7 +330,6 @@ public class DbOperationActor extends BaseActor {
         }
       }
       sender().tell(response, self());
-      generateTelemetryObjectStore(reqObj, JsonKey.CREATE);
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);
       sender().tell(ex, self());
@@ -420,7 +411,6 @@ public class DbOperationActor extends BaseActor {
    * @param indexName
    * @param typeName
    * @param identifier
-   * @param data
    * @return
    */
   private boolean deleteDataFromElastic(String indexName, String typeName, String identifier) {
@@ -438,53 +428,4 @@ public class DbOperationActor extends BaseActor {
     cassandraOperation.deleteRecord(keyspaceName, tableName, identifier);
   }
 
-  private void generateSearchTelemetryEvent(
-      SearchDTO searchDto, String[] types, Map<String, Object> result) {
-
-    Map<String, Object> telemetryContext = TelemetryUtil.getTelemetryContext();
-    Map<String, Object> params = new HashMap<>();
-    params.put(JsonKey.QUERY, searchDto.getQuery());
-    params.put(JsonKey.FILTERS, searchDto.getAdditionalProperties().get(JsonKey.FILTERS));
-    params.put(JsonKey.SORT, searchDto.getSortBy());
-    params.put(JsonKey.TOPN, generateTopNResult(result));
-    params.put(JsonKey.SIZE, result.get(JsonKey.COUNT));
-    params.put(JsonKey.TYPE, String.join(",", types));
-
-    Request request = new Request();
-    request.setRequest(telemetryRequestForSearch(telemetryContext, params));
-    TelemetryLmaxWriter.getInstance().submitMessage(request);
-  }
-
-  private List<Map<String, Object>> generateTopNResult(Map<String, Object> result) {
-    List<Map<String, Object>> dataMapList = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-    Integer topN = Integer.parseInt(topn);
-    int count = Math.min(topN, dataMapList.size());
-    List<Map<String, Object>> list = new ArrayList<>();
-    for (int i = 0; i < count; i++) {
-      Map<String, Object> m = new HashMap<>();
-      m.put(JsonKey.ID, dataMapList.get(i).get(JsonKey.ID));
-      list.add(m);
-    }
-    return list;
-  }
-
-  private static Map<String, Object> telemetryRequestForSearch(
-      Map<String, Object> telemetryContext, Map<String, Object> params) {
-    Map<String, Object> map = new HashMap<>();
-    map.put(JsonKey.CONTEXT, telemetryContext);
-    map.put(JsonKey.PARAMS, params);
-    map.put(JsonKey.TELEMETRY_EVENT_TYPE, "SEARCH");
-    return map;
-  }
-
-  private static void generateTelemetryObjectStore(Request reqObj, String opKey) {
-    Map<String, Object> targetObject =
-        TelemetryUtil.generateTargetObject(
-            (String) ((Map<String, Object>) reqObj.getRequest().get(PAYLOAD)).get(JsonKey.ID),
-            (String) reqObj.getRequest().get(ENTITY_NAME),
-            JsonKey.CREATE,
-            null);
-    TelemetryUtil.telemetryProcessingCall(
-        (Map<String, Object>) reqObj.getRequest().get(PAYLOAD), targetObject, new ArrayList<>());
-  }
 }

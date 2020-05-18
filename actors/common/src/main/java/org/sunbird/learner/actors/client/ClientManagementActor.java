@@ -16,7 +16,6 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
-import org.sunbird.telemetry.util.TelemetryUtil;
 
 @ActorConfig(
   tasks = {"registerClient", "updateClientKey", "getClientKey"},
@@ -55,11 +54,6 @@ public class ClientManagementActor extends BaseActor {
   private void registerClient(Request actorMessage) {
     ProjectLogger.log("Register client method call start");
     String clientName = (String) actorMessage.getRequest().get(JsonKey.CLIENT_NAME);
-
-    // object of telemetry event...
-    Map<String, Object> targetObject = null;
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
-
     Response data = getDataFromCassandra(JsonKey.CLIENT_NAME, clientName);
     List<Map<String, Object>> dataList =
         (List<Map<String, Object>>) data.getResult().get(JsonKey.RESPONSE);
@@ -99,14 +93,7 @@ public class ClientManagementActor extends BaseActor {
     result.getResult().put(JsonKey.CLIENT_ID, uniqueId);
     result.getResult().put(JsonKey.MASTER_KEY, masterKey);
     result.getResult().remove(JsonKey.RESPONSE);
-    // telemetry related data
-    targetObject =
-        TelemetryUtil.generateTargetObject(uniqueId, JsonKey.MASTER_KEY, JsonKey.CREATE, null);
-    TelemetryUtil.generateCorrelatedObject(channel, "channel", "client.channel", correlatedObject);
 
-    sender().tell(result, self());
-    TelemetryUtil.telemetryProcessingCall(
-        actorMessage.getRequest(), targetObject, correlatedObject);
   }
 
   /**
@@ -119,15 +106,6 @@ public class ClientManagementActor extends BaseActor {
     ProjectLogger.log("Update client key method call start");
     String clientId = (String) actorMessage.getRequest().get(JsonKey.CLIENT_ID);
     String masterKey = (String) actorMessage.getRequest().get(JsonKey.MASTER_KEY);
-
-    Map<String, Object> targetObject = null;
-    // correlated object of telemetry event...
-    List<Map<String, Object>> correlatedObject = new ArrayList<>();
-
-    // telemetry related data
-    targetObject =
-        TelemetryUtil.generateTargetObject(clientId, JsonKey.MASTER_KEY, JsonKey.UPDATE, null);
-
     Response data = getDataFromCassandra(JsonKey.ID, clientId);
     List<Map<String, Object>> dataList =
         (List<Map<String, Object>>) data.getResult().get(JsonKey.RESPONSE);
@@ -191,8 +169,6 @@ public class ClientManagementActor extends BaseActor {
     result.getResult().put(JsonKey.MASTER_KEY, newMasterKey);
     result.getResult().remove(JsonKey.RESPONSE);
     sender().tell(result, self());
-    TelemetryUtil.telemetryProcessingCall(
-        actorMessage.getRequest(), targetObject, correlatedObject);
   }
 
   /**

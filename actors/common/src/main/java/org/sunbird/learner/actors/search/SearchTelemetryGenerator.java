@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 @ActorConfig(
-        tasks = {"generateSearchTelemetry"},
+        tasks = {},
         asyncTasks = {"generateSearchTelemetry"}
 )
 public class SearchTelemetryGenerator extends BaseActor {

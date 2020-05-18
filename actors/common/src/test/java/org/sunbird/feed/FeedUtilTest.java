@@ -1,4 +1,5 @@
 package org.sunbird.feed;
+
 import static org.powermock.api.mockito.PowerMockito.*;
 
 import java.util.*;
@@ -12,6 +13,8 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.core.classloader.annotations.SuppressStaticInitializationFor;
 import org.powermock.modules.junit4.PowerMockRunner;
+import org.sunbird.actorutil.org.OrganisationClient;
+import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
 import org.sunbird.bean.ShadowUser;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.cassandraimpl.CassandraOperationImpl;
@@ -25,20 +28,23 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.feed.impl.FeedFactory;
 import org.sunbird.feed.impl.FeedServiceImpl;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.models.organisation.Organisation;
 import org.sunbird.models.user.Feed;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({
-        ServiceFactory.class,
-        ElasticSearchRestHighImpl.class,
-        ElasticSearchHelper.class,
-        EsClientFactory.class,
-        CassandraOperationImpl.class,
-        ElasticSearchService.class,
-        IFeedService.class,
-        FeedServiceImpl.class,
-        FeedFactory.class,
-        ShadowUser.class
+  ServiceFactory.class,
+  ElasticSearchRestHighImpl.class,
+  ElasticSearchHelper.class,
+  EsClientFactory.class,
+  CassandraOperationImpl.class,
+  ElasticSearchService.class,
+  IFeedService.class,
+  FeedServiceImpl.class,
+  FeedFactory.class,
+  ShadowUser.class,
+  OrganisationClient.class,
+  OrganisationClientImpl.class
 })
 @SuppressStaticInitializationFor("org.sunbird.common.ElasticSearchUtil")
 @PowerMockIgnore({"javax.management.*"})
@@ -47,19 +53,27 @@ public class FeedUtilTest {
   private CassandraOperation cassandraOperation = null;
   private static Response response;
   private static IFeedService feedService;
+  private static OrganisationClient organisationClient;
+
   @Before
   public void setUp() throws Exception {
     PowerMockito.mockStatic(FeedServiceImpl.class);
     PowerMockito.mockStatic(FeedFactory.class);
     feedService = mock(FeedServiceImpl.class);
+    organisationClient = mock(OrganisationClient.class);
+    mockStatic(OrganisationClientImpl.class);
     when(FeedFactory.getInstance()).thenReturn(feedService);
     when(FeedServiceImpl.getCassandraInstance()).thenReturn(cassandraOperation);
     when(FeedServiceImpl.getESInstance()).thenReturn(esUtil);
     when(feedService.getRecordsByProperties(Mockito.anyMap()))
-            .thenReturn(getFeedList(true))
-            .thenReturn(getFeedList(false));
+        .thenReturn(getFeedList(true))
+        .thenReturn(getFeedList(false));
     when(feedService.insert(Mockito.any())).thenReturn(new Response());
     when(feedService.update(Mockito.any())).thenReturn(new Response());
+
+    // whenNew(OrganisationClientImpl.class).withNoArguments().thenReturn(organisationClient);
+    when(OrganisationClientImpl.getInstance()).thenReturn(organisationClient);
+    when(organisationClient.esSearchOrgByFilter(Mockito.anyMap())).thenReturn(getFeedOrgs());
 
     PowerMockito.mockStatic(ServiceFactory.class);
     PowerMockito.mockStatic(EsClientFactory.class);
@@ -75,14 +89,15 @@ public class FeedUtilTest {
     PowerMockito.when(ServiceFactory.getInstance()).thenReturn(cassandraOperation);
     PowerMockito.when(
             cassandraOperation.getRecordsByProperties(Mockito.any(), Mockito.any(), Mockito.any()))
-            .thenReturn(response);
+        .thenReturn(response);
     Response upsertResponse = new Response();
     Map<String, Object> responseMap2 = new HashMap<>();
     responseMap2.put(Constants.RESPONSE, Constants.SUCCESS);
     upsertResponse.getResult().putAll(responseMap2);
     PowerMockito.when(cassandraOperation.upsertRecord(Mockito.any(), Mockito.any(), Mockito.any()))
-            .thenReturn(upsertResponse);
+        .thenReturn(upsertResponse);
   }
+
   private List<Feed> getFeedList(boolean needId) {
     Feed feed = new Feed();
     feed.setUserId("123-456-7890");
@@ -120,5 +135,14 @@ public class FeedUtilTest {
     ShadowUser.ShadowUserBuilder user = new ShadowUser.ShadowUserBuilder();
     user.setChannel("SI");
     return user.build();
+  }
+
+  private List<Organisation> getFeedOrgs() {
+    Organisation org = new Organisation();
+    org.setChannel("dummyChannel");
+    org.setId("dummyId");
+    List<Organisation> orgList = new ArrayList<>();
+    orgList.add(org);
+    return orgList;
   }
 }

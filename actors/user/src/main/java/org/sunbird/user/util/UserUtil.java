@@ -760,6 +760,23 @@ public class UserUtil {
               }
             });
   }
+
+  public static Map<String, Object> validateManagedByUser(String managedBy) {
+    Future<Map<String, Object>> managedByInfoF =
+            esUtil.getDataByIdentifier(ProjectUtil.EsType.user.getTypeName(), managedBy);
+    Map<String, Object> managedByInfo = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(managedByInfoF);
+    if (ProjectUtil.isNull(managedByInfo)
+            || StringUtils.isBlank((String) managedByInfo.get(JsonKey.FIRST_NAME))
+            || StringUtils.isNotBlank((String) managedByInfo.get(JsonKey.MANAGED_BY))
+            || (null != managedByInfo.get(JsonKey.IS_DELETED) && (boolean) (managedByInfo.get(JsonKey.IS_DELETED))) ) {
+      throw new ProjectCommonException(
+              ResponseCode.invalidRequestData.getErrorCode(),
+              ResponseCode.invalidRequestData.getErrorMessage(),
+              ResponseCode.CLIENT_ERROR.getResponseCode());
+    }
+    UserUtility.decryptUserDataFrmES(managedByInfo);
+    return managedByInfo;
+  }
 }
 
 @FunctionalInterface

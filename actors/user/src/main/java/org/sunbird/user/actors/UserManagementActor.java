@@ -207,7 +207,7 @@ public class UserManagementActor extends BaseActor {
     Map<String, Boolean> userBooleanMap = updatedUserFlagsMap(userMap, userDbRecord);
     int userFlagValue = userFlagsToNum(userBooleanMap);
     requestMap.put(JsonKey.FLAGS_VALUE, userFlagValue);
-    if (StringUtils.isNotEmpty((String) requestMap.get(JsonKey.MANAGED_BY))
+    if (StringUtils.isNotEmpty((String) userDbRecord.get(JsonKey.MANAGED_BY))
             && (StringUtils.isNotEmpty((String) requestMap.get(JsonKey.EMAIL)))
         || (StringUtils.isNotEmpty((String) requestMap.get(JsonKey.PHONE)))) {
       requestMap.put(JsonKey.MANAGED_BY, null);
@@ -915,6 +915,15 @@ public class UserManagementActor extends BaseActor {
     } else {
       userBooleanMap.put(
           JsonKey.STATE_VALIDATED, (boolean) userDbRecord.get(JsonKey.STATE_VALIDATED));
+    }
+    // adding in release-3.0.0
+    // checks if user is managedBy other user and updates emailverified and phoneverified value
+    if (StringUtils.isNotEmpty((String) userDbRecord.get(JsonKey.MANAGED_BY))) {
+      if (userMap.containsKey("JsonKey.EMAIL")) {
+        emailVerified = true;
+      } else if (userMap.containsKey("JsonKey.PHONE")) {
+        phoneVerified = true;
+      }
     }
     userBooleanMap.put(JsonKey.EMAIL_VERIFIED, emailVerified);
     userBooleanMap.put(JsonKey.PHONE_VERIFIED, phoneVerified);

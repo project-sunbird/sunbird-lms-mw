@@ -151,6 +151,7 @@ public class UserManagementActor extends BaseActor {
   @SuppressWarnings("unchecked")
   private void updateUser(Request actorMessage) {
     Map<String, Object> targetObject = null;
+    boolean resetPasswordLink = false;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     actorMessage.toLower();
     Util.getUserProfileConfig(systemSettingActorRef);
@@ -206,6 +207,12 @@ public class UserManagementActor extends BaseActor {
     Map<String, Boolean> userBooleanMap = updatedUserFlagsMap(userMap, userDbRecord);
     int userFlagValue = userFlagsToNum(userBooleanMap);
     requestMap.put(JsonKey.FLAGS_VALUE, userFlagValue);
+    if (StringUtils.isNotEmpty((String) requestMap.get(JsonKey.MANAGED_BY))
+            && (StringUtils.isNotEmpty((String) requestMap.get(JsonKey.EMAIL)))
+        || (StringUtils.isNotEmpty((String) requestMap.get(JsonKey.PHONE)))) {
+      requestMap.put(JsonKey.MANAGED_BY, null);
+      resetPasswordLink = true;
+    }
     Response response =
         cassandraOperation.updateRecord(
             usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
@@ -227,7 +234,11 @@ public class UserManagementActor extends BaseActor {
     response.put(
         JsonKey.ERRORS,
         ((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE)).get(JsonKey.ERRORS));
+    if (resetPasswordLink) {
+      response = sendResetPasswordLink(requestMap);
+    }
     sender().tell(response, self());
+
     if (null != resp) {
       Map<String, Object> completeUserDetails = new HashMap<>(userDbRecord);
       completeUserDetails.putAll(requestMap);
@@ -451,7 +462,9 @@ public class UserManagementActor extends BaseActor {
         (String) actorMessage.getContext().get(JsonKey.REQUEST_SOURCE) != null
             ? (String) actorMessage.getContext().get(JsonKey.REQUEST_SOURCE)
             : "";
-    if (StringUtils.isNotBlank(version) && (JsonKey.VERSION_2.equalsIgnoreCase(version) || JsonKey.VERSION_3.equalsIgnoreCase(version))) {
+    if (StringUtils.isNotBlank(version)
+        && (JsonKey.VERSION_2.equalsIgnoreCase(version)
+            || JsonKey.VERSION_3.equalsIgnoreCase(version))) {
       userRequestValidator.validateCreateUserV2Request(actorMessage);
       if (StringUtils.isNotBlank(callerId)) {
         userMap.put(JsonKey.ROOT_ORG_ID, actorMessage.getContext().get(JsonKey.ROOT_ORG_ID));
@@ -807,25 +820,27 @@ public class UserManagementActor extends BaseActor {
     response.put(
         JsonKey.ERRORS,
         ((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE)).get(JsonKey.ERRORS));
-  
+
     Response syncResponse = new Response();
     syncResponse.putAll(response.getResult());
-    
-    if(null != resp && userMap.containsKey("sync") && (boolean)userMap.get("sync")) {
-        Map<String, Object> userDetails =
-                Util.getUserDetails(userId, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
+
+    if (null != resp && userMap.containsKey("sync") && (boolean) userMap.get("sync")) {
+      Map<String, Object> userDetails =
+          Util.getUserDetails(userId, getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()));
       Future<Response> future =
-        saveUserToES(userDetails).map(new Mapper<String, Response>() {
-          @Override
-          public Response apply(String parameter) {
-            return syncResponse;
-          }
-        },context().dispatcher());
+          saveUserToES(userDetails)
+              .map(
+                  new Mapper<String, Response>() {
+                    @Override
+                    public Response apply(String parameter) {
+                      return syncResponse;
+                    }
+                  },
+                  context().dispatcher());
       Patterns.pipe(future, getContext().dispatcher()).to(sender());
-    }
-    else {
+    } else {
       sender().tell(response, self());
-      if(null != resp) {
+      if (null != resp) {
         saveUserDetailsToEs(esResponse);
       }
     }
@@ -961,6 +976,25 @@ public class UserManagementActor extends BaseActor {
     EmailAndSmsRequest.getRequest().putAll(userMap);
     EmailAndSmsRequest.setOperation(UserActorOperations.PROCESS_ONBOARDING_MAIL_AND_SMS.getValue());
     tellToAnother(EmailAndSmsRequest);
+  }
+
+  private Response sendResetPasswordLink(Map<String, Object> userMap) {
+    Request passwordResetRequest = new Request();
+    if (StringUtils.isNotEmpty((String) userMap.get(JsonKey.EMAIL))) {
+      userMap.put(JsonKey.TYPE, JsonKey.EMAIL);
+    } else {
+      userMap.put(JsonKey.TYPE, JsonKey.PHONE);
+    }
+    passwordResetRequest.getRequest().putAll(userMap);
+    ProjectLogger.log(
+        "UserManagementActor: sendResetPasswordLink: sending reset password link to: "
+            + passwordResetRequest.getRequest().get(JsonKey.USER_ID),
+        LoggerEnum.INFO.name());
+    Response response =
+        (Response)
+            interServiceCommunication.getResponse(
+                getActorRef(ActorOperations.RESET_PASSWORD.getValue()), passwordResetRequest);
+    return response;
   }
 
   private Future<String> saveUserToES(Map<String, Object> completeUserMap) {

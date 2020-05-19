@@ -617,7 +617,7 @@ public class UserManagementActor extends BaseActor {
     if (StringUtils.isEmpty(managedBy)) {
       UserUtil.checkPhoneUniqueness((String) userMap.get(JsonKey.PHONE));
       UserUtil.checkEmailUniqueness((String) userMap.get(JsonKey.EMAIL));
-    }else{
+    } else{
       String channel = DataCacheHandler.getConfigSettings().get(JsonKey.CUSTODIAN_ORG_CHANNEL);
       String rootOrgId = DataCacheHandler.getConfigSettings().get(JsonKey.CUSTODIAN_ORG_ID);
       userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
@@ -784,8 +784,8 @@ public class UserManagementActor extends BaseActor {
     if (StringUtils.isNotEmpty(managedBy)) {
       Map<String, Object> managedByInfo = UserUtil.validateManagedByUser(managedBy);
 
-      managedByEmail = (String) managedByInfo.get(JsonKey.EMAIL);
-      managedByPhone = (String) managedByInfo.get(JsonKey.PHONE);
+      managedByEmail = (String) managedByInfo.get(JsonKey.ENC_EMAIL);
+      managedByPhone = (String) managedByInfo.get(JsonKey.ENC_PHONE);
     }
 
     UserUtil.toLower(userMap);
@@ -830,6 +830,7 @@ public class UserManagementActor extends BaseActor {
     } else {
       ProjectLogger.log("UserManagementActor:processUserRequest: User creation failure");
     }
+
     // Enable this when you want to send full response of user attributes
     Map<String, Object> esResponse = new HashMap<>();
     esResponse.putAll((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE));

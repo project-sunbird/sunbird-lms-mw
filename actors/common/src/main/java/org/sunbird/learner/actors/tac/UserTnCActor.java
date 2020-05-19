@@ -57,6 +57,12 @@ public class UserTnCActor extends BaseActor {
     String acceptedTnC = (String) request.getRequest().get(JsonKey.VERSION);
     Map<String, Object> userMap = new HashMap();
     String userId = (String) request.getContext().get(JsonKey.REQUESTED_BY);
+
+    //When managedProfile terms and conditions accepted, pick userId from request
+    String requestUserId = (String) request.getRequest().get(JsonKey.USER_ID);
+    if (StringUtils.isNotBlank(requestUserId)){
+      userId = requestUserId;
+    }
     SystemSettingClient systemSettingClient = SystemSettingClientImpl.getInstance();
     String latestTnC =
         systemSettingClient.getSystemSettingByFieldAndKey(
@@ -80,6 +86,16 @@ public class UserTnCActor extends BaseActor {
           ResponseCode.userNotFound.getErrorCode(),
           ResponseCode.userNotFound.getErrorMessage(),
           ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+    }
+
+    // Check whether user account is a child account(passed in request) wth managedBy is empty
+    if (StringUtils.isNotBlank(requestUserId)
+            && ProjectUtil.isNotNull(result)
+            && ProjectUtil.isNull(result.containsKey(JsonKey.MANAGED_BY))){
+      ProjectCommonException.throwClientErrorException(
+          ResponseCode.invalidParameterValue,
+          MessageFormat.format(
+              ResponseCode.invalidParameterValue.getErrorMessage(), userId, JsonKey.USER_ID));
     }
 
     // Check whether user account is locked or not

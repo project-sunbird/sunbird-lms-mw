@@ -25,9 +25,8 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
-import org.sunbird.telemetry.util.TelemetryLmaxWriter;
 import org.sunbird.telemetry.util.TelemetryUtil;
-import scala.concurrent.Await;
+import org.sunbird.telemetry.util.TelemetryWriter;
 import scala.concurrent.Future;
 
 /**
@@ -150,33 +149,15 @@ public class SearchHandlerActor extends BaseActor {
             },
             getContext().dispatcher());
     Patterns.pipe(response, getContext().dispatcher()).to(sender());
-    Response orgSearchResponse = null;
-    try {
-      orgSearchResponse = Await.result(response, BaseActor.timeout.duration());
-      String[] types = new String[] {indexType};
-      Map<String, Object> contentMap = new HashMap<>();
-      List<Object> contentList = new ArrayList<>();
-      if (orgSearchResponse != null
-          && MapUtils.isNotEmpty(orgSearchResponse.getResult())
-          && MapUtils.isNotEmpty(
-              (Map<String, Object>) orgSearchResponse.getResult().get(JsonKey.RESPONSE))) {
-        HashMap<String, Object> contentListMap =
-            (HashMap<String, Object>) orgSearchResponse.getResult().get(JsonKey.RESPONSE);
-        contentList.add(contentListMap.get(JsonKey.CONTENT));
-        if (CollectionUtils.isNotEmpty(contentList)) {
-          contentMap.put(JsonKey.CONTENT, contentList.get(0));
-          contentMap.put(
-              JsonKey.COUNT,
-              contentListMap.get(JsonKey.COUNT) != null ? contentListMap.get(JsonKey.COUNT) : 0);
-          generateSearchTelemetryEvent(searchDto, types, contentMap);
-        }
-      }
-    } catch (Exception e) {
-      ProjectLogger.log(
-          "SearchHandlerActor:handelOrgSearchAsyncRequest: Error occured in generating Telemetry for orgSearch  ",
-          e,
-          LoggerEnum.ERROR.name());
-    }
+    ProjectLogger.log("SearchHandlerActor:handleOrgSearchAsyncRequest: Telemetry disabled for search org api.",LoggerEnum.INFO.name());
+    Request telemetryReq = new Request();
+    Map<String, Object> telemetryContext = TelemetryUtil.getTelemetryContext();
+    telemetryReq.getRequest().put("context",telemetryContext);
+    telemetryReq.getRequest().put("searchFResponse",response);
+    telemetryReq.getRequest().put("indexType",indexType);
+    telemetryReq.getRequest().put("searchDto",searchDto);
+    telemetryReq.setOperation("generateSearchTelemetry");
+    tellToAnother(telemetryReq);
   }
 
   @SuppressWarnings("unchecked")
@@ -300,7 +281,7 @@ public class SearchHandlerActor extends BaseActor {
     // response
     Request req = new Request();
     req.setRequest(telemetryRequestForSearch(telemetryContext, params));
-    TelemetryLmaxWriter.getInstance().submitMessage(req);
+    TelemetryWriter.write(req);
   }
 
   private List<Map<String, Object>> generateTopnResult(Map<String, Object> result) {

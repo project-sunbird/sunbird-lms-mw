@@ -160,17 +160,18 @@ public class UserManagementActor extends BaseActor {
     if (actorMessage.getContext().containsKey(JsonKey.PRIVATE)) {
       isPrivate = (boolean) actorMessage.getContext().get(JsonKey.PRIVATE);
     }
-    if (!isPrivate) {
-      if (StringUtils.isNotBlank(callerId)) {
-        userService.validateUploader(actorMessage);
-      } else {
-        userService.validateUserId(actorMessage);
-      }
-    }
     Map<String, Object> userMap = actorMessage.getRequest();
     userRequestValidator.validateUpdateUserRequest(actorMessage);
     validateUserOrganisations(actorMessage, isPrivate);
     Map<String, Object> userDbRecord = UserUtil.validateExternalIdsAndReturnActiveUser(userMap);
+    String managedById = (String) userDbRecord.get(JsonKey.MANAGED_BY);
+    if (!isPrivate) {
+      if (StringUtils.isNotBlank(callerId)) {
+        userService.validateUploader(actorMessage);
+      } else {
+        userService.validateUserId(actorMessage, managedById);
+      }
+    }
     validateUserFrameworkData(userMap, userDbRecord);
     validateUserTypeForUpdate(userMap);
     User user = mapper.convertValue(userMap, User.class);
@@ -207,7 +208,7 @@ public class UserManagementActor extends BaseActor {
     Map<String, Boolean> userBooleanMap = updatedUserFlagsMap(userMap, userDbRecord);
     int userFlagValue = userFlagsToNum(userBooleanMap);
     requestMap.put(JsonKey.FLAGS_VALUE, userFlagValue);
-    if (StringUtils.isNotEmpty((String) userDbRecord.get(JsonKey.MANAGED_BY))
+    if (StringUtils.isNotEmpty(managedById)
             && (StringUtils.isNotEmpty((String) requestMap.get(JsonKey.EMAIL)))
         || (StringUtils.isNotEmpty((String) requestMap.get(JsonKey.PHONE)))) {
       requestMap.put(JsonKey.MANAGED_BY, null);
@@ -234,11 +235,11 @@ public class UserManagementActor extends BaseActor {
     response.put(
         JsonKey.ERRORS,
         ((Map<String, Object>) resp.getResult().get(JsonKey.RESPONSE)).get(JsonKey.ERRORS));
-    if (resetPasswordLink) {
-      response = sendResetPasswordLink(requestMap);
-    }
     sender().tell(response, self());
-
+    // Managed-users should get ResetPassword Link
+    if (resetPasswordLink) {
+      sendResetPasswordLink(requestMap);
+    }
     if (null != resp) {
       Map<String, Object> completeUserDetails = new HashMap<>(userDbRecord);
       completeUserDetails.putAll(requestMap);
@@ -917,7 +918,8 @@ public class UserManagementActor extends BaseActor {
           JsonKey.STATE_VALIDATED, (boolean) userDbRecord.get(JsonKey.STATE_VALIDATED));
     }
     // adding in release-3.0.0
-    // checks if user is managedBy other user and updates emailverified and phoneverified value
+    // checks if any user is managedBy other user and updates email/phone value corresponding flag
+    // emailverified/phoneverified is updated
     if (StringUtils.isNotEmpty((String) userDbRecord.get(JsonKey.MANAGED_BY))) {
       if (userMap.containsKey("JsonKey.EMAIL")) {
         emailVerified = true;
@@ -987,23 +989,8 @@ public class UserManagementActor extends BaseActor {
     tellToAnother(EmailAndSmsRequest);
   }
 
-  private Response sendResetPasswordLink(Map<String, Object> userMap) {
-    Request passwordResetRequest = new Request();
-    if (StringUtils.isNotEmpty((String) userMap.get(JsonKey.EMAIL))) {
-      userMap.put(JsonKey.TYPE, JsonKey.EMAIL);
-    } else {
-      userMap.put(JsonKey.TYPE, JsonKey.PHONE);
-    }
-    passwordResetRequest.getRequest().putAll(userMap);
-    ProjectLogger.log(
-        "UserManagementActor: sendResetPasswordLink: sending reset password link to: "
-            + passwordResetRequest.getRequest().get(JsonKey.USER_ID),
-        LoggerEnum.INFO.name());
-    Response response =
-        (Response)
-            interServiceCommunication.getResponse(
-                getActorRef(ActorOperations.RESET_PASSWORD.getValue()), passwordResetRequest);
-    return response;
+  private void sendResetPasswordLink(Map<String, Object> userMap) {
+    // need to add functionality for reset-passwordlink
   }
 
   private Future<String> saveUserToES(Map<String, Object> completeUserMap) {

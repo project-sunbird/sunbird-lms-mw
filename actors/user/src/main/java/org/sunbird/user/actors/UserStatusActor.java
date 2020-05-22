@@ -1,21 +1,21 @@
 package org.sunbird.user.actors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.text.MessageFormat;
-import java.util.HashMap;
-import java.util.Map;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.Status;
-import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
+
+import java.text.MessageFormat;
+import java.util.HashMap;
+import java.util.Map;
 
 @ActorConfig(
   tasks = {"unblockUser", "blockUser"},
@@ -27,7 +27,6 @@ public class UserStatusActor extends UserBaseActor {
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, TelemetryEnvKey.USER);
-    ExecutionContext.setRequestId(request.getRequestId());
     String operation = request.getOperation();
     switch (operation) {
       case "blockUser":
@@ -107,7 +106,7 @@ public class UserStatusActor extends UserBaseActor {
       ProjectLogger.log(logMsgPrefix + "Update user data to ES is skipped.");
     }
 
-    generateTelemetryEvent(request.getRequest(), userId, operation);
+    generateTelemetryEvent(request.getRequest(), userId, operation, request.getContext());
   }
 
   private Map<String, Object> getUserMapES(String userId, String updatedBy, boolean isDeleted) {

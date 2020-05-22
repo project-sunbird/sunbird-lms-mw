@@ -26,7 +26,7 @@ public abstract class UserBaseActor extends BaseActor {
   private UserService userService = UserServiceImpl.getInstance();
 
   protected void generateTelemetryEvent(
-      Map<String, Object> requestMap, String userId, String objectType) {
+      Map<String, Object> requestMap, String userId, String objectType , Map<String,Object> context) {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     Map<String, Object> targetObject =
         TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
@@ -49,7 +49,7 @@ public abstract class UserBaseActor extends BaseActor {
         // Do Nothing
     }
 
-    TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(telemetryAction, targetObject, correlatedObject, context);
   }
 
   protected ActorRef getSystemSettingActorRef() {

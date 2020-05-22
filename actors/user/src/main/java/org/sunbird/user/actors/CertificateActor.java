@@ -19,7 +19,6 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.datasecurity.DataMaskingService;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
-import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
@@ -104,7 +103,7 @@ public class CertificateActor extends UserBaseActor {
       userResult.setResponseCode(ResponseCode.success);
       sender().tell(userResult, self());
       sendMergeNotification(mergeeId, mergerId);
-      triggerMergeCertTelemetry(request);
+      triggerMergeCertTelemetry(request, certRequest.getContext());
     }
   }
 
@@ -360,7 +359,7 @@ public class CertificateActor extends UserBaseActor {
     telemetryMap.put(JsonKey.USER_ID, userId);
     telemetryMap.put(JsonKey.CERT_ID, certAddReqMap.get(JsonKey.ID));
     telemetryMap.put(JsonKey.ROOT_ORG_ID, user.getRootOrgId());
-    triggerAddCertTelemetry(telemetryMap);
+    triggerAddCertTelemetry(telemetryMap, request.getContext());
   }
 
   private Response reIssueCert(Map<String, Object> certAddReqMap, Map<String, Object> certUpdateReqMap) {
@@ -468,14 +467,14 @@ public class CertificateActor extends UserBaseActor {
     return false;
   }
 
-  private void triggerMergeCertTelemetry(Map telemetryMap) {
+  private void triggerMergeCertTelemetry(Map telemetryMap, Map<String,Object> context) {
     ProjectLogger.log(
         "UserMergeActor:triggerMergeCertTelemetry: generating telemetry event for merge certificate");
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     Map<String, String> rollUp = new HashMap<>();
     rollUp.put("l1", (String) telemetryMap.get(JsonKey.ROOT_ORG_ID));
-    ExecutionContext.getCurrent().getRequestContext().put(JsonKey.ROLLUP, rollUp);
+    context.put(JsonKey.ROLLUP, rollUp);
     targetObject =
         TelemetryUtil.generateTargetObject(
             (String) telemetryMap.get(JsonKey.FROM_ACCOUNT_ID),
@@ -495,17 +494,17 @@ public class CertificateActor extends UserBaseActor {
     telemetryMap.remove(JsonKey.ID);
     telemetryMap.remove(JsonKey.USER_ID);
     telemetryMap.remove(JsonKey.ROOT_ORG_ID);
-    TelemetryUtil.telemetryProcessingCall(telemetryMap, targetObject, correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(telemetryMap, targetObject, correlatedObject, context);
   }
 
-  private void triggerAddCertTelemetry(Map telemetryMap) {
+  private void triggerAddCertTelemetry(Map telemetryMap, Map<String,Object> context) {
     ProjectLogger.log(
         "UserMergeActor:triggerAddCertTelemetry: generating telemetry event for add certificate");
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     Map<String, String> rollUp = new HashMap<>();
     rollUp.put("l1", (String) telemetryMap.get(JsonKey.ROOT_ORG_ID));
-    ExecutionContext.getCurrent().getRequestContext().put(JsonKey.ROLLUP, rollUp);
+    context.put(JsonKey.ROLLUP, rollUp);
     if(null != telemetryMap.get(JsonKey.OLD_ID)){
       TelemetryUtil.generateCorrelatedObject(
               (String) telemetryMap.get(JsonKey.OLD_ID), JsonKey.OLD_CERTIFICATE, null, correlatedObject);
@@ -518,6 +517,6 @@ public class CertificateActor extends UserBaseActor {
     TelemetryUtil.generateCorrelatedObject(
         (String) telemetryMap.get(JsonKey.CERT_ID), JsonKey.CERTIFICATE, null, correlatedObject);
     telemetryMap.remove(JsonKey.ROOT_ORG_ID);
-    TelemetryUtil.telemetryProcessingCall(telemetryMap, targetObject, correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(telemetryMap, targetObject, correlatedObject, context);
   }
 }

@@ -22,7 +22,6 @@ import java.util.Map;
         asyncTasks = {"generateSearchTelemetry"}
 )
 public class SearchTelemetryGenerator extends BaseActor {
-    private String topn = PropertiesCache.getInstance().getProperty(JsonKey.SEARCH_TOP_N);
 
     @Override
     public void onReceive(Request request) throws Throwable {
@@ -41,7 +40,6 @@ public class SearchTelemetryGenerator extends BaseActor {
         Response orgSearchResponse = null;
         try {
             orgSearchResponse = Await.result(response, BaseActor.timeout.duration());
-            ProjectLogger.log("SearchTelemetryGenerator:generateTelemetry : Got the response: "+orgSearchResponse.getResult(),LoggerEnum.INFO.name());
             String[] types = new String[] {indexType};
             Map<String, Object> contentMap = new HashMap<>();
             List<Object> contentList = new ArrayList<>();
@@ -87,7 +85,7 @@ public class SearchTelemetryGenerator extends BaseActor {
     private List<Map<String, Object>> generateTopnResult(Map<String, Object> result) {
 
         List<Map<String, Object>> userMapList = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-        Integer topN = Integer.parseInt(topn);
+        Integer topN = Integer.parseInt(PropertiesCache.getInstance().getProperty(JsonKey.SEARCH_TOP_N));
 
         List<Map<String, Object>> list = new ArrayList<>();
         if (topN < userMapList.size()) {

@@ -17,12 +17,10 @@ import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
-import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.util.SearchTelemetryUtil;
 import org.sunbird.learner.util.Util;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import scala.concurrent.Future;
@@ -42,8 +40,6 @@ public class NotesManagementActor extends BaseActor {
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, TelemetryEnvKey.USER);
-    // set request id fto thread loacl...
-    ExecutionContext.setRequestId(request.getRequestId());
     switch (request.getOperation()) {
       case "createNote":
         createNote(request);
@@ -118,7 +114,7 @@ public class NotesManagementActor extends BaseActor {
       TelemetryUtil.addTargetObjectRollUp(rollup, targetObject);
 
       TelemetryUtil.telemetryProcessingCall(
-          actorMessage.getRequest(), targetObject, correlatedObject);
+          actorMessage.getRequest(), targetObject, correlatedObject, actorMessage.getContext());
 
       Request request = new Request();
       request.setOperation(ActorOperations.INSERT_USER_NOTES_ES.getValue());
@@ -188,7 +184,7 @@ public class NotesManagementActor extends BaseActor {
       TelemetryUtil.addTargetObjectRollUp(rollup, targetObject);
 
       TelemetryUtil.telemetryProcessingCall(
-          actorMessage.getRequest(), targetObject, correlatedObject);
+          actorMessage.getRequest(), targetObject, correlatedObject, actorMessage.getContext());
 
       Request request = new Request();
       request.getRequest().put(JsonKey.NOTE, req);
@@ -304,8 +300,6 @@ public class NotesManagementActor extends BaseActor {
       result = new HashMap<>();
     }
     String[] types = {EsType.usernotes.getTypeName()};
-    SearchTelemetryUtil.generateSearchTelemetryEvent(
-        searchDto, types, result); // generating search for telemetry
     return result;
   }
 
@@ -353,7 +347,7 @@ public class NotesManagementActor extends BaseActor {
       TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
 
       TelemetryUtil.telemetryProcessingCall(
-          actorMessage.getRequest(), targetObject, correlatedObject);
+          actorMessage.getRequest(), targetObject, correlatedObject, actorMessage.getContext());
 
       Request request = new Request();
       request.getRequest().put(JsonKey.NOTE, req);

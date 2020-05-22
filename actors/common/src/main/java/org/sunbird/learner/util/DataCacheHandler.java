@@ -8,9 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.*;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.role.service.RoleService;
 
@@ -22,6 +20,7 @@ import org.sunbird.learner.actors.role.service.RoleService;
 public class DataCacheHandler implements Runnable {
 
   private static Map<String, Object> roleMap = new ConcurrentHashMap<>();
+  private static Map<String, Object> telemetryPdata = new ConcurrentHashMap<>(3);
   private static Map<String, String> orgTypeMap = new ConcurrentHashMap<>();
   private static Map<String, String> configSettings = new ConcurrentHashMap<>();
   private static Map<String, Map<String, List<Map<String, String>>>> frameworkCategoriesMap =
@@ -39,9 +38,15 @@ public class DataCacheHandler implements Runnable {
     orgTypeCache(orgTypeMap);
     cacheSystemConfig(configSettings);
     cacheRoleForRead();
+    cacheTelemetryPdata(telemetryPdata);
     ProjectLogger.log("DataCacheHandler:run: Cache refresh completed.", LoggerEnum.INFO.name());
   }
 
+  private void cacheTelemetryPdata(Map<String, Object> telemetryPdata) {
+        telemetryPdata.put("telemetry_pdata_id", ProjectUtil.getConfigValue("telemetry_pdata_id"));
+        telemetryPdata.put("telemetry_pdata_pid", ProjectUtil.getConfigValue("telemetry_pdata_pid"));
+        telemetryPdata.put("telemetry_pdata_ver", ProjectUtil.getConfigValue("telemetry_pdata_ver"));
+  }
   private void cacheRoleForRead() {
     roleCacheResponse = RoleService.getUserRoles();
   }
@@ -49,7 +54,9 @@ public class DataCacheHandler implements Runnable {
   public static Response getRoleResponse() {
     return roleCacheResponse;
   }
-
+  public static Map<String, Object> getTelemetryPdata() {
+        return telemetryPdata;
+    }
   public static void setRoleResponse(Response response) {
     if (response != null) roleCacheResponse = response;
   }

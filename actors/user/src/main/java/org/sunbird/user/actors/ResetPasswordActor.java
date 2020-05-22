@@ -1,9 +1,6 @@
 package org.sunbird.user.actors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -12,17 +9,18 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.TelemetryEnvKey;
-import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
-import org.sunbird.services.sso.SSOManager;
-import org.sunbird.services.sso.SSOServiceFactory;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.dao.UserDao;
 import org.sunbird.user.dao.impl.UserDaoImpl;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /** This actor process the request for reset password. */
 @ActorConfig(
@@ -35,13 +33,11 @@ public class ResetPasswordActor extends BaseActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
-    // Generate Telemetry (initializing context)
     Util.initializeContext(request, TelemetryEnvKey.USER);
-    ExecutionContext.setRequestId(request.getRequestId());
     String userId = (String) request.get(JsonKey.USER_ID);
     String type = (String) request.get(JsonKey.TYPE);
     resetPassword(userId, type);
-    generateTelemetry(request.getRequest());
+    generateTelemetry(request);
   }
 
   private void resetPassword(String userId, String type) {
@@ -74,7 +70,7 @@ public class ResetPasswordActor extends BaseActor {
     }
   }
 
-  private void generateTelemetry(Map<String, Object> request) {
+  private void generateTelemetry(Request request) {
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     targetObject =
@@ -82,7 +78,7 @@ public class ResetPasswordActor extends BaseActor {
             (String) request.get(JsonKey.USER_ID), TelemetryEnvKey.USER, JsonKey.UPDATE, null);
     TelemetryUtil.generateCorrelatedObject(
         (String) request.get(JsonKey.USER_ID), TelemetryEnvKey.USER, null, correlatedObject);
-    TelemetryUtil.telemetryProcessingCall(request, targetObject, correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(request.getRequest(), targetObject, correlatedObject, request.getContext());
   }
 
   private User removeUnUsedIdentity(User user, String type) {

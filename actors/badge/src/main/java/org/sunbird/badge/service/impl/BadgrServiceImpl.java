@@ -99,7 +99,7 @@ public class BadgrServiceImpl implements BadgingService {
             BadgingJsonKey.BADGE_ISSUER,
             JsonKey.CREATE,
             null);
-    TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject, request.getContext());
 
     return response;
   }
@@ -217,7 +217,7 @@ public class BadgrServiceImpl implements BadgingService {
           issuerId, BadgingJsonKey.BADGE_ISSUER, null, correlatedObject);
       TelemetryUtil.generateCorrelatedObject(
           rootOrgId, JsonKey.ORGANISATION, null, correlatedObject);
-      TelemetryUtil.telemetryProcessingCall(requestData, targetObject, correlatedObject);
+      TelemetryUtil.telemetryProcessingCall(requestData, targetObject, correlatedObject, request.getContext());
 
     } catch (IOException e) {
       BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
@@ -362,7 +362,7 @@ public class BadgrServiceImpl implements BadgingService {
       targetObject =
           TelemetryUtil.generateTargetObject(
               badgeId, BadgingJsonKey.BADGE_CLASS, JsonKey.DELETE, null);
-      TelemetryUtil.telemetryProcessingCall(requestData, targetObject, correlatedObject);
+      TelemetryUtil.telemetryProcessingCall(requestData, targetObject, correlatedObject, requestMsg.getContext());
 
     } catch (IOException e) {
       BadgingUtil.throwBadgeClassExceptionOnErrorStatus(
@@ -430,7 +430,7 @@ public class BadgrServiceImpl implements BadgingService {
         BadgingJsonKey.BADGE_CLASS,
         null,
         correlatedObject);
-    TelemetryUtil.telemetryProcessingCall(requestedData, targetObject, correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(requestedData, targetObject, correlatedObject, request.getContext());
     return response;
   }
 
@@ -507,7 +507,7 @@ public class BadgrServiceImpl implements BadgingService {
         (String) requestedData.get(BadgingJsonKey.RECIPIENT_TYPE),
         null,
         correlatedObject);
-    TelemetryUtil.telemetryProcessingCall(requestedData, targetObject, correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(requestedData, targetObject, correlatedObject, request.getContext());
     return response;
   }
 
@@ -530,7 +530,7 @@ public class BadgrServiceImpl implements BadgingService {
 
     targetObject =
         TelemetryUtil.generateTargetObject(slug, BadgingJsonKey.BADGE_ISSUER, JsonKey.DELETE, null);
-    TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(req, targetObject, correlatedObject, request.getContext());
     return response;
   }
 

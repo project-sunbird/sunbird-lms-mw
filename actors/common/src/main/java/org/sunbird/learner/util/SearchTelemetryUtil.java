@@ -1,3 +1,4 @@
+/*
 package org.sunbird.learner.util;
 
 import java.util.ArrayList;
@@ -58,3 +59,4 @@ public class SearchTelemetryUtil {
     return map;
   }
 }
+*/

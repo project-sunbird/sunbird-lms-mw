@@ -15,7 +15,6 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.util.*;
-import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
@@ -52,7 +51,6 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, TelemetryEnvKey.ORGANISATION);
-    ExecutionContext.setRequestId(request.getRequestId());
     String operation = request.getOperation();
 
     if (operation.equalsIgnoreCase("orgBulkUpload")) {

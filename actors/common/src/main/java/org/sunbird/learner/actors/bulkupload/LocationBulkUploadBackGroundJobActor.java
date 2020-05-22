@@ -16,7 +16,6 @@ import org.sunbird.actorutil.location.impl.LocationClientImpl;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.BulkProcessStatus;
-import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.bulkupload.dao.BulkUploadProcessDao;
@@ -46,7 +45,6 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgrou
 
     String operation = request.getOperation();
     Util.initializeContext(request, TelemetryEnvKey.GEO_LOCATION);
-    ExecutionContext.setRequestId(request.getRequestId());
 
     switch (operation) {
       case "locationBulkUploadBackground":

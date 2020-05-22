@@ -31,7 +31,6 @@ import org.sunbird.common.models.util.StringFormatter;
 import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.models.util.datasecurity.DataMaskingService;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
-import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.feed.IFeedService;
@@ -88,7 +87,6 @@ public class TenantMigrationActor extends BaseActor {
   public void onReceive(Request request) throws Throwable {
     ProjectLogger.log("TenantMigrationActor:onReceive called.", LoggerEnum.INFO.name());
     Util.initializeContext(request, StringUtils.capitalize(JsonKey.CONSUMER));
-    ExecutionContext.setRequestId(request.getRequestId());
     String operation = request.getOperation();
     if (systemSettingActorRef == null) {
       systemSettingActorRef = getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue());
@@ -115,11 +113,9 @@ public class TenantMigrationActor extends BaseActor {
         userService.esGetPublicUserProfileById((String) request.getRequest().get(JsonKey.USER_ID));
     validateUserCustodianOrgId((String) userDetails.get(JsonKey.ROOT_ORG_ID));
     validateChannelAndGetRootOrgId(request);
-    // Add rollup for telemetry event
-    ExecutionContext context = ExecutionContext.getCurrent();
     Map<String, String> rollup = new HashMap<>();
     rollup.put("l1", (String) request.getRequest().get(JsonKey.ROOT_ORG_ID));
-    context.getRequestContext().put(JsonKey.ROLLUP, rollup);
+    request.getContext().put(JsonKey.ROLLUP, rollup);
     String orgId = validateOrgExternalIdOrOrgIdAndGetOrgId(request.getRequest());
     request.getRequest().put(JsonKey.ORG_ID, orgId);
     int userFlagValue = UserFlagEnum.STATE_VALIDATED.getUserFlagValue();
@@ -177,7 +173,7 @@ public class TenantMigrationActor extends BaseActor {
     targetObject =
         TelemetryUtil.generateTargetObject(
             (String) reqMap.get(JsonKey.USER_ID), TelemetryEnvKey.USER, MIGRATE, null);
-    TelemetryUtil.telemetryProcessingCall(reqMap, targetObject, correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(reqMap, targetObject, correlatedObject, request.getContext());
   }
 
   private void notify(Map<String, Object> userDetail) {

@@ -16,7 +16,6 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
-import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
@@ -51,9 +50,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
     @Override
     public void onReceive(Request request) throws Throwable {
         Util.initializeContext(request, SHADOW_USER_UPLOAD);
-        ExecutionContext.setRequestId(request.getRequestId());
         String operation = request.getOperation();
-        request.setContext( ExecutionContext.getCurrent().getRequestContext());
         if (operation.equalsIgnoreCase(BulkUploadActorOperation.USER_BULK_MIGRATION.getValue())) {
             uploadCsv(request);
         } else {
@@ -91,7 +88,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
         targetObject =
                 TelemetryUtil.generateTargetObject(
                         processId, StringUtils.capitalize(JsonKey.MIGRATION_USER_OBJECT), SHADOW_USER_UPLOAD, null);
-        TelemetryUtil.telemetryProcessingCall(mapper.convertValue(migrationUser,Map.class), targetObject, correlatedObject);
+        TelemetryUtil.telemetryProcessingCall(mapper.convertValue(migrationUser,Map.class), targetObject, correlatedObject,request.getContext());
     }
 
     private void insertRecord(BulkMigrationUser bulkMigrationUser){

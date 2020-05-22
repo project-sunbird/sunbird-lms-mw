@@ -14,7 +14,6 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
-import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
@@ -122,7 +121,7 @@ public class UserMergeActor extends UserBaseActor {
               });
 
       // create telemetry event for merge
-      triggerUserMergeTelemetry(telemetryMap, merger);
+      triggerUserMergeTelemetry(telemetryMap, merger, userRequest.getContext());
 
     } else {
       ProjectLogger.log(
@@ -217,14 +216,14 @@ public class UserMergeActor extends UserBaseActor {
     return mergeUserEvent;
   }
 
-  private void triggerUserMergeTelemetry(Map telemetryMap, User merger) {
+  private void triggerUserMergeTelemetry(Map telemetryMap, User merger, Map<String,Object> context) {
     ProjectLogger.log(
         "UserMergeActor:triggerUserMergeTelemetry: generating telemetry event for merge");
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     Map<String, String> rollUp = new HashMap<>();
     rollUp.put("l1", merger.getRootOrgId());
-    ExecutionContext.getCurrent().getRequestContext().put(JsonKey.ROLLUP, rollUp);
+    context.put(JsonKey.ROLLUP, rollUp);
     targetObject =
         TelemetryUtil.generateTargetObject(
             (String) telemetryMap.get(JsonKey.FROM_ACCOUNT_ID),
@@ -243,7 +242,7 @@ public class UserMergeActor extends UserBaseActor {
         correlatedObject);
     telemetryMap.remove(JsonKey.ID);
     telemetryMap.remove(JsonKey.USER_ID);
-    TelemetryUtil.telemetryProcessingCall(telemetryMap, targetObject, correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(telemetryMap, targetObject, correlatedObject, context);
   }
 
   private void mergeUserDetailsToEs(Request userRequest) {

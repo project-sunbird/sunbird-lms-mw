@@ -1,8 +1,6 @@
 /** */
 package org.sunbird.badge.actors;
 
-import java.io.IOException;
-import java.util.Map;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.badge.BadgeOperations;
@@ -11,14 +9,12 @@ import org.sunbird.badge.service.impl.BadgingFactory;
 import org.sunbird.badge.util.BadgeAssertionValidator;
 import org.sunbird.badge.util.BadgingUtil;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.BadgingJsonKey;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.TelemetryEnvKey;
-import org.sunbird.common.request.ExecutionContext;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.Request;
 import org.sunbird.learner.util.Util;
+
+import java.io.IOException;
+import java.util.Map;
 
 /** @author Manzarul */
 @ActorConfig(
@@ -35,7 +31,6 @@ public class BadgeAssertionActor extends BaseActor {
     String operation = request.getOperation();
 
     Util.initializeContext(request, TelemetryEnvKey.BADGE_ASSERTION);
-    ExecutionContext.setRequestId(request.getRequestId());
 
     switch (operation) {
       case "createBadgeAssertion":

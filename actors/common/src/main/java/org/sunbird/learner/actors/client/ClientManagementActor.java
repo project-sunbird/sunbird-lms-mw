@@ -11,7 +11,6 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
-import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
@@ -30,8 +29,6 @@ public class ClientManagementActor extends BaseActor {
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, TelemetryEnvKey.MASTER_KEY);
-    // set request id fto thread loacl...
-    ExecutionContext.setRequestId(request.getRequestId());
 
     if (request.getOperation().equalsIgnoreCase(ActorOperations.REGISTER_CLIENT.getValue())) {
       registerClient(request);
@@ -106,7 +103,7 @@ public class ClientManagementActor extends BaseActor {
 
     sender().tell(result, self());
     TelemetryUtil.telemetryProcessingCall(
-        actorMessage.getRequest(), targetObject, correlatedObject);
+        actorMessage.getRequest(), targetObject, correlatedObject, actorMessage.getContext());
   }
 
   /**
@@ -192,7 +189,7 @@ public class ClientManagementActor extends BaseActor {
     result.getResult().remove(JsonKey.RESPONSE);
     sender().tell(result, self());
     TelemetryUtil.telemetryProcessingCall(
-        actorMessage.getRequest(), targetObject, correlatedObject);
+        actorMessage.getRequest(), targetObject, correlatedObject, actorMessage.getContext());
   }
 
   /**

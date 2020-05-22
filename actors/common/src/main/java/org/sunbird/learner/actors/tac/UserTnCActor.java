@@ -24,7 +24,6 @@ import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
@@ -44,8 +43,6 @@ public class UserTnCActor extends BaseActor {
   @Override
   public void onReceive(Request request) throws Throwable {
     String operation = request.getOperation();
-    ExecutionContext.setRequestId(request.getRequestId());
-
     if (operation.equalsIgnoreCase(ActorOperations.USER_TNC_ACCEPT.getValue())) {
       acceptTNC(request);
     } else {
@@ -54,6 +51,7 @@ public class UserTnCActor extends BaseActor {
   }
 
   private void acceptTNC(Request request) {
+    Util.initializeContext(request,JsonKey.USER);
     String acceptedTnC = (String) request.getRequest().get(JsonKey.VERSION);
     Map<String, Object> userMap = new HashMap();
     String userId = (String) request.getContext().get(JsonKey.REQUESTED_BY);
@@ -106,7 +104,7 @@ public class UserTnCActor extends BaseActor {
         syncUserDetails(userMap);
       }
       sender().tell(response, self());
-      generateTelemetry(userMap, acceptedTnC, lastAcceptedVersion);
+      generateTelemetry(userMap, lastAcceptedVersion, request.getContext());
     } else {
       response.getResult().put(JsonKey.RESPONSE, JsonKey.SUCCESS);
       sender().tell(response, self());
@@ -114,7 +112,7 @@ public class UserTnCActor extends BaseActor {
   }
 
   private void generateTelemetry(
-      Map<String, Object> userMap, String acceptedTnCVersion, String lastAcceptedVersion) {
+          Map<String, Object> userMap, String lastAcceptedVersion, Map<String, Object> context) {
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     targetObject =
@@ -123,7 +121,7 @@ public class UserTnCActor extends BaseActor {
             JsonKey.USER,
             JsonKey.UPDATE,
             lastAcceptedVersion);
-    TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(userMap, targetObject, correlatedObject,context);
     ProjectLogger.log(
         "UserTnCActor:syncUserDetails: Telemetry generation call ended ", LoggerEnum.INFO.name());
   }

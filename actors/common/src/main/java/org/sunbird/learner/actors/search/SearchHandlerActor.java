@@ -17,7 +17,6 @@ import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
-import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.responsecode.ResponseMessage;
@@ -50,8 +49,6 @@ public class SearchHandlerActor extends BaseActor {
   public void onReceive(Request request) throws Throwable {
     request.toLower();
     Util.initializeContext(request, TelemetryEnvKey.USER);
-    // set request id fto thread loacl...
-    ExecutionContext.setRequestId(request.getRequestId());
     String requestedFields = (String) request.getContext().get(JsonKey.FIELDS);
 
     if (request.getOperation().equalsIgnoreCase(ActorOperations.COMPOSITE_SEARCH.getValue())) {
@@ -81,9 +78,8 @@ public class SearchHandlerActor extends BaseActor {
       Map<String, Object> result = null;
       if (EsType.organisation.getTypeName().equalsIgnoreCase(filterObjectType)) {
         handleOrgSearchAsyncRequest(
-            ProjectUtil.EsIndex.sunbird.getIndexName(),
             EsType.organisation.getTypeName(),
-            searchDto);
+            searchDto,request.getContext());
       } else {
         Future<Map<String, Object>> resultF = esService.search(searchDto, types[0]);
         result = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
@@ -124,7 +120,7 @@ public class SearchHandlerActor extends BaseActor {
         }
         sender().tell(response, self());
         // create search telemetry event here ...
-        generateSearchTelemetryEvent(searchDto, types, result);
+        generateSearchTelemetryEvent(searchDto, types, result, request.getContext());
       }
     } else {
       onReceiveUnsupportedOperation(request.getOperation());
@@ -132,7 +128,7 @@ public class SearchHandlerActor extends BaseActor {
   }
 
   private void handleOrgSearchAsyncRequest(
-      String indexName, String indexType, SearchDTO searchDto) {
+      String indexType, SearchDTO searchDto, Map<String,Object> context) {
     Future<Map<String, Object>> futureResponse = esService.search(searchDto, indexType);
     Future<Response> response =
         futureResponse.map(
@@ -151,8 +147,7 @@ public class SearchHandlerActor extends BaseActor {
     Patterns.pipe(response, getContext().dispatcher()).to(sender());
     ProjectLogger.log("SearchHandlerActor:handleOrgSearchAsyncRequest: Telemetry disabled for search org api.",LoggerEnum.INFO.name());
     Request telemetryReq = new Request();
-    Map<String, Object> telemetryContext = TelemetryUtil.getTelemetryContext();
-    telemetryReq.getRequest().put("context",telemetryContext);
+    telemetryReq.getRequest().put("context",context);
     telemetryReq.getRequest().put("searchFResponse",response);
     telemetryReq.getRequest().put("indexType",indexType);
     telemetryReq.getRequest().put("searchDto",searchDto);
@@ -267,9 +262,7 @@ public class SearchHandlerActor extends BaseActor {
   }
 
   private void generateSearchTelemetryEvent(
-      SearchDTO searchDto, String[] types, Map<String, Object> result) {
-
-    Map<String, Object> telemetryContext = TelemetryUtil.getTelemetryContext();
+      SearchDTO searchDto, String[] types, Map<String, Object> result, Map<String, Object> context) {
 
     Map<String, Object> params = new HashMap<>();
     params.put(JsonKey.TYPE, String.join(",", types));
@@ -280,7 +273,7 @@ public class SearchHandlerActor extends BaseActor {
     params.put(JsonKey.TOPN, generateTopnResult(result)); // need to get topn value from
     // response
     Request req = new Request();
-    req.setRequest(telemetryRequestForSearch(telemetryContext, params));
+    req.setRequest(telemetryRequestForSearch(context, params));
     TelemetryWriter.write(req);
   }
 

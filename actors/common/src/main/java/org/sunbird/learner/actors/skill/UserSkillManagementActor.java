@@ -36,7 +36,6 @@ import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
-import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
@@ -70,8 +69,6 @@ public class UserSkillManagementActor extends BaseActor {
   public void onReceive(Request request) throws Throwable {
     String operation = request.getOperation();
     Util.initializeContext(request, TelemetryEnvKey.USER);
-    // set request id fto thread loacl...
-    ExecutionContext.setRequestId(request.getRequestId());
 
     switch (operation) {
       case "addSkill":
@@ -636,7 +633,7 @@ public class UserSkillManagementActor extends BaseActor {
     Map<String, Object> targetObject;
     targetObject = TelemetryUtil.generateTargetObject(userId, JsonKey.USER, JsonKey.UPDATE, null);
     TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
-    TelemetryUtil.telemetryProcessingCall(request.getRequest(), targetObject, correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(request.getRequest(), targetObject, correlatedObject, request.getContext());
   }
 
   private void validateUserRootOrg(String requestedUserId, String endorsedUserId) {

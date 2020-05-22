@@ -16,7 +16,6 @@ import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
-import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
@@ -66,10 +65,7 @@ public class DbOperationActor extends BaseActor {
 
   @Override
   public void onReceive(Request actorMessage) throws Throwable {
-
     Util.initializeContext(actorMessage, TelemetryEnvKey.OBJECT_STORE);
-    // set request id to thread local...
-    ExecutionContext.setRequestId(actorMessage.getRequestId());
     if (null == tableList) {
       createtableList();
     }
@@ -172,7 +168,7 @@ public class DbOperationActor extends BaseActor {
       generateSearchTelemetryEvent(
           searchDto,
           new String[] {ES_INDEX_NAME},
-          (Map<String, Object>) response.get(JsonKey.RESPONSE));
+          (Map<String, Object>) response.get(JsonKey.RESPONSE),reqObj.getContext());
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);
       sender().tell(ex, self());
@@ -239,7 +235,7 @@ public class DbOperationActor extends BaseActor {
             (String) reqObj.getRequest().get(JsonKey.ID));
       }
       sender().tell(response, self());
-      generateTelemetryObjectStore(reqObj, JsonKey.DELETE);
+      generateTelemetryObjectStore(reqObj);
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);
       sender().tell(ex, self());
@@ -299,7 +295,7 @@ public class DbOperationActor extends BaseActor {
         }
       }
       sender().tell(response, self());
-      generateTelemetryObjectStore(reqObj, JsonKey.UPDATE);
+      generateTelemetryObjectStore(reqObj);
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);
       sender().tell(ex, self());
@@ -338,7 +334,7 @@ public class DbOperationActor extends BaseActor {
         }
       }
       sender().tell(response, self());
-      generateTelemetryObjectStore(reqObj, JsonKey.CREATE);
+      generateTelemetryObjectStore(reqObj);
     } catch (Exception ex) {
       ProjectLogger.log(ex.getMessage(), ex);
       sender().tell(ex, self());
@@ -438,10 +434,8 @@ public class DbOperationActor extends BaseActor {
   }
 
   private void generateSearchTelemetryEvent(
-      SearchDTO searchDto, String[] types, Map<String, Object> result) {
-
-    Map<String, Object> telemetryContext = TelemetryUtil.getTelemetryContext();
-    Map<String, Object> params = new HashMap<>();
+      SearchDTO searchDto, String[] types, Map<String, Object> result, Map<String,Object> context) {
+      Map<String, Object> params = new HashMap<>();
     params.put(JsonKey.QUERY, searchDto.getQuery());
     params.put(JsonKey.FILTERS, searchDto.getAdditionalProperties().get(JsonKey.FILTERS));
     params.put(JsonKey.SORT, searchDto.getSortBy());
@@ -450,7 +444,7 @@ public class DbOperationActor extends BaseActor {
     params.put(JsonKey.TYPE, String.join(",", types));
 
     Request request = new Request();
-    request.setRequest(telemetryRequestForSearch(telemetryContext, params));
+    request.setRequest(telemetryRequestForSearch(context, params));
     TelemetryWriter.write(request);
   }
 
@@ -476,7 +470,7 @@ public class DbOperationActor extends BaseActor {
     return map;
   }
 
-  private static void generateTelemetryObjectStore(Request reqObj, String opKey) {
+  private static void generateTelemetryObjectStore(Request reqObj) {
     Map<String, Object> targetObject =
         TelemetryUtil.generateTargetObject(
             (String) ((Map<String, Object>) reqObj.getRequest().get(PAYLOAD)).get(JsonKey.ID),
@@ -484,6 +478,6 @@ public class DbOperationActor extends BaseActor {
             JsonKey.CREATE,
             null);
     TelemetryUtil.telemetryProcessingCall(
-        (Map<String, Object>) reqObj.getRequest().get(PAYLOAD), targetObject, new ArrayList<>());
+        (Map<String, Object>) reqObj.getRequest().get(PAYLOAD), targetObject, new ArrayList<>(),reqObj.getContext());
   }
 }

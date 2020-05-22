@@ -19,7 +19,6 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.models.util.fcm.Notification;
-import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
@@ -47,7 +46,6 @@ public class GeoLocationManagementActor extends BaseActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
-    ExecutionContext.setRequestId(request.getRequestId());
     Util.initializeContext(request, TelemetryEnvKey.GEO_LOCATION);
     if (request.getOperation().equalsIgnoreCase(ActorOperations.CREATE_GEO_LOCATION.getValue())) {
       createGeoLocation(request);
@@ -175,7 +173,7 @@ public class GeoLocationManagementActor extends BaseActor {
     targetObject =
         TelemetryUtil.generateTargetObject(locationId, JsonKey.LOCATION, JsonKey.DELETE, null);
     TelemetryUtil.telemetryProcessingCall(
-        actorMessage.getRequest(), targetObject, correlatedObject);
+        actorMessage.getRequest(), targetObject, correlatedObject, actorMessage.getContext());
   }
 
   /**
@@ -238,7 +236,7 @@ public class GeoLocationManagementActor extends BaseActor {
     targetObject =
         TelemetryUtil.generateTargetObject(locationId, JsonKey.LOCATION, JsonKey.UPDATE, null);
     TelemetryUtil.telemetryProcessingCall(
-        actorMessage.getRequest(), targetObject, correlatedObject);
+        actorMessage.getRequest(), targetObject, correlatedObject, actorMessage.getContext());
   }
 
   /**
@@ -372,7 +370,7 @@ public class GeoLocationManagementActor extends BaseActor {
       TelemetryUtil.generateCorrelatedObject(id, JsonKey.LOCATION, null, correlatedObject);
       TelemetryUtil.generateCorrelatedObject(rootOrgId, JsonKey.ROOT_ORG, null, correlatedObject);
       TelemetryUtil.telemetryProcessingCall(
-          actorMessage.getRequest(), targetObject, correlatedObject);
+          actorMessage.getRequest(), targetObject, correlatedObject, actorMessage.getContext());
     }
     finalResponse.getResult().put(JsonKey.RESPONSE, responseList);
     sender().tell(finalResponse, self());

@@ -1,9 +1,5 @@
 package org.sunbird.badge.actors;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.sunbird.actor.core.BaseActor;
@@ -15,13 +11,17 @@ import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
-import org.sunbird.common.request.ExecutionContext;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import scala.concurrent.Future;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 @ActorConfig(
   tasks = {},
@@ -34,9 +34,8 @@ public class UserBadgeAssertion extends BaseActor {
   private ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
-  public void onReceive(Request request) throws Throwable {
+  public void onReceive(Request request) {
     Util.initializeContext(request, TelemetryEnvKey.USER);
-    ExecutionContext.setRequestId(request.getRequestId());
     String operation = request.getOperation();
     if (BadgeOperations.assignBadgeToUser.name().equalsIgnoreCase(operation)) {
       addBadgeData(request);
@@ -137,10 +136,10 @@ public class UserBadgeAssertion extends BaseActor {
     Response reponse = new Response();
     reponse.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(reponse, self());
-    sendTelemetry(request.getRequest(), badge);
+    sendTelemetry(request, badge);
   }
 
-  private void sendTelemetry(Map<String, Object> map, Map<String, Object> badge) {
+  private void sendTelemetry(Request request, Map<String, Object> badge) {
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     Map<String, Object> targetObject;
     String userId = (String) badge.get(JsonKey.USER_ID);
@@ -151,6 +150,6 @@ public class UserBadgeAssertion extends BaseActor {
         null,
         correlatedObject);
     TelemetryUtil.generateCorrelatedObject(userId, JsonKey.USER, null, correlatedObject);
-    TelemetryUtil.telemetryProcessingCall(map, targetObject, correlatedObject);
+    TelemetryUtil.telemetryProcessingCall(request.getRequest(), targetObject, correlatedObject, request.getContext());
   }
 }

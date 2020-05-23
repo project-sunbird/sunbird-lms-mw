@@ -1,6 +1,5 @@
 package org.sunbird.learner.actors;
 
-import java.util.*;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
@@ -11,17 +10,15 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 import scala.concurrent.Future;
+
+import java.util.*;
 
 /**
  * This class will handle all the background job.
@@ -45,17 +42,6 @@ import scala.concurrent.Future;
   }
 )
 public class BackgroundJobManager extends BaseActor {
-
-  private static Map<String, String> headerMap = new HashMap<>();
-  private static Util.DbInfo dbInfo = null;
-
-  static {
-    headerMap.put("content-type", "application/json");
-    headerMap.put("accept", "application/json");
-  }
-
-  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -101,6 +87,7 @@ public class BackgroundJobManager extends BaseActor {
     Map<String, Object> userBadgeMap = actorMessage.getRequest();
     userBadgeMap.remove(JsonKey.OPERATION);
     DbInfo userbadge = Util.dbInfoMap.get(JsonKey.USER_BADGES_DB);
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     Response response =
         cassandraOperation.getRecordsByProperties(
             userbadge.getKeySpace(), userbadge.getTableName(), userBadgeMap);
@@ -144,6 +131,7 @@ public class BackgroundJobManager extends BaseActor {
     List<String> roles = (List<String>) actorMessage.getRequest().get(JsonKey.ROLES);
     String type = (String) actorMessage.get(JsonKey.TYPE);
     String orgId = (String) actorMessage.get(JsonKey.ORGANISATION_ID);
+    ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
     Future<Map<String, Object>> resultF =
         esService.getDataByIdentifier(
             ProjectUtil.EsType.user.getTypeName(), (String) actorMessage.get(JsonKey.USER_ID));
@@ -172,6 +160,7 @@ public class BackgroundJobManager extends BaseActor {
   @SuppressWarnings("unchecked")
   private void removeUserOrgInfoToEs(Request actorMessage) {
     Map<String, Object> orgMap = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
+    ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
     Future<Map<String, Object>> resultF =
         esService.getDataByIdentifier(
             ProjectUtil.EsType.user.getTypeName(), (String) orgMap.get(JsonKey.USER_ID));
@@ -203,6 +192,7 @@ public class BackgroundJobManager extends BaseActor {
   @SuppressWarnings("unchecked")
   private void updateUserOrgInfoToEs(Request actorMessage) {
     Map<String, Object> orgMap = (Map<String, Object>) actorMessage.getRequest().get(JsonKey.USER);
+    ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
     Future<Map<String, Object>> resultF =
         esService.getDataByIdentifier(
             ProjectUtil.EsType.user.getTypeName(), (String) orgMap.get(JsonKey.USER_ID));
@@ -237,6 +227,7 @@ public class BackgroundJobManager extends BaseActor {
     if (ProjectUtil.isNotNull(orgMap)) {
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
       String id = (String) orgMap.get(JsonKey.ID);
+      CassandraOperation cassandraOperation = ServiceFactory.getInstance();
       Response orgResponse =
           cassandraOperation.getRecordById(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), id);
       List<Map<String, Object>> orgList =
@@ -282,6 +273,7 @@ public class BackgroundJobManager extends BaseActor {
 
   private boolean updateDataToElastic(
       String indexName, String typeName, String identifier, Map<String, Object> data) {
+    ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
     Future<Boolean> responseF = esService.update(typeName, identifier, data);
     boolean response = (boolean) ElasticSearchHelper.getResponseFromFuture(responseF);
     if (response) {
@@ -328,7 +320,7 @@ public class BackgroundJobManager extends BaseActor {
      * ProfileCompletenessFactory.getInstance(); Map<String, Object> responsemap =
      * service.computeProfile(data); data.putAll(responsemap); }
      */
-
+    ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
     Future<String> responseF = esService.save(type, identifier, data);
     String response = (String) ElasticSearchHelper.getResponseFromFuture(responseF);
     ProjectLogger.log(

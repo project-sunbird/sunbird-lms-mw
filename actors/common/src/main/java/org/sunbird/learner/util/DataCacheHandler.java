@@ -1,14 +1,19 @@
 /** */
 package org.sunbird.learner.util;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.*;
+import org.sunbird.helper.CassandraConnectionManager;
+import org.sunbird.helper.CassandraConnectionMngrFactory;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.actors.role.service.RoleService;
 
@@ -30,6 +35,8 @@ public class DataCacheHandler implements Runnable {
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static final String KEY_SPACE_NAME = Util.KEY_SPACE_NAME;
   private static Response roleCacheResponse;
+  private static List<String> sunbirdPluginTableList = null;
+  private static Map<String, Integer> orderMap;
 
   @Override
   public void run() {
@@ -39,7 +46,40 @@ public class DataCacheHandler implements Runnable {
     cacheSystemConfig(configSettings);
     cacheRoleForRead();
     cacheTelemetryPdata(telemetryPdata);
+    createSunbirdPluginTableList();
+    initLocationOrderMap();
     ProjectLogger.log("DataCacheHandler:run: Cache refresh completed.", LoggerEnum.INFO.name());
+  }
+
+  private void initLocationOrderMap() {
+        if (orderMap == null) {
+            orderMap = new HashMap<>();
+
+            List<String> subTypeList =
+                    Arrays.asList(
+                            ProjectUtil.getConfigValue(GeoLocationJsonKey.SUNBIRD_VALID_LOCATION_TYPES)
+                                    .split(";"));
+            for (String str : subTypeList) {
+                List<String> typeList =
+                        (((Arrays.asList(str.split(","))).stream().map(String::toLowerCase))
+                                .collect(Collectors.toList()));
+                for (int i = 0; i < typeList.size(); i++) {
+                    orderMap.put(typeList.get(i), i);
+                }
+            }
+        }
+  }
+
+
+  public void createSunbirdPluginTableList() {
+      try {
+          CassandraConnectionManager manager =
+                  CassandraConnectionMngrFactory.getObject(
+                          PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_CASSANDRA_MODE));
+          sunbirdPluginTableList = manager.getTableList(JsonKey.SUNBIRD_PLUGIN);
+      } catch (Exception e) {
+           ProjectLogger.log("Error occurred" + e.getMessage(), e);
+      }
   }
 
   private void cacheTelemetryPdata(Map<String, Object> telemetryPdata) {
@@ -183,4 +223,8 @@ public class DataCacheHandler implements Runnable {
   public static void updateHashtagIdFrameworkIdMap(String hashtagId, List<String> frameworkIds) {
     DataCacheHandler.hashtagIdFrameworkIdMap.put(hashtagId, frameworkIds);
   }
+
+  public static List<String> getSunbirdPluginTableList() {return sunbirdPluginTableList;}
+
+  public static Map<String, Integer> getLocationOrderMap() {return orderMap;}
 }

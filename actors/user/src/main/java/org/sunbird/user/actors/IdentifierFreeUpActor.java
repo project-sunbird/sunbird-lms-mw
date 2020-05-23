@@ -35,7 +35,6 @@ import scala.concurrent.Future;
 public class IdentifierFreeUpActor extends BaseActor {
 
   private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-  public static final int FIRST_RECORD = 0;
 
   @Override
   public void onReceive(Request request) {
@@ -56,7 +55,7 @@ public class IdentifierFreeUpActor extends BaseActor {
           LoggerEnum.ERROR.name());
       ProjectCommonException.throwClientErrorException(ResponseCode.invalidUserId);
     }
-    return responseList.get(FIRST_RECORD);
+    return responseList.get(0);
   }
 
   private Response processUserAttribute(Map<String, Object> userDbMap, List<String> identifiers) {

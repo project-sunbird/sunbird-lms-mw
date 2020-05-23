@@ -33,8 +33,6 @@ import java.util.Map;
 )
 public class UserRoleActor extends UserBaseActor {
 
-  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, TelemetryEnvKey.USER);
@@ -84,6 +82,7 @@ public class UserRoleActor extends UserBaseActor {
     searchMap.put(JsonKey.USER_ID, userId);
     searchMap.put(JsonKey.ORGANISATION_ID, organisationId);
     searchMap.put(JsonKey.IS_DELETED, false);
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     Response res =
         cassandraOperation.getRecordsByProperties(JsonKey.SUNBIRD, JsonKey.USER_ORG, searchMap);
     List<Map<String, Object>> responseList = (List<Map<String, Object>>) res.get(JsonKey.RESPONSE);

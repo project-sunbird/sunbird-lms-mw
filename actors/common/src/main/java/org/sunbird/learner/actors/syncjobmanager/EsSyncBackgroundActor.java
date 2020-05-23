@@ -1,14 +1,5 @@
 package org.sunbird.learner.actors.syncjobmanager;
 
-import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
@@ -18,16 +9,17 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
+
+import java.text.MessageFormat;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 /** Background sync of data between Cassandra and Elastic Search. */
 @ActorConfig(
@@ -35,9 +27,6 @@ import org.sunbird.learner.util.Util.DbInfo;
   asyncTasks = {"backgroundSync"}
 )
 public class EsSyncBackgroundActor extends BaseActor {
-
-  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -52,7 +41,7 @@ public class EsSyncBackgroundActor extends BaseActor {
 
   private void sync(Request message) {
     ProjectLogger.log("EsSyncBackgroundActor: sync called", LoggerEnum.INFO);
-
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     long startTime = System.currentTimeMillis();
     Map<String, Object> req = message.getRequest();
     Map<String, Object> responseMap = new HashMap<>();
@@ -144,7 +133,7 @@ public class EsSyncBackgroundActor extends BaseActor {
         result.add(getOrgDetails(itr.next()));
       }
     }
-
+    ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
     esService.bulkInsert(getType(objectType), result);
     long stopTime = System.currentTimeMillis();
     long elapsedTime = stopTime - startTime;
@@ -160,6 +149,7 @@ public class EsSyncBackgroundActor extends BaseActor {
 
   private void handleUserSyncRequest(List<Object> objectIds) {
     if (CollectionUtils.isEmpty(objectIds)) {
+      CassandraOperation cassandraOperation = ServiceFactory.getInstance();
       Response response =
           cassandraOperation.getRecordsByProperties(
               JsonKey.SUNBIRD, JsonKey.USER, null, Arrays.asList(JsonKey.ID));
@@ -210,6 +200,7 @@ public class EsSyncBackgroundActor extends BaseActor {
 
   private Map<String, Object> getDetailsById(DbInfo dbInfo, String userId) {
     try {
+      CassandraOperation cassandraOperation = ServiceFactory.getInstance();
       Response response =
           cassandraOperation.getRecordById(dbInfo.getKeySpace(), dbInfo.getTableName(), userId);
       return ((((List<Map<String, Object>>) response.get(JsonKey.RESPONSE)).isEmpty())

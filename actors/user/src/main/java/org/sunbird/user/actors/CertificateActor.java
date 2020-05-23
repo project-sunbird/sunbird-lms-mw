@@ -38,17 +38,15 @@ import org.sunbird.user.service.impl.UserServiceImpl;
 public class CertificateActor extends UserBaseActor {
 
   private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private static Util.DbInfo certDbInfo = Util.dbInfoMap.get(JsonKey.USER_CERT);
-  private static Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+  private Util.DbInfo certDbInfo = Util.dbInfoMap.get(JsonKey.USER_CERT);
+  private Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
   private UserService userService = UserServiceImpl.getInstance();
-  DecryptionService decryptionService =
+  private DecryptionService decryptionService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
           "");
-  DataMaskingService maskingService =
+  private DataMaskingService maskingService =
       org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance("");
-  private static ObjectMapper objectMapper = new ObjectMapper();
-  private static final String ACCOUNT_MERGE_EMAIL_TEMPLATE = "accountMerge";
-  private static final String MASK_IDENTIFIER = "maskIdentifier";
+  private ObjectMapper objectMapper = new ObjectMapper();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -176,6 +174,7 @@ public class CertificateActor extends UserBaseActor {
 
   private HashMap<String, Object> createUserData(
       HashMap<String, Object> userMap, boolean isMergerAccount) {
+      String MASK_IDENTIFIER = "maskIdentifier";
     if (isMergerAccount) {
       if (StringUtils.isNotBlank((String) userMap.get(JsonKey.EMAIL))) {
         String deceryptedEmail = decryptionService.decryptData((String) userMap.get(JsonKey.EMAIL));
@@ -221,13 +220,14 @@ public class CertificateActor extends UserBaseActor {
       requestMap.put(JsonKey.RECIPIENT_PHONES, identifiers);
       requestMap.put(JsonKey.MODE, "sms");
     }
-    requestMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, ACCOUNT_MERGE_EMAIL_TEMPLATE);
+    requestMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, "accountMerge");
+    String MASK_IDENTIFIER = "maskIdentifier";
     String body =
         MessageFormat.format(
             ProjectUtil.getConfigValue(JsonKey.SUNBIRD_ACCOUNT_MERGE_BODY),
             ProjectUtil.getConfigValue(JsonKey.SUNBIRD_INSTALLATION),
-            (String) mergerUserData.get(MASK_IDENTIFIER),
-            (String) mergeeUserData.get(MASK_IDENTIFIER));
+            mergerUserData.get(MASK_IDENTIFIER),
+            mergeeUserData.get(MASK_IDENTIFIER));
     requestMap.put(JsonKey.BODY, body);
     requestMap.put(JsonKey.SUBJECT, ProjectUtil.getConfigValue("sunbird_account_merge_subject"));
     request.getRequest().put(JsonKey.EMAIL_REQUEST, requestMap);
@@ -394,7 +394,7 @@ public class CertificateActor extends UserBaseActor {
     return objectMapper.convertValue(certificate, Map.class);
   }
 
-  private static Timestamp getTimeStamp() {
+  private Timestamp getTimeStamp() {
     return new Timestamp(Calendar.getInstance().getTime().getTime());
   }
 

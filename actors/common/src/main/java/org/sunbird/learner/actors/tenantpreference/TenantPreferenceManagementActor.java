@@ -1,9 +1,5 @@
 package org.sunbird.learner.actors.tenantpreference;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -19,6 +15,11 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 /** Class for Tenant preferences . Created by arvind on 27/10/17. */
 @ActorConfig(
   tasks = {
@@ -29,10 +30,6 @@ import org.sunbird.learner.util.Util;
   asyncTasks = {}
 )
 public class TenantPreferenceManagementActor extends BaseActor {
-
-  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private Util.DbInfo tenantPreferenceDbInfo = Util.dbInfoMap.get(JsonKey.TENANT_PREFERENCE_DB);
-  private static final String DEFAULT_WILDCARD_ORG_ID = "*";
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -60,7 +57,7 @@ public class TenantPreferenceManagementActor extends BaseActor {
    */
   @SuppressWarnings("unchecked")
   private void getTenantPreference(Request actorMessage) {
-
+    String DEFAULT_WILDCARD_ORG_ID = "*";
     String orgId = (String) actorMessage.getRequest().get(JsonKey.ROOT_ORG_ID);
     ProjectLogger.log(
         "TenantPreferenceManagementActor-getTenantPreference called for org: " + orgId);
@@ -104,7 +101,7 @@ public class TenantPreferenceManagementActor extends BaseActor {
     List<Map<String, Object>> reqList =
         (List<Map<String, Object>>) actorMessage.getRequest().get(JsonKey.TENANT_PREFERENCE);
     List<Map<String, Object>> preferencesList = getPreferencesFromDB(orgId);
-
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     for (Map<String, Object> map : reqList) {
       Map<String, Object> preferenceObj = null;
       String key = (String) map.get(JsonKey.KEY);
@@ -127,7 +124,7 @@ public class TenantPreferenceManagementActor extends BaseActor {
                   orgId,
                   key,
                   "Preference setting not found for key: " + key + " for the org: " + orgId));
-
+        Util.DbInfo tenantPreferenceDbInfo = Util.dbInfoMap.get(JsonKey.TENANT_PREFERENCE_DB);
         // if preference is found
         if (null != preferenceObj) {
           preferenceObj.put(JsonKey.KEY, key);
@@ -180,7 +177,7 @@ public class TenantPreferenceManagementActor extends BaseActor {
           break;
         }
       }
-
+      CassandraOperation cassandraOperation = ServiceFactory.getInstance();
       // create the preference if not already exists
       if (!skip) {
         Map<String, Object> dbMap = new HashMap<String, Object>();
@@ -188,6 +185,7 @@ public class TenantPreferenceManagementActor extends BaseActor {
         dbMap.put(JsonKey.ORG_ID, orgId);
         dbMap.put(JsonKey.KEY, key);
         dbMap.put(JsonKey.DATA, map.get(JsonKey.DATA));
+        Util.DbInfo tenantPreferenceDbInfo = Util.dbInfoMap.get(JsonKey.TENANT_PREFERENCE_DB);
         cassandraOperation.insertRecord(
             tenantPreferenceDbInfo.getKeySpace(), tenantPreferenceDbInfo.getTableName(), dbMap);
         responseList.add(getResponseMap(orgId, key, null));
@@ -212,6 +210,8 @@ public class TenantPreferenceManagementActor extends BaseActor {
 
   @SuppressWarnings("unchecked")
   private List<Map<String, Object>> getPreferencesFromDB(String orgId) {
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+    Util.DbInfo tenantPreferenceDbInfo = Util.dbInfoMap.get(JsonKey.TENANT_PREFERENCE_DB);
     Response tenantPreferences =
         cassandraOperation.getRecordsByProperty(
             tenantPreferenceDbInfo.getKeySpace(),

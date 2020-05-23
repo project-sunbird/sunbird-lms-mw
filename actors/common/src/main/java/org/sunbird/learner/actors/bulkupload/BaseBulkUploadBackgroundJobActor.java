@@ -3,27 +3,12 @@ package org.sunbird.learner.actors.bulkupload;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.opencsv.CSVWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.common.Constants;
 import org.sunbird.common.exception.ProjectCommonException;
-import org.sunbird.common.models.util.BulkUploadJsonKey;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.util.CloudStorageUtil;
@@ -31,6 +16,13 @@ import org.sunbird.common.util.CloudStorageUtil.CloudStorageType;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
 import org.sunbird.learner.actors.bulkupload.model.StorageDetails;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.text.MessageFormat;
+import java.util.*;
+import java.util.function.Function;
 
 public abstract class BaseBulkUploadBackgroundJobActor extends BaseBulkUploadActor {
 

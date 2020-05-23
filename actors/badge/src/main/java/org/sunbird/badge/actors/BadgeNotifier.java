@@ -24,15 +24,11 @@ import java.util.List;
 )
 public class BadgeNotifier extends BaseActor {
 
-  private static final String INVALID_BADGE_NOTIFICATION_REQUEST =
-      "INVALID_BADGE_NOTIFICATION_REQUEST";
-  private static final List<String> asyncTasks =
-      Arrays.asList("assignBadgeMessage", "revokeBadgeMessage");
-
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, TelemetryEnvKey.USER);
-
+    List<String> asyncTasks =
+              Arrays.asList("assignBadgeMessage", "revokeBadgeMessage");
     String operation = request.getOperation();
     String objectType = (String) request.getRequest().get(JsonKey.OBJECT_TYPE);
     ProjectLogger.log(
@@ -51,6 +47,8 @@ public class BadgeNotifier extends BaseActor {
   private Response processBadge(String operation, String objectType, Request request)
       throws Exception {
     Response response;
+    String INVALID_BADGE_NOTIFICATION_REQUEST =
+              "INVALID_BADGE_NOTIFICATION_REQUEST";
     if (StringUtils.isBlank(objectType)) {
       response = invalidObjectType(INVALID_BADGE_NOTIFICATION_REQUEST, objectType);
     } else {

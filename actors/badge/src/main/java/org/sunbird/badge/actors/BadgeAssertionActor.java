@@ -4,7 +4,6 @@ package org.sunbird.badge.actors;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.badge.BadgeOperations;
-import org.sunbird.badge.service.BadgingService;
 import org.sunbird.badge.service.impl.BadgingFactory;
 import org.sunbird.badge.util.BadgeAssertionValidator;
 import org.sunbird.badge.util.BadgingUtil;
@@ -22,8 +21,6 @@ import java.util.Map;
   asyncTasks = {}
 )
 public class BadgeAssertionActor extends BaseActor {
-
-  BadgingService service = BadgingFactory.getInstance();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -64,7 +61,7 @@ public class BadgeAssertionActor extends BaseActor {
     String objectType = (String) actorMessage.getRequest().get(BadgingJsonKey.RECIPIENT_TYPE);
     String badgeId = (String) actorMessage.getRequest().get(BadgingJsonKey.BADGE_ID);
     BadgeAssertionValidator.validateRootOrg(recipientId, objectType, badgeId);
-    Response result = service.badgeAssertion(actorMessage);
+    Response result = BadgingFactory.getInstance().badgeAssertion(actorMessage);
     ProjectLogger.log(
         "BadgeAssertionActor:createAssertion: Assertion Response : " + result.getResult(),
         LoggerEnum.INFO.name());
@@ -92,7 +89,7 @@ public class BadgeAssertionActor extends BaseActor {
    * @param request Request
    */
   private void getAssertionDetails(Request request) throws IOException {
-    Response result = service.getAssertionDetails(request);
+    Response result = BadgingFactory.getInstance().getAssertionDetails(request);
     sender().tell(result, self());
   }
 
@@ -103,7 +100,7 @@ public class BadgeAssertionActor extends BaseActor {
    * @param request Request
    */
   private void getAssertionList(Request request) throws IOException {
-    Response result = service.getAssertionList(request);
+    Response result = BadgingFactory.getInstance().getAssertionList(request);
     sender().tell(result, self());
   }
 
@@ -113,7 +110,7 @@ public class BadgeAssertionActor extends BaseActor {
    * @param request Request
    */
   private void revokeAssertion(Request request) throws IOException {
-    Response result = service.revokeAssertion(request);
+    Response result = BadgingFactory.getInstance().revokeAssertion(request);
     sender().tell(result, self());
     Map<String, Object> map = BadgingUtil.createRevokeBadgeNotifierMap(request.getRequest());
     Request notificationReq = new Request();

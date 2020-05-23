@@ -29,8 +29,6 @@ import java.util.Map;
 )
 public class ResetPasswordActor extends BaseActor {
 
-  ObjectMapper mapper = new ObjectMapper();
-
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, TelemetryEnvKey.USER);
@@ -43,6 +41,7 @@ public class ResetPasswordActor extends BaseActor {
   private void resetPassword(String userId, String type) {
     ProjectLogger.log("ResetPasswordActor:resetPassword: method called.", LoggerEnum.INFO.name());
     User user = getUserDao().getUserById(userId);
+    ObjectMapper mapper = new ObjectMapper();
     if (null != user) {
       user = removeUnUsedIdentity(user, type);
       Map<String, Object> userMap = mapper.convertValue(user, Map.class);

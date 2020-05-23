@@ -10,6 +10,7 @@ import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
+import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 import org.sunbird.location.dao.LocationDao;
 import org.sunbird.location.dao.impl.LocationDaoFactory;
@@ -36,15 +37,10 @@ import java.util.stream.Collectors;
   asyncTasks = {}
 )
 public class LocationActor extends BaseLocationActor {
-  private Map<String, Integer> orderMap;
-  private ObjectMapper mapper = new ObjectMapper();
-  private LocationDao locationDao = LocationDaoFactory.getInstance();
- 
+
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, TelemetryEnvKey.LOCATION);
-    initOrderMap();
-
     String operation = request.getOperation();
     switch (operation) {
       case "createLocation":
@@ -67,25 +63,6 @@ public class LocationActor extends BaseLocationActor {
     }
   }
 
-  private void initOrderMap() {
-    if (orderMap == null) {
-      orderMap = new HashMap<>();
-
-      List<String> subTypeList =
-          Arrays.asList(
-              ProjectUtil.getConfigValue(GeoLocationJsonKey.SUNBIRD_VALID_LOCATION_TYPES)
-                  .split(";"));
-      for (String str : subTypeList) {
-        List<String> typeList =
-            (((Arrays.asList(str.split(","))).stream().map(String::toLowerCase))
-                .collect(Collectors.toList()));
-        for (int i = 0; i < typeList.size(); i++) {
-          orderMap.put(typeList.get(i), i);
-        }
-      }
-    }
-  }
-
   private void getRelatedLocationIds(Request request) {
     Response response = new Response();
     List<String> relatedLocationIds =
@@ -96,6 +73,8 @@ public class LocationActor extends BaseLocationActor {
 
   private void createLocation(Request request) {
     try {
+      ObjectMapper mapper = new ObjectMapper();
+      LocationDao locationDao = LocationDaoFactory.getInstance();
       UpsertLocationRequest  locationRequest =  ProjectUtil.convertToRequestPojo(request, UpsertLocationRequest.class);
       validateUpsertLocnReq(locationRequest, JsonKey.CREATE);
       // put unique identifier in request for Id
@@ -115,6 +94,8 @@ public class LocationActor extends BaseLocationActor {
 
   private void updateLocation(Request request) {
     try {
+      ObjectMapper mapper = new ObjectMapper();
+      LocationDao locationDao = LocationDaoFactory.getInstance();
       UpsertLocationRequest  locationRequest =  ProjectUtil.convertToRequestPojo(request, UpsertLocationRequest.class);
       validateUpsertLocnReq(locationRequest, JsonKey.UPDATE);
       Location location = mapper.convertValue(locationRequest, Location.class);
@@ -144,11 +125,13 @@ public class LocationActor extends BaseLocationActor {
   }
 
   private Response searchLocation(Map<String, Object> searchMap) {
-    return locationDao.search(searchMap);
+      LocationDao locationDao = LocationDaoFactory.getInstance();
+      return locationDao.search(searchMap);
   }
 
   private void deleteLocation(Request request) {
     try {
+      LocationDao locationDao = LocationDaoFactory.getInstance();
       String locationId = (String) request.getRequest().get(JsonKey.LOCATION_ID);
       LocationRequestValidator.isLocationHasChild(locationId);
       Response response = locationDao.delete(locationId);
@@ -163,10 +146,6 @@ public class LocationActor extends BaseLocationActor {
   }
 
   private void saveDataToES(Map<String, Object> locData, String opType) {
-    if (isEventSyncEnabled()) {
-      ProjectLogger.log("LocationActor:saveDataToES: Event sync is enabled", LoggerEnum.INFO);
-      return;
-    }
     Request request = new Request();
     request.setOperation(LocationActorOperation.UPSERT_LOCATION_TO_ES.getValue());
     request.getRequest().put(JsonKey.LOCATION, locData);
@@ -177,17 +156,8 @@ public class LocationActor extends BaseLocationActor {
       ProjectLogger.log("LocationActor:saveDataToES: Exception occurred with error message = ", ex.getMessage());
     }
   }
-  
-  private boolean isEventSyncEnabled() { 
-    Boolean eventSync = Boolean.parseBoolean(getEventSyncSetting(JsonKey.LOCATION));
-    return eventSync;
-  }
 
   private void deleteDataFromES(String locId) {
-    if (isEventSyncEnabled()) {
-      ProjectLogger.log("LocationActor:deleteDataFromES: Event sync is enabled", LoggerEnum.INFO);
-      return;
-    }
     Request request = new Request();
     request.setOperation(LocationActorOperation.DELETE_LOCATION_FROM_ES.getValue());
     request.getRequest().put(JsonKey.LOCATION_ID, locId);
@@ -236,6 +206,7 @@ public class LocationActor extends BaseLocationActor {
     if (response != null) {
       List<Map<String, Object>> responseList =
           (List<Map<String, Object>>) response.getResult().get(JsonKey.RESPONSE);
+      ObjectMapper mapper = new ObjectMapper();
       return responseList
           .stream()
           .map(s -> mapper.convertValue(s, Location.class))
@@ -314,6 +285,6 @@ public class LocationActor extends BaseLocationActor {
   }
 
   public int getOrder(String type) {
-    return orderMap.get(type);
+    return DataCacheHandler.getLocationOrderMap().get(type);
   }
 }

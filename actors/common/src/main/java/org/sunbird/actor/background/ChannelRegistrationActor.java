@@ -1,10 +1,6 @@
 package org.sunbird.actor.background;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -15,16 +11,17 @@ import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.HttpUtil;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.Request;
 import org.sunbird.dto.SearchDTO;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import scala.concurrent.Future;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /** @author Amit Kumar */
 @ActorConfig(
@@ -32,9 +29,6 @@ import scala.concurrent.Future;
   asyncTasks = {"registerChannel"}
 )
 public class ChannelRegistrationActor extends BaseActor {
-
-  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -79,7 +73,7 @@ public class ChannelRegistrationActor extends BaseActor {
     map.put(JsonKey.ID, JsonKey.CHANNEL_REG_STATUS_ID);
     map.put(JsonKey.FIELD, JsonKey.CHANNEL_REG_STATUS);
     map.put(JsonKey.VALUE, String.valueOf(bool));
-
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     Response response = cassandraOperation.upsertRecord("sunbird", JsonKey.SYSTEM_SETTINGS_DB, map);
     ProjectLogger.log(
         "Upsert operation result for channel reg status =  "
@@ -97,6 +91,7 @@ public class ChannelRegistrationActor extends BaseActor {
     Map<String, Object> filter = new HashMap<>();
     filter.put(JsonKey.IS_ROOT_ORG, true);
     searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
+    ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
     Future<Map<String, Object>> esResponseF =
         esService.search(searchDto, ProjectUtil.EsType.organisation.getTypeName());
     Map<String, Object> esResponse =

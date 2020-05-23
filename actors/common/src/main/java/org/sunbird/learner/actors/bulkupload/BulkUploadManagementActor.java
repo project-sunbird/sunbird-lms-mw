@@ -1,13 +1,5 @@
 package org.sunbird.learner.actors.bulkupload;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.IOException;
-import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -21,9 +13,7 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.util.CloudStorageUtil;
 import org.sunbird.common.util.CloudStorageUtil.CloudStorageType;
 import org.sunbird.helper.ServiceFactory;
-import org.sunbird.learner.actors.bulkupload.dao.BulkUploadProcessTaskDao;
 import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessDaoImpl;
-import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessTaskDaoImpl;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
 import org.sunbird.learner.actors.bulkupload.model.StorageDetails;
@@ -31,10 +21,13 @@ import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
 
+import java.io.IOException;
+import java.text.MessageFormat;
+import java.util.*;
+
 /**
  * This actor will handle bulk upload operation .
  *
- * @author Amit Kumar
  */
 @ActorConfig(
   tasks = {"bulkUpload", "getBulkOpStatus", "getBulkUploadStatusDownloadLink"},
@@ -46,51 +39,6 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
   private Util.DbInfo bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
   private int userDataSize = 0;
   private int orgDataSize = 0;
-  BulkUploadProcessTaskDao bulkUploadProcessTaskDao = new BulkUploadProcessTaskDaoImpl();
-  private ObjectMapper mapper = new ObjectMapper();
-  private String[] bulkUserAllowedFields = {
-    JsonKey.FIRST_NAME,
-    JsonKey.LAST_NAME,
-    JsonKey.PHONE,
-    JsonKey.COUNTRY_CODE,
-    JsonKey.EMAIL,
-    JsonKey.USERNAME,
-    JsonKey.PHONE_VERIFIED,
-    JsonKey.EMAIL_VERIFIED,
-    JsonKey.ROLES,
-    JsonKey.POSITION,
-    JsonKey.GRADE,
-    JsonKey.LOCATION,
-    JsonKey.DOB,
-    JsonKey.GENDER,
-    JsonKey.LANGUAGE,
-    JsonKey.PROFILE_SUMMARY,
-    JsonKey.SUBJECT,
-    JsonKey.WEB_PAGES,
-    JsonKey.EXTERNAL_ID_PROVIDER,
-    JsonKey.EXTERNAL_ID,
-    JsonKey.EXTERNAL_ID_TYPE,
-    JsonKey.EXTERNAL_IDS
-  };
-
-  private String[] bulkBatchAllowedFields = {JsonKey.BATCH_ID, JsonKey.USER_IDs};
-  private String[] bulkOrgAllowedFields = {
-    JsonKey.ORGANISATION_NAME,
-    JsonKey.CHANNEL,
-    JsonKey.IS_ROOT_ORG,
-    JsonKey.PROVIDER,
-    JsonKey.EXTERNAL_ID,
-    JsonKey.DESCRIPTION,
-    JsonKey.HOME_URL,
-    JsonKey.ORG_CODE,
-    JsonKey.ORG_TYPE,
-    JsonKey.PREFERRED_LANGUAGE,
-    JsonKey.THEME,
-    JsonKey.CONTACT_DETAILS,
-    JsonKey.LOC_ID,
-    JsonKey.HASHTAGID,
-    JsonKey.LOCATION_CODE
-  };
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -298,6 +246,23 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
       validateFileSizeAgainstLineNumbers(orgDataSize, orgList.size());
       if (!orgList.isEmpty()) {
         String[] columns = orgList.get(0);
+        String[] bulkOrgAllowedFields = {
+                  JsonKey.ORGANISATION_NAME,
+                  JsonKey.CHANNEL,
+                  JsonKey.IS_ROOT_ORG,
+                  JsonKey.PROVIDER,
+                  JsonKey.EXTERNAL_ID,
+                  JsonKey.DESCRIPTION,
+                  JsonKey.HOME_URL,
+                  JsonKey.ORG_CODE,
+                  JsonKey.ORG_TYPE,
+                  JsonKey.PREFERRED_LANGUAGE,
+                  JsonKey.THEME,
+                  JsonKey.CONTACT_DETAILS,
+                  JsonKey.LOC_ID,
+                  JsonKey.HASHTAGID,
+                  JsonKey.LOCATION_CODE
+          };
         validateBulkUploadFields(columns, bulkOrgAllowedFields, false);
       } else {
         throw new ProjectCommonException(
@@ -393,6 +358,30 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
             LoggerEnum.INFO.name());
       }
       validateFileSizeAgainstLineNumbers(userDataSize, userList.size());
+      String[] bulkUserAllowedFields = {
+                JsonKey.FIRST_NAME,
+                JsonKey.LAST_NAME,
+                JsonKey.PHONE,
+                JsonKey.COUNTRY_CODE,
+                JsonKey.EMAIL,
+                JsonKey.USERNAME,
+                JsonKey.PHONE_VERIFIED,
+                JsonKey.EMAIL_VERIFIED,
+                JsonKey.ROLES,
+                JsonKey.POSITION,
+                JsonKey.GRADE,
+                JsonKey.LOCATION,
+                JsonKey.DOB,
+                JsonKey.GENDER,
+                JsonKey.LANGUAGE,
+                JsonKey.PROFILE_SUMMARY,
+                JsonKey.SUBJECT,
+                JsonKey.WEB_PAGES,
+                JsonKey.EXTERNAL_ID_PROVIDER,
+                JsonKey.EXTERNAL_ID,
+                JsonKey.EXTERNAL_ID_TYPE,
+                JsonKey.EXTERNAL_IDS
+        };
       if (!userList.isEmpty()) {
         String[] columns = userList.get(0);
         validateBulkUploadFields(columns, bulkUserAllowedFields, false);

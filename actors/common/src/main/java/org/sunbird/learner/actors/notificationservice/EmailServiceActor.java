@@ -1,12 +1,5 @@
 package org.sunbird.learner.actors.notificationservice;
 
-import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
@@ -38,21 +31,14 @@ import org.sunbird.notification.sms.provider.ISmsProvider;
 import org.sunbird.notification.utils.SMSFactory;
 import scala.concurrent.Future;
 
+import java.text.MessageFormat;
+import java.util.*;
+
 @ActorConfig(
   tasks = {"emailService"},
   asyncTasks = {"emailService"}
 )
 public class EmailServiceActor extends BaseActor {
-
-  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private DecryptionService decryptionService =
-      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
-          null);
-  private EncryptionService encryptionService =
-      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
-          null);
-  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
-  private static final String NOTIFICATION_MODE = "sms";
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -78,9 +64,8 @@ public class EmailServiceActor extends BaseActor {
     if (CollectionUtils.isEmpty(userIds)) {
       userIds = new ArrayList<>();
     }
-
     if (request.get(JsonKey.MODE) != null
-        && NOTIFICATION_MODE.equalsIgnoreCase((String) request.get(JsonKey.MODE))) {
+        && "sms".equalsIgnoreCase((String) request.get(JsonKey.MODE))) {
       List<String> phones = (List<String>) request.get(JsonKey.RECIPIENT_PHONES);
       if (CollectionUtils.isNotEmpty(phones)) {
         Iterator<String> itr = phones.iterator();
@@ -159,6 +144,9 @@ public class EmailServiceActor extends BaseActor {
     if (CollectionUtils.isEmpty(phones)) {
       phones = new ArrayList<String>();
     }
+    DecryptionService decryptionService =
+              org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
+                      null);
     if (CollectionUtils.isNotEmpty(userIds)) {
       List<Map<String, Object>> userList = getUsersFromDB(userIds);
       if (userIds.size() != userList.size()) {
@@ -219,6 +207,9 @@ public class EmailServiceActor extends BaseActor {
 
   private void validateUserIds(List<String> userIds, List<String> emails) {
     // Fetch private (masked in Elastic Search) user emails from Cassandra DB
+    DecryptionService decryptionService =
+              org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
+                      null);
     if (CollectionUtils.isNotEmpty(userIds)) {
       List<Map<String, Object>> userList = getUsersFromDB(userIds);
       if (userIds.size() != userList.size()) {
@@ -282,6 +273,7 @@ public class EmailServiceActor extends BaseActor {
     fields.add(JsonKey.FIRST_NAME);
     fields.add(JsonKey.EMAIL);
     fields.add(JsonKey.PHONE);
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     Response response =
         cassandraOperation.getRecordsByIdsWithSpecifiedColumns(
             usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), fields, userIdList);
@@ -312,7 +304,7 @@ public class EmailServiceActor extends BaseActor {
       Map<String, Object> esResult = Collections.emptyMap();
       try {
         Future<Map<String, Object>> esResultF =
-            esService.search(
+                EsClientFactory.getInstance(JsonKey.REST).search(
                 ElasticSearchHelper.createSearchDTO(recipientSearchQuery),
                 EsType.user.getTypeName());
         esResult = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(esResultF);
@@ -333,6 +325,9 @@ public class EmailServiceActor extends BaseActor {
           && CollectionUtils.isNotEmpty((List) esResult.get(JsonKey.CONTENT))) {
         List<Map<String, Object>> usersList =
             (List<Map<String, Object>>) esResult.get(JsonKey.CONTENT);
+        DecryptionService decryptionService =
+                  org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
+                          null);
         usersList.forEach(
             user -> {
               if (StringUtils.isNotBlank((String) user.get(JsonKey.EMAIL))) {
@@ -358,6 +353,7 @@ public class EmailServiceActor extends BaseActor {
     if (StringUtils.isNotBlank(orgName)) {
       return orgName;
     }
+    ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
     Future<Map<String, Object>> esUserResultF =
         esService.getDataByIdentifier(EsType.user.getTypeName(), usrId);
     Map<String, Object> esUserResult =
@@ -383,6 +379,9 @@ public class EmailServiceActor extends BaseActor {
 
   @SuppressWarnings("unchecked")
   private Map<String, Object> getUserInfo(String email) {
+    EncryptionService encryptionService =
+              org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
+                      null);
     String encryptedMail = "";
     try {
       encryptedMail = encryptionService.encryptData(email);
@@ -393,7 +392,7 @@ public class EmailServiceActor extends BaseActor {
     Map<String, Object> additionalProperties = new HashMap<>();
     additionalProperties.put(JsonKey.EMAIL, encryptedMail);
     searchDTO.addAdditionalProperty(JsonKey.FILTERS, additionalProperties);
-    Future<Map<String, Object>> esResultF = esService.search(searchDTO, EsType.user.getTypeName());
+    Future<Map<String, Object>> esResultF = EsClientFactory.getInstance(JsonKey.REST).search(searchDTO, EsType.user.getTypeName());
     Map<String, Object> esResult =
         (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(esResultF);
     if (MapUtils.isNotEmpty(esResult)

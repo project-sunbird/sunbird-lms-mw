@@ -5,12 +5,6 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
-import java.io.IOException;
-import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.location.LocationClient;
@@ -19,13 +13,7 @@ import org.sunbird.actorutil.org.OrganisationClient;
 import org.sunbird.actorutil.org.impl.OrganisationClientImpl;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LocationActorOperation;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.TelemetryEnvKey;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
@@ -34,12 +22,18 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.models.location.Location;
 import org.sunbird.models.organisation.Organisation;
 
+import java.io.IOException;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 @ActorConfig(
   tasks = {},
   asyncTasks = {"orgBulkUploadBackground"}
 )
 public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJobActor {
-  private OrganisationClient orgClient = new OrganisationClientImpl();
   private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
 
   @Override
@@ -197,6 +191,7 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
     row.put(JsonKey.LOCATION_CODE, locationCodes);
     String orgId;
     try {
+      OrganisationClient orgClient = new OrganisationClientImpl();
       orgId = orgClient.createOrg(getActorRef(ActorOperations.CREATE_ORG.getValue()), row);
     } catch (Exception ex) {
       ProjectLogger.log(
@@ -230,6 +225,7 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
     row.put(JsonKey.LOCATION_CODE, locationCodes);
     try {
       row.put(JsonKey.ORGANISATION_ID, org.getId());
+      OrganisationClient orgClient = new OrganisationClientImpl();
       orgClient.updateOrg(getActorRef(ActorOperations.UPDATE_ORG.getValue()), row);
     } catch (Exception ex) {
       ProjectLogger.log(

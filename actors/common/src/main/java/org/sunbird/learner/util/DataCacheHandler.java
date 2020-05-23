@@ -47,18 +47,21 @@ public class DataCacheHandler implements Runnable {
     cacheRoleForRead();
     cacheTelemetryPdata(telemetryPdata);
     createSunbirdPluginTableList();
-    initLocationOrderMap();
     ProjectLogger.log("DataCacheHandler:run: Cache refresh completed.", LoggerEnum.INFO.name());
   }
 
-  private void initLocationOrderMap() {
+  private static Map<String, Integer> initLocationOrderMap() {
         if (orderMap == null) {
             orderMap = new HashMap<>();
-
-            List<String> subTypeList =
-                    Arrays.asList(
-                            ProjectUtil.getConfigValue(GeoLocationJsonKey.SUNBIRD_VALID_LOCATION_TYPES)
-                                    .split(";"));
+            List<String> subTypeList;
+            try {
+            subTypeList =
+            Arrays.asList(
+                    ProjectUtil.getConfigValue(GeoLocationJsonKey.SUNBIRD_VALID_LOCATION_TYPES)
+                            .split(";"));
+            } catch (Exception ex) {
+                subTypeList = Arrays.asList("state,district,block;cluster".split(";"));
+            }
             for (String str : subTypeList) {
                 List<String> typeList =
                         (((Arrays.asList(str.split(","))).stream().map(String::toLowerCase))
@@ -68,6 +71,7 @@ public class DataCacheHandler implements Runnable {
                 }
             }
         }
+        return orderMap;
   }
 
 
@@ -227,5 +231,5 @@ public class DataCacheHandler implements Runnable {
 
   public static List<String> getSunbirdPluginTableList() {return sunbirdPluginTableList;}
 
-  public static Map<String, Integer> getLocationOrderMap() {return orderMap;}
+  public static Map<String, Integer> getLocationOrderMap() {return initLocationOrderMap();}
 }

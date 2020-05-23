@@ -2,7 +2,6 @@ package org.sunbird.learner.actors.search;
 
 import akka.dispatch.Mapper;
 import akka.pattern.Patterns;
-import java.util.*;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -24,9 +23,10 @@ import org.sunbird.dto.SearchDTO;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
-import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.telemetry.util.TelemetryWriter;
 import scala.concurrent.Future;
+
+import java.util.*;
 
 /**
  * This class will handle search operation for all different type of index and types
@@ -38,11 +38,6 @@ import scala.concurrent.Future;
   asyncTasks = {}
 )
 public class SearchHandlerActor extends BaseActor {
-
-  private List<String> supportedFields = Arrays.asList(JsonKey.ID, JsonKey.ORG_NAME);
-  private String topn = PropertiesCache.getInstance().getProperty(JsonKey.SEARCH_TOP_N);
-  private OrganisationClient orgClient = new OrganisationClientImpl();
-  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
 
   @SuppressWarnings({"unchecked", "rawtypes"})
   @Override
@@ -81,6 +76,7 @@ public class SearchHandlerActor extends BaseActor {
             EsType.organisation.getTypeName(),
             searchDto,request.getContext());
       } else {
+        ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
         Future<Map<String, Object>> resultF = esService.search(searchDto, types[0]);
         result = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
         Response response = new Response();
@@ -129,6 +125,7 @@ public class SearchHandlerActor extends BaseActor {
 
   private void handleOrgSearchAsyncRequest(
       String indexType, SearchDTO searchDto, Map<String,Object> context) {
+    ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
     Future<Map<String, Object>> futureResponse = esService.search(searchDto, indexType);
     Future<Response> response =
         futureResponse.map(
@@ -163,6 +160,7 @@ public class SearchHandlerActor extends BaseActor {
       try {
         List<String> fields = Arrays.asList(requestedFields.toLowerCase().split(","));
         List<String> filteredRequestedFields = new ArrayList<>();
+        List<String> supportedFields = Arrays.asList(JsonKey.ID, JsonKey.ORG_NAME);
         fields
             .stream()
             .forEach(
@@ -249,7 +247,7 @@ public class SearchHandlerActor extends BaseActor {
             });
 
     List<String> orgIds = new ArrayList<>(orgIdList);
-
+    OrganisationClient orgClient = new OrganisationClientImpl();
     List<Organisation> organisations = orgClient.esSearchOrgByIds(orgIds, filteredRequestedFileds);
     Map<String, Organisation> orgMap = new HashMap<>();
     organisations
@@ -280,7 +278,7 @@ public class SearchHandlerActor extends BaseActor {
   private List<Map<String, Object>> generateTopnResult(Map<String, Object> result) {
 
     List<Map<String, Object>> userMapList = (List<Map<String, Object>>) result.get(JsonKey.CONTENT);
-    Integer topN = Integer.parseInt(topn);
+    Integer topN = Integer.parseInt(PropertiesCache.getInstance().getProperty(JsonKey.SEARCH_TOP_N));
 
     List<Map<String, Object>> list = new ArrayList<>();
     if (topN < userMapList.size()) {

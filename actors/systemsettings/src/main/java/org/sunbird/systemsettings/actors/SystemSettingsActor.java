@@ -3,7 +3,6 @@ package org.sunbird.systemsettings.actors;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
-import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
@@ -27,10 +26,6 @@ import java.util.Map;
         asyncTasks = {}
 )
 public class SystemSettingsActor extends BaseActor {
-  private final ObjectMapper mapper = new ObjectMapper();
-  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private final SystemSettingDaoImpl systemSettingDaoImpl =
-          new SystemSettingDaoImpl(cassandraOperation);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -63,7 +58,8 @@ public class SystemSettingsActor extends BaseActor {
                       (String) actorMessage.getContext().get(JsonKey.FIELD),
                       value);
     }
-
+    SystemSettingDaoImpl systemSettingDaoImpl =
+              new SystemSettingDaoImpl(ServiceFactory.getInstance());
     if (setting == null) {
       setting =
               systemSettingDaoImpl.readByField((String) actorMessage.getContext().get(JsonKey.FIELD));
@@ -85,6 +81,8 @@ public class SystemSettingsActor extends BaseActor {
 
   private void getAllSystemSettings() {
     ProjectLogger.log("SystemSettingsActor: getAllSystemSettings called", LoggerEnum.DEBUG.name());
+    SystemSettingDaoImpl systemSettingDaoImpl =
+              new SystemSettingDaoImpl(ServiceFactory.getInstance());
     List<SystemSetting> allSystemSettings = systemSettingDaoImpl.readAll();
     Response response = new Response();
     response.put(JsonKey.RESPONSE, allSystemSettings);
@@ -105,8 +103,10 @@ public class SystemSettingsActor extends BaseActor {
               ResponseCode.errorUpdateSettingNotAllowed,
               MessageFormat.format(ResponseCode.errorUpdateSettingNotAllowed.getErrorMessage(), field));
     }
-
+    ObjectMapper mapper = new ObjectMapper();
     SystemSetting systemSetting = mapper.convertValue(request, SystemSetting.class);
+    SystemSettingDaoImpl systemSettingDaoImpl =
+              new SystemSettingDaoImpl(ServiceFactory.getInstance());
     Response response = systemSettingDaoImpl.write(systemSetting);
     sender().tell(response, self());
   }

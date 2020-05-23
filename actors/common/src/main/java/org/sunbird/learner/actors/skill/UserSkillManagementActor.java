@@ -1,22 +1,8 @@
 package org.sunbird.learner.actors.skill;
 
-import static org.sunbird.learner.util.Util.isNotNull;
-import static org.sunbird.learner.util.Util.isNull;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import java.sql.Timestamp;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -28,13 +14,8 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
-import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.models.util.datasecurity.OneWayHashing;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -47,6 +28,15 @@ import org.sunbird.models.user.skill.Skill;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import scala.concurrent.Future;
 
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.stream.Collectors;
+
+import static org.sunbird.learner.util.Util.isNotNull;
+import static org.sunbird.learner.util.Util.isNull;
+
 /**
  * Class to provide functionality for Add and Endorse the user skills . Created by arvind on
  * 18/10/17.
@@ -56,14 +46,6 @@ import scala.concurrent.Future;
   asyncTasks = {}
 )
 public class UserSkillManagementActor extends BaseActor {
-
-  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private Util.DbInfo userSkillDbInfo = Util.dbInfoMap.get(JsonKey.USER_SKILL_DB);
-  private Util.DbInfo skillsListDbInfo = Util.dbInfoMap.get(JsonKey.SKILLS_LIST_DB);
-  private Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-  private static final String REF_SKILLS_DB_ID = "001";
-  private UserSkillDao userSkillDao = UserSkillDaoImpl.getInstance();
-  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -160,6 +142,7 @@ public class UserSkillManagementActor extends BaseActor {
         if (CollectionUtils.isNotEmpty(removedSkillsList)) {
           List<String> idList =
               removedSkillsList.stream().map(skill -> skill.getId()).collect(Collectors.toList());
+          UserSkillDao userSkillDao = UserSkillDaoImpl.getInstance();
           Boolean deleted = userSkillDao.delete(idList);
           if (!deleted) {
             ProjectLogger.log(
@@ -183,6 +166,7 @@ public class UserSkillManagementActor extends BaseActor {
   }
 
   private void saveUserSkill(List<String> skillSet, String userId) {
+    UserSkillDao userSkillDao = UserSkillDaoImpl.getInstance();
     for (String skillName : skillSet) {
       String id =
           OneWayHashing.encryptVal(
@@ -213,6 +197,7 @@ public class UserSkillManagementActor extends BaseActor {
     List<String> fields = new ArrayList<>();
     fields.add(JsonKey.SKILLS);
     esDtoMap.put(JsonKey.FIELDS, fields);
+    ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
     Future<Map<String, Object>> resultF =
         esService.search(ElasticSearchHelper.createSearchDTO(esDtoMap), EsType.user.getTypeName());
     return (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
@@ -220,7 +205,9 @@ public class UserSkillManagementActor extends BaseActor {
 
   /** Method will return all the list of skills , it is type of reference data ... */
   private void getSkillsList() {
-
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+    Util.DbInfo skillsListDbInfo = Util.dbInfoMap.get(JsonKey.SKILLS_LIST_DB);
+    String REF_SKILLS_DB_ID = "001";
     ProjectLogger.log("UserSkillManagementActor:getSkillsList called");
     Map<String, Object> skills = new HashMap<>();
     Response skilldbresponse =
@@ -283,7 +270,7 @@ public class UserSkillManagementActor extends BaseActor {
     // object of telemetry event...
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
-
+    Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     String endoresedUserId = (String) actorMessage.getRequest().get(JsonKey.ENDORSED_USER_ID);
 
     List<String> list = (List<String>) actorMessage.getRequest().get(JsonKey.SKILL_NAME);
@@ -296,7 +283,7 @@ public class UserSkillManagementActor extends BaseActor {
         "UserSkillManagementActor:endorseSkill: context userId "
             + actorMessage.getContext().get(JsonKey.REQUESTED_BY),
         LoggerEnum.INFO.name());
-
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     ProjectLogger.log(
         "UserSkillManagementActor:endorseSkill: context endorsedUserId " + endoresedUserId,
         LoggerEnum.INFO.name());
@@ -339,7 +326,7 @@ public class UserSkillManagementActor extends BaseActor {
           ResponseCode.canNotEndorse.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
-
+    Util.DbInfo userSkillDbInfo = Util.dbInfoMap.get(JsonKey.USER_SKILL_DB);
     for (String skillName : skillset) {
 
       if (!StringUtils.isBlank(skillName)) {
@@ -470,7 +457,7 @@ public class UserSkillManagementActor extends BaseActor {
         OneWayHashing.encryptVal(
             endorsedUserId + JsonKey.PRIMARY_KEY_DELIMETER + skillName.toLowerCase());
     validateUserRootOrg(requestedUserId, endorsedUserId);
-
+    UserSkillDao userSkillDao = UserSkillDaoImpl.getInstance();
     Skill skill = userSkillDao.read(skillId);
     if (null == skill) {
       throw new ProjectCommonException(
@@ -490,7 +477,7 @@ public class UserSkillManagementActor extends BaseActor {
 
     List<HashMap<String, String>> endorsersList = skill.getEndorsersList();
     skill = updateEndorsersList(skill, endorsersList, endorsersId, endorsedId);
-
+    UserSkillDao userSkillDao = UserSkillDaoImpl.getInstance();
     userSkillDao.update(skill);
     updateES(endorsedId);
     Response response = new Response();
@@ -533,7 +520,9 @@ public class UserSkillManagementActor extends BaseActor {
   }
 
   private void updateMasterSkillsList(List<String> skillset) {
-
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+    Util.DbInfo skillsListDbInfo = Util.dbInfoMap.get(JsonKey.SKILLS_LIST_DB);
+    String REF_SKILLS_DB_ID = "001";
     Map<String, Object> skills = new HashMap<>();
     List<String> skillsList = null;
     Response skilldbresponse =
@@ -568,6 +557,9 @@ public class UserSkillManagementActor extends BaseActor {
 
     // get all records from cassandra as list and add that list to user in
     // ElasticSearch ...
+    Util.DbInfo userSkillDbInfo = Util.dbInfoMap.get(JsonKey.USER_SKILL_DB);
+    ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     Response response =
         cassandraOperation.getRecordsByProperty(
             userSkillDbInfo.getKeySpace(), userSkillDbInfo.getTableName(), JsonKey.USER_ID, userId);
@@ -651,6 +643,8 @@ public class UserSkillManagementActor extends BaseActor {
   }
 
   private Map<String, Object> getUser(String id, String parameter) {
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+    Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Response response =
         cassandraOperation.getRecordById(userDbInfo.getKeySpace(), userDbInfo.getTableName(), id);
     List<Map<String, Object>> responseUserList =

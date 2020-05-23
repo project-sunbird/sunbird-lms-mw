@@ -1,9 +1,5 @@
 package org.sunbird.learner.actors;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actor.core.BaseActor;
@@ -22,14 +18,16 @@ import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.Util;
 import scala.concurrent.Future;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 @ActorConfig(
   tasks = {},
   asyncTasks = {"updateUserCountToLocationID"}
 )
 public class BackGroundServiceActor extends BaseActor {
-
-  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private static ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -48,6 +46,7 @@ public class BackGroundServiceActor extends BaseActor {
     List<Object> locationIds = (List<Object>) actorMessage.getRequest().get(JsonKey.LOCATION_IDS);
     String operation = (String) actorMessage.getRequest().get(JsonKey.OPERATION);
     ProjectLogger.log("operation for updating UserCount" + operation);
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     Response response =
         cassandraOperation.getRecordsByProperty(
             locDbInfo.getKeySpace(), locDbInfo.getTableName(), JsonKey.ID, locationIds);
@@ -114,6 +113,7 @@ public class BackGroundServiceActor extends BaseActor {
     Map<String, Object> filter = new HashMap<>();
     filter.put(JsonKey.LOCATION_ID, locationId);
     searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
+    ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
     Future<Map<String, Object>> esResponseF =
         esService.search(searchDto, ProjectUtil.EsType.organisation.getTypeName());
     Map<String, Object> esResponse =

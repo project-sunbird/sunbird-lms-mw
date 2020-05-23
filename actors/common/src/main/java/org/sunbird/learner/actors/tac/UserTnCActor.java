@@ -1,13 +1,6 @@
 package org.sunbird.learner.actors.tac;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import java.sql.Timestamp;
-import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -19,11 +12,7 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
@@ -31,14 +20,15 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import scala.concurrent.Future;
 
+import java.sql.Timestamp;
+import java.text.MessageFormat;
+import java.util.*;
+
 @ActorConfig(
   tasks = {"userTnCAccept"},
   asyncTasks = {}
 )
 public class UserTnCActor extends BaseActor {
-  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -69,6 +59,7 @@ public class UserTnCActor extends BaseActor {
               ResponseCode.invalidParameterValue.getErrorMessage(), acceptedTnC, JsonKey.VERSION));
     }
     // Search user account in ES
+    ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
     Future<Map<String, Object>> resultF =
         esService.getDataByIdentifier(ProjectUtil.EsType.user.getTypeName(), userId);
     Map<String, Object> result =
@@ -97,6 +88,8 @@ public class UserTnCActor extends BaseActor {
       userMap.put(JsonKey.TNC_ACCEPTED_VERSION, acceptedTnC);
       userMap.put(
           JsonKey.TNC_ACCEPTED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
+      CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+      Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
       response =
           cassandraOperation.updateRecord(
               usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userMap);

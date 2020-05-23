@@ -1,12 +1,6 @@
 package org.sunbird.learner.actors.bulkupload;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
@@ -18,12 +12,19 @@ import org.sunbird.common.request.Request;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.util.Util;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 @ActorConfig(
   tasks = {"userBulkUpload"},
   asyncTasks = {}
 )
 public class UserBulkUploadActor extends BaseBulkUploadActor {
-  private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
+
   private String[] bulkUserAllowedFields = {
     JsonKey.FIRST_NAME,
     JsonKey.LAST_NAME,
@@ -65,6 +66,7 @@ public class UserBulkUploadActor extends BaseBulkUploadActor {
   @SuppressWarnings("unchecked")
   private void upload(Request request) throws IOException {
     Map<String, Object> req = (Map<String, Object>) request.getRequest().get(JsonKey.DATA);
+    SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
     Object dataObject =
         systemSettingClient.getSystemSettingByFieldAndKey(
             getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),

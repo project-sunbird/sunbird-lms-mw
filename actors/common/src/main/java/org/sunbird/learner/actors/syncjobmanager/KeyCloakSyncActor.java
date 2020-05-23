@@ -1,11 +1,5 @@
 package org.sunbird.learner.actors.syncjobmanager;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -13,11 +7,7 @@ import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.PropertiesCache;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.Request;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.UserUtility;
@@ -25,18 +15,15 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.services.sso.SSOManager;
 import org.sunbird.services.sso.SSOServiceFactory;
 
+import java.util.*;
+import java.util.Map.Entry;
+
 /** @author Amit Kumar */
 @ActorConfig(
   tasks = {"syncKeycloak"},
   asyncTasks = {}
 )
 public class KeyCloakSyncActor extends BaseActor {
-
-  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private boolean isSSOEnabled =
-      Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
-  private SSOManager ssoManager = SSOServiceFactory.getInstance();
-  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public void onReceive(Request actorMessage) throws Throwable {
@@ -56,6 +43,7 @@ public class KeyCloakSyncActor extends BaseActor {
   private void syncData(Request message) {
     ProjectLogger.log("USER DB data sync operation to keycloak started ");
     long startTime = System.currentTimeMillis();
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     Map<String, Object> req = message.getRequest();
     Map<String, Object> responseMap = new HashMap<>();
     List<Map<String, Object>> reponseList = null;
@@ -114,8 +102,12 @@ public class KeyCloakSyncActor extends BaseActor {
     // Decrypt user data
     UserUtility.decryptUserData(userMap);
     Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+    boolean isSSOEnabled =  Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
     if (isSSOEnabled) {
+      CassandraOperation cassandraOperation = ServiceFactory.getInstance();
       try {
+        SSOManager ssoManager = SSOServiceFactory.getInstance();
+        ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
         String res = ssoManager.syncUserData(userMap);
         if (!(!StringUtils.isBlank(res) && res.equalsIgnoreCase(JsonKey.SUCCESS))) {
           if (null == userMap.get(JsonKey.EMAIL_VERIFIED)) {

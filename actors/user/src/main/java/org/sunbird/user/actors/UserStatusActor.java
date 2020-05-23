@@ -10,6 +10,10 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
+import org.sunbird.services.sso.SSOManager;
+import org.sunbird.services.sso.SSOServiceFactory;
+import org.sunbird.user.dao.UserDao;
+import org.sunbird.user.dao.impl.UserDaoImpl;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 
@@ -22,7 +26,6 @@ import java.util.Map;
   asyncTasks = {}
 )
 public class UserStatusActor extends UserBaseActor {
-  private UserService userService = UserServiceImpl.getInstance();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -55,7 +58,7 @@ public class UserStatusActor extends UserBaseActor {
     String userId = (String) request.getRequest().get(JsonKey.USER_ID);
     String logMsgPrefix =
         MessageFormat.format("UserStatusActor:updateUserStatus:{0}:{1}: ", operation, userId);
-    User user = userService.getUserById(userId);
+    User user = UserServiceImpl.getInstance().getUserById(userId);
 
     if (operation.equals(ActorOperations.BLOCK_USER.getValue())
         && Boolean.TRUE.equals(user.getIsDeleted())) {
@@ -78,14 +81,15 @@ public class UserStatusActor extends UserBaseActor {
 
     ObjectMapper mapper = new ObjectMapper();
     User updatedUser = mapper.convertValue(userMapES, User.class);
-
+    SSOManager ssoManager = SSOServiceFactory.getInstance();
+    UserDao userDao = UserDaoImpl.getInstance();
     if (isBlocked) {
-      getSSOManager().deactivateUser(userMapES);
+          ssoManager.deactivateUser(userMapES);
     } else {
-      getSSOManager().activateUser(userMapES);
+          ssoManager.activateUser(userMapES);
     }
 
-    Response response = getUserDao().updateUser(updatedUser);
+    Response response = userDao.updateUser(updatedUser);
     sender().tell(response, self());
 
     // Update status in ES

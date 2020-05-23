@@ -2,14 +2,7 @@ package org.sunbird.learner.actors.bulkupload;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import java.sql.Timestamp;
-import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
@@ -19,12 +12,7 @@ import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.actorutil.user.UserClient;
 import org.sunbird.actorutil.user.impl.UserClientImpl;
-import org.sunbird.common.models.util.ActorOperations;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.TelemetryEnvKey;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
@@ -35,19 +23,21 @@ import org.sunbird.learner.util.Util;
 import org.sunbird.models.organisation.Organisation;
 import org.sunbird.validator.user.UserBulkUploadRequestValidator;
 
+import java.sql.Timestamp;
+import java.text.MessageFormat;
+import java.util.*;
+
 @ActorConfig(
   tasks = {},
   asyncTasks = {"userBulkUploadBackground"}
 )
 public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJobActor {
-  private UserClient userClient = new UserClientImpl();
-  private OrganisationClient organisationClient = new OrganisationClientImpl();
-  private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
 
   @Override
   public void onReceive(Request request) throws Throwable {
     String operation = request.getOperation();
     Util.initializeContext(request, TelemetryEnvKey.USER);
+    SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
     if (operation.equalsIgnoreCase("userBulkUploadBackground")) {
 
       Map outputColumns =
@@ -109,6 +99,8 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
     String data = task.getData();
     Organisation organisation = null;
     try {
+      ObjectMapper mapper = new ObjectMapper();
+      SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
       Map<String, Object> userMap = mapper.readValue(data, Map.class);
       String[] mandatoryColumnsObject =
           systemSettingClient.getSystemSettingByFieldAndKey(
@@ -236,6 +228,7 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
     ProjectLogger.log("UserBulkUploadBackgroundJobActor: callCreateUser called", LoggerEnum.INFO);
     String userId;
     try {
+      UserClient userClient = new UserClientImpl();
       userId = userClient.createUser(getActorRef(ActorOperations.CREATE_USER.getValue()), user);
     } catch (Exception ex) {
       ProjectLogger.log(
@@ -269,6 +262,7 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
     ProjectLogger.log("UserBulkUploadBackgroundJobActor: callUpdateUser called", LoggerEnum.INFO);
     try {
       user.put(JsonKey.ORG_NAME, orgName);
+      UserClient userClient = new UserClientImpl();
       userClient.updateUser(getActorRef(ActorOperations.UPDATE_USER.getValue()), user);
     } catch (Exception ex) {
       ProjectLogger.log(
@@ -280,12 +274,14 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
           task, ProjectUtil.BulkProcessStatus.FAILED, ex.getMessage(), user, JsonKey.UPDATE);
     }
     if (task.getStatus() != ProjectUtil.BulkProcessStatus.FAILED.getValue()) {
+      ObjectMapper mapper = new ObjectMapper();
       task.setData(mapper.writeValueAsString(user));
       setSuccessTaskStatus(task, ProjectUtil.BulkProcessStatus.COMPLETED, user, JsonKey.UPDATE);
     }
   }
 
   private Organisation getOrgDetails(Map<String, Object> userMap) {
+    OrganisationClient organisationClient = new OrganisationClientImpl();
     if (StringUtils.isNotBlank((String) userMap.get(JsonKey.ORG_EXTERNAL_ID))) {
       Map<String, Object> filters = new HashMap<>();
       filters.put(

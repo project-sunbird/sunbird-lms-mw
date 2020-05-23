@@ -2,11 +2,6 @@ package org.sunbird.user.actors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.IOException;
-import java.sql.Timestamp;
-import java.text.MessageFormat;
-import java.util.*;
-
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -30,25 +25,17 @@ import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 
+import java.io.IOException;
+import java.sql.Timestamp;
+import java.text.MessageFormat;
+import java.util.*;
+
 /** This class helps in interacting with adding and validating the user-certificate details */
 @ActorConfig(
   tasks = {"validateCertificate", "addCertificate", "getSignUrl", "mergeUserCertificate"},
   asyncTasks = {}
 )
 public class CertificateActor extends UserBaseActor {
-
-  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private static Util.DbInfo certDbInfo = Util.dbInfoMap.get(JsonKey.USER_CERT);
-  private static Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-  private UserService userService = UserServiceImpl.getInstance();
-  DecryptionService decryptionService =
-      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
-          "");
-  DataMaskingService maskingService =
-      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance("");
-  private static ObjectMapper objectMapper = new ObjectMapper();
-  private static final String ACCOUNT_MERGE_EMAIL_TEMPLATE = "accountMerge";
-  private static final String MASK_IDENTIFIER = "maskIdentifier";
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -74,10 +61,12 @@ public class CertificateActor extends UserBaseActor {
    * @param certRequest
    */
   private void mergeUserCertificate(Request certRequest) {
+    Util.DbInfo certDbInfo = Util.dbInfoMap.get(JsonKey.USER_CERT);
     Response userResult = new Response();
     Map request = certRequest.getRequest();
     String mergeeId = (String) request.get(JsonKey.FROM_ACCOUNT_ID);
     String mergerId = (String) request.get(JsonKey.TO_ACCOUNT_ID);
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     Response response =
         cassandraOperation.getRecordsByProperty(
             certDbInfo.getKeySpace(), certDbInfo.getTableName(), JsonKey.USER_ID, mergeeId);
@@ -176,6 +165,12 @@ public class CertificateActor extends UserBaseActor {
 
   private HashMap<String, Object> createUserData(
       HashMap<String, Object> userMap, boolean isMergerAccount) {
+      DataMaskingService maskingService =
+              org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance("");
+      DecryptionService decryptionService =
+              org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
+                      "");
+      String MASK_IDENTIFIER = "maskIdentifier";
     if (isMergerAccount) {
       if (StringUtils.isNotBlank((String) userMap.get(JsonKey.EMAIL))) {
         String deceryptedEmail = decryptionService.decryptData((String) userMap.get(JsonKey.EMAIL));
@@ -221,13 +216,14 @@ public class CertificateActor extends UserBaseActor {
       requestMap.put(JsonKey.RECIPIENT_PHONES, identifiers);
       requestMap.put(JsonKey.MODE, "sms");
     }
-    requestMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, ACCOUNT_MERGE_EMAIL_TEMPLATE);
+    requestMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, "accountMerge");
+    String MASK_IDENTIFIER = "maskIdentifier";
     String body =
         MessageFormat.format(
             ProjectUtil.getConfigValue(JsonKey.SUNBIRD_ACCOUNT_MERGE_BODY),
             ProjectUtil.getConfigValue(JsonKey.SUNBIRD_INSTALLATION),
-            (String) mergerUserData.get(MASK_IDENTIFIER),
-            (String) mergeeUserData.get(MASK_IDENTIFIER));
+            mergerUserData.get(MASK_IDENTIFIER),
+            mergeeUserData.get(MASK_IDENTIFIER));
     requestMap.put(JsonKey.BODY, body);
     requestMap.put(JsonKey.SUBJECT, ProjectUtil.getConfigValue("sunbird_account_merge_subject"));
     request.getRequest().put(JsonKey.EMAIL_REQUEST, requestMap);
@@ -237,6 +233,8 @@ public class CertificateActor extends UserBaseActor {
 
   private List<HashMap<String, Object>> getUserByIdentifiers(
       List<String> identifiers, List<String> attributes) {
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+    Util.DbInfo userDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Response response =
         cassandraOperation.getRecordsByIdsWithSpecifiedColumns(
             userDbInfo.getKeySpace(), userDbInfo.getTableName(), attributes, identifiers);
@@ -269,6 +267,7 @@ public class CertificateActor extends UserBaseActor {
       Response userResult = new Response();
       Map recordStore = (Map<String, Object>) responseDetails.get(JsonKey.STORE);
       String jsonData = (String) recordStore.get(JsonKey.JSON_DATA);
+      ObjectMapper objectMapper = new ObjectMapper();
       userResponse.put(JsonKey.JSON, objectMapper.readValue(jsonData, Map.class));
       userResponse.put(JsonKey.PDF, recordStore.get(JsonKey.PDF_URL));
       userResponse.put(JsonKey.COURSE_ID, recordStore.get(JsonKey.COURSE_ID));
@@ -294,7 +293,9 @@ public class CertificateActor extends UserBaseActor {
   }
 
   private Map getCertificateDetails(String certificatedId) {
+    Util.DbInfo certDbInfo = Util.dbInfoMap.get(JsonKey.USER_CERT);
     Map<String, Object> responseDetails = null;
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     Response response =
         cassandraOperation.getRecordById(
             certDbInfo.getKeySpace(), certDbInfo.getTableName(), certificatedId);
@@ -326,17 +327,20 @@ public class CertificateActor extends UserBaseActor {
 
   private void addCertificate(Request request) throws JsonProcessingException {
     Response response = null;
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     Map<String, String> storeMap = new HashMap<>();
     Map<String, Object> telemetryMap = new HashMap();
     Map<String, Object> certAddReqMap = request.getRequest();
     String userId = (String) certAddReqMap.get(JsonKey.USER_ID);
     String oldCertId = (String)certAddReqMap.get(JsonKey.OLD_ID);
+    UserService userService = UserServiceImpl.getInstance();
     User user = userService.getUserById(userId);
     assureUniqueCertId((String) certAddReqMap.get(JsonKey.ID));
     populateStoreData(storeMap, certAddReqMap);
     certAddReqMap.put(JsonKey.STORE, storeMap);
     certAddReqMap = getRequiredRequest(certAddReqMap);
     certAddReqMap.put(JsonKey.CREATED_AT, getTimeStamp());
+    Util.DbInfo certDbInfo = Util.dbInfoMap.get(JsonKey.USER_CERT);
     if(StringUtils.isNotBlank(oldCertId)) {
       getCertificateDetails(oldCertId);
       HashMap<String, Object> certUpdatedMap = new HashMap<>(certAddReqMap);
@@ -363,6 +367,8 @@ public class CertificateActor extends UserBaseActor {
   }
 
   private Response reIssueCert(Map<String, Object> certAddReqMap, Map<String, Object> certUpdateReqMap) {
+    Util.DbInfo certDbInfo = Util.dbInfoMap.get(JsonKey.USER_CERT);
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     Map<String, Object> cassandraInput = new HashMap<>();
     cassandraInput.put(JsonKey.INSERT, certAddReqMap);
     certAddReqMap.put(JsonKey.IS_DELETED,false);
@@ -376,6 +382,7 @@ public class CertificateActor extends UserBaseActor {
   private void populateStoreData(
       Map<String, String> storeMap, Map<String, Object> certAddRequestMap)
       throws JsonProcessingException {
+    ObjectMapper objectMapper = new ObjectMapper();
     storeMap.put(JsonKey.PDF_URL, (String) certAddRequestMap.get(JsonKey.PDF_URL));
     storeMap.put(
         JsonKey.JSON_DATA,
@@ -390,16 +397,18 @@ public class CertificateActor extends UserBaseActor {
   }
 
   private Map<String, Object> getRequiredRequest(Map<String, Object> certAddReqMap) {
+    ObjectMapper objectMapper = new ObjectMapper();
     Certificate certificate = objectMapper.convertValue(certAddReqMap, Certificate.class);
     return objectMapper.convertValue(certificate, Map.class);
   }
 
-  private static Timestamp getTimeStamp() {
+  private Timestamp getTimeStamp() {
     return new Timestamp(Calendar.getInstance().getTime().getTime());
   }
 
   public void getSignUrl(Request request) {
     try {
+      ObjectMapper objectMapper = new ObjectMapper();
       HashMap<String, Object> certReqMap = new HashMap<>();
       certReqMap.put(JsonKey.REQUEST, request.getRequest());
       String requestBody = objectMapper.writeValueAsString(certReqMap);
@@ -454,6 +463,8 @@ public class CertificateActor extends UserBaseActor {
   }
 
   private boolean isIdentityPresent(String certificateId) {
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+    Util.DbInfo certDbInfo = Util.dbInfoMap.get(JsonKey.USER_CERT);
     Response response =
         cassandraOperation.getRecordById(
             certDbInfo.getKeySpace(), certDbInfo.getTableName(), certificateId);

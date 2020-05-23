@@ -1,7 +1,5 @@
 package org.sunbird.learner.actors.otp;
 
-import java.util.HashMap;
-import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
@@ -13,12 +11,14 @@ import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.request.Request;
 import org.sunbird.learner.util.OTPUtil;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @ActorConfig(
   tasks = {},
   asyncTasks = {"sendOTP"}
 )
 public class SendOTPActor extends BaseActor {
-  public static final String RESET_PASSWORD = "resetPassword";
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -62,6 +62,7 @@ public class SendOTPActor extends BaseActor {
   }
 
   private void sendOTPViaEmail(String key, String otp, String otpType, String template) {
+    String RESET_PASSWORD = "resetPassword";
     Map<String, Object> emailTemplateMap = new HashMap<>();
     emailTemplateMap.put(JsonKey.EMAIL, key);
     emailTemplateMap.put(JsonKey.OTP, otp);

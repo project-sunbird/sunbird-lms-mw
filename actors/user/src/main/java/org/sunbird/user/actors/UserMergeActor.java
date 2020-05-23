@@ -2,9 +2,6 @@ package org.sunbird.user.actors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.typesafe.config.Config;
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.sunbird.actor.router.ActorConfig;
@@ -30,9 +27,18 @@ import org.sunbird.telemetry.dto.Context;
 import org.sunbird.telemetry.dto.Target;
 import org.sunbird.telemetry.dto.Telemetry;
 import org.sunbird.telemetry.util.TelemetryUtil;
+import org.sunbird.user.dao.UserDao;
+import org.sunbird.user.dao.impl.UserDaoImpl;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.KafkaConfigConstants;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 @ActorConfig(
   tasks = {"mergeUser"},
@@ -41,10 +47,6 @@ import org.sunbird.user.util.KafkaConfigConstants;
 public class UserMergeActor extends UserBaseActor {
   String topic = null;
   Producer<String, String> producer = null;
-  private ObjectMapper objectMapper = new ObjectMapper();
-  private UserService userService = UserServiceImpl.getInstance();
-  private SSOManager keyCloakService = SSOServiceFactory.getInstance();
-  private SystemSettingClient systemSettingClient = SystemSettingClientImpl.getInstance();
 
   @Override
   public void onReceive(Request userRequest) throws Throwable {
@@ -73,6 +75,7 @@ public class UserMergeActor extends UserBaseActor {
     // validating tokens
     checkTokenDetails(headers, mergeeId, mergerId);
     Map telemetryMap = (HashMap) requestMap.clone();
+    UserService userService = UserServiceImpl.getInstance();
     User mergee = userService.getUserById(mergeeId);
     User merger = userService.getUserById(mergerId);
     String custodianId = getCustodianValue();
@@ -91,7 +94,8 @@ public class UserMergeActor extends UserBaseActor {
     if (!mergee.getIsDeleted()) {
       prepareMergeeAccountData(mergee, mergeeDBMap);
       userRequest.put(JsonKey.USER_MERGEE_ACCOUNT, mergeeDBMap);
-      Response mergeeResponse = getUserDao().updateUser(mergeeDBMap);
+      UserDao userDao = UserDaoImpl.getInstance();
+      Response mergeeResponse = userDao.updateUser(mergeeDBMap);
       String mergeeResponseStr = (String) mergeeResponse.get(JsonKey.RESPONSE);
       ProjectLogger.log(
           "UserMergeActor: updateUserMergeDetails: mergeeResponseStr = " + mergeeResponseStr,
@@ -145,6 +149,7 @@ public class UserMergeActor extends UserBaseActor {
     try {
       Map<String, String> configSettingMap = DataCacheHandler.getConfigSettings();
       custodianId = configSettingMap.get(JsonKey.CUSTODIAN_ORG_ID);
+      SystemSettingClient systemSettingClient = SystemSettingClientImpl.getInstance();
       if (custodianId == null || custodianId.isEmpty()) {
         SystemSetting custodianIdSetting =
             systemSettingClient.getSystemSettingByField(
@@ -175,6 +180,7 @@ public class UserMergeActor extends UserBaseActor {
   private void mergeCertCourseDetails(User mergee, User merger) throws IOException {
     String content = null;
     Telemetry userCertMergeRequest = createAccountMergeTopicData(mergee, merger);
+    ObjectMapper objectMapper = new ObjectMapper();
     content = objectMapper.writeValueAsString(userCertMergeRequest);
     ProjectLogger.log(
         "UserMergeActor:mergeCertCourseDetails: Kafka producer topic::" + content,
@@ -270,6 +276,7 @@ public class UserMergeActor extends UserBaseActor {
     String userAuthToken = (String) headers.get(JsonKey.X_AUTHENTICATED_USER_TOKEN);
     String sourceUserAuthToken = (String) headers.get(JsonKey.X_SOURCE_USER_TOKEN);
     String subDomainUrl = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_SUBDOMAIN_KEYCLOAK_BASE_URL);
+    SSOManager keyCloakService = SSOServiceFactory.getInstance();
     ProjectLogger.log(
         "UserMergeActor:checkTokenDetails subdomain url value " + subDomainUrl,
         LoggerEnum.INFO.name());
@@ -301,6 +308,7 @@ public class UserMergeActor extends UserBaseActor {
 
   private String deactivateMergeeFromKC(String userId) {
     Map<String, Object> userMap = new HashMap<>();
+    SSOManager keyCloakService = SSOServiceFactory.getInstance();
     userMap.put(JsonKey.USER_ID, userId);
     ProjectLogger.log(
         "UserMergeActor:deactivateMergeeFromKC: request Got to deactivate mergee account from KC:"

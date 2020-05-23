@@ -54,11 +54,7 @@ public class DataCacheHandler implements Runnable {
   private void initLocationOrderMap() {
         if (orderMap == null) {
             orderMap = new HashMap<>();
-
-            List<String> subTypeList =
-                    Arrays.asList(
-                            ProjectUtil.getConfigValue(GeoLocationJsonKey.SUNBIRD_VALID_LOCATION_TYPES)
-                                    .split(";"));
+            List<String> subTypeList = Arrays.asList("state,district,block;cluster".split(";"));
             for (String str : subTypeList) {
                 List<String> typeList =
                         (((Arrays.asList(str.split(","))).stream().map(String::toLowerCase))

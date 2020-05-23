@@ -1,5 +1,6 @@
 package org.sunbird.learner.actors.bulkupload;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.cassandra.CassandraOperation;
@@ -13,7 +14,9 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.common.util.CloudStorageUtil;
 import org.sunbird.common.util.CloudStorageUtil.CloudStorageType;
 import org.sunbird.helper.ServiceFactory;
+import org.sunbird.learner.actors.bulkupload.dao.BulkUploadProcessTaskDao;
 import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessDaoImpl;
+import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessTaskDaoImpl;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
 import org.sunbird.learner.actors.bulkupload.model.StorageDetails;
@@ -34,11 +37,6 @@ import java.util.*;
   asyncTasks = {}
 )
 public class BulkUploadManagementActor extends BaseBulkUploadActor {
-
-  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private Util.DbInfo bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
-  private int userDataSize = 0;
-  private int orgDataSize = 0;
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -96,6 +94,9 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
 
   private void getUploadStatus(Request actorMessage) {
     String processId = (String) actorMessage.getRequest().get(JsonKey.PROCESS_ID);
+    ObjectMapper mapper = new ObjectMapper();
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+    BulkUploadProcessTaskDao bulkUploadProcessTaskDao = new BulkUploadProcessTaskDaoImpl();
     DecryptionService decryptionService =
         org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
             .getDecryptionServiceInstance(null);
@@ -107,6 +108,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
             JsonKey.OBJECT_TYPE,
             JsonKey.SUCCESS_RESULT,
             JsonKey.FAILURE_RESULT);
+    Util.DbInfo bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
     response =
         cassandraOperation.getRecordById(
             bulkDb.getKeySpace(), bulkDb.getTableName(), processId, fields);
@@ -212,6 +214,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
 
   private void addTaskDataToList(List<Map> list, String data) {
     try {
+      ObjectMapper mapper = new ObjectMapper();
       list.add(mapper.readValue(data, Map.class));
     } catch (IOException ex) {
       ProjectLogger.log("Error while converting success list to map" + ex.getMessage(), ex);
@@ -232,7 +235,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
 
 
   private void processBulkOrgUpload(Map<String, Object> req, String processId) throws IOException {
-
+    int orgDataSize = 0;
     ProjectLogger.log("BulkUploadManagementActor: processBulkOrgUpload called.", LoggerEnum.INFO);
     List<String[]> orgList = null;
     orgList = parseCsvFile((byte[]) req.get(JsonKey.FILE), processId);
@@ -283,6 +286,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
 
   private void processBulkUserUpload(Map<String, Object> req, String processId) {
     DbInfo orgDb = Util.dbInfoMap.get(JsonKey.ORG_DB);
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     String orgId = "";
     Response response = null;
     if (!StringUtils.isBlank((String) req.get(JsonKey.ORGANISATION_ID))) {
@@ -346,6 +350,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
           ResponseCode.csvError.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
+    int userDataSize = 0;
     if (null != userList) {
       if (StringUtils.isNotBlank(ProjectUtil.getConfigValue(JsonKey.BULK_UPLOAD_USER_DATA_SIZE))) {
         userDataSize =
@@ -453,6 +458,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
     Map<String, Object> map = new HashMap<>();
 
     try {
+      ObjectMapper mapper = new ObjectMapper();
       map.put(JsonKey.DATA, mapper.writeValueAsString(dataMapList));
     } catch (IOException e) {
       ProjectLogger.log(
@@ -464,13 +470,14 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
           ResponseCode.internalError.getErrorMessage(),
           ResponseCode.SERVER_ERROR.getResponseCode());
     }
-
+    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     map.put(JsonKey.ID, processId);
     map.put(JsonKey.OBJECT_TYPE, objectType);
     map.put(JsonKey.UPLOADED_BY, requestedBy);
     map.put(JsonKey.UPLOADED_DATE, ProjectUtil.getFormattedDate());
     map.put(JsonKey.PROCESS_START_TIME, ProjectUtil.getFormattedDate());
     map.put(JsonKey.STATUS, ProjectUtil.BulkProcessStatus.NEW.getValue());
+    Util.DbInfo bulkDb = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
     Response res =
         cassandraOperation.insertRecord(bulkDb.getKeySpace(), bulkDb.getTableName(), map);
     res.put(JsonKey.PROCESS_ID, processId);

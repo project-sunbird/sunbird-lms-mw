@@ -10,6 +10,8 @@ import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
+import org.sunbird.learner.actors.bulkupload.dao.BulkUploadProcessDao;
+import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessDaoImpl;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.util.Util;
 import scala.concurrent.Future;
@@ -135,6 +137,7 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
     if (!additionalInfo.containsKey(JsonKey.CHANNEL)) {
       bulkUploadProcess.setStatus(ProjectUtil.BulkProcessStatus.FAILED.getValue());
       bulkUploadProcess.setFailureResult(ResponseCode.errorNoRootOrgAssociated.getErrorMessage());
+      BulkUploadProcessDao bulkUploadDao = new BulkUploadProcessDaoImpl();
       bulkUploadDao.update(bulkUploadProcess);
       ProjectCommonException.throwClientErrorException(
           ResponseCode.errorNoRootOrgAssociated,

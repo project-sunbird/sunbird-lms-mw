@@ -17,6 +17,10 @@ import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.SocialMediaType;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
+import org.sunbird.user.dao.UserDao;
+import org.sunbird.user.dao.impl.UserDaoImpl;
+import org.sunbird.user.service.UserService;
+import org.sunbird.user.service.impl.UserServiceImpl;
 
 @ActorConfig(
   tasks = {"profileVisibility", "getMediaTypes"},
@@ -56,15 +60,15 @@ public class UserProfileActor extends UserBaseActor {
 
     validateFields(privateList, JsonKey.PUBLIC_FIELDS);
     validateFields(publicList, JsonKey.PRIVATE_FIELDS);
-
-    Map<String, Object> esPublicUserProfile = getUserService().esGetPublicUserProfileById(userId);
-    Map<String, Object> esPrivateUserProfile = getUserService().esGetPrivateUserProfileById(userId);
+    UserService userService = UserServiceImpl.getInstance();
+    Map<String, Object> esPublicUserProfile = userService.esGetPublicUserProfileById(userId);
+    Map<String, Object> esPrivateUserProfile = userService.esGetPrivateUserProfileById(userId);
 
     updateUserProfile(publicList, privateList, esPublicUserProfile, esPrivateUserProfile);
 
     updateProfileVisibility(userId, publicList, privateList, esPublicUserProfile);
 
-    getUserService().syncUserProfile(userId, esPublicUserProfile, esPrivateUserProfile);
+    userService.syncUserProfile(userId, esPublicUserProfile, esPrivateUserProfile);
 
     Response response = new Response();
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
@@ -197,8 +201,8 @@ public class UserProfileActor extends UserBaseActor {
     User user = new User();
     user.setId(userId);
     user.setProfileVisibility(privateFieldMap);
-
-    Response response = getUserDao().updateUser(user);
+    UserDao userDao = UserDaoImpl.getInstance();
+    Response response = userDao.updateUser(user);
 
     String responseStr = (String) response.get(JsonKey.RESPONSE);
     ProjectLogger.log("UserProfileActor:saveUserProfileVisibility: responseStr = " + responseStr);

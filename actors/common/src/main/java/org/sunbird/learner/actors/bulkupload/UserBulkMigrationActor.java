@@ -1,5 +1,6 @@
 package org.sunbird.learner.actors.bulkupload;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
 import com.mchange.v1.util.ArrayUtils;
 import com.opencsv.CSVReader;
@@ -41,8 +42,6 @@ import java.util.Map;
 public class UserBulkMigrationActor extends BaseBulkUploadActor {
 
     private CSVReader csvReader;
-    private Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
-    private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     private SystemSetting systemSetting;
 
     @Override
@@ -67,6 +66,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
     }
 
     private void processCsvBytes(Map<String,Object>data,Request request) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
         Map<String,Object>values= mapper.readValue(systemSetting.getValue(),Map.class);
         Map<String, Object> targetObject = null;
         List<Map<String, Object>> correlatedObject = new ArrayList<>();
@@ -92,12 +92,14 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
 
     private void insertRecord(BulkMigrationUser bulkMigrationUser){
         long insertStartTime=System.currentTimeMillis();
+        ObjectMapper mapper = new ObjectMapper();
         ProjectLogger.log("UserBulkMigrationActor:insertRecord:record started inserting with ".concat(bulkMigrationUser.getId()+""),LoggerEnum.INFO.name());
         Map<String,Object>record=mapper.convertValue(bulkMigrationUser,Map.class);
         long createdOn=System.currentTimeMillis();
         record.put(JsonKey.CREATED_ON,new Timestamp(createdOn));
         record.put(JsonKey.LAST_UPDATED_ON,new Timestamp(createdOn));
         CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+        Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
         Response response=cassandraOperation.insertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), record);
         response.put(JsonKey.PROCESS_ID,bulkMigrationUser.getId());
         ProjectLogger.log("UserBulkMigrationActor:insertRecord:time taken by cassandra to insert record of size ".concat(record.size()+"")+"is(ms):".concat((System.currentTimeMillis()-insertStartTime)+""));
@@ -106,6 +108,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
     private BulkMigrationUser prepareRecord(Request request,String processID,List<MigrationUser>migrationUserList){
         try {
             int RETRY_COUNT=2;
+            ObjectMapper mapper = new ObjectMapper();
             String decryptedData=mapper.writeValueAsString(migrationUserList);
             BulkMigrationUser migrationUser=new BulkMigrationUser.BulkMigrationUserBuilder(processID,decryptedData)
                     .setObjectType(JsonKey.MIGRATION_USER_OBJECT)
@@ -321,6 +324,7 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
      */
     private Map<String,Object> getUserById(String userId){
         CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+        Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
         Response response=cassandraOperation.getRecordById(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),userId);
         if(((List)response.getResult().get(JsonKey.RESPONSE)).isEmpty()) {
             throw new ProjectCommonException(

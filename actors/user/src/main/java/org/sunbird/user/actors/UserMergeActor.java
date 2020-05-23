@@ -2,9 +2,6 @@ package org.sunbird.user.actors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.typesafe.config.Config;
-import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.sunbird.actor.router.ActorConfig;
@@ -30,9 +27,18 @@ import org.sunbird.telemetry.dto.Context;
 import org.sunbird.telemetry.dto.Target;
 import org.sunbird.telemetry.dto.Telemetry;
 import org.sunbird.telemetry.util.TelemetryUtil;
+import org.sunbird.user.dao.UserDao;
+import org.sunbird.user.dao.impl.UserDaoImpl;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.KafkaConfigConstants;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 @ActorConfig(
   tasks = {"mergeUser"},
@@ -88,7 +94,8 @@ public class UserMergeActor extends UserBaseActor {
     if (!mergee.getIsDeleted()) {
       prepareMergeeAccountData(mergee, mergeeDBMap);
       userRequest.put(JsonKey.USER_MERGEE_ACCOUNT, mergeeDBMap);
-      Response mergeeResponse = getUserDao().updateUser(mergeeDBMap);
+      UserDao userDao = UserDaoImpl.getInstance();
+      Response mergeeResponse = userDao.updateUser(mergeeDBMap);
       String mergeeResponseStr = (String) mergeeResponse.get(JsonKey.RESPONSE);
       ProjectLogger.log(
           "UserMergeActor: updateUserMergeDetails: mergeeResponseStr = " + mergeeResponseStr,

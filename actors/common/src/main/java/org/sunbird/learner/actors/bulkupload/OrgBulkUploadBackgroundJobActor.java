@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.location.LocationClient;
@@ -34,12 +35,12 @@ import java.util.Map;
   asyncTasks = {"orgBulkUploadBackground"}
 )
 public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJobActor {
-  private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
 
   @Override
   public void onReceive(Request request) throws Throwable {
     String operation = request.getOperation();
     Util.initializeContext(request, TelemetryEnvKey.ORGANISATION);
+    SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
     if (operation.equalsIgnoreCase("orgBulkUploadBackground")) {
       Map<String, String> outputColumns =
           systemSettingClient.getSystemSettingByFieldAndKey(
@@ -96,7 +97,9 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
       ActorRef locationActor) {
     ProjectLogger.log("OrgBulkUploadBackgroundJobActor: processOrg called", LoggerEnum.INFO);
     String data = task.getData();
+    ObjectMapper mapper = new ObjectMapper();
     try {
+      SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
       Map<String, Object> orgMap = mapper.readValue(data, Map.class);
       Object mandatoryColumnsObject =
           systemSettingClient.getSystemSettingByFieldAndKey(
@@ -147,6 +150,7 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
       ActorRef locationActor,
       List<String> locationCodes)
       throws IOException, JsonParseException, JsonMappingException {
+    ObjectMapper mapper = new ObjectMapper();
     if (ProjectUtil.BulkProcessStatus.COMPLETED.getValue() == task.getStatus()) {
       List<String> locationNames = new ArrayList<>();
       for (String locationCode : locationCodes) {
@@ -187,6 +191,7 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
   private void callCreateOrg(
       Organisation org, BulkUploadProcessTask task, List<String> locationCodes)
       throws JsonProcessingException {
+    ObjectMapper mapper = new ObjectMapper();
     Map<String, Object> row = mapper.convertValue(org, Map.class);
     row.put(JsonKey.LOCATION_CODE, locationCodes);
     String orgId;
@@ -221,6 +226,7 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
   private void callUpdateOrg(
       Organisation org, BulkUploadProcessTask task, List<String> locationCodes)
       throws JsonProcessingException {
+    ObjectMapper mapper = new ObjectMapper();
     Map<String, Object> row = mapper.convertValue(org, Map.class);
     row.put(JsonKey.LOCATION_CODE, locationCodes);
     try {

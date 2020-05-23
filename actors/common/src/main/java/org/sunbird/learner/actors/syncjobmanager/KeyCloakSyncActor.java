@@ -25,9 +25,6 @@ import java.util.Map.Entry;
 )
 public class KeyCloakSyncActor extends BaseActor {
 
-  private boolean isSSOEnabled =
-      Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
-
   @Override
   public void onReceive(Request actorMessage) throws Throwable {
     String requestedOperation = actorMessage.getOperation();
@@ -105,6 +102,7 @@ public class KeyCloakSyncActor extends BaseActor {
     // Decrypt user data
     UserUtility.decryptUserData(userMap);
     Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+    boolean isSSOEnabled =  Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
     if (isSSOEnabled) {
       CassandraOperation cassandraOperation = ServiceFactory.getInstance();
       try {

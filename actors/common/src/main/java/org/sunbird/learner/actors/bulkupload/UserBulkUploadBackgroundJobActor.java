@@ -2,6 +2,7 @@ package org.sunbird.learner.actors.bulkupload;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
@@ -98,6 +99,7 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
     String data = task.getData();
     Organisation organisation = null;
     try {
+      ObjectMapper mapper = new ObjectMapper();
       SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
       Map<String, Object> userMap = mapper.readValue(data, Map.class);
       String[] mandatoryColumnsObject =
@@ -272,6 +274,7 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
           task, ProjectUtil.BulkProcessStatus.FAILED, ex.getMessage(), user, JsonKey.UPDATE);
     }
     if (task.getStatus() != ProjectUtil.BulkProcessStatus.FAILED.getValue()) {
+      ObjectMapper mapper = new ObjectMapper();
       task.setData(mapper.writeValueAsString(user));
       setSuccessTaskStatus(task, ProjectUtil.BulkProcessStatus.COMPLETED, user, JsonKey.UPDATE);
     }

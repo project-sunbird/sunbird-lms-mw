@@ -10,6 +10,10 @@ import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.util.Util;
 import org.sunbird.models.user.User;
+import org.sunbird.services.sso.SSOManager;
+import org.sunbird.services.sso.SSOServiceFactory;
+import org.sunbird.user.dao.UserDao;
+import org.sunbird.user.dao.impl.UserDaoImpl;
 import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 
@@ -77,14 +81,15 @@ public class UserStatusActor extends UserBaseActor {
 
     ObjectMapper mapper = new ObjectMapper();
     User updatedUser = mapper.convertValue(userMapES, User.class);
-
+    SSOManager ssoManager = SSOServiceFactory.getInstance();
+    UserDao userDao = UserDaoImpl.getInstance();
     if (isBlocked) {
-      getSSOManager().deactivateUser(userMapES);
+          ssoManager.deactivateUser(userMapES);
     } else {
-      getSSOManager().activateUser(userMapES);
+          ssoManager.activateUser(userMapES);
     }
 
-    Response response = getUserDao().updateUser(updatedUser);
+    Response response = userDao.updateUser(updatedUser);
     sender().tell(response, self());
 
     // Update status in ES

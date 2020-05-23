@@ -1,7 +1,5 @@
 package org.sunbird.user.actors;
 
-import java.util.List;
-import java.util.Map;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.core.BaseActor;
@@ -23,6 +21,9 @@ import org.sunbird.learner.util.UserFlagEnum;
 import org.sunbird.learner.util.Util;
 import scala.concurrent.Future;
 
+import java.util.List;
+import java.util.Map;
+
 @ActorConfig(
   tasks = {"freeUpUserIdentity"},
   asyncTasks = {}
@@ -34,8 +35,6 @@ import scala.concurrent.Future;
  */
 public class IdentifierFreeUpActor extends BaseActor {
 
-  private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-
   @Override
   public void onReceive(Request request) {
     String id = (String) request.get(JsonKey.ID);
@@ -44,6 +43,7 @@ public class IdentifierFreeUpActor extends BaseActor {
   }
 
   private Map<String, Object> getUserById(String id) {
+    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Response response =
         getCassandraOperation().getRecordById(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), id);
     List<Map<String, Object>> responseList = (List) response.get(JsonKey.RESPONSE);
@@ -113,6 +113,7 @@ public class IdentifierFreeUpActor extends BaseActor {
   }
 
   private Response updateUser(Map<String, Object> userDbMap) {
+    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     return getCassandraOperation().updateRecord(
         usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userDbMap);
   }

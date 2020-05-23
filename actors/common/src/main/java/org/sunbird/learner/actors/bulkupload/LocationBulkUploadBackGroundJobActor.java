@@ -1,6 +1,7 @@
 package org.sunbird.learner.actors.bulkupload;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.actorutil.location.LocationClient;
@@ -55,7 +56,7 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgrou
   }
 
   private void processLocation(BulkUploadProcessTask task) {
-
+    ObjectMapper mapper = new ObjectMapper();
     ProjectLogger.log(
         "LocationBulkUploadBackGroundJobActor: processLocation called", LoggerEnum.INFO);
     String data = task.getData();
@@ -128,7 +129,7 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgrou
           JsonKey.UPDATE);
       return;
     }
-
+    ObjectMapper mapper = new ObjectMapper();
     try {
       LocationClient locationClient = new LocationClientImpl();
       locationClient.updateLocation(
@@ -157,7 +158,7 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgrou
 
     Request request = new Request();
     request.getRequest().putAll(row);
-
+    ObjectMapper mapper = new ObjectMapper();
     String locationId = "";
     try {
       LocationClient locationClient = new LocationClientImpl();

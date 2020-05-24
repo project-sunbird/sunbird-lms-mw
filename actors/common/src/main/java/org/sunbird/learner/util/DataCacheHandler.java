@@ -4,7 +4,10 @@ package org.sunbird.learner.util;
 import org.apache.commons.lang3.StringUtils;
 import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.*;
+import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.models.util.ProjectUtil;
 import org.sunbird.helper.CassandraConnectionManager;
 import org.sunbird.helper.CassandraConnectionMngrFactory;
 import org.sunbird.helper.ServiceFactory;
@@ -54,7 +57,7 @@ public class DataCacheHandler implements Runnable {
   private void initLocationOrderMap() {
         if (orderMap == null) {
             orderMap = new HashMap<>();
-            List<String> subTypeList = Arrays.asList("state,district,block;cluster".split(";"));
+            List<String> subTypeList = Arrays.asList(ProjectUtil.getConfigValue("sunbird_valid_location_types").split(";"));
             for (String str : subTypeList) {
                 List<String> typeList =
                         (((Arrays.asList(str.split(","))).stream().map(String::toLowerCase))
@@ -70,8 +73,7 @@ public class DataCacheHandler implements Runnable {
   public void createSunbirdPluginTableList() {
       try {
           CassandraConnectionManager manager =
-                  CassandraConnectionMngrFactory.getObject(
-                          PropertiesCache.getInstance().getProperty(JsonKey.SUNBIRD_CASSANDRA_MODE));
+                  CassandraConnectionMngrFactory.getInstance();
           sunbirdPluginTableList = manager.getTableList(JsonKey.SUNBIRD_PLUGIN);
       } catch (Exception e) {
            ProjectLogger.log("Error occurred" + e.getMessage(), e);

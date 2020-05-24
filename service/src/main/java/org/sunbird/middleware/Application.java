@@ -10,12 +10,10 @@ public class Application {
 
   public static void main(String[] args) {
     SunbirdMWService.init();
-     checkCassandraConnection();
+     init();
   }
 
-  public static void checkCassandraConnection() {
-    Util.checkCassandraDbConnections(JsonKey.SUNBIRD);
-    Util.checkCassandraDbConnections(JsonKey.SUNBIRD_PLUGIN);
+  public static void init() {
     SchedulerManager.schedule();
     new Thread(
             new Runnable() {

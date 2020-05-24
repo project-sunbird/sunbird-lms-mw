@@ -3,28 +3,9 @@ package org.sunbird.learner.util;
 import akka.actor.ActorRef;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.typesafe.config.Config;
-import java.io.IOException;
-import java.io.InputStream;
-import java.math.BigInteger;
-import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Properties;
-import java.util.WeakHashMap;
-import java.util.stream.Collectors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 import org.sunbird.actor.background.BackgroundOperations;
 import org.sunbird.actorutil.systemsettings.SystemSettingClient;
 import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
@@ -34,16 +15,9 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
 import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.response.Response;
-import org.sunbird.common.models.util.BadgingJsonKey;
-import org.sunbird.common.models.util.HttpUtil;
-import org.sunbird.common.models.util.JsonKey;
-import org.sunbird.common.models.util.LoggerEnum;
-import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.ProjectUtil;
-import org.sunbird.common.models.util.ProjectUtil.EsIndex;
+import org.sunbird.common.models.util.*;
 import org.sunbird.common.models.util.ProjectUtil.EsType;
 import org.sunbird.common.models.util.ProjectUtil.OrgStatus;
-import org.sunbird.common.models.util.PropertiesCache;
 import org.sunbird.common.models.util.datasecurity.DataMaskingService;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.models.util.datasecurity.EncryptionService;
@@ -66,6 +40,10 @@ import org.sunbird.models.user.User;
 import org.sunbird.notification.sms.provider.ISmsProvider;
 import org.sunbird.notification.utils.SMSFactory;
 import scala.concurrent.Future;
+
+import java.math.BigInteger;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Utility class for actors
@@ -96,7 +74,6 @@ public final class Util {
   private static ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
 
   static {
-    loadPropertiesFile();
     initializeOrgStatusTransition();
     initializeDBProperty(); // EkStep HttpClient headers init
     headers.put("content-type", "application/json");
@@ -214,137 +191,17 @@ public final class Util {
    * data base connection from provided environment variable , if environment variable values are
    * not set then connection will be established from property file.
    */
-  public static void checkCassandraDbConnections(String keySpace) {
-
-    PropertiesCache propertiesCache = PropertiesCache.getInstance();
-
-    String cassandraMode = propertiesCache.getProperty(JsonKey.SUNBIRD_CASSANDRA_MODE);
-    if (StringUtils.isBlank(cassandraMode)
-        || cassandraMode.equalsIgnoreCase(JsonKey.EMBEDDED_MODE)) {
-
-      // configure the Embedded mode and return true here ....
+  public static void checkCassandraDbConnections() {
       CassandraConnectionManager cassandraConnectionManager =
-          CassandraConnectionMngrFactory.getObject(cassandraMode);
-      boolean result =
-          cassandraConnectionManager.createConnection(null, null, null, null, keySpace);
-      if (result) {
-        ProjectLogger.log(
-            "CONNECTION CREATED SUCCESSFULLY FOR IP:" + " : KEYSPACE :" + keySpace,
-            LoggerEnum.INFO.name());
-      } else {
-        ProjectLogger.log("CONNECTION CREATION FAILED FOR IP: " + " : KEYSPACE :" + keySpace);
-      }
-
-    } else if (cassandraMode.equalsIgnoreCase(JsonKey.STANDALONE_MODE)) {
-      if (readConfigFromEnv(keySpace)) {
-        ProjectLogger.log("db connection is created from System env variable.");
-        return;
-      }
-      CassandraConnectionManager cassandraConnectionManager =
-          CassandraConnectionMngrFactory.getObject(JsonKey.STANDALONE_MODE);
-      String[] ipList = prop.getProperty(JsonKey.DB_IP).split(",");
-      String[] portList = prop.getProperty(JsonKey.DB_PORT).split(",");
-      // String[] keyspaceList = prop.getProperty(JsonKey.DB_KEYSPACE).split(",");
-
-      String userName = prop.getProperty(JsonKey.DB_USERNAME);
-      String password = prop.getProperty(JsonKey.DB_PASSWORD);
-      for (int i = 0; i < ipList.length; i++) {
-        String ip = ipList[i];
-        String port = portList[i];
-        // Reading the same keyspace which is passed in the method
-        // String keyspace = keyspaceList[i];
-
-        try {
-
-          boolean result =
-              cassandraConnectionManager.createConnection(ip, port, userName, password, keySpace);
-          if (result) {
-            ProjectLogger.log(
-                "CONNECTION CREATED SUCCESSFULLY FOR IP: " + ip + " : KEYSPACE :" + keySpace,
-                LoggerEnum.INFO.name());
-          } else {
-            ProjectLogger.log(
-                "CONNECTION CREATION FAILED FOR IP: " + ip + " : KEYSPACE :" + keySpace);
-          }
-
-        } catch (ProjectCommonException ex) {
-          ProjectLogger.log(ex.getMessage(), ex);
-        }
-      }
-    }
-  }
-
-  /**
-   * This method will read the configuration from System variable.
-   *
-   * @return boolean
-   */
-  public static boolean readConfigFromEnv(String keyspace) {
-    boolean response = false;
-    String ips = System.getenv(JsonKey.SUNBIRD_CASSANDRA_IP);
-    String envPort = System.getenv(JsonKey.SUNBIRD_CASSANDRA_PORT);
-    CassandraConnectionManager cassandraConnectionManager =
-        CassandraConnectionMngrFactory.getObject(JsonKey.STANDALONE_MODE);
-
-    if (StringUtils.isBlank(ips) || StringUtils.isBlank(envPort)) {
-      ProjectLogger.log("Configuration value is not coming form System variable.");
-      return response;
-    }
-    String[] ipList = ips.split(",");
-    String[] portList = envPort.split(",");
-    String userName = System.getenv(JsonKey.SUNBIRD_CASSANDRA_USER_NAME);
-    String password = System.getenv(JsonKey.SUNBIRD_CASSANDRA_PASSWORD);
-    for (int i = 0; i < ipList.length; i++) {
-      String ip = ipList[i];
-      String port = portList[i];
-      try {
-        boolean result =
-            cassandraConnectionManager.createConnection(ip, port, userName, password, keyspace);
-        if (result) {
-          response = true;
-          ProjectLogger.log(
-              "CONNECTION CREATED SUCCESSFULLY FOR IP: " + ip + " : KEYSPACE :" + keyspace,
-              LoggerEnum.INFO.name());
+          CassandraConnectionMngrFactory.getInstance();
+      String nodes = System.getenv(JsonKey.SUNBIRD_CASSANDRA_IP);
+        String[] hosts =  null;
+        if (StringUtils.isNotBlank(nodes)) {
+            hosts =  nodes.split(",");
         } else {
-          ProjectLogger.log(
-              "CONNECTION CREATION FAILED FOR IP: " + ip + " : KEYSPACE :" + keyspace,
-              LoggerEnum.INFO.name());
+            hosts = new String[] { "localhost" };
         }
-      } catch (ProjectCommonException ex) {
-        ProjectLogger.log(
-            "Util:readConfigFromEnv: Exception occurred with message = " + ex.getMessage(),
-            LoggerEnum.ERROR);
-      }
-    }
-    if (!response) {
-      throw new ProjectCommonException(
-          ResponseCode.invaidConfiguration.getErrorCode(),
-          ResponseCode.invaidConfiguration.getErrorCode(),
-          ResponseCode.SERVER_ERROR.hashCode());
-    }
-    return response;
-  }
-
-  /** This method will load the db config properties file. */
-  private static void loadPropertiesFile() {
-
-    InputStream input = null;
-
-    try {
-      input = Util.class.getClassLoader().getResourceAsStream("dbconfig.properties");
-      // load a properties file
-      prop.load(input);
-    } catch (IOException ex) {
-      ProjectLogger.log(ex.getMessage(), ex);
-    } finally {
-      if (input != null) {
-        try {
-          input.close();
-        } catch (IOException e) {
-          ProjectLogger.log(e.getMessage(), e);
-        }
-      }
-    }
+      cassandraConnectionManager.createConnection(hosts);
   }
 
   public static String getProperty(String key) {

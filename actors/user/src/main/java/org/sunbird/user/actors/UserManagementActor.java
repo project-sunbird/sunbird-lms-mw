@@ -62,10 +62,6 @@ import java.util.concurrent.Callable;
 )
 public class UserManagementActor extends BaseActor {
 
-  private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-  private Util.DbInfo userOrgDb = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
-  private InterServiceCommunication interServiceCommunication =
-      InterServiceCommunicationFactory.getInstance();
   private ActorRef systemSettingActorRef = null;
 
   @Override
@@ -186,6 +182,7 @@ public class UserManagementActor extends BaseActor {
     int userFlagValue = userFlagsToNum(userBooleanMap);
     requestMap.put(JsonKey.FLAGS_VALUE, userFlagValue);
     CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Response response =
         cassandraOperation.updateRecord(
             usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
@@ -615,6 +612,7 @@ public class UserManagementActor extends BaseActor {
     final String password = (String) userMap.get(JsonKey.PASSWORD);
     userMap.remove(JsonKey.PASSWORD);
     CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Response response =
         cassandraOperation.insertRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userMap);
     response.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
@@ -712,6 +710,7 @@ public class UserManagementActor extends BaseActor {
   private Map<String, Object> saveUserOrgInfo(Map<String, Object> userMap) {
     Map<String, Object> userOrgMap = createUserOrgRequestData(userMap);
     CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+    Util.DbInfo userOrgDb = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
     cassandraOperation.insertRecord(userOrgDb.getKeySpace(), userOrgDb.getTableName(), userOrgMap);
 
     return userOrgMap;
@@ -759,6 +758,7 @@ public class UserManagementActor extends BaseActor {
     Response response = null;
     boolean isPasswordUpdated = false;
     CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     try {
       response =
           cassandraOperation.insertRecord(
@@ -984,6 +984,8 @@ public class UserManagementActor extends BaseActor {
     request.getRequest().putAll(userMap);
     ProjectLogger.log("UserManagementActor:saveUserAttributes");
     try {
+      InterServiceCommunication interServiceCommunication =
+                InterServiceCommunicationFactory.getInstance();
       return (Response)
           interServiceCommunication.getResponse(
               getActorRef(UserActorOperations.SAVE_USER_ATTRIBUTES.getValue()), request);

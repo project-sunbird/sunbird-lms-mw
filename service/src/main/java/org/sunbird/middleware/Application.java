@@ -9,19 +9,10 @@ import org.sunbird.learner.util.Util;
 public class Application {
 
   public static void main(String[] args) {
-    SunbirdMWService.init();
      init();
   }
 
   public static void init() {
-    SchedulerManager.schedule();
-    new Thread(
-            new Runnable() {
-              @Override
-              public void run() {
-                org.sunbird.common.quartz.scheduler.SchedulerManager.getInstance();
-              }
-            })
-        .start();
+
   }
 }

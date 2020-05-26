@@ -1,6 +1,7 @@
 package org.sunbird.systemsettings.actors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.collections4.MapUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
 import org.sunbird.common.exception.ProjectCommonException;
@@ -16,6 +17,7 @@ import org.sunbird.models.systemsetting.SystemSetting;
 import org.sunbird.systemsettings.dao.impl.SystemSettingDaoImpl;
 
 import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -75,12 +77,24 @@ public class SystemSettingsActor extends BaseActor {
 
   private void getAllSystemSettings() {
     ProjectLogger.log("SystemSettingsActor: getAllSystemSettings called", LoggerEnum.DEBUG.name());
-    SystemSettingDaoImpl systemSettingDaoImpl =
-              new SystemSettingDaoImpl(ServiceFactory.getInstance());
-    List<SystemSetting> allSystemSettings = systemSettingDaoImpl.readAll();
+    Map<String, String> systemSettings = DataCacheHandler.getConfigSettings();
     Response response = new Response();
-    response.put(JsonKey.RESPONSE, allSystemSettings);
-    sender().tell(response, self());
+      List<SystemSetting> allSystemSettings = null;
+    if (MapUtils.isNotEmpty(systemSettings)) {
+        allSystemSettings = new ArrayList<>();
+        for (Map.Entry setting : systemSettings.entrySet()) {
+            allSystemSettings.add(new SystemSetting(
+                    (String)setting.getKey(),
+                    (String)setting.getKey(),
+                    (String)setting.getValue()));
+        }
+    } else {
+        SystemSettingDaoImpl systemSettingDaoImpl =
+                new SystemSettingDaoImpl(ServiceFactory.getInstance());
+        allSystemSettings = systemSettingDaoImpl.readAll();
+    }
+      response.put(JsonKey.RESPONSE, allSystemSettings);
+      sender().tell(response, self());
   }
 
   private void setSystemSetting(Request actorMessage) {

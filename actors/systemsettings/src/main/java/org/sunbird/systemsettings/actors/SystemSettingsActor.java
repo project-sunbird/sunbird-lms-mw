@@ -8,12 +8,10 @@ import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
 import org.sunbird.common.models.util.LoggerEnum;
 import org.sunbird.common.models.util.ProjectLogger;
-import org.sunbird.common.models.util.TelemetryEnvKey;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.DataCacheHandler;
-import org.sunbird.learner.util.Util;
 import org.sunbird.models.systemsetting.SystemSetting;
 import org.sunbird.systemsettings.dao.impl.SystemSettingDaoImpl;
 
@@ -29,7 +27,6 @@ public class SystemSettingsActor extends BaseActor {
 
   @Override
   public void onReceive(Request request) throws Throwable {
-    Util.initializeContext(request, TelemetryEnvKey.SYSTEM_SETTINGS);
     switch (request.getOperation()) {
       case "getSystemSetting":
         getSystemSetting(request);
@@ -47,32 +44,29 @@ public class SystemSettingsActor extends BaseActor {
   }
 
   private void getSystemSetting(Request actorMessage) {
-    ProjectLogger.log("SystemSettingsActor:getSystemSetting: request is " + actorMessage.getRequest(), LoggerEnum.INFO.name());
-    SystemSetting setting = null;
     String value = DataCacheHandler.getConfigSettings().get(actorMessage.getContext().get(JsonKey.FIELD));
-    ProjectLogger.log("SystemSettingsActor:getSystemSetting:the value got for field from cache is:"+ value,LoggerEnum.INFO.name());
+    ProjectLogger.log("SystemSettingsActor:getSystemSetting: got field value from cache.",LoggerEnum.INFO.name());
+    SystemSetting setting = null;
     if (value != null) {
       setting =
               new SystemSetting(
                       (String) actorMessage.getContext().get(JsonKey.FIELD),
                       (String) actorMessage.getContext().get(JsonKey.FIELD),
                       value);
-    }
-    if (setting == null) {
+    } else {
       SystemSettingDaoImpl systemSettingDaoImpl =
                 new SystemSettingDaoImpl(ServiceFactory.getInstance());
       setting =
               systemSettingDaoImpl.readByField((String) actorMessage.getContext().get(JsonKey.FIELD));
-      ProjectLogger.log("SystemSettingsActor:getSystemSetting:the value got for field from db",LoggerEnum.INFO.name());
-      if(null!=setting){
-        DataCacheHandler.getConfigSettings().put((String) actorMessage.getContext().get(JsonKey.FIELD), setting.getValue());
+      ProjectLogger.log("SystemSettingsActor:getSystemSetting:got field value from db",LoggerEnum.INFO.name());
+      if(null == setting){
+          throw new ProjectCommonException(
+                  ResponseCode.resourceNotFound.getErrorCode(),
+                  ResponseCode.resourceNotFound.getErrorMessage(),
+                  ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+
       }
-    }
-    if (setting == null) {
-      throw new ProjectCommonException(
-              ResponseCode.resourceNotFound.getErrorCode(),
-              ResponseCode.resourceNotFound.getErrorMessage(),
-              ResponseCode.RESOURCE_NOT_FOUND.getResponseCode());
+      DataCacheHandler.getConfigSettings().put((String) actorMessage.getContext().get(JsonKey.FIELD), setting.getValue());
     }
     Response response = new Response();
     response.put(JsonKey.RESPONSE, setting);

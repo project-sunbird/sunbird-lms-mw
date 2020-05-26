@@ -49,7 +49,7 @@ public class SystemSettingsActor extends BaseActor {
   private void getSystemSetting(Request actorMessage) {
     ProjectLogger.log("SystemSettingsActor:getSystemSetting: request is " + actorMessage.getRequest(), LoggerEnum.INFO.name());
     SystemSetting setting = null;
-    String value = DataCacheHandler.getConfigSettings().get((String) actorMessage.getContext().get(JsonKey.FIELD));
+    String value = DataCacheHandler.getConfigSettings().get(actorMessage.getContext().get(JsonKey.FIELD));
     ProjectLogger.log("SystemSettingsActor:getSystemSetting:the value got for field from cache is:"+ value,LoggerEnum.INFO.name());
     if (value != null) {
       setting =
@@ -58,9 +58,9 @@ public class SystemSettingsActor extends BaseActor {
                       (String) actorMessage.getContext().get(JsonKey.FIELD),
                       value);
     }
-    SystemSettingDaoImpl systemSettingDaoImpl =
-              new SystemSettingDaoImpl(ServiceFactory.getInstance());
     if (setting == null) {
+      SystemSettingDaoImpl systemSettingDaoImpl =
+                new SystemSettingDaoImpl(ServiceFactory.getInstance());
       setting =
               systemSettingDaoImpl.readByField((String) actorMessage.getContext().get(JsonKey.FIELD));
       ProjectLogger.log("SystemSettingsActor:getSystemSetting:the value got for field from db",LoggerEnum.INFO.name());

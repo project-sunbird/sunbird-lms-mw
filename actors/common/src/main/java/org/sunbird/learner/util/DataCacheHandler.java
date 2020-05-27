@@ -40,6 +40,47 @@ public class DataCacheHandler implements Runnable {
   private static Response roleCacheResponse;
   private static List<String> sunbirdPluginTableList = null;
   private static Map<String, Integer> orderMap;
+  public static String[] bulkUserAllowedFields = {
+            JsonKey.FIRST_NAME,
+            JsonKey.LAST_NAME,
+            JsonKey.PHONE,
+            JsonKey.COUNTRY_CODE,
+            JsonKey.EMAIL,
+            JsonKey.USERNAME,
+            JsonKey.PHONE_VERIFIED,
+            JsonKey.EMAIL_VERIFIED,
+            JsonKey.ROLES,
+            JsonKey.POSITION,
+            JsonKey.GRADE,
+            JsonKey.LOCATION,
+            JsonKey.DOB,
+            JsonKey.GENDER,
+            JsonKey.LANGUAGE,
+            JsonKey.PROFILE_SUMMARY,
+            JsonKey.SUBJECT,
+            JsonKey.WEB_PAGES,
+            JsonKey.EXTERNAL_ID_PROVIDER,
+            JsonKey.EXTERNAL_ID,
+            JsonKey.EXTERNAL_ID_TYPE,
+            JsonKey.EXTERNAL_IDS
+    };
+  public static String[] bulkOrgAllowedFields = {
+            JsonKey.ORGANISATION_NAME,
+            JsonKey.CHANNEL,
+            JsonKey.IS_ROOT_ORG,
+            JsonKey.PROVIDER,
+            JsonKey.EXTERNAL_ID,
+            JsonKey.DESCRIPTION,
+            JsonKey.HOME_URL,
+            JsonKey.ORG_CODE,
+            JsonKey.ORG_TYPE,
+            JsonKey.PREFERRED_LANGUAGE,
+            JsonKey.THEME,
+            JsonKey.CONTACT_DETAILS,
+            JsonKey.LOC_ID,
+            JsonKey.HASHTAGID,
+            JsonKey.LOCATION_CODE
+    };
 
   @Override
   public void run() {

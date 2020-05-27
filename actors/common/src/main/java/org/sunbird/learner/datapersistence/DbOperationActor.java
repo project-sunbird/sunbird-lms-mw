@@ -14,6 +14,8 @@ import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.dto.SearchDTO;
+import org.sunbird.helper.CassandraConnectionManager;
+import org.sunbird.helper.CassandraConnectionMngrFactory;
 import org.sunbird.helper.ServiceFactory;
 import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
@@ -40,6 +42,9 @@ import java.util.Map;
   asyncTasks = {}
 )
 public class DbOperationActor extends BaseActor {
+
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public void onReceive(Request actorMessage) throws Throwable {
@@ -84,7 +89,6 @@ public class DbOperationActor extends BaseActor {
       rawQueryMap.put(JsonKey.SIZE, 0);
       ObjectMapper mapper = new ObjectMapper();
       String rawQuery = mapper.writeValueAsString(rawQueryMap);
-      ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
       Response response = esService.searchMetricsData(ES_INDEX_NAME, rawQuery);
       sender().tell(response, self());
     } catch (Exception ex) {
@@ -100,7 +104,6 @@ public class DbOperationActor extends BaseActor {
       String ES_INDEX_NAME = "sunbirdplugin";
       Response response = new Response();
       String REQUIRED_FIELDS = "requiredFields";
-      ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
       List<String> requiredFields = null;
       if (!StringUtils.isBlank((String) reqObj.getRequest().get(ENTITY_NAME))) {
         String esType = (String) reqObj.getRequest().get(ENTITY_NAME);
@@ -162,7 +165,6 @@ public class DbOperationActor extends BaseActor {
       validateTableName(reqObj);
       String ENTITY_NAME = "entityName";
       if (!StringUtils.isBlank((String) reqObj.getRequest().get(ENTITY_NAME))) {
-        CassandraOperation cassandraOperation = ServiceFactory.getInstance();
         response =
             cassandraOperation.getAllRecords(
                 JsonKey.SUNBIRD_PLUGIN, (String) reqObj.getRequest().get(ENTITY_NAME));
@@ -185,7 +187,6 @@ public class DbOperationActor extends BaseActor {
       Response response = null;
       validateTableName(reqObj);
       if (!StringUtils.isBlank((String) reqObj.getRequest().get(ENTITY_NAME))) {
-        CassandraOperation cassandraOperation = ServiceFactory.getInstance();
         response =
             cassandraOperation.getRecordById(
                 JsonKey.SUNBIRD_PLUGIN,
@@ -210,7 +211,6 @@ public class DbOperationActor extends BaseActor {
       String ENTITY_NAME = "entityName";
       String ES_INDEX_NAME = "sunbirdplugin";
       String INDEXED = "indexed";
-      CassandraOperation cassandraOperation = ServiceFactory.getInstance();
       Response response =
           cassandraOperation.deleteRecord(
               JsonKey.SUNBIRD_PLUGIN,
@@ -238,7 +238,6 @@ public class DbOperationActor extends BaseActor {
       String ES_INDEX_NAME = "sunbirdplugin";
       validateTableName(reqObj);
       Map<String, Object> payload = (Map<String, Object>) reqObj.getRequest().get(PAYLOAD);
-      CassandraOperation cassandraOperation = ServiceFactory.getInstance();
       validateRequestData(payload);
       Response response = null;
       boolean esResult = false;
@@ -272,7 +271,6 @@ public class DbOperationActor extends BaseActor {
               ResponseCode.CLIENT_ERROR.getResponseCode());
         }
       } else {
-        ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
         Future<Map<String, Object>> dataF =
             esService.getDataByIdentifier(ES_INDEX_NAME, (String) payload.get(JsonKey.ID));
         Map<String, Object> data =
@@ -305,7 +303,6 @@ public class DbOperationActor extends BaseActor {
       validateTableName(reqObj);
       Map<String, Object> payload = (Map<String, Object>) reqObj.getRequest().get(PAYLOAD);
       validateRequestData(payload);
-      CassandraOperation cassandraOperation = ServiceFactory.getInstance();
       Response response =
           cassandraOperation.insertRecord(
               JsonKey.SUNBIRD_PLUGIN, (String) reqObj.getRequest().get(ENTITY_NAME), payload);
@@ -369,7 +366,6 @@ public class DbOperationActor extends BaseActor {
    */
   private boolean insertDataToElastic(
       String index, String type, String identifier, Map<String, Object> data) {
-    ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
     ProjectLogger.log(
         "making call to ES for index ,identifier ,data==" + type + " " + identifier + data);
     Future<String> responseF = esService.save(index, identifier, data);
@@ -401,7 +397,6 @@ public class DbOperationActor extends BaseActor {
    */
   private boolean updateDataToElastic(
       String indexName, String typeName, String identifier, Map<String, Object> data) {
-    ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
     Future<Boolean> responseF = esService.update(indexName, identifier, data);
     boolean response = (boolean) ElasticSearchHelper.getResponseFromFuture(responseF);
     if (response) {
@@ -421,7 +416,6 @@ public class DbOperationActor extends BaseActor {
    * @return
    */
   private boolean deleteDataFromElastic(String indexName, String typeName, String identifier) {
-    ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
     Future<Boolean> responseF = esService.delete(indexName, identifier);
     boolean response = (boolean) ElasticSearchHelper.getResponseFromFuture(responseF);
     if (response) {
@@ -433,7 +427,6 @@ public class DbOperationActor extends BaseActor {
   }
 
   private void deleteRecord(String keyspaceName, String tableName, String identifier) {
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     cassandraOperation.deleteRecord(keyspaceName, tableName, identifier);
   }
 

@@ -24,6 +24,8 @@ import java.util.Map;
 )
 public class ClientManagementActor extends BaseActor {
 
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, TelemetryEnvKey.MASTER_KEY);
@@ -87,7 +89,6 @@ public class ClientManagementActor extends BaseActor {
     req.put(JsonKey.CREATED_DATE, ProjectUtil.getFormattedDate());
     req.put(JsonKey.UPDATED_DATE, ProjectUtil.getFormattedDate());
     req.put(JsonKey.CHANNEL, channel);
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     Util.DbInfo clientDbInfo = Util.dbInfoMap.get(JsonKey.CLIENT_INFO_DB);
     Response result =
         cassandraOperation.insertRecord(
@@ -179,7 +180,6 @@ public class ClientManagementActor extends BaseActor {
     if (!StringUtils.isBlank(clientName)) {
       req.put(JsonKey.CLIENT_NAME, clientName);
     }
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     req.remove(JsonKey.CLIENT_ID);
     Util.DbInfo clientDbInfo = Util.dbInfoMap.get(JsonKey.CLIENT_INFO_DB);
     Response result =
@@ -245,7 +245,6 @@ public class ClientManagementActor extends BaseActor {
     ProjectLogger.log("Get data from cassandra method call start");
     Response result = null;
     Util.DbInfo clientDbInfo = Util.dbInfoMap.get(JsonKey.CLIENT_INFO_DB);
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     if (StringUtils.equalsIgnoreCase(JsonKey.CLIENT_NAME, propertyName)) {
       result =
           cassandraOperation.getRecordsByProperty(

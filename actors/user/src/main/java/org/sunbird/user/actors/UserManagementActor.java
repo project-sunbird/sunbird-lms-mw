@@ -45,6 +45,7 @@ import org.sunbird.models.user.org.UserOrg;
 import org.sunbird.telemetry.util.TelemetryUtil;
 import org.sunbird.user.dao.UserOrgDao;
 import org.sunbird.user.dao.impl.UserOrgDaoImpl;
+import org.sunbird.user.service.UserService;
 import org.sunbird.user.service.impl.UserServiceImpl;
 import org.sunbird.user.util.UserActorOperations;
 import org.sunbird.user.util.UserUtil;
@@ -62,7 +63,18 @@ import java.util.concurrent.Callable;
 )
 public class UserManagementActor extends BaseActor {
 
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private UserRequestValidator userRequestValidator = new UserRequestValidator();
+  private UserService userService = UserServiceImpl.getInstance();
+  private SystemSettingClient systemSettingClient = SystemSettingClientImpl.getInstance();
+  private OrganisationClient organisationClient = new OrganisationClientImpl();
+  private OrgExternalService orgExternalService = new OrgExternalService();
+  private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+  private Util.DbInfo userOrgDb = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
+  private static InterServiceCommunication interServiceCommunication =
+          InterServiceCommunicationFactory.getInstance();
   private ActorRef systemSettingActorRef = null;
+  private static ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -113,7 +125,6 @@ public class UserManagementActor extends BaseActor {
 
   private void cacheFrameworkFieldsConfig() {
     if (MapUtils.isEmpty(DataCacheHandler.getFrameworkFieldsConfig())) {
-      SystemSettingClient systemSettingClient = SystemSettingClientImpl.getInstance();
       Map<String, List<String>> frameworkFieldsConfig =
           systemSettingClient.getSystemSettingByFieldAndKey(
               getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
@@ -136,9 +147,9 @@ public class UserManagementActor extends BaseActor {
     }
     if (!isPrivate) {
       if (StringUtils.isNotBlank(callerId)) {
-         UserServiceImpl.getInstance().validateUploader(actorMessage);
+          userService.validateUploader(actorMessage);
       } else {
-         UserServiceImpl.getInstance().validateUserId(actorMessage);
+          userService.validateUserId(actorMessage);
       }
     }
     Map<String, Object> userMap = actorMessage.getRequest();
@@ -181,8 +192,6 @@ public class UserManagementActor extends BaseActor {
     Map<String, Boolean> userBooleanMap = updatedUserFlagsMap(userMap, userDbRecord);
     int userFlagValue = userFlagsToNum(userBooleanMap);
     requestMap.put(JsonKey.FLAGS_VALUE, userFlagValue);
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Response response =
         cassandraOperation.updateRecord(
             usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), requestMap);
@@ -229,7 +238,6 @@ public class UserManagementActor extends BaseActor {
         List<String> fields = new ArrayList<>();
         fields.add(JsonKey.HASHTAGID);
         fields.add(JsonKey.ID);
-        OrganisationClient organisationClient = new OrganisationClientImpl();
         List<Organisation> orgList = organisationClient.esSearchOrgByIds(orgIdList, fields);
         Map<String, Object> orgMap = new HashMap<>();
         orgList.forEach(org -> orgMap.put(org.getId(), org));
@@ -291,7 +299,7 @@ public class UserManagementActor extends BaseActor {
   }
 
   private String getUserRootOrgId(String userId) {
-    User user = UserServiceImpl.getInstance().getUserById(userId);
+    User user = userService.getUserById(userId);
     return user.getRootOrgId();
   }
 
@@ -345,7 +353,7 @@ public class UserManagementActor extends BaseActor {
       String userType = (String) userMap.get(JsonKey.USER_TYPE);
       if (UserType.TEACHER.getTypeName().equalsIgnoreCase(userType)) {
         String custodianRootOrgId = null;
-        User user = UserServiceImpl.getInstance().getUserById((String) userMap.get(JsonKey.USER_ID));
+        User user = userService.getUserById((String) userMap.get(JsonKey.USER_ID));
         try {
           custodianRootOrgId = getCustodianRootOrgId();
         } catch (Exception ex) {
@@ -380,7 +388,6 @@ public class UserManagementActor extends BaseActor {
       } else {
         frameworkIdList = (List<String>) framework.get(JsonKey.ID);
       }
-      UserRequestValidator userRequestValidator = new UserRequestValidator();
       userRequestMap.put(JsonKey.FRAMEWORK, framework);
       List<String> frameworkFields =
           DataCacheHandler.getFrameworkFieldsConfig().get(JsonKey.FIELDS);
@@ -426,7 +433,6 @@ public class UserManagementActor extends BaseActor {
     Map<String, Object> userMap = actorMessage.getRequest();
     String callerId = (String) actorMessage.getContext().get(JsonKey.CALLER_ID);
     String version = (String) actorMessage.getContext().get(JsonKey.VERSION);
-    UserRequestValidator userRequestValidator = new UserRequestValidator();
     if (StringUtils.isNotBlank(version) && (JsonKey.VERSION_2.equalsIgnoreCase(version) || JsonKey.VERSION_3.equalsIgnoreCase(version))) {
       userRequestValidator.validateCreateUserV2Request(actorMessage);
       if (StringUtils.isNotBlank(callerId)) {
@@ -449,8 +455,8 @@ public class UserManagementActor extends BaseActor {
       try {
         if (StringUtils.isBlank((String) userMap.get(JsonKey.CHANNEL))
             && StringUtils.isBlank((String) userMap.get(JsonKey.ROOT_ORG_ID))) {
-          String channel = UserServiceImpl.getInstance().getCustodianChannel(userMap, systemSettingActorRef);
-          String rootOrgId = UserServiceImpl.getInstance().getRootOrgIdFromChannel(channel);
+          String channel = userService.getCustodianChannel(userMap, systemSettingActorRef);
+          String rootOrgId = userService.getRootOrgIdFromChannel(channel);
           userMap.put(JsonKey.ROOT_ORG_ID, rootOrgId);
           userMap.put(JsonKey.CHANNEL, channel);
           isCustodianOrg = true;
@@ -464,7 +470,6 @@ public class UserManagementActor extends BaseActor {
     if (userMap.containsKey(JsonKey.ORG_EXTERNAL_ID)) {
       String orgExternalId = (String) userMap.get(JsonKey.ORG_EXTERNAL_ID);
       String channel = (String) userMap.get(JsonKey.CHANNEL);
-      OrgExternalService orgExternalService = new OrgExternalService();
       String orgId =
           orgExternalService.getOrgIdFromOrgExternalIdAndProvider(orgExternalId, channel);
       if (StringUtils.isBlank(orgId)) {
@@ -533,7 +538,6 @@ public class UserManagementActor extends BaseActor {
   private void validateChannelAndOrganisationId(Map<String, Object> userMap) {
     String organisationId = (String) userMap.get(JsonKey.ORGANISATION_ID);
     String requestedChannel = (String) userMap.get(JsonKey.CHANNEL);
-    OrganisationClient organisationClient = new OrganisationClientImpl();
     String subOrgRootOrgId = "";
     if (StringUtils.isNotBlank(organisationId)) {
       Organisation organisation = organisationClient.esGetOrgById(organisationId);
@@ -562,7 +566,7 @@ public class UserManagementActor extends BaseActor {
     }
     String rootOrgId = "";
     if (StringUtils.isNotBlank(requestedChannel)) {
-      rootOrgId = UserServiceImpl.getInstance().getRootOrgIdFromChannel(requestedChannel);
+      rootOrgId = userService.getRootOrgIdFromChannel(requestedChannel);
       if (StringUtils.isNotBlank(subOrgRootOrgId) && !rootOrgId.equalsIgnoreCase(subOrgRootOrgId)) {
         throwParameterMismatchException(JsonKey.CHANNEL, JsonKey.ORGANISATION_ID);
       }
@@ -611,8 +615,6 @@ public class UserManagementActor extends BaseActor {
     userMap.put(JsonKey.FLAGS_VALUE, userFlagValue);
     final String password = (String) userMap.get(JsonKey.PASSWORD);
     userMap.remove(JsonKey.PASSWORD);
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Response response =
         cassandraOperation.insertRecord(usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userMap);
     response.put(JsonKey.USER_ID, userMap.get(JsonKey.ID));
@@ -709,8 +711,6 @@ public class UserManagementActor extends BaseActor {
 
   private Map<String, Object> saveUserOrgInfo(Map<String, Object> userMap) {
     Map<String, Object> userOrgMap = createUserOrgRequestData(userMap);
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-    Util.DbInfo userOrgDb = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
     cassandraOperation.insertRecord(userOrgDb.getKeySpace(), userOrgDb.getTableName(), userOrgMap);
 
     return userOrgMap;
@@ -757,8 +757,6 @@ public class UserManagementActor extends BaseActor {
     requestMap.put(JsonKey.FLAGS_VALUE, userFlagValue);
     Response response = null;
     boolean isPasswordUpdated = false;
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     try {
       response =
           cassandraOperation.insertRecord(
@@ -915,8 +913,8 @@ public class UserManagementActor extends BaseActor {
 
   private String getCustodianRootOrgId() {
     String custodianChannel =
-            UserServiceImpl.getInstance().getCustodianChannel(new HashMap<>(), systemSettingActorRef);
-    return UserServiceImpl.getInstance().getRootOrgIdFromChannel(custodianChannel);
+            userService.getCustodianChannel(new HashMap<>(), systemSettingActorRef);
+    return userService.getRootOrgIdFromChannel(custodianChannel);
   }
 
   @SuppressWarnings("unchecked")
@@ -951,7 +949,6 @@ public class UserManagementActor extends BaseActor {
   }
 
   private Future<String> saveUserToES(Map<String, Object> completeUserMap) {
-    ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
     return esUtil.save(
         ProjectUtil.EsType.user.getTypeName(),
         (String) completeUserMap.get(JsonKey.USER_ID),
@@ -984,8 +981,6 @@ public class UserManagementActor extends BaseActor {
     request.getRequest().putAll(userMap);
     ProjectLogger.log("UserManagementActor:saveUserAttributes");
     try {
-      InterServiceCommunication interServiceCommunication =
-                InterServiceCommunicationFactory.getInstance();
       return (Response)
           interServiceCommunication.getResponse(
               getActorRef(UserActorOperations.SAVE_USER_ATTRIBUTES.getValue()), request);

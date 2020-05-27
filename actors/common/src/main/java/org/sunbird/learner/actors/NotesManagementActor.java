@@ -29,6 +29,8 @@ import java.util.*;
 )
 public class NotesManagementActor extends BaseActor {
 
+  private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private static ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
 
   /** Receives the actor message and perform the operation for user note */
   @Override
@@ -67,7 +69,6 @@ public class NotesManagementActor extends BaseActor {
     // object of telemetry event...
     Map<String, Object> targetObject = new HashMap<>();
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     try {
       Map<String, Object> req = actorMessage.getRequest();
       if (!validUser((String) req.get(JsonKey.USER_ID))) {
@@ -134,7 +135,6 @@ public class NotesManagementActor extends BaseActor {
     // object of telemetry event...
     Map<String, Object> targetObject = new HashMap<>();
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     try {
       String noteId = (String) actorMessage.getContext().get(JsonKey.NOTE_ID);
       String userId = (String) actorMessage.getContext().get(JsonKey.REQUESTED_BY);
@@ -280,7 +280,6 @@ public class NotesManagementActor extends BaseActor {
     }
     excludedFields.add(JsonKey.IS_DELETED);
     searchDto.setExcludedFields(excludedFields);
-    ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
     Future<Map<String, Object>> resultF =
         esService.search(searchDto, EsType.usernotes.getTypeName());
     Map<String, Object> result =
@@ -307,7 +306,6 @@ public class NotesManagementActor extends BaseActor {
   private void deleteNote(Request actorMessage) {
     ProjectLogger.log("Delete Note method call start");
     // object of telemetry event...
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     Map<String, Object> targetObject = new HashMap<>();
     List<Map<String, Object>> correlatedObject = new ArrayList<>();
     try {
@@ -368,7 +366,6 @@ public class NotesManagementActor extends BaseActor {
     Boolean result = false;
 
     if (!StringUtils.isBlank(userId)) {
-      ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
       Future<Map<String, Object>> dataF =
           esService.getDataByIdentifier(EsType.user.getTypeName(), userId);
       Map<String, Object> data =
@@ -402,7 +399,6 @@ public class NotesManagementActor extends BaseActor {
    * @return Note data as List<Map<String, Object>>
    */
   private Map<String, Object> getNoteRecordById(String noteId) {
-    ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
     Future<Map<String, Object>> resultF =
         esService.getDataByIdentifier(EsType.usernotes.getTypeName(), noteId);
     Map<String, Object> result =

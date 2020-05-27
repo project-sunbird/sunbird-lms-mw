@@ -38,6 +38,8 @@ import java.util.stream.Collectors;
 )
 public class LocationActor extends BaseLocationActor {
 
+  private LocationDao locationDao = LocationDaoFactory.getInstance();
+
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, TelemetryEnvKey.LOCATION);
@@ -74,7 +76,6 @@ public class LocationActor extends BaseLocationActor {
   private void createLocation(Request request) {
     try {
       ObjectMapper mapper = new ObjectMapper();
-      LocationDao locationDao = LocationDaoFactory.getInstance();
       UpsertLocationRequest  locationRequest =  ProjectUtil.convertToRequestPojo(request, UpsertLocationRequest.class);
       validateUpsertLocnReq(locationRequest, JsonKey.CREATE);
       // put unique identifier in request for Id
@@ -95,7 +96,6 @@ public class LocationActor extends BaseLocationActor {
   private void updateLocation(Request request) {
     try {
       ObjectMapper mapper = new ObjectMapper();
-      LocationDao locationDao = LocationDaoFactory.getInstance();
       UpsertLocationRequest  locationRequest =  ProjectUtil.convertToRequestPojo(request, UpsertLocationRequest.class);
       validateUpsertLocnReq(locationRequest, JsonKey.UPDATE);
       Location location = mapper.convertValue(locationRequest, Location.class);
@@ -125,13 +125,11 @@ public class LocationActor extends BaseLocationActor {
   }
 
   private Response searchLocation(Map<String, Object> searchMap) {
-      LocationDao locationDao = LocationDaoFactory.getInstance();
       return locationDao.search(searchMap);
   }
 
   private void deleteLocation(Request request) {
     try {
-      LocationDao locationDao = LocationDaoFactory.getInstance();
       String locationId = (String) request.getRequest().get(JsonKey.LOCATION_ID);
       LocationRequestValidator.isLocationHasChild(locationId);
       Response response = locationDao.delete(locationId);

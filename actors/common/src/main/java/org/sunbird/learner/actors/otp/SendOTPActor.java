@@ -20,6 +20,8 @@ import java.util.Map;
 )
 public class SendOTPActor extends BaseActor {
 
+  public static final String RESET_PASSWORD = "resetPassword";
+
   @Override
   public void onReceive(Request request) throws Throwable {
 
@@ -62,7 +64,6 @@ public class SendOTPActor extends BaseActor {
   }
 
   private void sendOTPViaEmail(String key, String otp, String otpType, String template) {
-    String RESET_PASSWORD = "resetPassword";
     Map<String, Object> emailTemplateMap = new HashMap<>();
     emailTemplateMap.put(JsonKey.EMAIL, key);
     emailTemplateMap.put(JsonKey.OTP, otp);

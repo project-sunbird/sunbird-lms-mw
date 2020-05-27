@@ -30,6 +30,9 @@ import java.util.Map;
 )
 public class ChannelRegistrationActor extends BaseActor {
 
+  private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private static ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
+
   @Override
   public void onReceive(Request request) throws Throwable {
     if (request.getOperation().equalsIgnoreCase(BackgroundOperations.registerChannel.name())) {
@@ -73,7 +76,6 @@ public class ChannelRegistrationActor extends BaseActor {
     map.put(JsonKey.ID, JsonKey.CHANNEL_REG_STATUS_ID);
     map.put(JsonKey.FIELD, JsonKey.CHANNEL_REG_STATUS);
     map.put(JsonKey.VALUE, String.valueOf(bool));
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     Response response = cassandraOperation.upsertRecord("sunbird", JsonKey.SYSTEM_SETTINGS_DB, map);
     ProjectLogger.log(
         "Upsert operation result for channel reg status =  "
@@ -91,7 +93,6 @@ public class ChannelRegistrationActor extends BaseActor {
     Map<String, Object> filter = new HashMap<>();
     filter.put(JsonKey.IS_ROOT_ORG, true);
     searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
-    ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
     Future<Map<String, Object>> esResponseF =
         esService.search(searchDto, ProjectUtil.EsType.organisation.getTypeName());
     Map<String, Object> esResponse =

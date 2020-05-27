@@ -60,12 +60,15 @@ import static org.sunbird.learner.util.Util.isNotNull;
 )
 public class UserProfileReadActor extends BaseActor {
 
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private EncryptionService encryptionService =
-      org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
-          null);
+          org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
+                  null);
   private Util.DbInfo userOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
   private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
   private ActorRef systemSettingActorRef = null;
+  private UserExternalIdentityDaoImpl userExternalIdentityDao = new UserExternalIdentityDaoImpl();
+  private ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -120,7 +123,6 @@ public class UserProfileReadActor extends BaseActor {
             MessageFormat.format(
                 ResponseCode.mandatoryParamsMissing.getErrorMessage(), JsonKey.ID_TYPE));
       } else {
-        UserExternalIdentityDaoImpl userExternalIdentityDao = new UserExternalIdentityDaoImpl();
         userId = userExternalIdentityDao.getUserIdByExternalId(id, provider, idType);
         if (userId == null) {
           ProjectCommonException.throwClientErrorException(
@@ -137,7 +139,6 @@ public class UserProfileReadActor extends BaseActor {
     }
     boolean isPrivate = (boolean) actorMessage.getContext().get(JsonKey.PRIVATE);
     Map<String, Object> result = null;
-    ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
     if (!isPrivate) {
       Future<Map<String, Object>> resultF =
           esUtil.getDataByIdentifier(ProjectUtil.EsType.user.getTypeName(), userId);
@@ -246,7 +247,6 @@ public class UserProfileReadActor extends BaseActor {
 
   @SuppressWarnings("unchecked")
   private List<Map<String, String>> fetchUserExternalIdentity(String userId) {
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     Response response =
         cassandraOperation.getRecordsByIndexedProperty(
             JsonKey.SUNBIRD, JsonKey.USR_EXT_IDNT_TABLE, JsonKey.USER_ID, userId);
@@ -316,7 +316,6 @@ public class UserProfileReadActor extends BaseActor {
 
   private Future<Map<String, Object>> fetchRootAndRegisterOrganisation(Map<String, Object> result) {
     try {
-      ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
       if (isNotNull(result.get(JsonKey.ROOT_ORG_ID))) {
         String rootOrgId = (String) result.get(JsonKey.ROOT_ORG_ID);
         return esUtil.getDataByIdentifier(ProjectUtil.EsType.organisation.getTypeName(), rootOrgId);
@@ -400,7 +399,6 @@ public class UserProfileReadActor extends BaseActor {
     Set<String> topicSet = new HashSet<>();
 
     // fetch all associated user orgs
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     Response response1 =
         cassandraOperation.getRecordsByProperty(
             userOrgDbInfo.getKeySpace(), userOrgDbInfo.getTableName(), JsonKey.USER_ID, userId);
@@ -428,7 +426,6 @@ public class UserProfileReadActor extends BaseActor {
         SearchDTO searchDTO = new SearchDTO();
         searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
         searchDTO.setFields(orgfields);
-        ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
         Future<Map<String, Object>> esresultF =
             esUtil.search(searchDTO, EsType.organisation.getTypeName());
         Map<String, Object> esresult =
@@ -541,7 +538,6 @@ public class UserProfileReadActor extends BaseActor {
   @SuppressWarnings("unchecked")
   private Map<String, Map<String, Object>> getEsResultByListOfIds(
       List<String> orgIds, List<String> fields, EsType typeToSearch) {
-    ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
     Map<String, Object> filters = new HashMap<>();
     filters.put(JsonKey.ID, orgIds);
 
@@ -631,7 +627,6 @@ public class UserProfileReadActor extends BaseActor {
         sender().tell(exception, self());
         return;
       }
-      ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
       SearchDTO searchDto = new SearchDTO();
       Map<String, Object> filter = new HashMap<>();
       filter.put(JsonKey.LOGIN_ID, loginId);
@@ -728,7 +723,6 @@ public class UserProfileReadActor extends BaseActor {
         // If the user requests his data then we are fetching the private data from
         // userprofilevisibility index
         // and merge it with user index data
-        ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
         Future<Map<String, Object>> privateResultF =
             esUtil.getDataByIdentifier(
                 ProjectUtil.EsType.userprofilevisibility.getTypeName(),
@@ -874,7 +868,6 @@ public class UserProfileReadActor extends BaseActor {
         LoggerEnum.INFO.name());
     SearchDTO searchDTO = new SearchDTO();
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, searchMap);
-    ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
     Future<Map<String, Object>> esFuture = esUtil.search(searchDTO, EsType.user.getTypeName());
     Future<Response> userResponse =
         esFuture.map(
@@ -923,7 +916,6 @@ public class UserProfileReadActor extends BaseActor {
   }
 
   private void handleUserSearchAsyncRequest(SearchDTO searchDto, Request actorMessage) {
-    ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
     Future<Map<String, Object>> futureResponse =
         esUtil.search(searchDto, EsType.user.getTypeName());
 

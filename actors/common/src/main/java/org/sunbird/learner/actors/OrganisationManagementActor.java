@@ -55,6 +55,12 @@ import static org.sunbird.learner.util.Util.isNull;
   asyncTasks = {}
 )
 public class OrganisationManagementActor extends BaseActor {
+  private static final CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private static final LocationRequestValidator validator = new LocationRequestValidator();
+  private static final EncryptionService encryptionService =
+            org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
+                    null);
+  private static ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -107,7 +113,6 @@ public class OrganisationManagementActor extends BaseActor {
     try {
       Util.DbInfo orgTypeDbInfo = Util.dbInfoMap.get(JsonKey.ORG_TYPE_DB);
       Map<String, Object> request = actorMessage.getRequest();
-      CassandraOperation cassandraOperation = ServiceFactory.getInstance();
       Response result =
           cassandraOperation.getRecordsByProperty(
               orgTypeDbInfo.getKeySpace(),
@@ -167,7 +172,6 @@ public class OrganisationManagementActor extends BaseActor {
     try {
       Util.DbInfo orgTypeDbInfo = Util.dbInfoMap.get(JsonKey.ORG_TYPE_DB);
       Map<String, Object> request = actorMessage.getRequest();
-      CassandraOperation cassandraOperation = ServiceFactory.getInstance();
       Response result =
           cassandraOperation.getAllRecords(
               orgTypeDbInfo.getKeySpace(), orgTypeDbInfo.getTableName());
@@ -221,7 +225,6 @@ public class OrganisationManagementActor extends BaseActor {
     ProjectLogger.log("getOrgTypeList method call start");
     try {
       Util.DbInfo orgTypeDbInfo = Util.dbInfoMap.get(JsonKey.ORG_TYPE_DB);
-      CassandraOperation cassandraOperation = ServiceFactory.getInstance();
       Response response =
           cassandraOperation.getAllRecords(
               orgTypeDbInfo.getKeySpace(), orgTypeDbInfo.getTableName());
@@ -365,7 +368,6 @@ public class OrganisationManagementActor extends BaseActor {
         request.put(JsonKey.IS_ROOT_ORG, false);
         request.put(JsonKey.IS_SSO_ROOTORG_ENABLED, false);
       }
-      CassandraOperation cassandraOperation = ServiceFactory.getInstance();
       // This will remove all extra unnecessary parameter from request
       ObjectMapper mapper = new ObjectMapper();
       Organisation org = mapper.convertValue(request, Organisation.class);
@@ -413,7 +415,6 @@ public class OrganisationManagementActor extends BaseActor {
     orgExtIdRequest.put(JsonKey.PROVIDER, StringUtils.lowerCase(channel));
     orgExtIdRequest.put(JsonKey.EXTERNAL_ID, StringUtils.lowerCase(externalId));
     orgExtIdRequest.put(JsonKey.ORG_ID, orgId);
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     cassandraOperation.insertRecord(JsonKey.SUNBIRD, JsonKey.ORG_EXT_ID_DB, orgExtIdRequest);
   }
 
@@ -421,7 +422,6 @@ public class OrganisationManagementActor extends BaseActor {
     Map<String, String> orgExtIdRequest = new HashMap<String, String>();
     orgExtIdRequest.put(JsonKey.PROVIDER, StringUtils.lowerCase(channel));
     orgExtIdRequest.put(JsonKey.EXTERNAL_ID, StringUtils.lowerCase(externalId));
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     cassandraOperation.deleteRecord(JsonKey.SUNBIRD, JsonKey.ORG_EXT_ID_DB, orgExtIdRequest);
   }
 
@@ -430,7 +430,6 @@ public class OrganisationManagementActor extends BaseActor {
     filters.put(JsonKey.HASHTAGID, hashTagId);
     SearchDTO searchDto = new SearchDTO();
     searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filters);
-    ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
     Future<Map<String, Object>> resultF =
         esService.search(searchDto, ProjectUtil.EsType.organisation.getTypeName());
     Map<String, Object> result =
@@ -461,7 +460,6 @@ public class OrganisationManagementActor extends BaseActor {
       orgTypeId = DataCacheHandler.getOrgTypeMap().get(orgType.toLowerCase());
     } else {
       Util.DbInfo orgTypeDbInfo = Util.dbInfoMap.get(JsonKey.ORG_TYPE_DB);
-      CassandraOperation cassandraOperation = ServiceFactory.getInstance();
       Response response =
           cassandraOperation.getAllRecords(
               orgTypeDbInfo.getKeySpace(), orgTypeDbInfo.getTableName());
@@ -489,7 +487,6 @@ public class OrganisationManagementActor extends BaseActor {
 
     // object of telemetry event...
     Map<String, Object> targetObject = null;
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     try {
       actorMessage.toLower();
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
@@ -569,7 +566,6 @@ public class OrganisationManagementActor extends BaseActor {
     try {
       actorMessage.toLower();
       Map<String, Object> request = actorMessage.getRequest();
-      CassandraOperation cassandraOperation = ServiceFactory.getInstance();
       String orgId = (String) request.get(JsonKey.ORGANISATION_ID);
       Response result =
           cassandraOperation.getRecordById(
@@ -890,7 +886,6 @@ public class OrganisationManagementActor extends BaseActor {
     Map<String, Object> requestData = new HashMap<>();
     requestData.put(JsonKey.USER_ID, userId);
     requestData.put(JsonKey.ORGANISATION_ID, orgId);
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     Response result =
         cassandraOperation.getRecordsByProperties(
             userOrgDbInfo.getKeySpace(), userOrgDbInfo.getTableName(), requestData);
@@ -1020,7 +1015,6 @@ public class OrganisationManagementActor extends BaseActor {
     Map<String, Object> requestData = new HashMap<>();
     requestData.put(JsonKey.USER_ID, userId);
     requestData.put(JsonKey.ORGANISATION_ID, orgId);
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     Response result =
         cassandraOperation.getRecordsByProperties(
             userOrgDbInfo.getKeySpace(), userOrgDbInfo.getTableName(), requestData);
@@ -1107,7 +1101,6 @@ public class OrganisationManagementActor extends BaseActor {
       ProjectLogger.log("REQUESTED DATA IS NOT VALID");
       return;
     }
-    ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
     String orgId = (String) request.get(JsonKey.ORGANISATION_ID);
     Future<Map<String, Object>> resultF =
         esService.getDataByIdentifier(ProjectUtil.EsType.organisation.getTypeName(), orgId);
@@ -1128,7 +1121,6 @@ public class OrganisationManagementActor extends BaseActor {
 
   /** Inserts an address if not present, else updates the existing address */
   private void upsertAddress(Map<String, Object> addressReq) {
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ADDRESS_DB);
     cassandraOperation.upsertRecord(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), addressReq);
   }
@@ -1141,7 +1133,6 @@ public class OrganisationManagementActor extends BaseActor {
   public void validateRootOrg(Map<String, Object> request) {
     ProjectLogger.log("Validating Root org started---");
     Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     if (!StringUtils.isBlank((String) request.get(JsonKey.PARENT_ORG_ID))) {
       Response result =
           cassandraOperation.getRecordById(
@@ -1219,7 +1210,6 @@ public class OrganisationManagementActor extends BaseActor {
       Map<String, Object> requestDbMap = new HashMap<>();
       requestDbMap.put(JsonKey.PROVIDER, req.get(JsonKey.PROVIDER));
       requestDbMap.put(JsonKey.EXTERNAL_ID, req.get(JsonKey.EXTERNAL_ID));
-      CassandraOperation cassandraOperation = ServiceFactory.getInstance();
       Response result =
           cassandraOperation.getRecordsByProperties(
               userdbInfo.getKeySpace(), userdbInfo.getTableName(), requestDbMap);
@@ -1280,7 +1270,6 @@ public class OrganisationManagementActor extends BaseActor {
     }
     SearchDTO searchDTO = new SearchDTO();
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, requestDbMap);
-    ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
     Future<Map<String, Object>> esResponseF =
         esService.search(searchDTO, ProjectUtil.EsType.organisation.getTypeName());
     Map<String, Object> esResponse =
@@ -1335,7 +1324,6 @@ public class OrganisationManagementActor extends BaseActor {
     boolean fromExtId = false;
     Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Map<String, Object> requestDbMap = new HashMap<>();
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     if (!StringUtils.isBlank((String) data.get(JsonKey.USER_ID))) {
       requestDbMap.put(JsonKey.ID, data.get(JsonKey.USER_ID));
       result =
@@ -1368,9 +1356,6 @@ public class OrganisationManagementActor extends BaseActor {
       } else {
         data.put(JsonKey.LOGIN_ID, data.get(JsonKey.USERNAME));
       }
-      EncryptionService encryptionService =
-                org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
-                        null);
       String loginId = "";
       try {
         loginId = encryptionService.encryptData((String) data.get(JsonKey.LOGIN_ID));
@@ -1411,7 +1396,6 @@ public class OrganisationManagementActor extends BaseActor {
     Map<String, Object> requestData = new HashMap<>();
     requestData.put(JsonKey.CHANNEL, channel);
     requestData.put(JsonKey.IS_ROOT_ORG, true);
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     Response result =
         cassandraOperation.getRecordsByProperties(
             orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), requestData);
@@ -1479,7 +1463,6 @@ public class OrganisationManagementActor extends BaseActor {
 
     SearchDTO searchDTO = new SearchDTO();
     searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filters);
-    ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
     Future<Map<String, Object>> resultF = esService.search(searchDTO, type);
     Map<String, Object> esResponse =
         (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
@@ -1511,7 +1494,6 @@ public class OrganisationManagementActor extends BaseActor {
   private boolean validateFieldUniqueness(String key, String value, String orgId) {
     if (value != null) {
       Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
-      CassandraOperation cassandraOperation = ServiceFactory.getInstance();
       Response result =
           cassandraOperation.getRecordsByProperty(
               orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), key, value);
@@ -1536,7 +1518,6 @@ public class OrganisationManagementActor extends BaseActor {
 
   private boolean handleChannelExternalIdUniqueness(
       Map<String, Object> compositeKeyMap, String orgId) {
-      CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     if (MapUtils.isNotEmpty(compositeKeyMap)) {
       Response result =
           cassandraOperation.getRecordsByCompositeKey(
@@ -1622,7 +1603,6 @@ public class OrganisationManagementActor extends BaseActor {
       Map<String, Object> filterMap = new HashMap<>();
       filterMap.put(JsonKey.CHANNEL, channel);
       filterMap.put(JsonKey.IS_ROOT_ORG, true);
-      ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
       SearchDTO searchDTO = new SearchDTO();
       searchDTO.getAdditionalProperties().put(JsonKey.FILTERS, filterMap);
       Future<Map<String, Object>> esResponseF =
@@ -1644,7 +1624,6 @@ public class OrganisationManagementActor extends BaseActor {
   @SuppressWarnings("unchecked")
   private void validateLocationCodeAndIds(Map<String, Object> request) {
     List<String> locationIdsList ;
-    LocationRequestValidator validator = new LocationRequestValidator();
     if (CollectionUtils.isNotEmpty((List<String>) request.get(JsonKey.LOCATION_IDS))) {
       locationIdsList =
           validator.getHierarchyLocationIds(
@@ -1665,7 +1644,6 @@ public class OrganisationManagementActor extends BaseActor {
 
   private Map<String, Object> getOrgById(String id) {
     Map<String, Object> responseMap = new HashMap<>();
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
     Response response =
         cassandraOperation.getRecordById(orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), id);
@@ -1735,7 +1713,6 @@ public class OrganisationManagementActor extends BaseActor {
   }
 
   private Response updateCassandraOrgRecord(Map<String, Object> reqMap) {
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
     return cassandraOperation.updateRecord(
         orgDbInfo.getKeySpace(), orgDbInfo.getTableName(), reqMap);

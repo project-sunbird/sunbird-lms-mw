@@ -39,6 +39,9 @@ import java.util.*;
 )
 public class SearchHandlerActor extends BaseActor {
 
+  private OrganisationClient orgClient = new OrganisationClientImpl();
+  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
+
   @SuppressWarnings({"unchecked", "rawtypes"})
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -76,7 +79,6 @@ public class SearchHandlerActor extends BaseActor {
             EsType.organisation.getTypeName(),
             searchDto,request.getContext());
       } else {
-        ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
         Future<Map<String, Object>> resultF = esService.search(searchDto, types[0]);
         result = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
         Response response = new Response();
@@ -125,7 +127,6 @@ public class SearchHandlerActor extends BaseActor {
 
   private void handleOrgSearchAsyncRequest(
       String indexType, SearchDTO searchDto, Map<String,Object> context) {
-    ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
     Future<Map<String, Object>> futureResponse = esService.search(searchDto, indexType);
     Future<Response> response =
         futureResponse.map(
@@ -247,7 +248,6 @@ public class SearchHandlerActor extends BaseActor {
             });
 
     List<String> orgIds = new ArrayList<>(orgIdList);
-    OrganisationClient orgClient = new OrganisationClientImpl();
     List<Organisation> organisations = orgClient.esSearchOrgByIds(orgIds, filteredRequestedFileds);
     Map<String, Organisation> orgMap = new HashMap<>();
     organisations

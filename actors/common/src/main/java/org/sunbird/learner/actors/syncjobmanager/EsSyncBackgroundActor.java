@@ -28,6 +28,9 @@ import java.util.stream.Collectors;
 )
 public class EsSyncBackgroundActor extends BaseActor {
 
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
+
   @Override
   public void onReceive(Request request) throws Throwable {
     String operation = request.getOperation();
@@ -41,7 +44,6 @@ public class EsSyncBackgroundActor extends BaseActor {
 
   private void sync(Request message) {
     ProjectLogger.log("EsSyncBackgroundActor: sync called", LoggerEnum.INFO);
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     long startTime = System.currentTimeMillis();
     Map<String, Object> req = message.getRequest();
     Map<String, Object> responseMap = new HashMap<>();
@@ -133,7 +135,6 @@ public class EsSyncBackgroundActor extends BaseActor {
         result.add(getOrgDetails(itr.next()));
       }
     }
-    ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
     esService.bulkInsert(getType(objectType), result);
     long stopTime = System.currentTimeMillis();
     long elapsedTime = stopTime - startTime;
@@ -149,7 +150,6 @@ public class EsSyncBackgroundActor extends BaseActor {
 
   private void handleUserSyncRequest(List<Object> objectIds) {
     if (CollectionUtils.isEmpty(objectIds)) {
-      CassandraOperation cassandraOperation = ServiceFactory.getInstance();
       Response response =
           cassandraOperation.getRecordsByProperties(
               JsonKey.SUNBIRD, JsonKey.USER, null, Arrays.asList(JsonKey.ID));
@@ -200,7 +200,6 @@ public class EsSyncBackgroundActor extends BaseActor {
 
   private Map<String, Object> getDetailsById(DbInfo dbInfo, String userId) {
     try {
-      CassandraOperation cassandraOperation = ServiceFactory.getInstance();
       Response response =
           cassandraOperation.getRecordById(dbInfo.getKeySpace(), dbInfo.getTableName(), userId);
       return ((((List<Map<String, Object>>) response.get(JsonKey.RESPONSE)).isEmpty())

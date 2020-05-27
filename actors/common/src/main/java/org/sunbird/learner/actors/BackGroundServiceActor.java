@@ -29,6 +29,9 @@ import java.util.Map;
 )
 public class BackGroundServiceActor extends BaseActor {
 
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private static ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
+
   @Override
   public void onReceive(Request request) throws Throwable {
     if (request
@@ -46,7 +49,6 @@ public class BackGroundServiceActor extends BaseActor {
     List<Object> locationIds = (List<Object>) actorMessage.getRequest().get(JsonKey.LOCATION_IDS);
     String operation = (String) actorMessage.getRequest().get(JsonKey.OPERATION);
     ProjectLogger.log("operation for updating UserCount" + operation);
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     Response response =
         cassandraOperation.getRecordsByProperty(
             locDbInfo.getKeySpace(), locDbInfo.getTableName(), JsonKey.ID, locationIds);
@@ -113,7 +115,6 @@ public class BackGroundServiceActor extends BaseActor {
     Map<String, Object> filter = new HashMap<>();
     filter.put(JsonKey.LOCATION_ID, locationId);
     searchDto.getAdditionalProperties().put(JsonKey.FILTERS, filter);
-    ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
     Future<Map<String, Object>> esResponseF =
         esService.search(searchDto, ProjectUtil.EsType.organisation.getTypeName());
     Map<String, Object> esResponse =

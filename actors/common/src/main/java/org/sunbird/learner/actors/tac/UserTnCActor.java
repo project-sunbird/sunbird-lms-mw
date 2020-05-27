@@ -30,6 +30,10 @@ import java.util.*;
 )
 public class UserTnCActor extends BaseActor {
 
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
+
   @Override
   public void onReceive(Request request) throws Throwable {
     String operation = request.getOperation();
@@ -59,7 +63,6 @@ public class UserTnCActor extends BaseActor {
               ResponseCode.invalidParameterValue.getErrorMessage(), acceptedTnC, JsonKey.VERSION));
     }
     // Search user account in ES
-    ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
     Future<Map<String, Object>> resultF =
         esService.getDataByIdentifier(ProjectUtil.EsType.user.getTypeName(), userId);
     Map<String, Object> result =
@@ -88,8 +91,6 @@ public class UserTnCActor extends BaseActor {
       userMap.put(JsonKey.TNC_ACCEPTED_VERSION, acceptedTnC);
       userMap.put(
           JsonKey.TNC_ACCEPTED_ON, new Timestamp(Calendar.getInstance().getTime().getTime()));
-      CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-      Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
       response =
           cassandraOperation.updateRecord(
               usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userMap);

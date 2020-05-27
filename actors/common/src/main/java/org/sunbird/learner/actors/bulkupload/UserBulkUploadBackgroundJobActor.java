@@ -33,11 +33,14 @@ import java.util.*;
 )
 public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJobActor {
 
+  private UserClient userClient = new UserClientImpl();
+  private OrganisationClient organisationClient = new OrganisationClientImpl();
+  private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
+
   @Override
   public void onReceive(Request request) throws Throwable {
     String operation = request.getOperation();
     Util.initializeContext(request, TelemetryEnvKey.USER);
-    SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
     if (operation.equalsIgnoreCase("userBulkUploadBackground")) {
 
       Map outputColumns =
@@ -100,7 +103,6 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
     Organisation organisation = null;
     try {
       ObjectMapper mapper = new ObjectMapper();
-      SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
       Map<String, Object> userMap = mapper.readValue(data, Map.class);
       String[] mandatoryColumnsObject =
           systemSettingClient.getSystemSettingByFieldAndKey(
@@ -228,7 +230,6 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
     ProjectLogger.log("UserBulkUploadBackgroundJobActor: callCreateUser called", LoggerEnum.INFO);
     String userId;
     try {
-      UserClient userClient = new UserClientImpl();
       userId = userClient.createUser(getActorRef(ActorOperations.CREATE_USER.getValue()), user);
     } catch (Exception ex) {
       ProjectLogger.log(
@@ -262,7 +263,6 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
     ProjectLogger.log("UserBulkUploadBackgroundJobActor: callUpdateUser called", LoggerEnum.INFO);
     try {
       user.put(JsonKey.ORG_NAME, orgName);
-      UserClient userClient = new UserClientImpl();
       userClient.updateUser(getActorRef(ActorOperations.UPDATE_USER.getValue()), user);
     } catch (Exception ex) {
       ProjectLogger.log(
@@ -281,7 +281,6 @@ public class UserBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJo
   }
 
   private Organisation getOrgDetails(Map<String, Object> userMap) {
-    OrganisationClient organisationClient = new OrganisationClientImpl();
     if (StringUtils.isNotBlank((String) userMap.get(JsonKey.ORG_EXTERNAL_ID))) {
       Map<String, Object> filters = new HashMap<>();
       filters.put(

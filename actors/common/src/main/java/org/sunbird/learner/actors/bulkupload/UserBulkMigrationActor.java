@@ -41,8 +41,11 @@ import java.util.Map;
 )
 public class UserBulkMigrationActor extends BaseBulkUploadActor {
 
+    private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
+    private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+    public static final int RETRY_COUNT=2;
     private CSVReader csvReader;
-    private SystemSetting systemSetting;
+    private static SystemSetting systemSetting;
 
     @Override
     public void onReceive(Request request) throws Throwable {
@@ -57,7 +60,6 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
 
     private void uploadCsv(Request request) throws IOException {
         Map<String, Object> req = (Map<String, Object>) request.getRequest().get(JsonKey.DATA);
-        SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
          systemSetting  =
                 systemSettingClient.getSystemSettingByField(
                         getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
@@ -98,7 +100,6 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
         long createdOn=System.currentTimeMillis();
         record.put(JsonKey.CREATED_ON,new Timestamp(createdOn));
         record.put(JsonKey.LAST_UPDATED_ON,new Timestamp(createdOn));
-        CassandraOperation cassandraOperation = ServiceFactory.getInstance();
         Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.BULK_OP_DB);
         Response response=cassandraOperation.insertRecord(dbInfo.getKeySpace(), dbInfo.getTableName(), record);
         response.put(JsonKey.PROCESS_ID,bulkMigrationUser.getId());
@@ -107,7 +108,6 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
     }
     private BulkMigrationUser prepareRecord(Request request,String processID,List<MigrationUser>migrationUserList){
         try {
-            int RETRY_COUNT=2;
             ObjectMapper mapper = new ObjectMapper();
             String decryptedData=mapper.writeValueAsString(migrationUserList);
             BulkMigrationUser migrationUser=new BulkMigrationUser.BulkMigrationUserBuilder(processID,decryptedData)
@@ -323,7 +323,6 @@ public class UserBulkMigrationActor extends BaseBulkUploadActor {
      * @return result
      */
     private Map<String,Object> getUserById(String userId){
-        CassandraOperation cassandraOperation = ServiceFactory.getInstance();
         Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
         Response response=cassandraOperation.getRecordById(usrDbInfo.getKeySpace(),usrDbInfo.getTableName(),userId);
         if(((List)response.getResult().get(JsonKey.RESPONSE)).isEmpty()) {

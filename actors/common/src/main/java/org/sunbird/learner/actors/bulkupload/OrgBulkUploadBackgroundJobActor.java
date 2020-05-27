@@ -36,11 +36,13 @@ import java.util.Map;
 )
 public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJobActor {
 
+  private OrganisationClient orgClient = new OrganisationClientImpl();
+  private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
+
   @Override
   public void onReceive(Request request) throws Throwable {
     String operation = request.getOperation();
     Util.initializeContext(request, TelemetryEnvKey.ORGANISATION);
-    SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
     if (operation.equalsIgnoreCase("orgBulkUploadBackground")) {
       Map<String, String> outputColumns =
           systemSettingClient.getSystemSettingByFieldAndKey(
@@ -99,7 +101,6 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
     String data = task.getData();
     ObjectMapper mapper = new ObjectMapper();
     try {
-      SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
       Map<String, Object> orgMap = mapper.readValue(data, Map.class);
       Object mandatoryColumnsObject =
           systemSettingClient.getSystemSettingByFieldAndKey(
@@ -196,7 +197,6 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
     row.put(JsonKey.LOCATION_CODE, locationCodes);
     String orgId;
     try {
-      OrganisationClient orgClient = new OrganisationClientImpl();
       orgId = orgClient.createOrg(getActorRef(ActorOperations.CREATE_ORG.getValue()), row);
     } catch (Exception ex) {
       ProjectLogger.log(
@@ -231,7 +231,6 @@ public class OrgBulkUploadBackgroundJobActor extends BaseBulkUploadBackgroundJob
     row.put(JsonKey.LOCATION_CODE, locationCodes);
     try {
       row.put(JsonKey.ORGANISATION_ID, org.getId());
-      OrganisationClient orgClient = new OrganisationClientImpl();
       orgClient.updateOrg(getActorRef(ActorOperations.UPDATE_ORG.getValue()), row);
     } catch (Exception ex) {
       ProjectLogger.log(

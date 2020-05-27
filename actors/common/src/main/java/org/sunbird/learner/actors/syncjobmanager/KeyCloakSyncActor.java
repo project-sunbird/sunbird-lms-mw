@@ -25,6 +25,10 @@ import java.util.Map.Entry;
 )
 public class KeyCloakSyncActor extends BaseActor {
 
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private boolean isSSOEnabled = Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
+  private SSOManager ssoManager = SSOServiceFactory.getInstance();
+  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
   @Override
   public void onReceive(Request actorMessage) throws Throwable {
     String requestedOperation = actorMessage.getOperation();
@@ -43,7 +47,6 @@ public class KeyCloakSyncActor extends BaseActor {
   private void syncData(Request message) {
     ProjectLogger.log("USER DB data sync operation to keycloak started ");
     long startTime = System.currentTimeMillis();
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     Map<String, Object> req = message.getRequest();
     Map<String, Object> responseMap = new HashMap<>();
     List<Map<String, Object>> reponseList = null;
@@ -102,17 +105,13 @@ public class KeyCloakSyncActor extends BaseActor {
     // Decrypt user data
     UserUtility.decryptUserData(userMap);
     Util.DbInfo dbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
-    boolean isSSOEnabled =  Boolean.parseBoolean(PropertiesCache.getInstance().getProperty(JsonKey.IS_SSO_ENABLED));
     if (isSSOEnabled) {
-      CassandraOperation cassandraOperation = ServiceFactory.getInstance();
       try {
-        SSOManager ssoManager = SSOServiceFactory.getInstance();
-        ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
         String res = ssoManager.syncUserData(userMap);
         if (!(!StringUtils.isBlank(res) && res.equalsIgnoreCase(JsonKey.SUCCESS))) {
           if (null == userMap.get(JsonKey.EMAIL_VERIFIED)) {
             Map<String, Object> map = new HashMap<>();
-            if (SSOServiceFactory.getInstance().isEmailVerified(userId)) {
+            if (ssoManager.isEmailVerified(userId)) {
               map.put(JsonKey.EMAIL_VERIFIED, true);
               map.put(JsonKey.ID, userId);
             } else {

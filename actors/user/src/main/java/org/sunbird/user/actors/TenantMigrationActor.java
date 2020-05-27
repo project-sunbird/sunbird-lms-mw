@@ -56,7 +56,23 @@ import java.util.stream.IntStream;
 )
 public class TenantMigrationActor extends BaseActor {
 
+  private Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
+  private Util.DbInfo usrOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
+  private static InterServiceCommunication interServiceCommunication =
+          InterServiceCommunicationFactory.getInstance();
   private ActorRef systemSettingActorRef = null;
+  private ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
+  private static final String ACCOUNT_MERGE_EMAIL_TEMPLATE = "accountMerge";
+  private static final String MASK_IDENTIFIER = "maskIdentifier";
+  private static final int MAX_MIGRATION_ATTEMPT = 2;
+  public static final int USER_EXTERNAL_ID_MISMATCH = -1;
+  private IFeedService feedService = FeedFactory.getInstance();
+  private DecryptionService decryptionService =
+          org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
+                  "");
+  private DataMaskingService maskingService =
+          org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance("");
+
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -101,7 +117,6 @@ public class TenantMigrationActor extends BaseActor {
     Map<String, Object> userUpdateRequest = createUserUpdateRequest(request);
     // Update user channel and rootOrgId
     CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-    Util.DbInfo usrDbInfo = Util.dbInfoMap.get(JsonKey.USER_DB);
     Response response =
         cassandraOperation.updateRecord(
             usrDbInfo.getKeySpace(), usrDbInfo.getTableName(), userUpdateRequest);
@@ -188,12 +203,12 @@ public class TenantMigrationActor extends BaseActor {
       requestMap.put(JsonKey.RECIPIENT_PHONES, Arrays.asList(userData.get(JsonKey.PHONE)));
       requestMap.put(JsonKey.MODE, JsonKey.SMS);
     }
-    requestMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, "accountMerge");
+    requestMap.put(JsonKey.EMAIL_TEMPLATE_TYPE, ACCOUNT_MERGE_EMAIL_TEMPLATE);
     String body =
         MessageFormat.format(
             ProjectUtil.getConfigValue(JsonKey.SUNBIRD_MIGRATE_USER_BODY),
             ProjectUtil.getConfigValue(JsonKey.SUNBIRD_INSTALLATION),
-            userData.get("maskIdentifier"));
+            userData.get(MASK_IDENTIFIER));
     requestMap.put(JsonKey.BODY, body);
     requestMap.put(
         JsonKey.SUBJECT, ProjectUtil.getConfigValue(JsonKey.SUNBIRD_ACCOUNT_MERGE_SUBJECT));
@@ -203,19 +218,14 @@ public class TenantMigrationActor extends BaseActor {
   }
 
   private Map<String, Object> createUserData(Map<String, Object> userData) {
-    DecryptionService decryptionService =
-              org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getDecryptionServiceInstance(
-                      "");
-    DataMaskingService maskingService =
-              org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getMaskingServiceInstance("");
     if (StringUtils.isNotBlank((String) userData.get(JsonKey.EMAIL))) {
       userData.put(
           JsonKey.EMAIL, decryptionService.decryptData((String) userData.get(JsonKey.EMAIL)));
-      userData.put("maskIdentifier", maskingService.maskEmail((String) userData.get(JsonKey.EMAIL)));
+      userData.put(MASK_IDENTIFIER, maskingService.maskEmail((String) userData.get(JsonKey.EMAIL)));
     } else {
       userData.put(
           JsonKey.PHONE, decryptionService.decryptData((String) userData.get(JsonKey.PHONE)));
-      userData.put("maskIdentifier", maskingService.maskPhone((String) userData.get(JsonKey.PHONE)));
+      userData.put(MASK_IDENTIFIER, maskingService.maskPhone((String) userData.get(JsonKey.PHONE)));
     }
     return userData;
   }
@@ -229,7 +239,6 @@ public class TenantMigrationActor extends BaseActor {
         || StringUtils.isNotBlank((String) migrateReq.get(JsonKey.ORG_EXTERNAL_ID))) {
       if (StringUtils.isNotBlank((String) migrateReq.get(JsonKey.ORG_ID))) {
         orgId = (String) migrateReq.get(JsonKey.ORG_ID);
-        ElasticSearchService esUtil = EsClientFactory.getInstance(JsonKey.REST);
         Future<Map<String, Object>> resultF =
             esUtil.getDataByIdentifier(ProjectUtil.EsType.organisation.getTypeName(), orgId);
         Map<String, Object> result =
@@ -309,8 +318,6 @@ public class TenantMigrationActor extends BaseActor {
       userequest.setOperation(UserActorOperations.UPSERT_USER_EXTERNAL_IDENTITY_DETAILS.getValue());
       userExtIdsReq.put(JsonKey.OPERATION_TYPE, JsonKey.CREATE);
       userequest.getRequest().putAll(userExtIdsReq);
-      InterServiceCommunication interServiceCommunication =
-                InterServiceCommunicationFactory.getInstance();
       response =
           (Response)
               interServiceCommunication.getResponse(
@@ -374,7 +381,6 @@ public class TenantMigrationActor extends BaseActor {
   }
 
   private void deleteOldUserOrgMapping(List<Map<String, Object>> userOrgList) {
-    Util.DbInfo usrOrgDbInfo = Util.dbInfoMap.get(JsonKey.USER_ORG_DB);
     ProjectLogger.log(
         "TenantMigrationActor:deleteOldUserOrgMapping: delete old user org association started.",
         LoggerEnum.INFO.name());
@@ -482,7 +488,6 @@ public class TenantMigrationActor extends BaseActor {
   }
 
   private int getRemainingAttempt(List<ShadowUser> shadowUserList) {
-    int MAX_MIGRATION_ATTEMPT = 2;
     return MAX_MIGRATION_ATTEMPT - shadowUserList.get(0).getAttemptedCount() - 1;
   }
 
@@ -510,7 +515,6 @@ public class TenantMigrationActor extends BaseActor {
   }
 
   private boolean isIndexValid(int index) {
-      int USER_EXTERNAL_ID_MISMATCH = -1;
       return (index != USER_EXTERNAL_ID_MISMATCH);
   }
 
@@ -536,7 +540,6 @@ public class TenantMigrationActor extends BaseActor {
    * @return
    */
   private int getIndexOfShadowUser(List<ShadowUser> shadowUserList, String extUserId) {
-    int USER_EXTERNAL_ID_MISMATCH = -1;
     int index =
         IntStream.range(0, shadowUserList.size())
             .filter(i -> Objects.nonNull(shadowUserList.get(i)))
@@ -592,7 +595,6 @@ public class TenantMigrationActor extends BaseActor {
       ProjectLogger.log(
           "TenantMigrationActor:deleteUserFeed method called for feedId : " + feedId,
           LoggerEnum.INFO.name());
-      IFeedService feedService = FeedFactory.getInstance();
       feedService.delete(feedId);
     }
   }
@@ -607,7 +609,6 @@ public class TenantMigrationActor extends BaseActor {
    */
   private Response prepareFailureResponse(String extUserId, int remainingAttempt) {
     Response response = new Response();
-    int MAX_MIGRATION_ATTEMPT = 2;
     response.setResponseCode(ResponseCode.invalidUserExternalId);
     response.put(JsonKey.ERROR, true);
     response.put(JsonKey.MAX_ATTEMPT, MAX_MIGRATION_ATTEMPT);

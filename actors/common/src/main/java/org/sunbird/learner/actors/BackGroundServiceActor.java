@@ -29,7 +29,7 @@ import java.util.Map;
 )
 public class BackGroundServiceActor extends BaseActor {
 
-  private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override

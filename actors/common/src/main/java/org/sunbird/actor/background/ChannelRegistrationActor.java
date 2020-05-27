@@ -30,8 +30,8 @@ import java.util.Map;
 )
 public class ChannelRegistrationActor extends BaseActor {
 
-  private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private static ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public void onReceive(Request request) throws Throwable {

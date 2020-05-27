@@ -55,12 +55,12 @@ import static org.sunbird.learner.util.Util.isNull;
   asyncTasks = {}
 )
 public class OrganisationManagementActor extends BaseActor {
-  private static final CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private final CassandraOperation cassandraOperation = ServiceFactory.getInstance();
   private static final LocationRequestValidator validator = new LocationRequestValidator();
-  private static final EncryptionService encryptionService =
+  private final EncryptionService encryptionService =
             org.sunbird.common.models.util.datasecurity.impl.ServiceFactory.getEncryptionServiceInstance(
                     null);
-  private static ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
+  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
 
   @Override
   public void onReceive(Request request) throws Throwable {

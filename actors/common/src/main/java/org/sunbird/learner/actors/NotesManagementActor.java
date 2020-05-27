@@ -29,8 +29,8 @@ import java.util.*;
 )
 public class NotesManagementActor extends BaseActor {
 
-  private static CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-  private static ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
 
   /** Receives the actor message and perform the operation for user note */
   @Override

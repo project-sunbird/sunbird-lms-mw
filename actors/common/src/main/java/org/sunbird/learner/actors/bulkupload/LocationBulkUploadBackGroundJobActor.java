@@ -28,6 +28,8 @@ import java.util.Map;
     asyncTasks = {"locationBulkUploadBackground"})
 public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgroundJobActor {
 
+  private LocationClient locationClient = new LocationClientImpl();
+
   @Override
   public void onReceive(Request request) throws Throwable {
 
@@ -66,7 +68,6 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgrou
 
       if (checkMandatoryFields(row, GeoLocationJsonKey.CODE)) {
         Location location = null;
-        LocationClient locationClient = new LocationClientImpl();
         try {
           location =
               locationClient.getLocationByCode(
@@ -131,7 +132,6 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgrou
     }
     ObjectMapper mapper = new ObjectMapper();
     try {
-      LocationClient locationClient = new LocationClientImpl();
       locationClient.updateLocation(
           getActorRef(LocationActorOperation.UPDATE_LOCATION.getValue()),
           mapper.convertValue(row, UpsertLocationRequest.class));
@@ -161,7 +161,6 @@ public class LocationBulkUploadBackGroundJobActor extends BaseBulkUploadBackgrou
     ObjectMapper mapper = new ObjectMapper();
     String locationId = "";
     try {
-      LocationClient locationClient = new LocationClientImpl();
       locationId =
           locationClient.createLocation(
               getActorRef(LocationActorOperation.CREATE_LOCATION.getValue()),

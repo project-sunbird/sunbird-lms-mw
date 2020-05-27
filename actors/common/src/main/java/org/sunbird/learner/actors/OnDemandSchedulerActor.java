@@ -25,7 +25,7 @@ import static org.sunbird.common.request.orgvalidator.BaseOrgRequestValidator.ER
   asyncTasks = {}
 )
 public class OnDemandSchedulerActor extends BaseActor {
-
+  private static final String TYPE = "type";
   @Override
   public void onReceive(Request actorMessage) throws Throwable {
     if (actorMessage
@@ -39,7 +39,6 @@ public class OnDemandSchedulerActor extends BaseActor {
 
  private void startSchedular(Request actorMessage) {
    Map<String, Object> req = actorMessage.getRequest();
-   String TYPE = "type";
    ArrayList<String> jobTypes = (ArrayList<String>) req.get(TYPE);
    if(jobTypes.size() > 0) {
     String[] jobs = jobTypes.stream().toArray(String[]::new);
@@ -56,7 +55,6 @@ public class OnDemandSchedulerActor extends BaseActor {
 
  private void validateJobs(String[] jobs) {
    List<String> jobsAllowed = new ArrayList<String>();
-   String TYPE = "type";
    jobsAllowed.add("bulkupload");
    jobsAllowed.add("shadowuser");
    for(String job: jobs) {

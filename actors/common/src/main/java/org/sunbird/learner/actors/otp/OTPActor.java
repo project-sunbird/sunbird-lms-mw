@@ -28,6 +28,13 @@ import java.util.Map;
 )
 public class OTPActor extends BaseActor {
 
+  private OTPService otpService = new OTPService();
+  private static final String SUNBIRD_OTP_ALLOWED_ATTEMPT = "sunbird_otp_allowed_attempt";
+  private static final String REMAINING_ATTEMPT = "remainingAttempt";
+  private static final String MAX_ALLOWED_ATTEMPT = "maxAllowedAttempt";
+  private RateLimitService rateLimitService = new RateLimitServiceImpl();
+  private LogMaskServiceImpl logMaskService = new LogMaskServiceImpl();
+
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, TelemetryEnvKey.USER);
@@ -41,12 +48,10 @@ public class OTPActor extends BaseActor {
   }
 
   private String maskOTP(String otp) {
-      LogMaskServiceImpl logMaskService = new LogMaskServiceImpl();
       return logMaskService.maskOTP(otp);
   }
 
   private String maskId(String id, String type) {
-    LogMaskServiceImpl logMaskService = new LogMaskServiceImpl();
     if (JsonKey.EMAIL.equalsIgnoreCase(type)) {
       return logMaskService.maskEmail(id);
     } else if (JsonKey.PHONE.equalsIgnoreCase(type)) {
@@ -59,13 +64,11 @@ public class OTPActor extends BaseActor {
     ProjectLogger.log("OTPActor:generateOTP method call start.", LoggerEnum.INFO.name());
     String type = (String) request.getRequest().get(JsonKey.TYPE);
     String key = getKey(type, request);
-    OTPService otpService = new OTPService();
     String userId = (String) request.getRequest().get(JsonKey.USER_ID);
     if (StringUtils.isNotBlank(userId)) {
       key = OTPUtil.getEmailPhoneByUserId(userId, type);
       type = getType(type);
     }
-    RateLimitService rateLimitService = new RateLimitServiceImpl();
     rateLimitService.throttleByKey(
         key, new RateLimiter[] {OtpRateLimiter.HOUR, OtpRateLimiter.DAY});
 
@@ -127,7 +130,6 @@ public class OTPActor extends BaseActor {
       key = OTPUtil.getEmailPhoneByUserId(userId, type);
       type = getType(type);
     }
-    OTPService otpService = new OTPService();
     Map<String, Object> otpDetails = otpService.getOTPDetails(type, key);
 
     if (MapUtils.isEmpty(otpDetails)) {
@@ -182,7 +184,6 @@ public class OTPActor extends BaseActor {
             + remainingCount,
         LoggerEnum.INFO.name());
     int attemptedCount = (int) otpDetails.get(JsonKey.ATTEMPTED_COUNT);
-    OTPService otpService = new OTPService();
     if (remainingCount <= 0) {
       otpService.deleteOtp(type, key);
     } else {
@@ -201,14 +202,14 @@ public class OTPActor extends BaseActor {
     response
         .getResult()
         .put(
-            "maxAllowedAttempt",
-            Integer.parseInt(ProjectUtil.getConfigValue("sunbird_otp_allowed_attempt")));
-    response.getResult().put("remainingAttempt", remainingCount);
+                MAX_ALLOWED_ATTEMPT,
+            Integer.parseInt(ProjectUtil.getConfigValue(SUNBIRD_OTP_ALLOWED_ATTEMPT)));
+    response.getResult().put(REMAINING_ATTEMPT, remainingCount);
     sender().tell(response, self());
   }
 
   private int getRemainingAttemptedCount(Map<String, Object> otpDetails) {
-    int allowedAttempt = Integer.parseInt(ProjectUtil.getConfigValue("sunbird_otp_allowed_attempt"));
+    int allowedAttempt = Integer.parseInt(ProjectUtil.getConfigValue(SUNBIRD_OTP_ALLOWED_ATTEMPT));
     int attemptedCount = (int) otpDetails.get(JsonKey.ATTEMPTED_COUNT);
     return (allowedAttempt - (attemptedCount + 1));
   }

@@ -27,6 +27,8 @@ import java.util.Map;
 )
 public class UserStatusActor extends UserBaseActor {
 
+  private UserService userService = UserServiceImpl.getInstance();
+
   @Override
   public void onReceive(Request request) throws Throwable {
     Util.initializeContext(request, TelemetryEnvKey.USER);
@@ -58,7 +60,7 @@ public class UserStatusActor extends UserBaseActor {
     String userId = (String) request.getRequest().get(JsonKey.USER_ID);
     String logMsgPrefix =
         MessageFormat.format("UserStatusActor:updateUserStatus:{0}:{1}: ", operation, userId);
-    User user = UserServiceImpl.getInstance().getUserById(userId);
+    User user = userService.getUserById(userId);
 
     if (operation.equals(ActorOperations.BLOCK_USER.getValue())
         && Boolean.TRUE.equals(user.getIsDeleted())) {

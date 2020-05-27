@@ -7,12 +7,14 @@ import org.sunbird.actorutil.systemsettings.impl.SystemSettingClientImpl;
 import org.sunbird.common.ElasticSearchHelper;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.factory.EsClientFactory;
+import org.sunbird.common.inf.ElasticSearchService;
 import org.sunbird.common.models.util.*;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
 import org.sunbird.learner.actors.bulkupload.dao.BulkUploadProcessDao;
 import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessDaoImpl;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
+import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.Util;
 import scala.concurrent.Future;
 
@@ -29,25 +31,9 @@ import java.util.stream.Collectors;
 )
 public class OrgBulkUploadActor extends BaseBulkUploadActor {
 
-  private String[] bulkOrgAllowedFields = {
-    JsonKey.ORGANISATION_ID,
-    JsonKey.ORGANISATION_NAME,
-    JsonKey.EXTERNAL_ID,
-    JsonKey.DESCRIPTION,
-    JsonKey.LOCATION_CODE,
-    JsonKey.STATUS,
-    JsonKey.CHANNEL,
-    JsonKey.IS_ROOT_ORG,
-    JsonKey.PROVIDER,
-    JsonKey.HOME_URL,
-    JsonKey.ORG_CODE,
-    JsonKey.ORG_TYPE,
-    JsonKey.PREFERRED_LANGUAGE,
-    JsonKey.THEME,
-    JsonKey.CONTACT_DETAILS,
-    JsonKey.LOC_ID,
-    JsonKey.HASHTAGID,
-  };
+  private SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
+  private ElasticSearchService esService = EsClientFactory.getInstance(JsonKey.REST);
+
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -63,7 +49,6 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
 
   private void upload(Request request) throws IOException {
     Map<String, Object> req = (Map<String, Object>) request.getRequest().get(JsonKey.DATA);
-    SystemSettingClient systemSettingClient = new SystemSettingClientImpl();
     Object dataObject =
         systemSettingClient.getSystemSettingByFieldAndKey(
             getActorRef(ActorOperations.GET_SYSTEM_SETTING.getValue()),
@@ -104,7 +89,7 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
           mandatoryColumns,
           supportedColumnsLowerCaseMap);
     } else {
-      validateFileHeaderFields(req, bulkOrgAllowedFields, false, false);
+      validateFileHeaderFields(req, DataCacheHandler.bulkOrgAllowedFields, false, false);
     }
     BulkUploadProcess bulkUploadProcess =
         handleUpload(JsonKey.ORGANISATION, (String) req.get(JsonKey.CREATED_BY));
@@ -151,12 +136,12 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
         processId,
         bulkUploadProcess,
         BulkUploadActorOperation.ORG_BULK_UPLOAD_BACKGROUND_JOB.getValue(),
-        bulkOrgAllowedFields);
+        DataCacheHandler.bulkOrgAllowedFields);
   }
 
   Map<String, Object> getUser(String userId) {
     Future<Map<String, Object>> resultF =
-            EsClientFactory.getInstance(JsonKey.REST).getDataByIdentifier(ProjectUtil.EsType.user.getTypeName(), userId);
+            esService.getDataByIdentifier(ProjectUtil.EsType.user.getTypeName(), userId);
     Map<String, Object> result =
         (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     if (result != null || result.size() > 0) {
@@ -167,7 +152,7 @@ public class OrgBulkUploadActor extends BaseBulkUploadActor {
 
   Map<String, Object> getOrg(String orgId) {
     Future<Map<String, Object>> resultF =
-            EsClientFactory.getInstance(JsonKey.REST).getDataByIdentifier(ProjectUtil.EsType.organisation.getTypeName(), orgId);
+            esService.getDataByIdentifier(ProjectUtil.EsType.organisation.getTypeName(), orgId);
     Map<String, Object> result =
         (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
     if (result != null && result.size() > 0) {

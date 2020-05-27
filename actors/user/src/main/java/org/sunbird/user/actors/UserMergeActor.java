@@ -47,6 +47,9 @@ import java.util.concurrent.CompletableFuture;
 public class UserMergeActor extends UserBaseActor {
   String topic = null;
   Producer<String, String> producer = null;
+  private UserService userService = UserServiceImpl.getInstance();
+  private SSOManager keyCloakService = SSOServiceFactory.getInstance();
+  private SystemSettingClient systemSettingClient = SystemSettingClientImpl.getInstance();
 
   @Override
   public void onReceive(Request userRequest) throws Throwable {
@@ -75,7 +78,6 @@ public class UserMergeActor extends UserBaseActor {
     // validating tokens
     checkTokenDetails(headers, mergeeId, mergerId);
     Map telemetryMap = (HashMap) requestMap.clone();
-    UserService userService = UserServiceImpl.getInstance();
     User mergee = userService.getUserById(mergeeId);
     User merger = userService.getUserById(mergerId);
     String custodianId = getCustodianValue();
@@ -149,7 +151,6 @@ public class UserMergeActor extends UserBaseActor {
     try {
       Map<String, String> configSettingMap = DataCacheHandler.getConfigSettings();
       custodianId = configSettingMap.get(JsonKey.CUSTODIAN_ORG_ID);
-      SystemSettingClient systemSettingClient = SystemSettingClientImpl.getInstance();
       if (custodianId == null || custodianId.isEmpty()) {
         SystemSetting custodianIdSetting =
             systemSettingClient.getSystemSettingByField(
@@ -276,7 +277,6 @@ public class UserMergeActor extends UserBaseActor {
     String userAuthToken = (String) headers.get(JsonKey.X_AUTHENTICATED_USER_TOKEN);
     String sourceUserAuthToken = (String) headers.get(JsonKey.X_SOURCE_USER_TOKEN);
     String subDomainUrl = ProjectUtil.getConfigValue(JsonKey.SUNBIRD_SUBDOMAIN_KEYCLOAK_BASE_URL);
-    SSOManager keyCloakService = SSOServiceFactory.getInstance();
     ProjectLogger.log(
         "UserMergeActor:checkTokenDetails subdomain url value " + subDomainUrl,
         LoggerEnum.INFO.name());
@@ -308,7 +308,6 @@ public class UserMergeActor extends UserBaseActor {
 
   private String deactivateMergeeFromKC(String userId) {
     Map<String, Object> userMap = new HashMap<>();
-    SSOManager keyCloakService = SSOServiceFactory.getInstance();
     userMap.put(JsonKey.USER_ID, userId);
     ProjectLogger.log(
         "UserMergeActor:deactivateMergeeFromKC: request Got to deactivate mergee account from KC:"

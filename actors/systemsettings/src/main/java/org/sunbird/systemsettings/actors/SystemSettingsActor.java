@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.collections4.MapUtils;
 import org.sunbird.actor.core.BaseActor;
 import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.cassandra.CassandraOperation;
 import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.JsonKey;
@@ -26,6 +27,10 @@ import java.util.Map;
         asyncTasks = {}
 )
 public class SystemSettingsActor extends BaseActor {
+
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
+  private final SystemSettingDaoImpl systemSettingDaoImpl =
+            new SystemSettingDaoImpl(cassandraOperation);
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -56,8 +61,6 @@ public class SystemSettingsActor extends BaseActor {
                       (String) actorMessage.getContext().get(JsonKey.FIELD),
                       value);
     } else {
-      SystemSettingDaoImpl systemSettingDaoImpl =
-                new SystemSettingDaoImpl(ServiceFactory.getInstance());
       setting =
               systemSettingDaoImpl.readByField((String) actorMessage.getContext().get(JsonKey.FIELD));
       ProjectLogger.log("SystemSettingsActor:getSystemSetting:got field value from db",LoggerEnum.INFO.name());
@@ -89,8 +92,6 @@ public class SystemSettingsActor extends BaseActor {
                     (String)setting.getValue()));
         }
     } else {
-        SystemSettingDaoImpl systemSettingDaoImpl =
-                new SystemSettingDaoImpl(ServiceFactory.getInstance());
         allSystemSettings = systemSettingDaoImpl.readAll();
     }
       response.put(JsonKey.RESPONSE, allSystemSettings);
@@ -113,8 +114,6 @@ public class SystemSettingsActor extends BaseActor {
     }
     ObjectMapper mapper = new ObjectMapper();
     SystemSetting systemSetting = mapper.convertValue(request, SystemSetting.class);
-    SystemSettingDaoImpl systemSettingDaoImpl =
-              new SystemSettingDaoImpl(ServiceFactory.getInstance());
     Response response = systemSettingDaoImpl.write(systemSetting);
     sender().tell(response, self());
   }

@@ -20,6 +20,7 @@ import org.sunbird.learner.actors.bulkupload.dao.impl.BulkUploadProcessTaskDaoIm
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcess;
 import org.sunbird.learner.actors.bulkupload.model.BulkUploadProcessTask;
 import org.sunbird.learner.actors.bulkupload.model.StorageDetails;
+import org.sunbird.learner.util.DataCacheHandler;
 import org.sunbird.learner.util.UserUtility;
 import org.sunbird.learner.util.Util;
 import org.sunbird.learner.util.Util.DbInfo;
@@ -37,6 +38,8 @@ import java.util.*;
   asyncTasks = {}
 )
 public class BulkUploadManagementActor extends BaseBulkUploadActor {
+
+  private BulkUploadProcessTaskDao bulkUploadProcessTaskDao = new BulkUploadProcessTaskDaoImpl();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -96,7 +99,6 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
     String processId = (String) actorMessage.getRequest().get(JsonKey.PROCESS_ID);
     ObjectMapper mapper = new ObjectMapper();
     CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-    BulkUploadProcessTaskDao bulkUploadProcessTaskDao = new BulkUploadProcessTaskDaoImpl();
     DecryptionService decryptionService =
         org.sunbird.common.models.util.datasecurity.impl.ServiceFactory
             .getDecryptionServiceInstance(null);
@@ -249,23 +251,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
       validateFileSizeAgainstLineNumbers(orgDataSize, orgList.size());
       if (!orgList.isEmpty()) {
         String[] columns = orgList.get(0);
-        String[] bulkOrgAllowedFields = {
-                  JsonKey.ORGANISATION_NAME,
-                  JsonKey.CHANNEL,
-                  JsonKey.IS_ROOT_ORG,
-                  JsonKey.PROVIDER,
-                  JsonKey.EXTERNAL_ID,
-                  JsonKey.DESCRIPTION,
-                  JsonKey.HOME_URL,
-                  JsonKey.ORG_CODE,
-                  JsonKey.ORG_TYPE,
-                  JsonKey.PREFERRED_LANGUAGE,
-                  JsonKey.THEME,
-                  JsonKey.CONTACT_DETAILS,
-                  JsonKey.LOC_ID,
-                  JsonKey.HASHTAGID,
-                  JsonKey.LOCATION_CODE
-          };
+        String[] bulkOrgAllowedFields = DataCacheHandler.bulkOrgAllowedFields;
         validateBulkUploadFields(columns, bulkOrgAllowedFields, false);
       } else {
         throw new ProjectCommonException(
@@ -363,30 +349,7 @@ public class BulkUploadManagementActor extends BaseBulkUploadActor {
             LoggerEnum.INFO.name());
       }
       validateFileSizeAgainstLineNumbers(userDataSize, userList.size());
-      String[] bulkUserAllowedFields = {
-                JsonKey.FIRST_NAME,
-                JsonKey.LAST_NAME,
-                JsonKey.PHONE,
-                JsonKey.COUNTRY_CODE,
-                JsonKey.EMAIL,
-                JsonKey.USERNAME,
-                JsonKey.PHONE_VERIFIED,
-                JsonKey.EMAIL_VERIFIED,
-                JsonKey.ROLES,
-                JsonKey.POSITION,
-                JsonKey.GRADE,
-                JsonKey.LOCATION,
-                JsonKey.DOB,
-                JsonKey.GENDER,
-                JsonKey.LANGUAGE,
-                JsonKey.PROFILE_SUMMARY,
-                JsonKey.SUBJECT,
-                JsonKey.WEB_PAGES,
-                JsonKey.EXTERNAL_ID_PROVIDER,
-                JsonKey.EXTERNAL_ID,
-                JsonKey.EXTERNAL_ID_TYPE,
-                JsonKey.EXTERNAL_IDS
-        };
+      String[] bulkUserAllowedFields = DataCacheHandler.bulkUserAllowedFields;
       if (!userList.isEmpty()) {
         String[] columns = userList.get(0);
         validateBulkUploadFields(columns, bulkUserAllowedFields, false);

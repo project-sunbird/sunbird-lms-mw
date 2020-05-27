@@ -31,8 +31,10 @@ import java.util.*;
   asyncTasks = {}
 )
 public class GeoLocationManagementActor extends BaseActor {
+  private Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
   private Util.DbInfo orgDbInfo = Util.dbInfoMap.get(JsonKey.ORG_DB);
   private SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+  private CassandraOperation cassandraOperation = ServiceFactory.getInstance();
 
   @Override
   public void onReceive(Request request) throws Throwable {
@@ -68,8 +70,6 @@ public class GeoLocationManagementActor extends BaseActor {
     List<Map<String, Object>> result = new ArrayList<>();
     List<String> dbIdList = new ArrayList<>();
     Map<String, Object> responseMap = null;
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-    Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
     Response response =
         cassandraOperation.getRecordsByProperty(
             geoLocationDbInfo.getKeySpace(),
@@ -109,8 +109,6 @@ public class GeoLocationManagementActor extends BaseActor {
     String topic = (String) actorMessage.getRequest().get(JsonKey.TO);
     // Topic name is same as Location id in current system.
     // if logic is change then we need to update the matching logic as well
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-    Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
     Response response =
         cassandraOperation.getRecordById(
             geoLocationDbInfo.getKeySpace(), geoLocationDbInfo.getTableName(), topic);
@@ -157,8 +155,6 @@ public class GeoLocationManagementActor extends BaseActor {
           ResponseCode.invalidRequestData.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-    Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
     cassandraOperation.deleteRecord(
         geoLocationDbInfo.getKeySpace(), geoLocationDbInfo.getTableName(), locationId);
     finalResponse.getResult().put(JsonKey.RESPONSE, JsonKey.SUCCESS);
@@ -195,8 +191,6 @@ public class GeoLocationManagementActor extends BaseActor {
           ResponseCode.invalidRequestData.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
-    Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
     Response response1 =
         cassandraOperation.getRecordById(
             geoLocationDbInfo.getKeySpace(), geoLocationDbInfo.getTableName(), locationId);
@@ -252,8 +246,6 @@ public class GeoLocationManagementActor extends BaseActor {
           ResponseCode.invalidRequestData.getErrorMessage(),
           ResponseCode.CLIENT_ERROR.getResponseCode());
     }
-    Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     if (type.equalsIgnoreCase(JsonKey.ORGANISATION)) {
       Response response1 =
           cassandraOperation.getRecordsByProperty(
@@ -291,9 +283,7 @@ public class GeoLocationManagementActor extends BaseActor {
    * @param actorMessage
    */
   private void createGeoLocation(Request actorMessage) {
-    Util.DbInfo geoLocationDbInfo = Util.dbInfoMap.get(JsonKey.GEO_LOCATION_DB);
     ProjectLogger.log("GeoLocationManagementActor-createGeoLocation called");
-    CassandraOperation cassandraOperation = ServiceFactory.getInstance();
     // object of telemetry event...
     Map<String, Object> targetObject = null;
     List<Map<String, Object>> correlatedObject = new ArrayList<>();

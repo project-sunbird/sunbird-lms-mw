@@ -47,40 +47,36 @@ public class SearchHandlerActor extends BaseActor {
   public void onReceive(Request request) throws Throwable {
     request.toLower();
     Util.initializeContext(request, TelemetryEnvKey.USER);
-    String requestedFields = (String) request.getContext().get(JsonKey.FIELDS);
-
     if (request.getOperation().equalsIgnoreCase(ActorOperations.COMPOSITE_SEARCH.getValue())) {
       Map<String, Object> searchQueryMap = request.getRequest();
       Object objectType =
           ((Map<String, Object>) searchQueryMap.get(JsonKey.FILTERS)).get(JsonKey.OBJECT_TYPE);
-      String[] types = null;
+      String filterObjectType = "";
       if (objectType != null && objectType instanceof List) {
-        List<String> list = (List) objectType;
-        types = list.toArray(new String[list.size()]);
+        List<String> types = (List) objectType;
+          filterObjectType = types.get(0);
       }
       ((Map<String, Object>) searchQueryMap.get(JsonKey.FILTERS)).remove(JsonKey.OBJECT_TYPE);
-      String filterObjectType = "";
-      for (String type : types) {
-        if (EsType.user.getTypeName().equalsIgnoreCase(type)) {
-          filterObjectType = EsType.user.getTypeName();
-          UserUtility.encryptUserSearchFilterQueryData(searchQueryMap);
-        } else if (EsType.organisation.getTypeName().equalsIgnoreCase(type)) {
-          filterObjectType = EsType.organisation.getTypeName();
-        }
-      }
-      extractOrFilter(searchQueryMap);
-      SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
-      if (filterObjectType.equalsIgnoreCase(EsType.user.getTypeName())) {
-        searchDto.setExcludedFields(Arrays.asList(ProjectUtil.excludes));
-      }
-      Map<String, Object> result = null;
       if (EsType.organisation.getTypeName().equalsIgnoreCase(filterObjectType)) {
+        SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
         handleOrgSearchAsyncRequest(
             EsType.organisation.getTypeName(),
             searchDto,request.getContext());
-      } else {
-        Future<Map<String, Object>> resultF = esService.search(searchDto, types[0]);
-        result = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
+      } else if (EsType.user.getTypeName().equalsIgnoreCase(filterObjectType)) {
+          handleUserSearch(request, searchQueryMap, filterObjectType);
+      }
+    } else {
+      onReceiveUnsupportedOperation(request.getOperation());
+    }
+  }
+
+    private void handleUserSearch(Request request, Map<String, Object> searchQueryMap, String filterObjectType) throws Exception {
+        UserUtility.encryptUserSearchFilterQueryData(searchQueryMap);
+        extractOrFilter(searchQueryMap);
+        SearchDTO searchDto = Util.createSearchDto(searchQueryMap);
+        searchDto.setExcludedFields(Arrays.asList(ProjectUtil.excludes));
+        Future<Map<String, Object>> resultF = esService.search(searchDto, filterObjectType);
+        Map<String, Object>  result = (Map<String, Object>) ElasticSearchHelper.getResponseFromFuture(resultF);
         Response response = new Response();
         // this fuzzy search Logic
         if (((List<Map<String, Object>>) result.get(JsonKey.CONTENT)).size() != 0
@@ -108,24 +104,19 @@ public class SearchHandlerActor extends BaseActor {
             userMap.remove(JsonKey.ENC_EMAIL);
             userMap.remove(JsonKey.ENC_PHONE);
           }
+          String requestedFields = (String) request.getContext().get(JsonKey.FIELDS);
           updateUserDetailsWithOrgName(requestedFields, userMapList);
         }
-        if (result != null) {
-          response.put(JsonKey.RESPONSE, result);
-        } else {
-          result = new HashMap<>();
-          response.put(JsonKey.RESPONSE, result);
+        if (result == null) {
+            result = new HashMap<>();
         }
+        response.put(JsonKey.RESPONSE, result);
         sender().tell(response, self());
         // create search telemetry event here ...
-        generateSearchTelemetryEvent(searchDto, types, result, request.getContext());
-      }
-    } else {
-      onReceiveUnsupportedOperation(request.getOperation());
+        generateSearchTelemetryEvent(searchDto, filterObjectType, result, request.getContext());
     }
-  }
 
-  private void handleOrgSearchAsyncRequest(
+    private void handleOrgSearchAsyncRequest(
       String indexType, SearchDTO searchDto, Map<String,Object> context) {
     Future<Map<String, Object>> futureResponse = esService.search(searchDto, indexType);
     Future<Response> response =
@@ -260,10 +251,10 @@ public class SearchHandlerActor extends BaseActor {
   }
 
   private void generateSearchTelemetryEvent(
-      SearchDTO searchDto, String[] types, Map<String, Object> result, Map<String, Object> context) {
+      SearchDTO searchDto, String type, Map<String, Object> result, Map<String, Object> context) {
 
     Map<String, Object> params = new HashMap<>();
-    params.put(JsonKey.TYPE, String.join(",", types));
+    params.put(JsonKey.TYPE, type);
     params.put(JsonKey.QUERY, searchDto.getQuery());
     params.put(JsonKey.FILTERS, searchDto.getAdditionalProperties().get(JsonKey.FILTERS));
     params.put(JsonKey.SORT, searchDto.getSortBy());

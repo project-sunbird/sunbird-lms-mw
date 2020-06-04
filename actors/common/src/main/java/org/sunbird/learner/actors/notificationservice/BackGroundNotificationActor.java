@@ -31,9 +31,11 @@ public class BackGroundNotificationActor extends BaseActor {
   }
 
   private void callNotificationService(Map<String, Object> request) {
+    ProjectLogger.log("BackGroundNotificationActor:callNotificationService :: Method called.", LoggerEnum.INFO.name());
     try {
       ObjectMapper mapper = new ObjectMapper();
-      String NOTIFICATION_SERVICE_URL = "http://localhost:9000/v1/notification/send";
+      String notification_service_base_url = System.getenv("notification_service_base_url");
+      String NOTIFICATION_SERVICE_URL = notification_service_base_url+"/v1/notification/send";
       CloseableHttpClient client = HttpClients.createDefault();
       HttpPost httpPost = new HttpPost(NOTIFICATION_SERVICE_URL);
       String json = mapper.writeValueAsString(request);

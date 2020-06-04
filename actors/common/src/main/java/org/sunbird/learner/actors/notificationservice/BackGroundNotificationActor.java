@@ -23,14 +23,11 @@ import java.util.Map;
 public class BackGroundNotificationActor extends BaseActor {
   @Override
   public void onReceive(Request request) throws Throwable {
-    process(request);
+    callNotificationService(request);
   }
 
-  private void process(Request request) {
-    callNotificationService(request.getRequest());
-  }
-
-  private void callNotificationService(Map<String, Object> request) {
+  private void callNotificationService(Request reqObj) {
+    Map<String, Object> request = reqObj.getRequest();
     ProjectLogger.log("BackGroundNotificationActor:callNotificationService :: Method called.", LoggerEnum.INFO.name());
     try {
       ObjectMapper mapper = new ObjectMapper();
@@ -44,7 +41,7 @@ public class BackGroundNotificationActor extends BaseActor {
       httpPost.setEntity(entity);
       httpPost.setHeader("Accept", "application/json");
       httpPost.setHeader("Content-type", "application/json");
-
+      httpPost.setHeader("requestId", reqObj.getRequestId());
       HttpResponse response = client.execute(httpPost);
       ProjectLogger.log("BackGroundNotificationActor:callNotificationService :: Response =" + response.getStatusLine().getStatusCode(), LoggerEnum.INFO.name());
     } catch (Exception ex) {

@@ -10,6 +10,8 @@ import org.sunbird.common.exception.ProjectCommonException;
 import org.sunbird.common.models.response.Response;
 import org.sunbird.common.models.util.ActorOperations;
 import org.sunbird.common.models.util.JsonKey;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
 import org.sunbird.common.models.util.datasecurity.DecryptionService;
 import org.sunbird.common.request.Request;
 import org.sunbird.common.responsecode.ResponseCode;
@@ -42,6 +44,7 @@ public class SendNotificationActor extends BaseActor {
     List<String> phoneOrEmailList;
     Map<String,Object> notificationReq;
     String mode = (String) requestMap.remove(JsonKey.MODE);
+    ProjectLogger.log("SendNotificationActor:sendNotification : called for mode =" + mode, LoggerEnum.INFO.name());
     if (StringUtils.isNotBlank(mode)
       && JsonKey.SMS.equalsIgnoreCase(mode)) {
       phoneOrEmailList = getUsersEmailOrPhone(userIds, JsonKey.PHONE);
@@ -51,15 +54,15 @@ public class SendNotificationActor extends BaseActor {
       String template = getEmailTemplateFile((String) requestMap.get(JsonKey.EMAIL_TEMPLATE_TYPE));
       notificationReq = getNotificationRequest(phoneOrEmailList,requestMap,JsonKey.EMAIL,template);
     }
-
-    process(notificationReq);
+    ProjectLogger.log("SendNotificationActor:sendNotification : called for userIds =" + userIds, LoggerEnum.INFO.name());
+    process(notificationReq,request.getRequestId());
 
     Response res = new Response();
     res.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(res, self());
   }
 
-  private void process(Map<String, Object> notificationReq) {
+  private void process(Map<String, Object> notificationReq, String requestId) {
     List<Map<String,Object>> notificationList = new ArrayList<>();
     notificationList.add(notificationReq);
     Map<String,Object> reqMap = new HashMap<>();
@@ -68,6 +71,7 @@ public class SendNotificationActor extends BaseActor {
     reqMap.put(JsonKey.REQUEST,request);
 
     Request bgRequest = new Request();
+    bgRequest.setRequestId(requestId);
     bgRequest.getRequest().putAll(reqMap);
     bgRequest.setOperation("processNotification");
     tellToAnother(bgRequest);

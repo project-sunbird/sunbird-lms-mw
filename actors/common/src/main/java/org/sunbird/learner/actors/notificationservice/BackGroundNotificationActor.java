@@ -1,0 +1,52 @@
+package org.sunbird.learner.actors.notificationservice;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.sunbird.actor.core.BaseActor;
+import org.sunbird.actor.router.ActorConfig;
+import org.sunbird.common.models.util.LoggerEnum;
+import org.sunbird.common.models.util.ProjectLogger;
+import org.sunbird.common.request.Request;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+
+@ActorConfig(
+  tasks = {},
+  asyncTasks = {"processNotification"}
+)
+public class BackGroundNotificationActor extends BaseActor {
+  @Override
+  public void onReceive(Request request) throws Throwable {
+    process(request);
+  }
+
+  private void process(Request request) {
+    callNotificationService(request.getRequest());
+  }
+
+  private void callNotificationService(Map<String, Object> request) {
+    try {
+      ObjectMapper mapper = new ObjectMapper();
+      String NOTIFICATION_SERVICE_URL = "http://localhost:9000/v1/notification/send";
+      CloseableHttpClient client = HttpClients.createDefault();
+      HttpPost httpPost = new HttpPost(NOTIFICATION_SERVICE_URL);
+      String json = mapper.writeValueAsString(request);
+      json = new String(json.getBytes(), StandardCharsets.UTF_8);
+      StringEntity entity = new StringEntity(json);
+      httpPost.setEntity(entity);
+      httpPost.setHeader("Accept", "application/json");
+      httpPost.setHeader("Content-type", "application/json");
+
+      HttpResponse response = client.execute(httpPost);
+      ProjectLogger.log("BackGroundNotificationActor:callNotificationService :: Response =" + response.getStatusLine().getStatusCode(), LoggerEnum.INFO.name());
+    } catch (Exception ex) {
+      ProjectLogger.log("BackGroundNotificationActor:callNotificationService :: Error occurred",ex);
+    }
+    }
+}

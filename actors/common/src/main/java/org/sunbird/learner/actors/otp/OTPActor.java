@@ -98,11 +98,11 @@ public class OTPActor extends BaseActor {
               LoggerEnum.INFO.name());
     }
 
+    sendOTP(request, otp, key);
+
     Response response = new Response();
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(response, self());
-
-    sendOTP(request, otp, key);
   }
 
   private String getType(String type) {

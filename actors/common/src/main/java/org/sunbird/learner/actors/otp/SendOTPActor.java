@@ -55,6 +55,8 @@ public class SendOTPActor extends BaseActor {
           "SendOTPActor:sendOTP : Sending OTP via sms for key " + key + " otp is " + otp,
           LoggerEnum.INFO.name());
       sendOTPViaSMS(key, otp, template);
+    } else {
+      ProjectLogger.log("SendOTPActor:sendOTP : No Email/Phone provided.",LoggerEnum.INFO.name());
     }
     Response response = new Response();
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);

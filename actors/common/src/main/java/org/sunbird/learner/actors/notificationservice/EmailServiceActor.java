@@ -127,9 +127,17 @@ public class EmailServiceActor extends BaseActor {
       }
 
       String template = getEmailTemplateFile((String) request.get(JsonKey.EMAIL_TEMPLATE_TYPE));
-      ProjectLogger.log(
-        "EmailServiceActor:sendMail: Sending email to = " + emails.size() + " emails",
-        LoggerEnum.INFO.name());
+
+      if ( 1 == emails.size() ) {
+        ProjectLogger.log(
+          "EmailServiceActor:sendMail: Sending email to = " + emails + " emails",
+          LoggerEnum.INFO.name());
+      } else {
+        ProjectLogger.log(
+          "EmailServiceActor:sendMail: Sending email to = " + emails.size() + " emails",
+          LoggerEnum.INFO.name());
+      }
+
       try {
         SendMail.sendMailWithBody(
           emails.toArray(new String[emails.size()]),

@@ -97,7 +97,7 @@ public class OTPActor extends BaseActor {
                       + maskOTP(otp),
               LoggerEnum.INFO.name());
     }
-
+    ProjectLogger.log("OTPActor:sendOTP : Calling SendOTPActor for Key = "+maskId(key,type),LoggerEnum.INFO.name());
     sendOTP(request, otp, key);
 
     Response response = new Response();
@@ -224,7 +224,6 @@ public class OTPActor extends BaseActor {
     sendOtpRequest.getRequest().put(JsonKey.KEY, key);
     sendOtpRequest.getRequest().put(JsonKey.OTP, otp);
     sendOtpRequest.setOperation(ActorOperations.SEND_OTP.getValue());
-    ProjectLogger.log("OTPActor:sendOTP : Calling SendOTPActor to process OTP.",LoggerEnum.INFO.name());
     tellToAnother(sendOtpRequest);
   }
 

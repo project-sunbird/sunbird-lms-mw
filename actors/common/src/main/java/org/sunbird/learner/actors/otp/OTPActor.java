@@ -97,12 +97,12 @@ public class OTPActor extends BaseActor {
                       + maskOTP(otp),
               LoggerEnum.INFO.name());
     }
+    ProjectLogger.log("OTPActor:sendOTP : Calling SendOTPActor for Key = "+maskId(key,type),LoggerEnum.INFO.name());
+    sendOTP(request, otp, key);
 
     Response response = new Response();
     response.put(JsonKey.RESPONSE, JsonKey.SUCCESS);
     sender().tell(response, self());
-
-    sendOTP(request, otp, key);
   }
 
   private String getType(String type) {

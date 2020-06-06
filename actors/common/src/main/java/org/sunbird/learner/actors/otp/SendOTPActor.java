@@ -85,6 +85,7 @@ public class SendOTPActor extends BaseActor {
     otpMap.put(JsonKey.OTP, otp);
     otpMap.put(JsonKey.TEMPLATE_ID, template);
     otpMap.put(JsonKey.OTP_EXPIRATION_IN_MINUTES, OTPUtil.getOTPExpirationInMinutes());
+    ProjectLogger.log("SendOTPActor:sendOTPViaSMS : Calling OTPUtil.sendOTPViaSMS to process SMS provider.",LoggerEnum.INFO.name());
     OTPUtil.sendOTPViaSMS(otpMap);
   }
 }

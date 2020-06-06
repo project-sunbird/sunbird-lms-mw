@@ -224,6 +224,7 @@ public class OTPActor extends BaseActor {
     sendOtpRequest.getRequest().put(JsonKey.KEY, key);
     sendOtpRequest.getRequest().put(JsonKey.OTP, otp);
     sendOtpRequest.setOperation(ActorOperations.SEND_OTP.getValue());
+    ProjectLogger.log("OTPActor:sendOTP : Calling SendOTPActor to process OTP.",LoggerEnum.INFO.name());
     tellToAnother(sendOtpRequest);
   }
 

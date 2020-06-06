@@ -75,6 +75,7 @@ public class SendOTPActor extends BaseActor {
     } else {
       emailRequest = OTPUtil.sendOTPViaEmail(emailTemplateMap, RESET_PASSWORD);
     }
+    ProjectLogger.log("SendOTPActor:sendOTP : Calling EmailServiceActor to process Email provider.",LoggerEnum.INFO.name());
     tellToAnother(emailRequest);
   }
 
